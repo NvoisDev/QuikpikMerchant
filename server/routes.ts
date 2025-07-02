@@ -84,8 +84,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Convert numeric fields from frontend to appropriate types
+      const { price, moq, stock, ...otherData } = req.body;
       const productData = insertProductSchema.parse({
-        ...req.body,
+        ...otherData,
+        price: price.toString(),
+        moq: parseInt(moq),
+        stock: parseInt(stock),
         wholesalerId: userId
       });
       const product = await storage.createProduct(productData);
@@ -110,7 +115,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      const productData = insertProductSchema.partial().parse(req.body);
+      // Convert numeric fields from frontend to appropriate types
+      const { price, moq, stock, ...otherData } = req.body;
+      const convertedData = {
+        ...otherData,
+        ...(price !== undefined && { price: price.toString() }),
+        ...(moq !== undefined && { moq: parseInt(moq) }),
+        ...(stock !== undefined && { stock: parseInt(stock) })
+      };
+      const productData = insertProductSchema.partial().parse(convertedData);
       const product = await storage.updateProduct(id, productData);
       res.json(product);
     } catch (error) {
