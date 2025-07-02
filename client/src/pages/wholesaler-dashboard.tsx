@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/sidebar";
+
 import StatsCard from "@/components/stats-card";
 import { 
   DollarSign, 
@@ -48,10 +48,8 @@ export default function WholesalerDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="flex-1 lg:ml-64">
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex-1">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">

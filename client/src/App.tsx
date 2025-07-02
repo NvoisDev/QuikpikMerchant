@@ -16,6 +16,7 @@ import Subscription from "@/pages/subscription";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Orders from "@/pages/orders";
+import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -33,7 +34,7 @@ function Router() {
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
-        <>
+        <AppLayout>
           <Route path="/marketplace" component={Marketplace} />
           {user && user.role === 'wholesaler' ? (
             <>
@@ -52,7 +53,7 @@ function Router() {
               <Route path="/checkout" component={Checkout} />
             </>
           )}
-        </>
+        </AppLayout>
       )}
       <Route component={NotFound} />
     </Switch>

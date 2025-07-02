@@ -15,7 +15,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/sidebar";
+
 import ProductCard from "@/components/product-card";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles } from "lucide-react";
 import type { Product } from "@shared/schema";
@@ -264,10 +264,8 @@ export default function ProductManagement() {
   }) || [];
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="flex-1 lg:ml-64">
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex-1">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">
