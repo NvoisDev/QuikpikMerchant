@@ -254,6 +254,25 @@ export default function ProductManagement() {
     }
   };
 
+  const handleDuplicate = (product: any) => {
+    // Reset the form with the product data but clear the ID to create a new product
+    setEditingProduct(null); // Set to null so it creates instead of edits
+    form.reset({
+      name: `${product.name} (Copy)`,
+      description: product.description || "",
+      price: product.price.toString(),
+      currency: product.currency || "GBP",
+      moq: product.moq.toString(),
+      stock: product.stock.toString(),
+      category: product.category || "",
+      imageUrl: product.imageUrl || "",
+      priceVisible: product.priceVisible,
+      negotiationEnabled: product.negotiationEnabled,
+      status: product.status,
+    });
+    setIsDialogOpen(true);
+  };
+
   const filteredProducts = products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -619,6 +638,7 @@ export default function ProductManagement() {
                   product={product}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
                 />
               ))}
             </div>
