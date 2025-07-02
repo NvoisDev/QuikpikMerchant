@@ -44,6 +44,10 @@ export interface IStorage {
   // Customer group operations
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
+  updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
+  getUserByPhone(phoneNumber: string): Promise<User | undefined>;
+  createCustomer(customer: { phoneNumber: string; firstName: string; role: string }): Promise<User>;
+  addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   
   // Analytics operations
   getWholesalerStats(wholesalerId: string): Promise<{
@@ -234,6 +238,45 @@ export class DatabaseStorage implements IStorage {
   async createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup> {
     const [newGroup] = await db.insert(customerGroups).values(group).returning();
     return newGroup;
+  }
+
+  async updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup> {
+    const [customerGroup] = await db
+      .update(customerGroups)
+      .set(updates)
+      .where(eq(customerGroups.id, id))
+      .returning();
+    return customerGroup;
+  }
+
+  async getUserByPhone(phoneNumber: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, phoneNumber));
+    return user;
+  }
+
+  async createCustomer(customer: { phoneNumber: string; firstName: string; role: string }): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        phoneNumber: customer.phoneNumber,
+        firstName: customer.firstName,
+        role: customer.role,
+      })
+      .returning();
+    return user;
+  }
+
+  async addCustomerToGroup(groupId: number, customerId: string): Promise<void> {
+    await db
+      .insert(customerGroupMembers)
+      .values({
+        groupId: groupId,
+        customerId: customerId,
+      });
   }
 
   // Analytics operations

@@ -88,6 +88,7 @@ export const customerGroups = pgTable("customer_groups", {
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   name: varchar("name").notNull(),
   description: text("description"),
+  whatsappGroupId: varchar("whatsapp_group_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

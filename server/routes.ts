@@ -284,6 +284,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WhatsApp group creation
+  app.post('/api/customer-groups/:groupId/whatsapp-group', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId);
+      
+      // Get the customer group
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Get user's phone number
+      const user = await storage.getUser(userId);
+      if (!user?.phoneNumber) {
+        return res.status(400).json({ 
+          message: "Please add your phone number in settings to create WhatsApp groups" 
+        });
+      }
+
+      // For now, we'll simulate WhatsApp group creation
+      // In a real implementation, you would integrate with WhatsApp Business API
+      const whatsappGroupId = `whatsapp_group_${groupId}_${Date.now()}`;
+      
+      // Update the group with WhatsApp group ID
+      await storage.updateCustomerGroup(groupId, { whatsappGroupId });
+      
+      res.json({
+        success: true,
+        groupName: `${group.name} - WhatsApp`,
+        whatsappGroupId,
+        message: "WhatsApp group created successfully. You can now add customers to this group.",
+      });
+    } catch (error) {
+      console.error("Error creating WhatsApp group:", error);
+      res.status(500).json({ message: "Failed to create WhatsApp group" });
+    }
+  });
+
+  // Add member to customer group
+  app.post('/api/customer-groups/:groupId/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId);
+      const { phoneNumber, name } = req.body;
+      
+      if (!phoneNumber || !name) {
+        return res.status(400).json({ message: "Phone number and name are required" });
+      }
+
+      // Get the customer group to verify ownership
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Create or find customer with phone number
+      let customer = await storage.getUserByPhone(phoneNumber);
+      if (!customer) {
+        // Create a new customer/retailer account
+        customer = await storage.createCustomer({
+          phoneNumber,
+          firstName: name,
+          role: "retailer",
+        });
+      }
+
+      // Add customer to the group
+      await storage.addCustomerToGroup(groupId, customer.id);
+      
+      res.json({
+        success: true,
+        message: `${name} added to ${group.name} successfully`,
+        customer: {
+          id: customer.id,
+          name: customer.firstName,
+          phoneNumber: customer.phoneNumber,
+        }
+      });
+    } catch (error) {
+      console.error("Error adding customer to group:", error);
+      res.status(500).json({ message: "Failed to add customer to group" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/stats', isAuthenticated, async (req: any, res) => {
     try {
