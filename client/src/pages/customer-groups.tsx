@@ -168,7 +168,7 @@ export default function CustomerGroups() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-center">

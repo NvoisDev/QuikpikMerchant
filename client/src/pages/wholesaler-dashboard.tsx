@@ -51,7 +51,7 @@ export default function WholesalerDashboard() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       
-      <div className="flex-1 ml-64">
+      <div className="flex-1 lg:ml-64">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">
