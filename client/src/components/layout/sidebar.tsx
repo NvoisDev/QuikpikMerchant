@@ -10,13 +10,15 @@ import {
   BarChart3,
   CreditCard,
   Settings,
-  LogOut
+  LogOut,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
+  { name: "Marketplace", href: "/marketplace", icon: Store },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Broadcasts", href: "/broadcasts", icon: MessageSquare },

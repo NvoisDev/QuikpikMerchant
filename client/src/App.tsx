@@ -12,6 +12,7 @@ import RetailerInterface from "@/pages/retailer-interface";
 import Checkout from "@/pages/checkout";
 import Broadcasts from "@/pages/broadcasts";
 import Subscription from "@/pages/subscription";
+import Marketplace from "@/pages/marketplace";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
+          <Route path="/marketplace" component={Marketplace} />
           {user && user.role === 'wholesaler' ? (
             <>
               <Route path="/" component={WholesalerDashboard} />

@@ -20,7 +20,7 @@ import {
   type InsertNegotiation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for auth)
@@ -69,6 +69,17 @@ export interface IStorage {
     productLimit: number;
   }): Promise<User>;
   checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }>;
+  
+  // Marketplace operations
+  getMarketplaceProducts(filters: {
+    search?: string;
+    category?: string;
+    sortBy?: string;
+  }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]>;
+  getMarketplaceWholesalers(filters: {
+    search?: string;
+  }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]>;
+  getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -380,6 +391,150 @@ export class DatabaseStorage implements IStorage {
       currentCount,
       limit,
       tier
+    };
+  }
+
+  // Marketplace operations
+  async getMarketplaceProducts(filters: {
+    search?: string;
+    category?: string;
+    sortBy?: string;
+  }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
+    // First get all active products from wholesalers
+    let whereConditions = [
+      eq(products.status, 'active'),
+      eq(users.role, 'wholesaler')
+    ];
+
+    if (filters.category) {
+      whereConditions.push(eq(products.category, filters.category));
+    }
+
+    if (filters.search) {
+      whereConditions.push(
+        or(
+          sql`${products.name} ILIKE ${`%${filters.search}%`}`,
+          sql`${products.description} ILIKE ${`%${filters.search}%`}`,
+          sql`${users.businessName} ILIKE ${`%${filters.search}%`}`
+        )!
+      );
+    }
+
+    const productsList = await db
+      .select()
+      .from(products)
+      .innerJoin(users, eq(products.wholesalerId, users.id))
+      .where(and(...whereConditions));
+
+    // Transform the results
+    const results = productsList.map(item => ({
+      ...item.products,
+      wholesaler: {
+        id: item.users.id,
+        businessName: item.users.businessName || `${item.users.firstName} ${item.users.lastName}`,
+        profileImageUrl: item.users.profileImageUrl || undefined,
+        rating: 4.5, // Mock rating for now
+      }
+    }));
+
+    // Apply sorting
+    if (filters.sortBy) {
+      results.sort((a, b) => {
+        switch (filters.sortBy) {
+          case 'price_low':
+            return parseFloat(a.price) - parseFloat(b.price);
+          case 'price_high':
+            return parseFloat(b.price) - parseFloat(a.price);
+          case 'newest':
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          case 'rating':
+            return (b.wholesaler.rating || 0) - (a.wholesaler.rating || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return results;
+  }
+
+  async getMarketplaceWholesalers(filters: {
+    search?: string;
+  }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]> {
+    // Get wholesalers
+    let whereConditions = [eq(users.role, 'wholesaler')];
+    
+    if (filters.search) {
+      whereConditions.push(
+        or(
+          sql`${users.businessName} ILIKE ${`%${filters.search}%`}`,
+          sql`${users.firstName} ILIKE ${`%${filters.search}%`}`,
+          sql`${users.lastName} ILIKE ${`%${filters.search}%`}`
+        )!
+      );
+    }
+
+    const wholesalers = await db
+      .select()
+      .from(users)
+      .where(and(...whereConditions));
+
+    // Get products for each wholesaler
+    const wholesalersWithProducts = await Promise.all(
+      wholesalers.map(async (wholesaler) => {
+        const wholesalerProducts = await db
+          .select()
+          .from(products)
+          .where(
+            and(
+              eq(products.wholesalerId, wholesaler.id),
+              eq(products.status, 'active')
+            )
+          )
+          .limit(6); // Limit to latest 6 products for display
+
+        return {
+          ...wholesaler,
+          products: wholesalerProducts,
+          rating: 4.5, // Mock rating
+          totalOrders: Math.floor(Math.random() * 100) + 10, // Mock order count
+        };
+      })
+    );
+
+    return wholesalersWithProducts;
+  }
+
+  async getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined> {
+    const [wholesaler] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.id, id),
+          eq(users.role, 'wholesaler')
+        )
+      );
+
+    if (!wholesaler) {
+      return undefined;
+    }
+
+    const wholesalerProducts = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.wholesalerId, wholesaler.id),
+          eq(products.status, 'active')
+        )
+      );
+
+    return {
+      ...wholesaler,
+      products: wholesalerProducts,
+      rating: 4.5, // Mock rating
+      totalOrders: Math.floor(Math.random() * 100) + 10, // Mock order count
     };
   }
 }

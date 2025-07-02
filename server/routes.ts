@@ -627,6 +627,56 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Marketplace endpoints (public access)
+  app.get('/api/marketplace/products', async (req, res) => {
+    try {
+      const { search, category, sortBy } = req.query;
+      
+      const products = await storage.getMarketplaceProducts({
+        search: search as string,
+        category: category as string,
+        sortBy: sortBy as string,
+      });
+      
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching marketplace products:", error);
+      res.status(500).json({ message: "Failed to fetch marketplace products" });
+    }
+  });
+
+  app.get('/api/marketplace/wholesalers', async (req, res) => {
+    try {
+      const { search } = req.query;
+      
+      const wholesalers = await storage.getMarketplaceWholesalers({
+        search: search as string,
+      });
+      
+      res.json(wholesalers);
+    } catch (error) {
+      console.error("Error fetching marketplace wholesalers:", error);
+      res.status(500).json({ message: "Failed to fetch marketplace wholesalers" });
+    }
+  });
+
+  app.get('/api/marketplace/wholesaler/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const wholesaler = await storage.getWholesalerProfile(id);
+      
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      
+      res.json(wholesaler);
+    } catch (error) {
+      console.error("Error fetching wholesaler profile:", error);
+      res.status(500).json({ message: "Failed to fetch wholesaler profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
