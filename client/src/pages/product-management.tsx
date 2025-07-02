@@ -288,14 +288,14 @@ export default function ProductManagement() {
                     Add Product
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingProduct ? "Edit Product" : "Add New Product"}
                     </DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
@@ -513,7 +513,7 @@ export default function ProductManagement() {
                         </div>
                       </div>
 
-                      <div className="flex justify-end space-x-4">
+                      <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
                         <Button
                           type="button"
                           variant="outline"
