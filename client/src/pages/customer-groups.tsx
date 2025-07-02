@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +53,7 @@ export default function CustomerGroups() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   const { data: customerGroups = [], isLoading } = useQuery<CustomerGroup[]>({
     queryKey: ["/api/customer-groups"],
@@ -194,6 +195,9 @@ export default function CustomerGroups() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create Customer Group</DialogTitle>
+                    <DialogDescription>
+                      Create a new customer group to organize your customers and send them targeted broadcasts.
+                    </DialogDescription>
                   </DialogHeader>
                   <Form {...createGroupForm}>
                     <form onSubmit={createGroupForm.handleSubmit(onCreateGroup)} className="space-y-4">
@@ -331,6 +335,10 @@ export default function CustomerGroups() {
                             variant="outline"
                             size="sm"
                             className="flex-1"
+                            onClick={() => {
+                              setSelectedGroup(group);
+                              setIsManageDialogOpen(true);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Manage
@@ -351,6 +359,9 @@ export default function CustomerGroups() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Customer to {selectedGroup?.name}</DialogTitle>
+            <DialogDescription>
+              Add a new customer to this group by providing their phone number and name. They will be able to receive broadcasts and updates.
+            </DialogDescription>
           </DialogHeader>
           <Form {...addMemberForm}>
             <form onSubmit={addMemberForm.handleSubmit(onAddMember)} className="space-y-4">
@@ -402,6 +413,79 @@ export default function CustomerGroups() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Group Dialog */}
+      <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage {selectedGroup?.name}</DialogTitle>
+            <DialogDescription>
+              View group details and manage group settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Members</span>
+                <Badge variant="secondary">{selectedGroup?.memberCount || 0}</Badge>
+              </div>
+              <p className="text-sm text-gray-600">
+                {selectedGroup?.memberCount === 0 
+                  ? "No members yet. Add customers to start building your group."
+                  : `This group has ${selectedGroup?.memberCount} member${selectedGroup?.memberCount === 1 ? '' : 's'}.`
+                }
+              </p>
+            </div>
+            
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">WhatsApp Integration</span>
+                {selectedGroup?.whatsappGroupId ? (
+                  <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>
+                ) : (
+                  <Badge variant="outline">Not connected</Badge>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">
+                {selectedGroup?.whatsappGroupId
+                  ? "This group is connected to WhatsApp for easy broadcasting."
+                  : "Connect to WhatsApp to send broadcasts directly to group members."
+                }
+              </p>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setIsManageDialogOpen(false);
+                  setIsAddMemberDialogOpen(true);
+                }}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
+              
+              {!selectedGroup?.whatsappGroupId && (
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    if (selectedGroup) {
+                      handleCreateWhatsAppGroup(selectedGroup.id);
+                      setIsManageDialogOpen(false);
+                    }
+                  }}
+                  disabled={createWhatsAppGroupMutation.isPending}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Connect WhatsApp
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
