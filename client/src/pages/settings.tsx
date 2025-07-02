@@ -32,6 +32,7 @@ type SettingsFormData = z.infer<typeof settingsFormSchema>;
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("account");
 
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsFormSchema),
@@ -89,19 +90,47 @@ export default function Settings() {
               <Card>
                 <CardContent className="p-6">
                   <nav className="space-y-2">
-                    <div className="flex items-center p-3 bg-blue-50 text-blue-700 rounded-lg">
+                    <div 
+                      className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                        activeTab === "account" 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setActiveTab("account")}
+                    >
                       <User className="h-5 w-5 mr-3" />
                       <span className="font-medium">Account</span>
                     </div>
-                    <div className="flex items-center p-3 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div 
+                      className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                        activeTab === "business" 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setActiveTab("business")}
+                    >
                       <Building2 className="h-5 w-5 mr-3" />
                       <span>Business</span>
                     </div>
-                    <div className="flex items-center p-3 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div 
+                      className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                        activeTab === "billing" 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setActiveTab("billing")}
+                    >
                       <CreditCard className="h-5 w-5 mr-3" />
                       <span>Billing</span>
                     </div>
-                    <div className="flex items-center p-3 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div 
+                      className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                        activeTab === "notifications" 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setActiveTab("notifications")}
+                    >
                       <Bell className="h-5 w-5 mr-3" />
                       <span>Notifications</span>
                     </div>
@@ -116,11 +145,15 @@ export default function Settings() {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Settings2 className="h-6 w-6 mr-2" />
-                    Account Settings
+                    {activeTab === "account" && "Account Settings"}
+                    {activeTab === "business" && "Business Settings"}
+                    {activeTab === "billing" && "Billing & Subscription"}
+                    {activeTab === "notifications" && "Notification Settings"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Form {...form}>
+                  {activeTab === "account" && (
+                    <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       {/* Personal Information */}
                       <div className="space-y-4">
@@ -258,7 +291,44 @@ export default function Settings() {
                         </Button>
                       </div>
                     </form>
-                  </Form>
+                    </Form>
+                  )}
+
+                  {activeTab === "business" && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Business Information</h3>
+                        <p className="text-gray-600">Manage your business profile and settings.</p>
+                      </div>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p className="text-yellow-800">Business settings coming soon. Contact support for custom business configurations.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === "billing" && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Billing & Subscription</h3>
+                        <p className="text-gray-600">Manage your subscription and billing information.</p>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-blue-800">Billing features coming soon. Contact support for subscription changes.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === "notifications" && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
+                        <p className="text-gray-600">Control how you receive notifications.</p>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-green-800">Notification settings coming soon. Currently all notifications are enabled by default.</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
