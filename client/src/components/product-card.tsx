@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/currencies";
 import { 
   MoreHorizontal, 
   Edit, 
@@ -25,6 +26,7 @@ interface Product {
   name: string;
   description?: string;
   price: string;
+  currency?: string;
   moq: number;
   stock: number;
   imageUrl?: string;
@@ -174,7 +176,7 @@ export default function ProductCard({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Price per unit:</span>
             <span className="font-semibold text-gray-900">
-              {product.priceVisible ? formatCurrency(product.price) : "Hidden"}
+              {product.priceVisible ? formatCurrency(parseFloat(product.price), product.currency || "GBP") : "Hidden"}
             </span>
           </div>
           <div className="flex justify-between items-center">

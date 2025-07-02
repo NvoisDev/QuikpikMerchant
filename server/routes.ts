@@ -589,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "AI description generation is not available. Please add your OPENAI_API_KEY to use this feature." });
       }
 
-      const OpenAI = require('openai');
+      const { default: OpenAI } = await import('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
       const prompt = `Write a compelling product description for a wholesale product:
