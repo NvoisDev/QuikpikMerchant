@@ -441,6 +441,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI description generation
+  app.post('/api/ai/generate-description', isAuthenticated, async (req: any, res) => {
+    try {
+      const { productName, category, features } = req.body;
+      
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(400).json({ message: "AI description generation is not available. Please add your OPENAI_API_KEY to use this feature." });
+      }
+
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const prompt = `Write a compelling product description for a wholesale product:
+      
+Product Name: ${productName}
+Category: ${category || 'General'}
+Features: ${features || 'N/A'}
+
+Write a professional, sales-focused description that highlights the key benefits and features. Keep it concise but persuasive, suitable for B2B wholesale buyers. Focus on quality, value, and practical benefits.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 300,
+        temperature: 0.7,
+      });
+
+      const generatedDescription = response.choices[0].message.content;
+      res.json({ description: generatedDescription });
+    } catch (error) {
+      console.error("AI description generation error:", error);
+      res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
   // Subscription endpoints
   app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {

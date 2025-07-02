@@ -17,17 +17,42 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/layout/sidebar";
 import ProductCard from "@/components/product-card";
-import { Plus, Search, Download, Grid, List, Package } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles } from "lucide-react";
 import type { Product } from "@shared/schema";
+import { currencies, formatCurrency } from "@/lib/currencies";
+
+const productCategories = [
+  "Electronics & Technology",
+  "Clothing & Apparel", 
+  "Home & Garden",
+  "Health & Beauty",
+  "Food & Beverages",
+  "Sports & Recreation",
+  "Automotive & Transportation",
+  "Industrial & Manufacturing",
+  "Office & Business Supplies",
+  "Toys & Games",
+  "Books & Media",
+  "Jewelry & Accessories",
+  "Baby & Kids",
+  "Pet Supplies",
+  "Arts & Crafts",
+  "Tools & Hardware",
+  "Construction & Building",
+  "Agriculture & Farming",
+  "Medical & Healthcare",
+  "Other"
+];
 
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
   price: z.string().min(1, "Price is required"),
+  currency: z.string().min(1, "Currency is required"),
   moq: z.string().min(1, "MOQ is required"),
   stock: z.string().min(1, "Stock is required"),
-  category: z.string().optional(),
-  imageUrl: z.string().url("Must be a valid URL").optional(),
+  category: z.string().min(1, "Category is required"),
+  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   priceVisible: z.boolean(),
   negotiationEnabled: z.boolean(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
@@ -44,6 +69,7 @@ export default function ProductManagement() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -51,6 +77,7 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
+      currency: "GBP",
       moq: "1",
       stock: "0",
       category: "",
@@ -60,6 +87,52 @@ export default function ProductManagement() {
       status: "active",
     },
   });
+
+  const generateDescription = async () => {
+    try {
+      setIsGeneratingDescription(true);
+      const productName = form.getValues("name");
+      const category = form.getValues("category");
+      
+      if (!productName) {
+        toast({
+          title: "Product Name Required",
+          description: "Please enter a product name first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await apiRequest("POST", "/api/ai/generate-description", {
+        productName,
+        category,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        form.setValue("description", data.description);
+        toast({
+          title: "Description Generated",
+          description: "AI-powered product description has been created",
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to generate description",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate description",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products", user?.id],
@@ -245,9 +318,20 @@ export default function ProductManagement() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Category</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g., Grains & Rice" {...field} />
-                              </FormControl>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {productCategories.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                      {category}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -259,7 +343,20 @@ export default function ProductManagement() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Description</FormLabel>
+                            <div className="flex items-center justify-between">
+                              <FormLabel>Description</FormLabel>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={generateDescription}
+                                disabled={isGeneratingDescription}
+                                className="h-8"
+                              >
+                                <Sparkles className="h-4 w-4 mr-1" />
+                                {isGeneratingDescription ? "Generating..." : "AI Generate"}
+                              </Button>
+                            </div>
                             <FormControl>
                               <Textarea placeholder="Enter product description" {...field} />
                             </FormControl>
@@ -268,16 +365,40 @@ export default function ProductManagement() {
                         )}
                       />
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <FormField
                           control={form.control}
                           name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Price ($)</FormLabel>
+                              <FormLabel>Price</FormLabel>
                               <FormControl>
                                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="currency"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Currency</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select currency" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {currencies.map((currency) => (
+                                    <SelectItem key={currency.code} value={currency.code}>
+                                      {currency.code} - {currency.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}

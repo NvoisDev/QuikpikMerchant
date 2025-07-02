@@ -47,6 +47,9 @@ export const users = pgTable("users", {
   subscriptionEndsAt: timestamp("subscription_ends_at"),
   productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
   
+  // Currency settings
+  preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -57,6 +60,7 @@ export const products = pgTable("products", {
   name: varchar("name").notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("GBP"), // ISO currency code
   moq: integer("moq").notNull().default(1), // minimum order quantity
   stock: integer("stock").notNull().default(0),
   imageUrl: varchar("image_url"),
