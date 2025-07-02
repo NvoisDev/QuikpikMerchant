@@ -59,6 +59,16 @@ export interface IStorage {
   getNegotiations(productId?: number, retailerId?: string): Promise<(Negotiation & { product: Product; retailer: User })[]>;
   createNegotiation(negotiation: InsertNegotiation): Promise<Negotiation>;
   updateNegotiation(id: number, updates: Partial<InsertNegotiation>): Promise<Negotiation>;
+  
+  // Subscription operations
+  updateUserSubscription(userId: string, subscription: {
+    tier: string;
+    status: string;
+    stripeSubscriptionId?: string;
+    subscriptionEndsAt?: Date;
+    productLimit: number;
+  }): Promise<User>;
+  checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -326,6 +336,51 @@ export class DatabaseStorage implements IStorage {
       .where(eq(negotiations.id, id))
       .returning();
     return updatedNegotiation;
+  }
+
+  async updateUserSubscription(userId: string, subscription: {
+    tier: string;
+    status: string;
+    stripeSubscriptionId?: string;
+    subscriptionEndsAt?: Date;
+    productLimit: number;
+  }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        subscriptionTier: subscription.tier,
+        subscriptionStatus: subscription.status,
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        subscriptionEndsAt: subscription.subscriptionEndsAt,
+        productLimit: subscription.productLimit,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const currentProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.wholesalerId, userId));
+
+    const currentCount = currentProducts.length;
+    const limit = user.productLimit || 3;
+    const tier = user.subscriptionTier || 'free';
+
+    return {
+      canAdd: limit === -1 || currentCount < limit, // -1 means unlimited
+      currentCount,
+      limit,
+      tier
+    };
   }
 }
 

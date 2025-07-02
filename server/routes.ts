@@ -60,6 +60,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/products', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Check product limit before creating
+      const limitCheck = await storage.checkProductLimit(userId);
+      if (!limitCheck.canAdd) {
+        return res.status(403).json({ 
+          message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan. Upgrade your subscription to add more products.`,
+          currentCount: limitCheck.currentCount,
+          limit: limitCheck.limit,
+          tier: limitCheck.tier
+        });
+      }
+
       const productData = insertProductSchema.parse({
         ...req.body,
         wholesalerId: userId
@@ -426,6 +438,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching broadcasts:", error);
       res.status(500).json({ message: "Failed to fetch broadcasts" });
+    }
+  });
+
+  // Subscription endpoints
+  app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const productCheck = await storage.checkProductLimit(userId);
+
+      res.json({
+        subscriptionTier: user.subscriptionTier || 'free',
+        subscriptionStatus: user.subscriptionStatus || 'inactive',
+        productLimit: user.productLimit || 3,
+        currentProducts: productCheck.currentCount,
+        subscriptionEndsAt: user.subscriptionEndsAt,
+        stripeSubscriptionId: user.stripeSubscriptionId
+      });
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
+      res.status(500).json({ message: "Failed to fetch subscription status" });
+    }
+  });
+
+  app.post('/api/subscription/create', isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const { tier } = req.body;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Define pricing and limits for each tier
+      const tierConfig = {
+        standard: { priceId: 'price_standard', productLimit: 10, price: 1099 }, // $10.99
+        premium: { priceId: 'price_premium', productLimit: -1, price: 1999 }    // $19.99
+      };
+
+      if (!tierConfig[tier as keyof typeof tierConfig]) {
+        return res.status(400).json({ message: "Invalid subscription tier" });
+      }
+
+      const config = tierConfig[tier as keyof typeof tierConfig];
+
+      // Create or retrieve Stripe customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email!,
+          name: `${user.firstName} ${user.lastName}`,
+          metadata: {
+            userId: userId,
+            businessName: user.businessName || ''
+          }
+        });
+        customerId = customer.id;
+      }
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Quikpik Merchant ${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan`,
+              description: `${config.productLimit === -1 ? 'Unlimited' : config.productLimit} products per month`
+            },
+            unit_amount: config.price,
+            recurring: {
+              interval: 'month'
+            }
+          },
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        success_url: `${req.protocol}://${req.hostname}/subscription?success=true`,
+        cancel_url: `${req.protocol}://${req.hostname}/subscription?canceled=true`,
+        metadata: {
+          userId: userId,
+          tier: tier,
+          productLimit: config.productLimit.toString()
+        }
+      });
+
+      res.json({ redirectUrl: session.url });
+    } catch (error: any) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription: " + error.message });
+    }
+  });
+
+  // Stripe webhook for subscription events
+  app.post('/api/stripe/subscription-webhook', async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const event = req.body;
+
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          if (session.mode === 'subscription') {
+            const { userId, tier, productLimit } = session.metadata;
+            
+            await storage.updateUserSubscription(userId, {
+              tier: tier,
+              status: 'active',
+              stripeSubscriptionId: session.subscription,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+              productLimit: parseInt(productLimit)
+            });
+          }
+          break;
+
+        case 'customer.subscription.deleted':
+          const deletedSub = event.data.object;
+          const userToUpdate = await storage.getUser(deletedSub.metadata?.userId);
+          if (userToUpdate) {
+            await storage.updateUserSubscription(userToUpdate.id, {
+              tier: 'free',
+              status: 'inactive',
+              subscriptionEndsAt: new Date(),
+              productLimit: 3
+            });
+          }
+          break;
+
+        case 'invoice.payment_failed':
+          // Handle failed payments - could send notification to user
+          break;
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error("Subscription webhook error:", error);
+      res.status(500).json({ message: "Webhook error: " + error.message });
     }
   });
 

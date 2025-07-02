@@ -8,6 +8,7 @@ import {
   ShoppingCart, 
   MessageSquare, 
   BarChart3,
+  CreditCard,
   Settings,
   LogOut
 } from "lucide-react";
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Broadcasts", href: "/broadcasts", icon: MessageSquare },
+  { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 

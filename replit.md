@@ -126,6 +126,8 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 
 ## Changelog
 - July 02, 2025. Initial setup
+- July 02, 2025. Added subscription system with tiered pricing (Free: 3 products, Standard: 10 products @ $10.99/month, Premium: unlimited @ $19.99/month)
+- July 02, 2025. Implemented WhatsApp broadcasting functionality with product notifications to customer groups
 
 ## User Preferences
 
