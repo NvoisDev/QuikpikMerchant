@@ -54,8 +54,15 @@ export default function CustomerGroups() {
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
 
-  const { data: customerGroups, isLoading } = useQuery({
+  const { data: customerGroups = [], isLoading } = useQuery<CustomerGroup[]>({
     queryKey: ["/api/customer-groups"],
+    queryFn: async () => {
+      const response = await fetch("/api/customer-groups", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch customer groups");
+      return response.json();
+    },
   });
 
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -257,7 +264,7 @@ export default function CustomerGroups() {
                     </CardContent>
                   </Card>
                 ))
-              ) : customerGroups?.length === 0 ? (
+              ) : customerGroups.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No customer groups yet</h3>
@@ -268,7 +275,7 @@ export default function CustomerGroups() {
                   </Button>
                 </div>
               ) : (
-                customerGroups?.map((group: CustomerGroup) => (
+                customerGroups.map((group: CustomerGroup) => (
                   <Card key={group.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
@@ -297,7 +304,7 @@ export default function CustomerGroups() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full"
+                            className="w-full disabled:opacity-50"
                             onClick={() => handleCreateWhatsAppGroup(group.id)}
                             disabled={createWhatsAppGroupMutation.isPending}
                           >

@@ -32,7 +32,7 @@ const navigation = [
 export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -61,7 +61,7 @@ export default function Sidebar() {
         "bg-white shadow-lg h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
         "w-64",
         isCollapsed ? "-translate-x-full lg:translate-x-0" : "translate-x-0",
-        "lg:translate-x-0"
+        "lg:translate-x-0 lg:block"
       )}>
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
