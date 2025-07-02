@@ -146,16 +146,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      const role = req.query.role; // 'customer' or 'wholesaler'
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       let orders;
-      if (user.role === 'wholesaler') {
-        orders = await storage.getOrders(userId);
-      } else {
+      if (role === 'customer' || user.role === 'retailer') {
+        // Get orders placed by this customer/retailer
         orders = await storage.getOrders(undefined, userId);
+      } else {
+        // Get orders received by this wholesaler
+        orders = await storage.getOrders(userId);
       }
       
       res.json(orders);
@@ -370,6 +373,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error adding customer to group:", error);
       res.status(500).json({ message: "Failed to add customer to group" });
+    }
+  });
+
+  // Get group members
+  app.get('/api/customer-groups/:groupId/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId);
+
+      // Verify group ownership
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      const members = await storage.getGroupMembers(groupId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching group members:", error);
+      res.status(500).json({ message: "Failed to fetch group members" });
     }
   });
 

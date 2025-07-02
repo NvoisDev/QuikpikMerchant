@@ -45,6 +45,7 @@ export interface IStorage {
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
   updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
+  getGroupMembers(groupId: number): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
   createCustomer(customer: { phoneNumber: string; firstName: string; role: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
@@ -264,6 +265,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(customerGroups.id, id))
       .returning();
     return customerGroup;
+  }
+
+  async getGroupMembers(groupId: number): Promise<User[]> {
+    const members = await db
+      .select()
+      .from(customerGroupMembers)
+      .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
+      .where(eq(customerGroupMembers.groupId, groupId))
+      .orderBy(users.firstName);
+    
+    return members.map(member => member.users);
   }
 
   async getUserByPhone(phoneNumber: string): Promise<User | undefined> {

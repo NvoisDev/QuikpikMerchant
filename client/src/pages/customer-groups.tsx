@@ -54,6 +54,20 @@ export default function CustomerGroups() {
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  
+  // Fetch group members when manage dialog opens
+  const { data: groupMembers = [], isLoading: membersLoading } = useQuery({
+    queryKey: ["/api/customer-groups", selectedGroup?.id, "members"],
+    queryFn: async () => {
+      if (!selectedGroup?.id) return [];
+      const response = await fetch(`/api/customer-groups/${selectedGroup.id}/members`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch group members");
+      return response.json();
+    },
+    enabled: isManageDialogOpen && !!selectedGroup?.id,
+  });
 
   const { data: customerGroups = [], isLoading } = useQuery<CustomerGroup[]>({
     queryKey: ["/api/customer-groups"],

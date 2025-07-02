@@ -29,13 +29,25 @@ export default function RetailerInterface() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<Array<{
+    productId: number;
+    quantity: number;
+    product: any;
+    wholesalerId: string;
+  }>>([]);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [selectedWholesaler, setSelectedWholesaler] = useState<string | null>(null);
 
+  // Fetch marketplace products (from all wholesalers)
   const { data: products, isLoading } = useQuery({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/marketplace/products", { search: searchQuery, category: categoryFilter, sortBy }],
     queryFn: async () => {
-      const response = await fetch("/api/products", {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (categoryFilter !== 'all') params.append('category', categoryFilter);
+      if (sortBy) params.append('sortBy', sortBy);
+      
+      const response = await fetch(`/api/marketplace/products?${params.toString()}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch products");
@@ -43,9 +55,45 @@ export default function RetailerInterface() {
     },
   });
 
+  // Fetch customer's order history
+  const { data: orders = [] } = useQuery({
+    queryKey: ["/api/orders", "customer"],
+    queryFn: async () => {
+      const response = await fetch("/api/orders?role=customer", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch orders");
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
+  // Place order mutation
+  const placeOrderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const response = await apiRequest("POST", "/api/orders", orderData);
+      return response.json();
+    },
+    onSuccess: () => {
+      setCart([]);
+      setIsOrderModalOpen(false);
+      toast({
+        title: "Order Placed",
+        description: "Your order has been sent to the wholesaler for confirmation.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Order Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const addToCartMutation = useMutation({
-    mutationFn: async (item: { productId: number; quantity: number }) => {
-      // In a real app, this might save to a backend cart
+    mutationFn: async (item: { productId: number; quantity: number; product: any; wholesalerId: string }) => {
       return item;
     },
     onSuccess: (item) => {
@@ -66,6 +114,87 @@ export default function RetailerInterface() {
       });
     },
   });
+
+  // Helper functions for cart management
+  const addToCart = (product: any, quantity: number) => {
+    addToCartMutation.mutate({
+      productId: product.id,
+      quantity,
+      product,
+      wholesalerId: product.wholesaler.id
+    });
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCart(prev => prev.filter(item => item.productId !== productId));
+  };
+
+  const updateCartQuantity = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(prev => prev.map(item => 
+      item.productId === productId ? { ...item, quantity } : item
+    ));
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => {
+      return total + (parseFloat(item.product.price) * item.quantity);
+    }, 0);
+  };
+
+  const getCartItemCount = () => {
+    return cart.reduce((count, item) => count + item.quantity, 0);
+  };
+
+  // Place order
+  const handlePlaceOrder = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Cart Empty",
+        description: "Please add items to your cart before placing an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Group cart items by wholesaler
+    const ordersByWholesaler = cart.reduce((acc, item) => {
+      if (!acc[item.wholesalerId]) {
+        acc[item.wholesalerId] = [];
+      }
+      acc[item.wholesalerId].push(item);
+      return acc;
+    }, {} as Record<string, typeof cart>);
+
+    // For simplicity, let's handle single wholesaler orders first
+    const wholesalerIds = Object.keys(ordersByWholesaler);
+    if (wholesalerIds.length > 1) {
+      toast({
+        title: "Multiple Wholesalers",
+        description: "Please place separate orders for different wholesalers.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const orderData = {
+      wholesalerId: wholesalerIds[0],
+      items: cart.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+        total: (parseFloat(item.product.price) * item.quantity).toString()
+      })),
+      totalAmount: getCartTotal().toString(),
+      deliveryAddress: "Customer delivery address", // This would come from a form
+      notes: "Order placed through marketplace"
+    };
+
+    placeOrderMutation.mutate(orderData);
+  };
 
   const categories = [
     { id: "grains", name: "Grains & Rice", icon: Sprout, color: "text-yellow-600", count: 24 },

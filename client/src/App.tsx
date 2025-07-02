@@ -15,6 +15,7 @@ import CustomerGroups from "@/pages/customer-groups";
 import Subscription from "@/pages/subscription";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
+import Orders from "@/pages/orders";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -40,12 +41,14 @@ function Router() {
               <Route path="/products" component={ProductManagement} />
               <Route path="/broadcasts" component={Broadcasts} />
               <Route path="/customer-groups" component={CustomerGroups} />
+              <Route path="/orders" component={Orders} />
               <Route path="/subscription" component={Subscription} />
               <Route path="/settings" component={Settings} />
             </>
           ) : (
             <>
               <Route path="/" component={RetailerInterface} />
+              <Route path="/orders" component={Orders} />
               <Route path="/checkout" component={Checkout} />
             </>
           )}
