@@ -23,11 +23,21 @@ const settingsFormSchema = z.object({
   businessName: z.string().optional(),
   businessAddress: z.string().optional(),
   businessPhone: z.string().optional(),
+  phoneNumber: z.string().optional(),
   preferredCurrency: z.string().min(1, "Currency is required"),
   timezone: z.string().optional(),
 });
 
+const notificationFormSchema = z.object({
+  email: z.boolean().default(true),
+  sms: z.boolean().default(true),
+  orderUpdates: z.boolean().default(true),
+  stockAlerts: z.boolean().default(true),
+  marketingEmails: z.boolean().default(false),
+});
+
 type SettingsFormData = z.infer<typeof settingsFormSchema>;
+type NotificationFormData = z.infer<typeof notificationFormSchema>;
 
 export default function Settings() {
   const { user } = useAuth();
@@ -249,6 +259,20 @@ export default function Settings() {
                             </FormItem>
                           )}
                         />
+
+                        <FormField
+                          control={form.control}
+                          name="phoneNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Personal Phone (for SMS notifications)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Your personal phone number" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
 
                       {/* Preferences */}
@@ -322,10 +346,95 @@ export default function Settings() {
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
-                        <p className="text-gray-600">Control how you receive notifications.</p>
+                        <p className="text-gray-600">Control how you receive notifications via text/SMS and email.</p>
                       </div>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-green-800">Notification settings coming soon. Currently all notifications are enabled by default.</p>
+
+                      <div className="space-y-6">
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900">Notification Methods</h4>
+                          
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                id="email-notifications" 
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
+                                defaultChecked={user?.notificationPreferences?.email !== false}
+                              />
+                              <label htmlFor="email-notifications" className="text-sm font-medium text-gray-700">
+                                Email notifications
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                id="sms-notifications" 
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
+                                defaultChecked={user?.notificationPreferences?.sms !== false}
+                              />
+                              <label htmlFor="sms-notifications" className="text-sm font-medium text-gray-700">
+                                Text/SMS notifications
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900">Notification Types</h4>
+                          
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                id="order-updates" 
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
+                                defaultChecked={user?.notificationPreferences?.orderUpdates !== false}
+                              />
+                              <label htmlFor="order-updates" className="text-sm font-medium text-gray-700">
+                                Order updates and status changes
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                id="stock-alerts" 
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
+                                defaultChecked={user?.notificationPreferences?.stockAlerts !== false}
+                              />
+                              <label htmlFor="stock-alerts" className="text-sm font-medium text-gray-700">
+                                Low stock alerts and inventory warnings
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <input 
+                                type="checkbox" 
+                                id="marketing-emails" 
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
+                                defaultChecked={user?.notificationPreferences?.marketingEmails === true}
+                              />
+                              <label htmlFor="marketing-emails" className="text-sm font-medium text-gray-700">
+                                Marketing emails and product updates
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p className="text-blue-800 text-sm">
+                              <strong>Note:</strong> To receive SMS notifications, make sure to add your personal phone number in the Account tab.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button className="min-w-[120px]">
+                            Save Preferences
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
