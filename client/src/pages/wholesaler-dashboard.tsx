@@ -32,9 +32,10 @@ export default function WholesalerDashboard() {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    const currency = user?.preferredCurrency || 'GBP';
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'USD'
+      currency: currency
     }).format(amount);
   };
 

@@ -26,6 +26,7 @@ export interface IStorage {
   // User operations (required for auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User>;
   
   // Product operations
   getProducts(wholesalerId?: string): Promise<Product[]>;
@@ -100,6 +101,18 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...settings,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }

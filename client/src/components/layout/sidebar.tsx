@@ -88,10 +88,12 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="space-y-2">
-          <Button variant="ghost" size="sm" className="w-full justify-start">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
+          <Link href="/settings">
+            <Button variant="ghost" size="sm" className="w-full justify-start">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </Link>
           <Button 
             variant="ghost" 
             size="sm" 

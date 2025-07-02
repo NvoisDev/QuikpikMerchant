@@ -35,6 +35,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer'
   businessName: varchar("business_name"),
+  businessAddress: varchar("business_address"),
+  businessPhone: varchar("business_phone"),
   
   // Stripe fields
   stripeAccountId: varchar("stripe_account_id"),
@@ -47,8 +49,9 @@ export const users = pgTable("users", {
   subscriptionEndsAt: timestamp("subscription_ends_at"),
   productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
   
-  // Currency settings
+  // Settings
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
+  timezone: varchar("timezone").default("UTC"),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

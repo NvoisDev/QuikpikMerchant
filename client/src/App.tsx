@@ -12,6 +12,7 @@ import RetailerInterface from "@/pages/retailer-interface";
 import Checkout from "@/pages/checkout";
 import Broadcasts from "@/pages/broadcasts";
 import Subscription from "@/pages/subscription";
+import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
               <Route path="/products" component={ProductManagement} />
               <Route path="/broadcasts" component={Broadcasts} />
               <Route path="/subscription" component={Subscription} />
+              <Route path="/settings" component={Settings} />
             </>
           ) : (
             <>
