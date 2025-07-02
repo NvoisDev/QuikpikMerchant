@@ -92,7 +92,7 @@ export default function Subscription() {
     mutationFn: async (tier: string) => {
       return await apiRequest("POST", "/api/subscription/create", { tier });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       } else {

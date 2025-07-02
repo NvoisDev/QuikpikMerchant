@@ -17,7 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/layout/sidebar";
 import ProductCard from "@/components/product-card";
-import { Plus, Search, Download, Grid, List } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package } from "lucide-react";
+import type { Product } from "@shared/schema";
 
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -60,7 +61,7 @@ export default function ProductManagement() {
     },
   });
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products", user?.id],
     queryFn: async () => {
       const response = await fetch(`/api/products?wholesalerId=${user?.id}`, {

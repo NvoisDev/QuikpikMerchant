@@ -26,6 +26,7 @@ import {
   Eye,
   BarChart3
 } from "lucide-react";
+import type { CustomerGroup, Product } from "@shared/schema";
 
 const broadcastFormSchema = z.object({
   productId: z.string().min(1, "Please select a product"),
@@ -82,7 +83,7 @@ export default function Broadcasts() {
     },
   });
 
-  const { data: customerGroups, isLoading: groupsLoading } = useQuery({
+  const { data: customerGroups, isLoading: groupsLoading } = useQuery<CustomerGroup[]>({
     queryKey: ["/api/customer-groups"],
   });
 
@@ -238,7 +239,7 @@ export default function Broadcasts() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {customerGroups?.map((group: any) => (
+                                  {customerGroups && customerGroups.map((group) => (
                                     <SelectItem key={group.id} value={group.id.toString()}>
                                       {group.name}
                                     </SelectItem>
