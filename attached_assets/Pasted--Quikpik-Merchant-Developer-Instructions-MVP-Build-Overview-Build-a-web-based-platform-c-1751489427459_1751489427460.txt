@@ -1,0 +1,295 @@
+🛠️ Quikpik Merchant – Developer Instructions (MVP Build)
+
+📌 Overview
+
+Build a web-based platform called Quikpik Merchant to help small-scale wholesalers:
+
+List and manage inventory
+
+Broadcast new stock to their retail customers via WhatsApp API
+
+Accept online orders with Stripe
+
+Track KPIs and transactions on a dashboard
+
+Collect a 5% platform fee per sale
+
+Enable negotiation, notifications, and optional marketplace visibility
+
+🔧 1. User Roles
+
+a. Wholesaler (Primary User)
+
+Can list/manage products
+
+Create groups of retail customers
+
+Send broadcast messages
+
+View dashboard analytics
+
+Accept payments via Stripe
+
+Set minimum order quantity (MOQ)
+
+Enable/disable price visibility
+
+Set negotiation rules per product
+
+b. Retailer (High Street Customer)
+
+Can view products (via link or dashboard login)
+
+Make online purchases
+
+Subscribe for WhatsApp, SMS, or email updates
+
+View their order history, invoices, and delivery details
+
+Submit price offers where enabled
+
+🧱 2. Core Modules
+
+2.1 Product Management
+
+Add/edit products with:
+
+Product name
+
+Description
+
+Images
+
+Unit price / per kg / bulk options
+
+Optional price visibility toggle
+
+Minimum order quantity (MOQ)
+
+Enable/disable negotiation toggle
+
+Products should have status (Active / Inactive / Out of stock)
+
+2.2 WhatsApp Broadcast
+
+Integrate Meta’s WhatsApp Business API or Twilio WhatsApp API
+
+Allow:
+
+Upload/import customer phone numbers (or sync from phonebook)
+
+Create and name customer groups
+
+Send product update messages with:
+
+Image
+
+Product summary
+
+Price or “Request for Price” CTA
+
+Link to product page or store
+
+Schedule or send instantly
+
+Track delivery + read rates
+
+2.3 Stripe Payment Integration
+
+Use Stripe Connect to allow each wholesaler to:
+
+Accept payments
+
+Automatically deduct 5% Quikpik platform fee
+
+Generate invoice after payment
+
+Store payment history per user
+
+Include reference ID in all transactions
+
+2.4 Negotiation Logic
+
+If enabled, retailers can submit an offer
+
+Wholesalers can:
+
+Accept
+
+Decline
+
+Counter (AI suggested counter optional in Phase 2)
+
+Record negotiation history per product/customer
+
+2.5 Retailer Dashboard
+
+After login, retailer can:
+
+View current and past purchases
+
+Download invoices
+
+Reorder items
+
+Track order status
+
+Subscribe/unsubscribe to notifications (WhatsApp, Email, SMS)
+
+2.6 Wholesaler Dashboard
+
+Show:
+
+Total sales this week/month
+
+Popular products
+
+WhatsApp blast performance (sends, opens, orders)
+
+Top customers
+
+Inventory alerts (low stock)
+
+📤 3. Notifications
+
+Send alerts via:
+
+WhatsApp
+
+Email (SendGrid or similar)
+
+SMS (Twilio)
+
+Trigger examples:
+
+“New product available”
+
+“You’re low on stock”
+
+“You have a pending order”
+
+“Customer X hasn’t bought in 30 days”
+
+📦 4. Invoicing System
+
+Generate invoice with:
+
+Buyer and seller info
+
+Product details
+
+Quantity & weight
+
+Unit & total price
+
+5% platform fee breakdown
+
+Stripe payment reference
+
+📟 5. Marketplace Phase (Optional - Future Release)
+
+Enable public discovery of wholesalers who opt in
+
+Product search with filters (category, MOQ, location)
+
+Price visibility toggle per product
+
+Chat or “Request Price” CTA
+
+🛡️ 6. Admin Panel (Optional but helpful)
+
+Monitor:
+
+Transactions
+
+Top-performing wholesalers
+
+Disputes
+
+Manage:
+
+Platform settings
+
+Fee percentage
+
+Manual user onboarding
+
+💻 7. Tech Stack Suggestions
+
+Frontend: React.js (with TailwindCSS)
+
+Backend: Node.js with Express.js or Firebase
+
+Database: PostgreSQL or Firestore
+
+Authentication: Firebase Auth / Auth0
+
+Messaging API: Twilio / Meta WhatsApp Business API
+
+Payments: Stripe (with Stripe Connect)
+
+Hosting: Vercel / Render / Firebase Hosting
+
+✅ MVP Delivery Checklist
+
+
+
+🔥 Strategic Enhancements for Future Builds
+
+🧠 AI & Automation
+
+Smart reorder suggestions based on buying patterns
+
+Auto-generate promotional captions for WhatsApp blasts
+
+AI-suggested negotiation counteroffers (Phase 2+)
+
+Auto-tag and categorize products
+
+📱 User Experience
+
+Mobile-first Progressive Web App (PWA)
+
+One-tap reorder, invoice sharing
+
+Voice-to-text product input
+
+💼 Business Process Features
+
+Inventory threshold alerts
+
+Order fulfillment tracking (with optional courier integration)
+
+Internal CRM notes per customer
+
+Scheduled bulk invoicing
+
+🍭 Marketplace & Growth
+
+Verified seller profiles
+
+Discoverable product feed with sorting & filtering
+
+Referral & rewards system
+
+📊 Data & Reports
+
+Weekly seller performance reports via WhatsApp/Email
+
+Excel/CSV data export for accounting
+
+💸 Monetization Expansion
+
+Premium plans (advanced analytics, more broadcast volume)
+
+Sponsored product placements
+
+Embedded microcredit offers via fintech APIs
+
+👥 Community & Trust
+
+Secure in-app messaging (optional)
+
+Retailer reviews and ratings
+
+“Quikpik University” – micro video training modules
