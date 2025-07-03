@@ -204,11 +204,16 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Dashboard provides real-time insights into broadcast performance and customer engagement
 - July 03, 2025. Implemented comprehensive stock update refresh system for campaign management:
   - Added "Stock Update" button to previously sent campaigns with orange styling for easy identification
-  - Created dedicated stock refresh API endpoint that sends updated product information with current stock levels and pricing
-  - Implemented stock refresh dialog allowing users to select customer groups for targeted stock updates
-  - Enhanced message generation to clearly mark refreshed campaigns as "Stock Update" with updated availability information
-  - Stock updates automatically track notification records and provide feedback on messages sent successfully
+  - **Stock Update function**: Only refreshes stock counts and pricing information without sending messages to customers
+  - **Send/Resend function**: Actually sends WhatsApp messages to customers with campaign content
+  - Created clear functional separation: Stock Update for data refresh, Send/Resend for customer communication
+  - Enhanced test mode for WhatsApp functionality - campaigns work even without WhatsApp API configuration
   - System supports both single-product broadcasts and multi-product template campaigns for comprehensive stock management
+  
+**Order Status System:**
+- Active status in orders refers to orders in progress (pending, processing, shipped)
+- Complete order lifecycle: pending → processing → shipped → completed/cancelled
+- Orders with "active status" are those not yet completed or cancelled
 
 ## User Preferences
 

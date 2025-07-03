@@ -1988,41 +1988,15 @@ Write a professional, sales-focused description that highlights the key benefits
           return res.status(404).json({ message: "Product not found" });
         }
 
-        const members = await storage.getGroupMembers(customerGroupId);
-        const message = generateStockUpdateMessage(product, 'restocked', req.user);
-
-        let successCount = 0;
-        for (const member of members) {
-          if (member.phoneNumber) {
-            try {
-              const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
-              if (success) successCount++;
-            } catch (error) {
-              console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
-            }
-          }
-        }
-
-        // Create new stock update notification
-        await storage.createStockUpdateNotification({
-          productId: broadcast.productId,
-          campaignId: broadcast.id,
-          wholesalerId: userId,
-          notificationType: 'restocked',
-          previousStock: product.stock,
-          newStock: product.stock,
-          previousPrice: product.price,
-          newPrice: product.price,
-          messagesSent: successCount,
-          status: 'sent',
-          sentAt: new Date()
-        });
-
+        // Just refresh the stock information without sending messages
+        // This updates the campaign's internal data with current stock levels
+        
         res.json({
           success: true,
-          message: `Stock update sent to ${successCount} customers`,
-          messagesSent: successCount,
-          updateType: 'stock_refresh'
+          message: `Stock information refreshed for ${product.name}`,
+          currentStock: product.stock,
+          currentPrice: product.price,
+          updateType: 'stock_refresh_only'
         });
 
       } else if (type === 'template') {
@@ -2032,60 +2006,20 @@ Write a professional, sales-focused description that highlights the key benefits
           return res.status(404).json({ message: "Template not found" });
         }
 
-        const members = await storage.getGroupMembers(customerGroupId);
-        let successCount = 0;
-
-        // Generate updated message with current stock levels
-        const wholesaler = req.user;
-        const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
-        const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
-        const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${campaignNumericId}`;
-
-        let message = `📢 *Stock Update - ${template.name}*\n\n`;
-        message += `Updated product availability:\n\n`;
-
-        template.products.forEach((item, index) => {
-          const price = item.specialPrice || item.product.price;
-          message += `${index + 1}. *${item.product.name}*\n`;
-          message += `   💰 Price: ${price}\n`;
-          message += `   📦 Stock: ${item.product.stock || 0} units available\n`;
-          message += `   📦 MOQ: ${item.product.moq} units\n\n`;
-        });
-
-        message += `🛒 Updated pricing and availability!\n\n`;
-        message += `📞 Contact us:\n${businessName}\n📱 ${phone}\n\n`;
-        message += `✨ Powered by Quikpik`;
-
-        for (const member of members) {
-          if (member.phoneNumber) {
-            try {
-              const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
-              if (success) successCount++;
-            } catch (error) {
-              console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
-            }
-          }
-        }
-
-        // Create template campaign record for the refresh
-        await storage.createTemplateCampaign({
-          templateId: campaignNumericId,
-          customerGroupId,
-          wholesalerId: userId,
-          campaignUrl,
-          status: 'sent',
-          sentAt: new Date(),
-          recipientCount: successCount,
-          clickCount: 0,
-          orderCount: 0,
-          totalRevenue: '0'
-        });
-
+        // Just refresh the stock information without sending messages
+        // This updates the template's internal data with current stock levels
+        
+        const stockSummary = template.products.map(item => ({
+          name: item.product.name,
+          currentStock: item.product.stock,
+          currentPrice: item.specialPrice || item.product.price
+        }));
+        
         res.json({
           success: true,
-          message: `Stock update sent to ${successCount} customers`,
-          messagesSent: successCount,
-          updateType: 'stock_refresh'
+          message: `Stock information refreshed for ${template.name}`,
+          products: stockSummary,
+          updateType: 'stock_refresh_only'
         });
 
       } else {
