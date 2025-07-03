@@ -70,6 +70,7 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -132,6 +133,90 @@ export default function ProductManagement() {
     } finally {
       setIsGeneratingDescription(false);
     }
+  };
+
+  const handleGenerateImage = async () => {
+    try {
+      setIsGeneratingImage(true);
+      const productName = form.getValues("name");
+      const category = form.getValues("category");
+      const description = form.getValues("description");
+      
+      if (!productName) {
+        toast({
+          title: "Product Name Required",
+          description: "Please enter a product name first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await apiRequest("POST", "/api/ai/generate-image", {
+        productName,
+        category,
+        description,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        form.setValue("imageUrl", data.imageUrl);
+        toast({
+          title: "Image Generated",
+          description: "AI-powered product image has been generated!",
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to generate image",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please choose an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please choose an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      onChange(result);
+      toast({
+        title: "Image uploaded",
+        description: "Product image has been uploaded successfully!",
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -453,9 +538,69 @@ export default function ProductManagement() {
                         name="imageUrl"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Image URL</FormLabel>
+                            <FormLabel>Product Image</FormLabel>
                             <FormControl>
-                              <Input placeholder="https://example.com/image.jpg" {...field} />
+                              <div className="space-y-4">
+                                <div className="flex space-x-2">
+                                  <Input 
+                                    placeholder="Image URL or upload file" 
+                                    {...field} 
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleGenerateImage}
+                                    disabled={isGeneratingImage}
+                                    className="px-3"
+                                  >
+                                    {isGeneratingImage ? (
+                                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                                    ) : (
+                                      <Sparkles className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('image-upload')?.click()}
+                                    className="px-3"
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                
+                                <input
+                                  id="image-upload"
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleImageUpload(e, field.onChange)}
+                                  className="hidden"
+                                />
+                                
+                                {field.value && (
+                                  <div className="flex items-center space-x-4">
+                                    <img 
+                                      src={field.value} 
+                                      alt="Product preview" 
+                                      className="h-20 w-20 object-cover rounded-lg border"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => field.onChange("")}
+                                      className="text-red-600 hover:text-red-800"
+                                    >
+                                      Remove
+                                    </Button>
+                                  </div>
+                                )}
+                                
+                                <p className="text-sm text-gray-600">
+                                  Upload an image, paste a URL, or generate with AI using your product name and description.
+                                </p>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
+import { generateProductDescription, generateProductImage } from "./ai";
 import { z } from "zod";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -1192,6 +1193,39 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error: any) {
       console.error("Error enabling WhatsApp:", error);
       res.status(500).json({ message: "Failed to enable WhatsApp integration" });
+    }
+  });
+
+  // AI-powered product generation endpoints
+  app.post('/api/ai/generate-description', isAuthenticated, async (req: any, res) => {
+    try {
+      const { productName, category } = req.body;
+      
+      if (!productName) {
+        return res.status(400).json({ message: "Product name is required" });
+      }
+
+      const description = await generateProductDescription(productName, category);
+      res.json({ description });
+    } catch (error: any) {
+      console.error("Error generating description:", error);
+      res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
+  app.post('/api/ai/generate-image', isAuthenticated, async (req: any, res) => {
+    try {
+      const { productName, category, description } = req.body;
+      
+      if (!productName) {
+        return res.status(400).json({ message: "Product name is required" });
+      }
+
+      const imageUrl = await generateProductImage(productName, category, description);
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Error generating image:", error);
+      res.status(500).json({ message: "Failed to generate image" });
     }
   });
 
