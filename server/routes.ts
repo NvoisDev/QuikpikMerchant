@@ -1209,7 +1209,19 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json({ description });
     } catch (error: any) {
       console.error("Error generating description:", error);
-      res.status(500).json({ message: "Failed to generate description" });
+      
+      // Check if it's a quota/billing issue
+      if (error.code === 'insufficient_quota') {
+        res.status(402).json({ 
+          message: "AI description generation is temporarily unavailable. Please manually enter a product description.",
+          fallback: true
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to generate description. Please enter manually.",
+          fallback: true 
+        });
+      }
     }
   });
 
@@ -1217,15 +1229,38 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const { productName, category, description } = req.body;
       
-      if (!productName) {
+      if (!productName || productName.trim().length === 0) {
         return res.status(400).json({ message: "Product name is required" });
       }
 
-      const imageUrl = await generateProductImage(productName, category, description);
+      // Validate product name doesn't contain problematic content
+      const cleanName = productName.trim();
+      if (cleanName.length > 100) {
+        return res.status(400).json({ message: "Product name is too long (max 100 characters)" });
+      }
+
+      const imageUrl = await generateProductImage(cleanName, category, description);
       res.json({ imageUrl });
     } catch (error: any) {
       console.error("Error generating image:", error);
-      res.status(500).json({ message: "Failed to generate image" });
+      
+      // Provide more specific error messages based on the error type
+      if (error.status === 400) {
+        res.status(400).json({ 
+          message: "Unable to generate image for this product. Try uploading an image or using an image URL instead.",
+          fallback: true
+        });
+      } else if (error.code === 'insufficient_quota') {
+        res.status(402).json({ 
+          message: "AI image generation is temporarily unavailable. Please upload an image or use an image URL.",
+          fallback: true
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Image generation service is temporarily unavailable. Please upload an image or use an image URL.",
+          fallback: true
+        });
+      }
     }
   });
 

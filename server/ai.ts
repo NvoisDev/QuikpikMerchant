@@ -36,18 +36,21 @@ export async function generateProductDescription(productName: string, category?:
 
 export async function generateProductImage(productName: string, category?: string, description?: string): Promise<string> {
   try {
-    let prompt = `A high-quality, professional product photo of ${productName}`;
+    // Clean and sanitize the product name to avoid policy violations
+    const cleanProductName = productName.replace(/[^\w\s-]/g, '').trim();
     
-    if (category) {
-      prompt += ` (${category} category)`;
+    // Create a safe, professional prompt
+    let prompt = `Professional product photography of ${cleanProductName}`;
+    
+    if (category && category.length > 0) {
+      const cleanCategory = category.replace(/[^\w\s-]/g, '').trim();
+      prompt += ` from ${cleanCategory} category`;
     }
     
-    if (description) {
-      // Extract key visual elements from description
-      prompt += `. ${description.substring(0, 100)}`;
-    }
-    
-    prompt += ". Clean white background, professional lighting, commercial photography style, high resolution, suitable for e-commerce";
+    // Add basic visual description without using the full description to avoid issues
+    prompt += ". Clean minimalist studio photography with white background, professional lighting, commercial style, high quality, centered composition, product focus";
+
+    console.log("Generating image with prompt:", prompt);
 
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -57,7 +60,11 @@ export async function generateProductImage(productName: string, category?: strin
       quality: "standard",
     });
 
-    return response.data[0].url || "";
+    if (!response.data || !response.data[0] || !response.data[0].url) {
+      throw new Error("No image URL returned from OpenAI");
+    }
+
+    return response.data[0].url;
   } catch (error) {
     console.error("Error generating product image:", error);
     throw new Error("Failed to generate product image");
