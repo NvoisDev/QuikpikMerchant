@@ -46,9 +46,11 @@ export interface IStorage {
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
   updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
   getGroupMembers(groupId: number): Promise<User[]>;
+  searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
-  createCustomer(customer: { phoneNumber: string; firstName: string; role: string }): Promise<User>;
+  createCustomer(customer: { phoneNumber: string; firstName: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
+  removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   
   // Analytics operations
   getWholesalerStats(wholesalerId: string): Promise<{
@@ -285,6 +287,27 @@ export class DatabaseStorage implements IStorage {
     return members.map(member => member.users);
   }
 
+  async searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]> {
+    const members = await db
+      .select()
+      .from(customerGroupMembers)
+      .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
+      .where(
+        and(
+          eq(customerGroupMembers.groupId, groupId),
+          or(
+            ilike(users.firstName, `%${searchTerm}%`),
+            ilike(users.lastName, `%${searchTerm}%`),
+            ilike(users.email, `%${searchTerm}%`),
+            ilike(users.phoneNumber, `%${searchTerm}%`)
+          )
+        )
+      )
+      .orderBy(users.firstName);
+    
+    return members.map(member => member.users);
+  }
+
   async getUserByPhone(phoneNumber: string): Promise<User | undefined> {
     const [user] = await db
       .select()
@@ -293,7 +316,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createCustomer(customer: { phoneNumber: string; firstName: string; role: string }): Promise<User> {
+  async createCustomer(customer: { 
+    phoneNumber: string; 
+    firstName: string; 
+    role: string; 
+    email?: string; 
+    streetAddress?: string; 
+    city?: string; 
+    state?: string; 
+    postalCode?: string; 
+    country?: string;
+  }): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
@@ -301,6 +334,12 @@ export class DatabaseStorage implements IStorage {
         phoneNumber: customer.phoneNumber,
         firstName: customer.firstName,
         role: customer.role,
+        email: customer.email,
+        streetAddress: customer.streetAddress,
+        city: customer.city,
+        state: customer.state,
+        postalCode: customer.postalCode,
+        country: customer.country || "United Kingdom",
       })
       .returning();
     return user;
@@ -313,6 +352,17 @@ export class DatabaseStorage implements IStorage {
         groupId: groupId,
         customerId: customerId,
       });
+  }
+
+  async removeCustomerFromGroup(groupId: number, customerId: string): Promise<void> {
+    await db
+      .delete(customerGroupMembers)
+      .where(
+        and(
+          eq(customerGroupMembers.groupId, groupId),
+          eq(customerGroupMembers.customerId, customerId)
+        )
+      );
   }
 
   // Analytics operations

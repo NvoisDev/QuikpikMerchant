@@ -394,6 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const groupId = parseInt(req.params.groupId);
+      const search = req.query.search as string;
 
       // Verify group ownership
       const groups = await storage.getCustomerGroups(userId);
@@ -403,11 +404,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      const members = await storage.getGroupMembers(groupId);
+      let members;
+      if (search && search.trim()) {
+        members = await storage.searchGroupMembers(groupId, search.trim());
+      } else {
+        members = await storage.getGroupMembers(groupId);
+      }
+      
       res.json(members);
     } catch (error) {
       console.error("Error fetching group members:", error);
       res.status(500).json({ message: "Failed to fetch group members" });
+    }
+  });
+
+  // Remove member from customer group
+  app.delete('/api/customer-groups/:groupId/members/:customerId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId);
+      const customerId = req.params.customerId;
+
+      // Verify group ownership
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Remove customer from group
+      await storage.removeCustomerFromGroup(groupId, customerId);
+      
+      res.json({
+        success: true,
+        message: "Customer removed from group successfully"
+      });
+    } catch (error) {
+      console.error("Error removing customer from group:", error);
+      res.status(500).json({ message: "Failed to remove customer from group" });
     }
   });
 

@@ -53,6 +53,14 @@ export const users = pgTable("users", {
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
   timezone: varchar("timezone").default("UTC"),
   phoneNumber: varchar("phone_number"),
+  
+  // Address fields for delivery/billing
+  streetAddress: varchar("street_address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country").default("United Kingdom"),
+  
   notificationPreferences: jsonb("notification_preferences").default({
     email: true,
     sms: true,

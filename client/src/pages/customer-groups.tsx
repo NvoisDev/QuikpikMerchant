@@ -56,13 +56,15 @@ export default function CustomerGroups() {
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Fetch group members when manage dialog opens
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery({
-    queryKey: ["/api/customer-groups", selectedGroup?.id, "members"],
+    queryKey: ["/api/customer-groups", selectedGroup?.id, "members", searchTerm],
     queryFn: async () => {
       if (!selectedGroup?.id) return [];
-      const response = await fetch(`/api/customer-groups/${selectedGroup.id}/members`, {
+      const searchParams = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+      const response = await fetch(`/api/customer-groups/${selectedGroup.id}/members${searchParams}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch group members");
@@ -182,6 +184,28 @@ export default function CustomerGroups() {
     },
   });
 
+  const deleteMemberMutation = useMutation({
+    mutationFn: async ({ groupId, customerId }: { groupId: number; customerId: string }) => {
+      const response = await apiRequest("DELETE", `/api/customer-groups/${groupId}/members/${customerId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups", selectedGroup?.id, "members"] });
+      toast({
+        title: "Success",
+        description: "Customer removed from group successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove customer from group",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onCreateGroup = (data: CustomerGroupFormData) => {
     createGroupMutation.mutate(data);
   };
@@ -189,6 +213,12 @@ export default function CustomerGroups() {
   const onAddMember = (data: AddMemberFormData) => {
     if (!selectedGroup) return;
     addMemberMutation.mutate({ ...data, groupId: selectedGroup.id });
+  };
+
+  const onDeleteMember = (customerId: string) => {
+    if (selectedGroup) {
+      deleteMemberMutation.mutate({ groupId: selectedGroup.id, customerId });
+    }
   };
 
   const handleCreateWhatsAppGroup = (groupId: number) => {
@@ -454,14 +484,23 @@ export default function CustomerGroups() {
 
       {/* Manage Group Dialog */}
       <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Manage {selectedGroup?.name}</DialogTitle>
             <DialogDescription>
-              View group details and manage group settings.
+              View and manage group members. Search by name or phone number.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Search Box */}
+            <div className="relative">
+              <Input
+                placeholder="Search members by name or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-4"
+              />
+            </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium">Members</span>
@@ -482,23 +521,40 @@ export default function CustomerGroups() {
                 </div>
               ) : groupMembers.length === 0 ? (
                 <p className="text-sm text-gray-600">
-                  No members yet. Add customers to start building your group.
+                  {searchTerm ? "No members found matching your search." : "No members yet. Add customers to start building your group."}
                 </p>
               ) : (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {groupMembers.map((member: any, index: number) => (
-                    <div key={index} className="flex items-center space-x-3 p-2 bg-white rounded border">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="h-4 w-4 text-blue-600" />
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {groupMembers.map((member: any) => (
+                    <div key={member.id} className="flex items-start space-x-3 p-3 bg-white rounded border">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-medium text-blue-600">
+                          {member.firstName?.charAt(0) || '?'}
+                        </span>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {member.firstName || member.name || 'Customer'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {member.phoneNumber || 'No phone'}
-                        </p>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {member.firstName} {member.lastName || ''}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center mt-1">
+                          <Phone className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{member.phoneNumber}</span>
+                        </div>
+                        {member.email && (
+                          <div className="text-xs text-gray-500 truncate mt-1">
+                            {member.email}
+                          </div>
+                        )}
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteMember(member.id)}
+                        disabled={deleteMemberMutation.isPending}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 flex-shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
