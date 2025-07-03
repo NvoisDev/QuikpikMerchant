@@ -228,46 +228,69 @@ export default function CustomerGroups() {
 
   const handleSelectFromContacts = async () => {
     try {
-      // Check if Contact Picker API is supported
+      // Check if Contact Picker API is supported (modern mobile browsers)
       if ('contacts' in navigator && 'ContactsManager' in window) {
         const props = ['name', 'tel'];
         const opts = { multiple: true };
         const contacts = await (navigator as any).contacts.select(props, opts);
         
         if (contacts && contacts.length > 0) {
-          const contact = contacts[0];
-          if (contact.tel && contact.tel.length > 0) {
-            // Clean and format phone number
-            const phoneNumber = contact.tel[0].replace(/[^\+\d]/g, '');
-            addMemberForm.setValue('phoneNumber', phoneNumber);
-            addMemberForm.setValue('name', contact.name ? contact.name.join(' ') : '');
-            
-            toast({
-              title: "Contact Selected",
-              description: `Added ${contact.name ? contact.name.join(' ') : 'contact'} from your phone contacts.`,
-            });
+          // Show contact selection dialog if multiple contacts
+          if (contacts.length === 1) {
+            const contact = contacts[0];
+            if (contact.tel && contact.tel.length > 0) {
+              const phoneNumber = contact.tel[0].replace(/[^\+\d]/g, '');
+              addMemberForm.setValue('phoneNumber', phoneNumber);
+              addMemberForm.setValue('name', contact.name ? contact.name.join(' ') : '');
+              
+              toast({
+                title: "Contact Added",
+                description: `Added ${contact.name ? contact.name.join(' ') : 'contact'} from your address book.`,
+              });
+            }
+          } else {
+            // Multiple contacts - for now, use first one (could be enhanced with selection dialog)
+            const contact = contacts[0];
+            if (contact.tel && contact.tel.length > 0) {
+              const phoneNumber = contact.tel[0].replace(/[^\+\d]/g, '');
+              addMemberForm.setValue('phoneNumber', phoneNumber);
+              addMemberForm.setValue('name', contact.name ? contact.name.join(' ') : '');
+              
+              toast({
+                title: "Contacts Available",
+                description: `Found ${contacts.length} contacts. Added first contact. Tap again for more.`,
+              });
+            }
           }
+        } else {
+          toast({
+            title: "No Contacts Selected",
+            description: "Please select a contact from your address book or enter manually.",
+          });
         }
-      } else if (navigator.userAgent.includes('WhatsApp')) {
-        // If user is in WhatsApp browser, show special instructions
-        toast({
-          title: "WhatsApp Browser Detected",
-          description: "Copy contact numbers from WhatsApp and paste them here, or use the Import CSV option for bulk contacts.",
-        });
       } else {
-        // Show enhanced instructions for different scenarios
+        // Fallback for browsers without Contact Picker API
         toast({
-          title: "Contact Access Options",
-          description: "• Use 'Import CSV' for bulk contacts\n• Copy numbers from WhatsApp and paste here\n• Open this page in Chrome mobile for contact picker",
+          title: "Address Book Access",
+          description: "To access your address book:\n• Use Chrome or Safari on mobile\n• Or import contacts via CSV file\n• Or copy/paste numbers manually",
           variant: "default",
         });
       }
-    } catch (error) {
-      console.error('Error accessing contacts:', error);
-      toast({
-        title: "Contact Access",
-        description: "Use Import CSV for bulk contacts or manually enter phone numbers.",
-      });
+    } catch (error: any) {
+      console.error('Error accessing address book:', error);
+      if (error.name === 'NotAllowedError') {
+        toast({
+          title: "Permission Denied",
+          description: "Please allow access to your contacts in browser settings, or use manual entry.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Contact Access Unavailable",
+          description: "Your browser doesn't support contact access. Use manual entry or CSV import.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -275,60 +298,91 @@ export default function CustomerGroups() {
     // Create a file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.accept = '.csv,.txt,.xlsx,.xls,.vcf';
+    fileInput.accept = '.csv,.txt,.vcf,.xlsx,.xls';
     fileInput.onchange = (event: Event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
           const text = e.target?.result as string;
-          const contacts = [];
+          const contacts: { name: string; phone: string }[] = [];
           
           if (file.name.endsWith('.vcf')) {
-            // Parse vCard format (WhatsApp exports)
+            // Parse vCard format (standard address book export)
             const vCards = text.split('BEGIN:VCARD');
             for (const vCard of vCards) {
               if (vCard.includes('FN:') && vCard.includes('TEL:')) {
                 const nameMatch = vCard.match(/FN:(.+)/);
-                const phoneMatch = vCard.match(/TEL[^:]*:(.+)/);
-                if (nameMatch && phoneMatch) {
+                const phoneMatches = vCard.match(/TEL[^:]*:(.+)/g);
+                if (nameMatch && phoneMatches) {
                   const name = nameMatch[1].trim();
-                  const phone = phoneMatch[1].replace(/[^\+\d]/g, '');
-                  if (name && phone) {
-                    contacts.push({ name, phone });
+                  // Get the first valid phone number
+                  for (const phoneMatch of phoneMatches) {
+                    const phone = phoneMatch.split(':')[1]?.replace(/[^\+\d]/g, '');
+                    if (phone && phone.length >= 7) {
+                      contacts.push({ name, phone });
+                      break; // Only take first valid phone number per contact
+                    }
                   }
                 }
               }
             }
           } else {
-            // Parse CSV/TXT format
+            // Parse CSV/TXT format (common address book exports)
             const lines = text.split('\n');
+            let nameIndex = 0, phoneIndex = 1;
             let startIndex = 0;
             
-            // Check if first line contains headers
-            if (lines[0] && (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('phone'))) {
-              startIndex = 1;
+            // Detect header row and column positions
+            if (lines[0]) {
+              const header = lines[0].toLowerCase();
+              if (header.includes('name') || header.includes('phone') || header.includes('mobile')) {
+                startIndex = 1;
+                const columns = header.split(',').map((col, idx) => ({ col: col.trim(), idx }));
+                
+                // Find name column
+                const nameCol = columns.find(c => 
+                  c.col.includes('name') || c.col.includes('first') || c.col.includes('last')
+                );
+                if (nameCol) nameIndex = nameCol.idx;
+                
+                // Find phone column
+                const phoneCol = columns.find(c => 
+                  c.col.includes('phone') || c.col.includes('mobile') || c.col.includes('cell') || c.col.includes('tel')
+                );
+                if (phoneCol) phoneIndex = phoneCol.idx;
+              }
             }
             
             for (let i = startIndex; i < lines.length; i++) {
               const line = lines[i].trim();
               if (!line) continue;
               
-              // Try different parsing methods
               let name = '', phone = '';
               
               if (line.includes(',')) {
-                // CSV format
+                // CSV format - most common for address book exports
                 const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
-                name = columns[0] || '';
-                phone = columns[1] || columns[2] || ''; // Check multiple columns for phone
+                name = columns[nameIndex] || '';
+                phone = columns[phoneIndex] || '';
+                
+                // If no phone in expected column, search other columns
+                if (!phone) {
+                  for (let j = 0; j < columns.length; j++) {
+                    const potentialPhone = columns[j]?.replace(/[^\+\d]/g, '');
+                    if (potentialPhone && potentialPhone.length >= 7) {
+                      phone = potentialPhone;
+                      break;
+                    }
+                  }
+                }
               } else if (line.includes('\t')) {
                 // Tab separated
                 const columns = line.split('\t').map(col => col.trim());
-                name = columns[0] || '';
-                phone = columns[1] || '';
+                name = columns[nameIndex] || '';
+                phone = columns[phoneIndex] || '';
               } else {
-                // Try to extract phone number from single line
+                // Single line with phone number
                 const phoneRegex = /(\+?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,9})/;
                 const phoneMatch = line.match(phoneRegex);
                 if (phoneMatch) {
@@ -337,34 +391,42 @@ export default function CustomerGroups() {
                 }
               }
               
-              // Clean phone number
+              // Clean and validate phone number
               if (phone) {
                 phone = phone.replace(/[^\+\d]/g, '');
-                if (phone && phone.length >= 7) { // Minimum valid phone length
-                  contacts.push({ name: name || 'Unknown', phone });
+                if (phone.length >= 7) { // Valid phone length
+                  // Add country code if missing (assuming UK for now)
+                  if (!phone.startsWith('+') && phone.length <= 11) {
+                    if (phone.startsWith('0')) {
+                      phone = '+44' + phone.substring(1);
+                    } else if (phone.length === 10) {
+                      phone = '+44' + phone;
+                    }
+                  }
+                  contacts.push({ name: name || 'Unknown Contact', phone });
                 }
               }
             }
           }
           
           if (contacts.length > 0) {
-            // Fill form with first contact and show summary
+            // Fill form with first contact
             addMemberForm.setValue('name', contacts[0].name);
             addMemberForm.setValue('phoneNumber', contacts[0].phone);
             
             toast({
-              title: "Contacts Imported Successfully",
-              description: `Found ${contacts.length} valid contacts. First contact loaded. You can add more one by one.`,
+              title: "Address Book Imported",
+              description: `Found ${contacts.length} contacts from your address book. First contact loaded.`,
             });
             
-            // Store remaining contacts for easy access (could be enhanced to show list)
+            // Log additional contacts for debugging
             if (contacts.length > 1) {
-              console.log('Additional contacts found:', contacts.slice(1));
+              console.log('Additional contacts available:', contacts.slice(1));
             }
           } else {
             toast({
-              title: "No Contacts Found",
-              description: "Please check your file format. Supported: CSV (Name,Phone), vCard (.vcf), or text files.",
+              title: "No Valid Contacts Found",
+              description: "Export your contacts as CSV from your phone's address book, or use vCard (.vcf) format.",
               variant: "destructive",
             });
           }
@@ -611,7 +673,7 @@ export default function CustomerGroups() {
                 </div>
                 
                 <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                  <strong>WhatsApp Contacts:</strong> Export contacts from WhatsApp → Settings → Chats → Export Chats → Without Media, then import the .txt file here.
+                  <strong>Address Book Access:</strong> "Phone Contacts" button accesses your device's address book directly. For bulk import, export contacts as CSV from your phone or use vCard (.vcf) files.
                 </div>
               </div>
 
