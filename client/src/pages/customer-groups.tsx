@@ -63,6 +63,7 @@ export default function CustomerGroups() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Fetch group members when manage dialog opens
@@ -114,6 +115,14 @@ export default function CustomerGroups() {
     },
   });
 
+  const editGroupForm = useForm<CustomerGroupFormData>({
+    resolver: zodResolver(customerGroupFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
   const createGroupMutation = useMutation({
     mutationFn: async (data: CustomerGroupFormData) => {
       const response = await apiRequest("POST", "/api/customer-groups", data);
@@ -132,6 +141,30 @@ export default function CustomerGroups() {
       toast({
         title: "Error",
         description: error.message || "Failed to create customer group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: async (data: { id: number; name: string; description?: string }) => {
+      const response = await apiRequest("PUT", `/api/customer-groups/${data.id}`, {
+        name: data.name,
+        description: data.description,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups"] });
+      toast({
+        title: "Success",
+        description: "Customer group updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer group",
         variant: "destructive",
       });
     },
@@ -222,6 +255,17 @@ export default function CustomerGroups() {
 
   const onCreateGroup = (data: CustomerGroupFormData) => {
     createGroupMutation.mutate(data);
+  };
+
+  const onEditGroup = (data: CustomerGroupFormData) => {
+    if (!selectedGroup) return;
+    updateGroupMutation.mutate({
+      id: selectedGroup.id,
+      name: data.name,
+      description: data.description,
+    });
+    setIsEditDialogOpen(false);
+    editGroupForm.reset();
   };
 
   const onAddMember = (data: AddMemberFormData) => {
@@ -762,6 +806,63 @@ export default function CustomerGroups() {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Customer Group Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Customer Group</DialogTitle>
+              <DialogDescription>
+                Update the name and description of your customer group.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...editGroupForm}>
+              <form onSubmit={editGroupForm.handleSubmit(onEditGroup)} className="space-y-4">
+                <FormField
+                  control={editGroupForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Group Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter group name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editGroupForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter group description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsEditDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateGroupMutation.isPending}
+                  >
+                    {updateGroupMutation.isPending ? "Updating..." : "Update Group"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Customer Groups Grid */}
@@ -797,9 +898,23 @@ export default function CustomerGroups() {
             <Card key={group.id} className="hover:shadow-lg transition-all duration-200 border-gray-200 h-fit">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between gap-2">
-                  <span className="truncate text-lg font-semibold">{group.name}</span>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="truncate text-lg font-semibold">{group.name}</span>
+                    <button
+                      className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                      onClick={() => {
+                        setSelectedGroup(group);
+                        editGroupForm.setValue('name', group.name);
+                        editGroupForm.setValue('description', group.description || '');
+                        setIsEditDialogOpen(true);
+                      }}
+                      title="Edit group name"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  </div>
                   <button
-                    className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                    className="flex-shrink-0 h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
                     onClick={() => {
                       setSelectedGroup(group);
                       setIsManageDialogOpen(true);

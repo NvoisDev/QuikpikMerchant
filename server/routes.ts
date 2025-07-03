@@ -300,6 +300,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/customer-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id);
+      const { name, description } = req.body;
+
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ message: "Name is required" });
+      }
+
+      // Verify the user owns this customer group
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      const updatedGroup = await storage.updateCustomerGroup(groupId, { 
+        name, 
+        description: description || undefined 
+      });
+      res.json(updatedGroup);
+    } catch (error) {
+      console.error("Error updating customer group:", error);
+      res.status(500).json({ message: "Failed to update customer group" });
+    }
+  });
+
   // WhatsApp group creation
   app.post('/api/customer-groups/:groupId/whatsapp-group', isAuthenticated, async (req: any, res) => {
     try {

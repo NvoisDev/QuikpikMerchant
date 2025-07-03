@@ -280,7 +280,7 @@ export class DatabaseStorage implements IStorage {
     return newGroup;
   }
 
-  async updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup> {
+  async updateCustomerGroup(id: number, updates: { whatsappGroupId?: string; name?: string; description?: string }): Promise<CustomerGroup> {
     const [customerGroup] = await db
       .update(customerGroups)
       .set(updates)
