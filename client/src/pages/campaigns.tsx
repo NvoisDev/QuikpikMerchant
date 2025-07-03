@@ -320,11 +320,16 @@ export default function Campaigns() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expected Revenue</p>
+                <p className="text-sm font-medium text-gray-600">Total Stock Value</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(campaigns.reduce((total, campaign) => 
-                    total + campaign.sentCampaigns.reduce((sum, sent) => sum + parseFloat(sent.totalRevenue), 0), 0
-                  ))}
+                  {formatCurrency((campaigns as any[]).reduce((total: number, campaign: any) => {
+                    if (campaign.campaignType === 'single') {
+                      return total + ((Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0));
+                    } else {
+                      return total + (campaign.products?.reduce((sum: number, p: any) => 
+                        sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0);
+                    }
+                  }, 0))}
                 </p>
               </div>
               <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
