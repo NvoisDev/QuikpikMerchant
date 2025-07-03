@@ -237,24 +237,36 @@ export default function CustomerGroups() {
         if (contacts && contacts.length > 0) {
           const contact = contacts[0];
           if (contact.tel && contact.tel.length > 0) {
-            addMemberForm.setValue('phoneNumber', contact.tel[0]);
-            addMemberForm.setValue('name', contact.name || '');
+            // Clean and format phone number
+            const phoneNumber = contact.tel[0].replace(/[^\+\d]/g, '');
+            addMemberForm.setValue('phoneNumber', phoneNumber);
+            addMemberForm.setValue('name', contact.name ? contact.name.join(' ') : '');
+            
+            toast({
+              title: "Contact Selected",
+              description: `Added ${contact.name ? contact.name.join(' ') : 'contact'} from your phone contacts.`,
+            });
           }
         }
-      } else {
-        // Fallback: Show instructions or alternative method
+      } else if (navigator.userAgent.includes('WhatsApp')) {
+        // If user is in WhatsApp browser, show special instructions
         toast({
-          title: "Contact Access Not Available",
-          description: "Your browser doesn't support contact access. Please manually enter the phone number.",
-          variant: "destructive",
+          title: "WhatsApp Browser Detected",
+          description: "Copy contact numbers from WhatsApp and paste them here, or use the Import CSV option for bulk contacts.",
+        });
+      } else {
+        // Show enhanced instructions for different scenarios
+        toast({
+          title: "Contact Access Options",
+          description: "• Use 'Import CSV' for bulk contacts\n• Copy numbers from WhatsApp and paste here\n• Open this page in Chrome mobile for contact picker",
+          variant: "default",
         });
       }
     } catch (error) {
       console.error('Error accessing contacts:', error);
       toast({
-        title: "Error",
-        description: "Unable to access contacts. Please manually enter the phone number.",
-        variant: "destructive",
+        title: "Contact Access",
+        description: "Use Import CSV for bulk contacts or manually enter phone numbers.",
       });
     }
   };
@@ -263,37 +275,97 @@ export default function CustomerGroups() {
     // Create a file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.accept = '.csv,.xlsx,.xls';
+    fileInput.accept = '.csv,.txt,.xlsx,.xls,.vcf';
     fileInput.onchange = (event: Event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
           const text = e.target?.result as string;
-          // Parse CSV content (simple implementation)
-          const lines = text.split('\n');
           const contacts = [];
           
-          for (let i = 1; i < lines.length; i++) { // Skip header
-            const columns = lines[i].split(',');
-            if (columns.length >= 2) {
-              const name = columns[0]?.trim();
-              const phone = columns[1]?.trim();
-              if (name && phone) {
-                contacts.push({ name, phone });
+          if (file.name.endsWith('.vcf')) {
+            // Parse vCard format (WhatsApp exports)
+            const vCards = text.split('BEGIN:VCARD');
+            for (const vCard of vCards) {
+              if (vCard.includes('FN:') && vCard.includes('TEL:')) {
+                const nameMatch = vCard.match(/FN:(.+)/);
+                const phoneMatch = vCard.match(/TEL[^:]*:(.+)/);
+                if (nameMatch && phoneMatch) {
+                  const name = nameMatch[1].trim();
+                  const phone = phoneMatch[1].replace(/[^\+\d]/g, '');
+                  if (name && phone) {
+                    contacts.push({ name, phone });
+                  }
+                }
+              }
+            }
+          } else {
+            // Parse CSV/TXT format
+            const lines = text.split('\n');
+            let startIndex = 0;
+            
+            // Check if first line contains headers
+            if (lines[0] && (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('phone'))) {
+              startIndex = 1;
+            }
+            
+            for (let i = startIndex; i < lines.length; i++) {
+              const line = lines[i].trim();
+              if (!line) continue;
+              
+              // Try different parsing methods
+              let name = '', phone = '';
+              
+              if (line.includes(',')) {
+                // CSV format
+                const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+                name = columns[0] || '';
+                phone = columns[1] || columns[2] || ''; // Check multiple columns for phone
+              } else if (line.includes('\t')) {
+                // Tab separated
+                const columns = line.split('\t').map(col => col.trim());
+                name = columns[0] || '';
+                phone = columns[1] || '';
+              } else {
+                // Try to extract phone number from single line
+                const phoneRegex = /(\+?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,9})/;
+                const phoneMatch = line.match(phoneRegex);
+                if (phoneMatch) {
+                  phone = phoneMatch[1].replace(/[^\+\d]/g, '');
+                  name = line.replace(phoneMatch[0], '').trim();
+                }
+              }
+              
+              // Clean phone number
+              if (phone) {
+                phone = phone.replace(/[^\+\d]/g, '');
+                if (phone && phone.length >= 7) { // Minimum valid phone length
+                  contacts.push({ name: name || 'Unknown', phone });
+                }
               }
             }
           }
           
           if (contacts.length > 0) {
-            // For now, just fill the form with the first contact
-            // In a full implementation, you'd show a list to choose from
+            // Fill form with first contact and show summary
             addMemberForm.setValue('name', contacts[0].name);
             addMemberForm.setValue('phoneNumber', contacts[0].phone);
             
             toast({
-              title: "Contacts Imported",
-              description: `Found ${contacts.length} contacts. First contact has been loaded.`,
+              title: "Contacts Imported Successfully",
+              description: `Found ${contacts.length} valid contacts. First contact loaded. You can add more one by one.`,
+            });
+            
+            // Store remaining contacts for easy access (could be enhanced to show list)
+            if (contacts.length > 1) {
+              console.log('Additional contacts found:', contacts.slice(1));
+            }
+          } else {
+            toast({
+              title: "No Contacts Found",
+              description: "Please check your file format. Supported: CSV (Name,Phone), vCard (.vcf), or text files.",
+              variant: "destructive",
             });
           }
         };
@@ -516,25 +588,31 @@ export default function CustomerGroups() {
                 )}
               />
               
-              <div className="flex space-x-2 mb-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSelectFromContacts()}
-                  className="flex-1"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Select from Contacts
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleImportContacts()}
-                  className="flex-1"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import CSV
-                </Button>
+              <div className="space-y-3 mb-4">
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSelectFromContacts()}
+                    className="flex-1"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Phone Contacts
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleImportContacts()}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import File
+                  </Button>
+                </div>
+                
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                  <strong>WhatsApp Contacts:</strong> Export contacts from WhatsApp → Settings → Chats → Export Chats → Without Media, then import the .txt file here.
+                </div>
               </div>
 
               <FormField
