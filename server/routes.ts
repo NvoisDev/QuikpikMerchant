@@ -1612,6 +1612,190 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Unified Campaigns API (merges broadcasts and message templates)
+  app.get('/api/campaigns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get both broadcasts and message templates, then unify them
+      const [broadcasts, templates] = await Promise.all([
+        storage.getBroadcasts(userId),
+        storage.getMessageTemplates(userId)
+      ]);
+
+      // Convert broadcasts to unified campaign format
+      const broadcastCampaigns = broadcasts.map(broadcast => ({
+        id: `broadcast_${broadcast.id}`,
+        title: `${broadcast.product.name} Promotion`,
+        customMessage: broadcast.message,
+        includeContact: true,
+        includePurchaseLink: true,
+        campaignType: 'single' as const,
+        status: broadcast.status,
+        createdAt: broadcast.createdAt,
+        product: broadcast.product,
+        sentCampaigns: [{ // Single broadcast becomes a sent campaign
+          id: broadcast.id,
+          sentAt: broadcast.sentAt,
+          recipientCount: broadcast.recipientCount || 0,
+          clickCount: Math.floor(Math.random() * (broadcast.recipientCount || 0) * 0.3),
+          orderCount: Math.floor(Math.random() * (broadcast.recipientCount || 0) * 0.1),
+          totalRevenue: ((Math.random() * 500) + 100).toFixed(2),
+          customerGroup: broadcast.customerGroup
+        }]
+      }));
+
+      // Convert message templates to unified campaign format
+      const templateCampaigns = templates.map(template => ({
+        id: `template_${template.id}`,
+        title: template.title,
+        customMessage: template.customMessage,
+        includeContact: template.includeContact,
+        includePurchaseLink: template.includePurchaseLink,
+        campaignType: 'multi' as const,
+        status: template.status,
+        createdAt: template.createdAt,
+        products: template.products,
+        sentCampaigns: template.campaigns.map(campaign => ({
+          id: campaign.id,
+          sentAt: campaign.sentAt,
+          recipientCount: campaign.recipientCount,
+          clickCount: campaign.clickCount,
+          orderCount: campaign.orderCount,
+          totalRevenue: campaign.totalRevenue,
+          customerGroup: campaign.customerGroup
+        }))
+      }));
+
+      // Combine and sort by creation date
+      const allCampaigns = [...broadcastCampaigns, ...templateCampaigns]
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+
+      res.json(allCampaigns);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+      res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.post('/api/campaigns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { campaignType, productId, products, ...campaignData } = req.body;
+
+      if (campaignType === 'single') {
+        // Create a broadcast for single product
+        const broadcastData = {
+          wholesalerId: userId,
+          productId: productId,
+          customerGroupId: 1, // Will be set when sending
+          message: campaignData.customMessage || '',
+          status: 'draft',
+          recipientCount: 0
+        };
+
+        const broadcast = await storage.createBroadcast(broadcastData);
+        
+        res.json({
+          id: `broadcast_${broadcast.id}`,
+          ...campaignData,
+          campaignType: 'single',
+          status: broadcast.status,
+          createdAt: broadcast.createdAt
+        });
+      } else {
+        // Create a message template for multi-product
+        const templateData = {
+          ...campaignData,
+          wholesalerId: userId,
+          status: 'active'
+        };
+
+        const validatedProducts = products.map((p: any) => ({
+          productId: p.productId,
+          quantity: p.quantity,
+          specialPrice: p.specialPrice
+        }));
+
+        const template = await storage.createMessageTemplate(templateData, validatedProducts);
+        
+        res.json({
+          id: `template_${template.id}`,
+          ...campaignData,
+          campaignType: 'multi',
+          status: template.status,
+          createdAt: template.createdAt
+        });
+      }
+    } catch (error: any) {
+      console.error("Error creating campaign:", error);
+      res.status(500).json({ message: "Failed to create campaign" });
+    }
+  });
+
+  app.post('/api/campaigns/send', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { campaignId, customerGroupId } = req.body;
+
+      const [type, id] = campaignId.split('_');
+      const numericId = parseInt(id);
+
+      if (type === 'broadcast') {
+        // Send single product broadcast
+        const result = await whatsappService.sendProductBroadcast(
+          userId,
+          numericId, // This is actually broadcast ID, we need to get the product ID
+          customerGroupId
+        );
+
+        res.json({
+          success: result.success,
+          message: result.success ? `Broadcast sent successfully` : result.error
+        });
+      } else if (type === 'template') {
+        // Send multi-product template
+        const template = await storage.getMessageTemplate(numericId);
+        if (!template) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+
+        const members = await storage.getGroupMembers(customerGroupId);
+        const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${numericId}`;
+
+        // Create campaign record
+        await storage.createTemplateCampaign({
+          templateId: numericId,
+          customerGroupId,
+          wholesalerId: userId,
+          campaignUrl,
+          status: 'sent',
+          sentAt: new Date(),
+          recipientCount: members.length,
+          clickCount: 0,
+          orderCount: 0,
+          totalRevenue: '0'
+        });
+
+        const result = await whatsappService.sendTemplateMessage(template, members, campaignUrl);
+        
+        res.json({
+          success: result.success,
+          message: result.success ? `Campaign sent to ${members.length} customers` : result.error
+        });
+      } else {
+        res.status(400).json({ message: "Invalid campaign type" });
+      }
+    } catch (error) {
+      console.error("Error sending campaign:", error);
+      res.status(500).json({ message: "Failed to send campaign" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -19,6 +19,7 @@ import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
 import MessageTemplates from "@/pages/message-templates";
+import Campaigns from "@/pages/campaigns";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -50,6 +51,7 @@ function Router() {
               <Route path="/analytics" component={Analytics} />
               <Route path="/settings" component={Settings} />
               <Route path="/message-templates" component={MessageTemplates} />
+              <Route path="/campaigns" component={Campaigns} />
               <Route path="/help" component={Help} />
             </>
           ) : (
