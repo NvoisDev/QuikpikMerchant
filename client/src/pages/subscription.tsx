@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 import { 
   Check, 
   CreditCard, 
@@ -132,22 +131,17 @@ export default function Subscription() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="flex-1 lg:ml-64">
-        {/* Top Bar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
-              <p className="text-gray-600 mt-1">Manage your plan and billing</p>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
+          <p className="text-gray-600 mt-1">Manage your plan and billing</p>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-8">
+      {/* Content */}
+      <div className="space-y-6">
           {/* Current Plan Status */}
           <Card className="mb-8">
             <CardHeader>
@@ -303,7 +297,6 @@ export default function Subscription() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }
