@@ -584,9 +584,19 @@ export default function Campaigns() {
             </CardHeader>
             <CardContent className="space-y-4">
               {campaign.campaignType === 'single' ? (
-                <div className="flex items-center text-sm">
-                  <Package className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="text-gray-600 truncate">{campaign.product?.name}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <Package className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-gray-600 truncate font-medium">{campaign.product?.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
+                    <span className="text-gray-600">
+                      💰 {formatCurrency(Number(campaign.product?.price) || 0)}
+                    </span>
+                    <span className="text-gray-600">
+                      📦 {campaign.product?.stock || 0} in stock
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -594,15 +604,21 @@ export default function Campaigns() {
                     <Package className="h-4 w-4 mr-2 text-gray-500" />
                     <span className="text-gray-600 font-medium">Products Included:</span>
                   </div>
-                  <div className="max-h-20 overflow-y-auto space-y-1">
+                  <div className="max-h-24 overflow-y-auto space-y-1">
                     {campaign.products?.slice(0, 3).map((productItem: any, index: number) => (
-                      <div key={index} className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 px-2 py-1 rounded">
-                        <span className="truncate flex-1">{productItem.product?.name}</span>
-                        <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
+                      <div key={index} className="bg-gray-50 px-2 py-1 rounded space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
+                          <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-600">
+                          <span>💰 {formatCurrency(Number(productItem.specialPrice || productItem.product?.price) || 0)}</span>
+                          <span>📦 {productItem.product?.stock || 0} stock</span>
+                        </div>
                       </div>
                     ))}
                     {campaign.products && campaign.products.length > 3 && (
-                      <div className="text-xs text-gray-500 italic">
+                      <div className="text-xs text-gray-500 italic px-2">
                         +{campaign.products.length - 3} more products
                       </div>
                     )}
