@@ -353,6 +353,95 @@ Update your inventory or restock soon.`;
       };
     }
   }
+
+  async sendTemplateMessage(
+    template: any,
+    members: any[],
+    campaignUrl: string
+  ): Promise<{ success: boolean; messageId?: string; error?: string; recipientCount?: number }> {
+    try {
+      // Get wholesaler details and WhatsApp credentials
+      const wholesaler = await storage.getUser(template.wholesalerId);
+      if (!wholesaler) {
+        throw new Error('Wholesaler not found');
+      }
+
+      // Check if WhatsApp is configured for this wholesaler
+      if (!wholesaler.whatsappEnabled || !wholesaler.whatsappBusinessPhone || !wholesaler.whatsappApiToken) {
+        throw new Error('WhatsApp Business API is not configured for this wholesaler');
+      }
+
+      const recipientCount = members.length;
+      const templateMessage = this.generateTemplateMessage(template, wholesaler, campaignUrl);
+      
+      // Send WhatsApp messages using wholesaler's own WhatsApp Business API
+      const promises = members.map(async (member) => {
+        if (!member.businessPhone) {
+          console.warn(`No phone number for member ${member.id}`);
+          return false;
+        }
+
+        return await this.sendWhatsAppMessage(
+          wholesaler.whatsappBusinessPhone,
+          member.businessPhone,
+          templateMessage,
+          wholesaler.whatsappApiToken
+        );
+      });
+
+      const results = await Promise.all(promises);
+      const successCount = results.filter(result => result === true).length;
+      
+      console.log(`Template message sent to ${successCount}/${recipientCount} recipients`);
+      
+      return {
+        success: successCount > 0,
+        recipientCount: successCount,
+        messageId: `template_${Date.now()}`
+      };
+
+    } catch (error: any) {
+      console.error('Template broadcast error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  private generateTemplateMessage(template: any, wholesaler: any, campaignUrl: string): string {
+    const businessName = wholesaler.businessName || "Your Business";
+    const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
+
+    let message = `🛍️ *${template.title}*\n\n`;
+    
+    if (template.customMessage) {
+      message += `${template.customMessage}\n\n`;
+    }
+
+    message += `📦 *Featured Products:*\n`;
+    
+    template.products.forEach((item: any, index: number) => {
+      const price = item.specialPrice || item.product.price;
+      message += `${index + 1}. *${item.product.name}*\n`;
+      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${item.product.moq})\n`;
+      message += `   📋 Suggested Qty: ${item.quantity}\n\n`;
+    });
+
+    if (template.includePurchaseLink) {
+      message += `🛒 *Order Now:* ${campaignUrl}\n\n`;
+    }
+
+    if (template.includeContact) {
+      message += `📞 Questions? Contact us:\n`;
+      message += `*${businessName}*\n`;
+      message += `📱 ${phone}\n`;
+    }
+
+    message += `\n✨ _Powered by Quikpik Merchant_`;
+
+    return message;
+  }
 }
 
 export const whatsappService = new WhatsAppService();

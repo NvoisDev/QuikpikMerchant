@@ -1,0 +1,933 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Search,
+  Package,
+  Users,
+  MessageSquare,
+  BarChart3,
+  CreditCard,
+  Settings,
+  ShoppingCart,
+  Star,
+  ArrowRight,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  Book,
+  Video,
+  FileText,
+  Mail
+} from "lucide-react";
+
+const helpSections = [
+  {
+    id: "getting-started",
+    title: "Getting Started",
+    icon: Book,
+    description: "Essential setup steps to begin using Quikpik Merchant",
+    articles: [
+      {
+        title: "Welcome to Quikpik Merchant",
+        content: `
+### What is Quikpik Merchant?
+
+Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholesalers to:
+- Manage inventory and products
+- Connect with retail customers
+- Process orders and payments
+- Send WhatsApp broadcasts
+- Track business analytics
+
+### Getting Started Checklist
+
+1. **Complete Your Profile** - Add business information in Settings → Account
+2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments
+3. **Add Your Products** - Create your product catalog in Product Management
+4. **Create Customer Groups** - Organize your customers in Customer Groups
+5. **Configure WhatsApp** - Set up broadcasting in Settings → WhatsApp Integration
+6. **Start Selling** - Your products will appear in the marketplace for customers to discover
+
+### Subscription Plans
+
+- **Free Plan**: Up to 3 products
+- **Standard Plan**: Up to 10 products ($10.99/month)
+- **Premium Plan**: Unlimited products ($19.99/month)
+        `
+      },
+      {
+        title: "Account Setup",
+        content: `
+### Setting Up Your Account
+
+#### Personal Information
+1. Go to **Settings → Account**
+2. Fill in your first name, last name, and email
+3. Add your phone number for customer communication
+
+#### Business Information
+1. Enter your business name (this appears to customers)
+2. Add your business address
+3. Set your business phone number
+4. Choose your preferred currency (GBP, USD, EUR, etc.)
+
+#### Logo & Branding
+You can customize your business logo in three ways:
+- **Initials**: Automatically generated from your business name
+- **Business Name**: Display your full business name
+- **Custom Upload**: Upload your own logo image
+
+Click "Save Changes" to update your profile.
+        `
+      }
+    ]
+  },
+  {
+    id: "product-management",
+    title: "Product Management",
+    icon: Package,
+    description: "How to add, edit, and manage your product inventory",
+    articles: [
+      {
+        title: "Adding Products",
+        content: `
+### Creating New Products
+
+1. **Navigate to Product Management** from the sidebar
+2. **Click "Add Product"** to open the creation form
+3. **Fill in Product Details**:
+   - **Name**: Clear, descriptive product name
+   - **Description**: Detailed product information (use AI generation if needed)
+   - **Price**: Set your wholesale price
+   - **Currency**: Choose from your preferred currency
+   - **MOQ (Minimum Order Quantity)**: Minimum units customers must order
+   - **Stock**: Current inventory count
+   - **Category**: Select appropriate product category
+
+4. **Add Product Image**:
+   - Upload image file (max 800x600px, under 500KB)
+   - Paste image URL
+   - Images are automatically optimized
+
+5. **Set Visibility Options**:
+   - **Price Visible**: Show/hide price to customers
+   - **Negotiation Enabled**: Allow customers to request price negotiations
+
+6. **Click "Create Product"** to save
+
+### Product Status Management
+
+Products have three status options:
+- **Active** (Green): Available for purchase
+- **Inactive** (Gray): Hidden from marketplace
+- **Out of Stock** (Red): Visible but not purchasable
+
+Click the status badge on any product card to quickly change status.
+        `
+      },
+      {
+        title: "Managing Inventory",
+        content: `
+### Inventory Management Best Practices
+
+#### Stock Tracking
+- Update stock levels regularly after sales
+- Set realistic MOQ based on your packaging/shipping constraints
+- Use "Out of Stock" status when inventory is depleted
+
+#### Pricing Strategy
+- Research competitor pricing in your category
+- Consider your margins and platform fee (5% on sales)
+- Use price visibility settings strategically
+
+#### Product Organization
+- Use clear, searchable product names
+- Write detailed descriptions with key specifications
+- Choose accurate categories for better discoverability
+- Upload high-quality product images
+
+#### Bulk Operations
+- Use the "Duplicate" feature to quickly create similar products
+- Edit multiple products by status to manage seasonal inventory
+- Export product data for offline analysis (coming soon)
+        `
+      }
+    ]
+  },
+  {
+    id: "customer-groups",
+    title: "Customer Groups",
+    icon: Users,
+    description: "Organize customers and manage group communications",
+    articles: [
+      {
+        title: "Creating Customer Groups",
+        content: `
+### Setting Up Customer Groups
+
+Customer groups help you organize customers for targeted marketing and communications.
+
+#### Creating a New Group
+1. **Go to Customer Groups** in the sidebar
+2. **Click "Create Group"**
+3. **Enter Group Details**:
+   - **Group Name**: Descriptive name (e.g., "Premium Retailers", "Local Shops")
+   - **Description**: Purpose and criteria for the group
+   - **WhatsApp Group ID** (optional): Link to existing WhatsApp group
+
+4. **Click "Create Group"**
+
+#### Adding Customers to Groups
+1. **Click on a customer group** to view details
+2. **Click "Add Customer"**
+3. **Fill in Customer Information**:
+   - Phone number (required for WhatsApp)
+   - First name
+   - Email address
+   - Business address details
+4. **Click "Add to Group"**
+
+The system prevents duplicate phone numbers across groups.
+        `
+      },
+      {
+        title: "Managing Group Members",
+        content: `
+### Group Member Management
+
+#### Viewing Group Members
+- Click on any customer group to see member list
+- View member count on the group card
+- Search members by name, phone, or email
+
+#### Member Information
+Each member profile includes:
+- Contact details (phone, email)
+- Business information
+- Address details
+- Join date
+
+#### Removing Members
+- Click the red trash icon next to any member
+- Confirm removal (they can be re-added later)
+- Members are only removed from the group, not deleted entirely
+
+#### Best Practices
+- Segment customers by purchase volume, location, or product interest
+- Keep groups reasonably sized for effective communication
+- Regularly review and update member lists
+- Use descriptive group names and descriptions
+        `
+      }
+    ]
+  },
+  {
+    id: "whatsapp-broadcasts",
+    title: "WhatsApp Broadcasts",
+    icon: MessageSquare,
+    description: "Send product updates and notifications via WhatsApp",
+    articles: [
+      {
+        title: "WhatsApp Business API Setup",
+        content: `
+### Setting Up WhatsApp Business API
+
+#### Prerequisites
+You need a WhatsApp Business API account from Meta.
+
+#### Step-by-Step Setup
+1. **Create Meta Developer Account**
+   - Visit [developers.facebook.com](https://developers.facebook.com)
+   - Sign up or log in with your Facebook account
+   - Verify your identity and business
+
+2. **Set Up WhatsApp Business API**
+   - Create a new app in Meta for Developers
+   - Add WhatsApp Business API product
+   - Complete business verification process
+   - Get your phone number verified
+
+3. **Get API Credentials**
+   - **Business Phone Number**: Your verified WhatsApp Business number
+   - **Access Token**: Permanent access token from Meta
+   - **Business Display Name**: How your business appears in messages
+
+4. **Configure in Quikpik**
+   - Go to **Settings → WhatsApp Integration**
+   - Enter your credentials
+   - Click "Save Configuration"
+   - Click "Verify Connection" to test
+
+#### Important Notes
+- Use your actual business phone number
+- Keep your access token secure
+- Test with a small group first
+        `
+      },
+      {
+        title: "Sending Broadcasts",
+        content: `
+### Creating and Sending Broadcasts
+
+#### To Send a Product Broadcast
+1. **Go to Broadcasts** in the sidebar
+2. **Click "Create New Broadcast"**
+3. **Select Product**: Choose which product to promote
+4. **Select Customer Group**: Pick your target audience
+5. **Add Custom Message** (optional): Personalize the message
+6. **Click "Send Broadcast"**
+
+#### Broadcast Message Format
+The system automatically generates messages including:
+- Product name and description
+- Price and MOQ information
+- Your business contact details
+- Custom message (if added)
+
+#### Tracking Results
+After sending, you can monitor:
+- **Delivery Status**: Sent, delivered, or failed
+- **Recipient Count**: Total customers reached
+- **Response Rates**: Customer engagement metrics
+
+#### Best Practices
+- Send broadcasts during business hours
+- Keep custom messages concise and relevant
+- Don't over-broadcast to the same group
+- Monitor response rates and adjust strategy
+- Ensure compliance with WhatsApp Business policies
+        `
+      }
+    ]
+  },
+  {
+    id: "orders-payments",
+    title: "Orders & Payments",
+    icon: ShoppingCart,
+    description: "Process orders and manage payment workflows",
+    articles: [
+      {
+        title: "Order Management",
+        content: `
+### Managing Customer Orders
+
+#### Order Workflow
+Orders go through these status stages:
+1. **Pending**: New order awaiting your confirmation
+2. **Confirmed**: You've accepted the order
+3. **Processing**: Order is being prepared
+4. **Shipped**: Order has been dispatched
+5. **Delivered**: Order received by customer
+
+#### Processing Orders
+1. **View Orders** in the sidebar
+2. **Click on an order** to see details
+3. **Review Order Items**:
+   - Products ordered
+   - Quantities and prices
+   - Customer delivery address
+   - Special notes
+
+4. **Update Order Status**:
+   - Click the status dropdown
+   - Select new status
+   - Order automatically updates
+
+#### Order Information
+Each order shows:
+- Customer details and delivery address
+- Order items with quantities and prices
+- Subtotal, platform fee (5%), and total
+- Payment status
+- Order date and tracking
+
+#### Communication
+- Contact customers directly via phone/email
+- Send updates about order progress
+- Resolve any issues promptly
+        `
+      },
+      {
+        title: "Payment Processing Setup",
+        content: `
+### Stripe Connect Payment Setup
+
+To receive payments from customers, you must set up Stripe Connect.
+
+#### Initial Setup
+1. **Go to Settings → Payments**
+2. **Click "Set up Payment Processing"**
+3. **Complete Stripe Onboarding**:
+   - Provide business information
+   - Add bank account details
+   - Verify your identity
+   - Complete tax information
+
+#### Payment Flow
+When customers pay:
+1. Customer pays full order amount (including 5% platform fee)
+2. Quikpik automatically collects 5% platform fee
+3. You receive 95% directly to your bank account
+4. Order status updates to "Processing"
+
+#### Account Status
+Your payment account has two key states:
+- **Account Status**: Verified or Pending
+- **Payment Processing**: Enabled or Disabled
+
+#### Revenue Breakdown
+- **You Keep**: 95% of order value
+- **Platform Fee**: 5% to Quikpik for platform services
+
+#### Bank Transfers
+- Funds are transferred to your bank account automatically
+- Transfer timing depends on your country (usually 2-7 business days)
+- View transfer history in your Stripe dashboard
+        `
+      }
+    ]
+  },
+  {
+    id: "marketplace",
+    title: "Marketplace",
+    icon: Star,
+    description: "How customers discover and purchase your products",
+    articles: [
+      {
+        title: "Marketplace Overview",
+        content: `
+### Understanding the Marketplace
+
+The Quikpik Marketplace is where customers discover and purchase products from all wholesalers.
+
+#### How It Works
+- **Product Discovery**: Customers browse all active products
+- **Wholesaler Profiles**: Your business appears with products
+- **Search & Filters**: Customers can search by product, category, or location
+- **Order Placement**: Customers add items to cart and checkout
+
+#### Your Marketplace Presence
+Your products appear in the marketplace when they're set to "Active" status.
+
+#### Product Display
+Each product card shows:
+- Product image and name
+- Price (if visible)
+- MOQ requirement
+- Your business name and logo (top right corner)
+- "View Details" button
+
+#### Customer Journey
+1. Customer browses marketplace
+2. Finds your products
+3. Views product details
+4. Adds to cart (respecting MOQ)
+5. Proceeds to checkout
+6. Completes payment via Stripe
+7. You receive order notification
+
+#### Improving Visibility
+- Use high-quality product images
+- Write detailed, keyword-rich descriptions
+- Price competitively
+- Maintain good stock levels
+- Respond quickly to orders
+        `
+      },
+      {
+        title: "Customer Experience",
+        content: `
+### What Customers See
+
+#### Product Discovery
+Customers can find your products through:
+- **Browse All Products**: Main marketplace view
+- **Search**: By product name or description
+- **Categories**: Filter by product type
+- **Wholesaler Profiles**: View all products from specific sellers
+
+#### Product Information
+Customers see:
+- Product name and description
+- Price (if you've made it visible)
+- Minimum order quantity (MOQ)
+- Stock availability
+- Your business information
+- Product images
+
+#### Shopping Cart
+- Customers add products respecting MOQ requirements
+- Cart shows total cost including platform fee
+- Order summary with delivery address
+
+#### Checkout Process
+- Secure payment via Stripe
+- Order confirmation email
+- Tracking information
+- Direct contact with you for updates
+
+#### After Purchase
+- Order status updates
+- Delivery tracking
+- Ability to contact you directly
+- Order history and receipts
+        `
+      }
+    ]
+  },
+  {
+    id: "analytics",
+    title: "Analytics & Reports",
+    icon: BarChart3,
+    description: "Track performance and business insights",
+    articles: [
+      {
+        title: "Dashboard Overview",
+        content: `
+### Understanding Your Analytics
+
+The Analytics dashboard provides insights into your business performance.
+
+#### Key Metrics
+- **Total Revenue**: All-time earnings from orders
+- **Orders Count**: Total number of orders processed
+- **Active Products**: Currently available products
+- **Low Stock**: Products with low inventory
+
+#### Revenue Analytics
+- **Revenue Trends**: Daily/weekly/monthly revenue charts
+- **Growth Rates**: Percentage change over time
+- **Revenue Sources**: Breakdown by product categories
+
+#### Product Performance
+- **Top Products**: Best-selling items by revenue and quantity
+- **Product Analytics**: Individual product performance
+- **Stock Levels**: Inventory management insights
+
+#### Customer Analytics
+- **New vs Returning**: Customer acquisition metrics
+- **Order Patterns**: Purchase frequency and timing
+- **Geographic Distribution**: Where your customers are located
+
+#### Broadcast Analytics
+- **Total Broadcasts**: Number of campaigns sent
+- **Recipients Reached**: Total customers contacted
+- **Engagement Rates**: Response and conversion rates
+        `
+      },
+      {
+        title: "Using Data for Growth",
+        content: `
+### Making Data-Driven Decisions
+
+#### Revenue Optimization
+- Identify your best-selling products
+- Focus inventory investment on high-performers
+- Adjust pricing based on demand patterns
+- Track seasonal trends
+
+#### Product Strategy
+- Monitor stock levels to prevent stockouts
+- Identify slow-moving inventory
+- Plan new product additions based on gaps
+- Optimize product descriptions and images
+
+#### Customer Insights
+- Understand customer purchase patterns
+- Identify your most valuable customer segments
+- Tailor broadcasts to customer preferences
+- Improve customer retention strategies
+
+#### Marketing Effectiveness
+- Track broadcast performance
+- Measure customer acquisition costs
+- Optimize communication timing
+- A/B test different message formats
+
+#### Operational Efficiency
+- Monitor order fulfillment times
+- Track customer satisfaction
+- Identify bottlenecks in your process
+- Plan capacity for peak periods
+        `
+      }
+    ]
+  },
+  {
+    id: "subscription",
+    title: "Subscription & Billing",
+    icon: CreditCard,
+    description: "Manage your subscription plan and billing",
+    articles: [
+      {
+        title: "Subscription Plans",
+        content: `
+### Choosing the Right Plan
+
+#### Free Plan
+- **Cost**: $0/month
+- **Products**: Up to 3 products
+- **Features**: 
+  - Basic WhatsApp broadcasts
+  - Order management
+  - Basic analytics
+  - Email support
+
+#### Standard Plan
+- **Cost**: $10.99/month
+- **Products**: Up to 10 products
+- **Features**:
+  - Advanced WhatsApp broadcasts
+  - Customer groups
+  - Priority order processing
+  - Advanced analytics
+  - Phone support
+
+#### Premium Plan
+- **Cost**: $19.99/month
+- **Products**: Unlimited products
+- **Features**:
+  - Custom broadcast templates
+  - Advanced customer segmentation
+  - Real-time inventory alerts
+  - Premium analytics dashboard
+  - Dedicated account manager
+
+#### Upgrading Your Plan
+1. Go to **Subscription** in the sidebar
+2. Review available plans
+3. Click "Upgrade" on your desired plan
+4. Complete secure payment via Stripe
+5. New limits take effect immediately
+        `
+      },
+      {
+        title: "Billing & Payments",
+        content: `
+### Managing Your Subscription
+
+#### Payment Methods
+- Subscriptions are processed via Stripe
+- Secure credit/debit card payments
+- Automatic monthly billing
+- Pro-rated upgrades/downgrades
+
+#### Billing Cycle
+- Monthly subscriptions bill on the same date each month
+- Upgrades are pro-rated for the current period
+- Downgrades take effect at the next billing cycle
+
+#### Managing Subscription
+- **View Current Plan**: Check your active subscription
+- **Usage Monitoring**: Track product limits
+- **Payment History**: View past invoices
+- **Cancel Anytime**: No long-term contracts
+
+#### Plan Changes
+- **Upgrading**: Immediate access to new features
+- **Downgrading**: Changes at next billing cycle
+- **Cancellation**: Account remains active until period end
+
+#### Transaction Fees
+Regardless of subscription plan:
+- **Platform Fee**: 5% on all successful orders
+- **Payment Processing**: Handled by Stripe
+- **Your Revenue**: 95% of order value goes to you
+        `
+      }
+    ]
+  },
+  {
+    id: "troubleshooting",
+    title: "Troubleshooting",
+    icon: Settings,
+    description: "Common issues and solutions",
+    articles: [
+      {
+        title: "Common Issues & Solutions",
+        content: `
+### Frequently Asked Questions
+
+#### Product Management Issues
+
+**Q: Why can't I add more products?**
+A: Check your subscription plan's product limit. Free plan allows 3 products, Standard allows 10, Premium is unlimited.
+
+**Q: My product images won't upload**
+A: Ensure images are under 500KB and max 800x600px. Supported formats: JPG, PNG, GIF.
+
+**Q: Products not appearing in marketplace**
+A: Make sure product status is set to "Active" and you have stock available.
+
+#### WhatsApp Broadcast Issues
+
+**Q: WhatsApp broadcasts not sending**
+A: Verify your WhatsApp Business API credentials in Settings → WhatsApp Integration. Ensure your access token is valid.
+
+**Q: Messages showing as failed**
+A: Check recipient phone numbers are valid and have WhatsApp. Verify your business phone number is active.
+
+#### Payment Processing Issues
+
+**Q: Can't receive payments**
+A: Complete Stripe Connect onboarding in Settings → Payments. Ensure your account is verified and payment processing is enabled.
+
+**Q: Customer payments failing**
+A: Check that your Stripe account can accept payments. Contact Stripe support if account verification is needed.
+
+#### Order Management Issues
+
+**Q: Orders not updating**
+A: Refresh the page or check your internet connection. Order status changes are saved automatically.
+
+**Q: Customer contact information missing**
+A: Ensure customers provide complete information during checkout. You can request updates directly.
+        `
+      },
+      {
+        title: "Getting Support",
+        content: `
+### How to Get Help
+
+#### Self-Service Resources
+1. **Help Hub**: This comprehensive guide (you're reading it!)
+2. **Settings Pages**: Built-in tooltips and guidance
+3. **Status Indicators**: Green checkmarks show properly configured features
+
+#### Contacting Support
+
+#### Free Plan Users
+- **Email Support**: Send detailed questions to support@quikpik.co
+- **Response Time**: Within 48 hours
+- **Documentation**: Extensive help articles and guides
+
+#### Standard Plan Users
+- **Email Support**: Priority email support
+- **Phone Support**: Direct phone consultation
+- **Response Time**: Within 24 hours
+- **Setup Assistance**: Help with integrations
+
+#### Premium Plan Users
+- **Dedicated Account Manager**: Personal support contact
+- **Priority Support**: Immediate assistance
+- **Phone Support**: Direct line for urgent issues
+- **Custom Onboarding**: Personalized setup assistance
+
+#### When Contacting Support
+Please include:
+- Your account email
+- Detailed description of the issue
+- Screenshots if relevant
+- Steps you've already tried
+- Browser and device information
+
+#### Technical Issues
+For technical problems:
+1. Try refreshing the page
+2. Clear browser cache and cookies
+3. Check internet connection
+4. Try a different browser
+5. Contact support if issue persists
+        `
+      }
+    ]
+  }
+];
+
+export default function Help() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSection, setSelectedSection] = useState(helpSections[0].id);
+  const [expandedArticles, setExpandedArticles] = useState<Record<string, boolean>>({});
+
+  const toggleArticle = (articleTitle: string) => {
+    setExpandedArticles(prev => ({
+      ...prev,
+      [articleTitle]: !prev[articleTitle]
+    }));
+  };
+
+  const filteredSections = helpSections.map(section => ({
+    ...section,
+    articles: section.articles.filter(article =>
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      article.content.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })).filter(section => section.articles.length > 0 || section.title.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const currentSection = helpSections.find(section => section.id === selectedSection);
+
+  const renderContent = (content: string) => {
+    return content.split('\n').map((line, index) => {
+      if (line.startsWith('### ')) {
+        return <h3 key={index} className="text-lg font-semibold text-gray-900 mt-6 mb-3">{line.replace('### ', '')}</h3>;
+      } else if (line.startsWith('#### ')) {
+        return <h4 key={index} className="text-base font-medium text-gray-800 mt-4 mb-2">{line.replace('#### ', '')}</h4>;
+      } else if (line.startsWith('- ')) {
+        return <li key={index} className="ml-4 text-gray-700">{line.replace('- ', '')}</li>;
+      } else if (line.trim().match(/^\d+\./)) {
+        return <li key={index} className="ml-4 text-gray-700 list-decimal">{line.trim()}</li>;
+      } else if (line.includes('[developers.facebook.com]')) {
+        return (
+          <p key={index} className="text-gray-700 mb-2">
+            {line.replace('[developers.facebook.com](https://developers.facebook.com)', '')}
+            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+              developers.facebook.com
+            </a>
+          </p>
+        );
+      } else if (line.startsWith('**') && line.endsWith('**')) {
+        return <p key={index} className="font-semibold text-gray-800 mb-2">{line.replace(/\*\*/g, '')}</p>;
+      } else if (line.trim() === '') {
+        return <br key={index} />;
+      } else {
+        return <p key={index} className="text-gray-700 mb-2">{line}</p>;
+      }
+    });
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Help Hub</h1>
+          <p className="text-gray-600 mt-1">Comprehensive guides and documentation for all Quikpik Merchant features</p>
+        </div>
+      </div>
+
+      {/* Search */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search help articles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar Navigation */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Book className="mr-2 h-5 w-5" />
+                Topics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <nav className="space-y-1">
+                {filteredSections.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <div
+                      key={section.id}
+                      className={`flex items-center p-3 cursor-pointer border-l-4 transition-colors ${
+                        selectedSection === section.id
+                          ? "bg-blue-50 text-blue-700 border-blue-500"
+                          : "text-gray-600 hover:bg-gray-50 border-transparent"
+                      }`}
+                      onClick={() => setSelectedSection(section.id)}
+                    >
+                      <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm">{section.title}</div>
+                        {section.articles.length > 0 && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {section.articles.length} articles
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </nav>
+            </CardContent>
+          </Card>
+
+          {/* Quick Links */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-sm">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <Mail className="mr-2 h-4 w-4" />
+                Contact Support
+              </Button>
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <Video className="mr-2 h-4 w-4" />
+                Video Tutorials
+              </Button>
+              <Button variant="outline" size="sm" className="w-full justify-start">
+                <FileText className="mr-2 h-4 w-4" />
+                Download Guides
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-3">
+          {currentSection && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center">
+                  <currentSection.icon className="mr-3 h-6 w-6 text-blue-600" />
+                  <div>
+                    <CardTitle>{currentSection.title}</CardTitle>
+                    <p className="text-gray-600 mt-1">{currentSection.description}</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {currentSection.articles.map((article, index) => (
+                  <div key={index} className="border rounded-lg">
+                    <div
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                      onClick={() => toggleArticle(article.title)}
+                    >
+                      <h3 className="font-medium text-gray-900">{article.title}</h3>
+                      {expandedArticles[article.title] ? (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-gray-500" />
+                      )}
+                    </div>
+                    {expandedArticles[article.title] && (
+                      <div className="px-4 pb-4 border-t bg-gray-50">
+                        <div className="pt-4 prose prose-sm max-w-none">
+                          {renderContent(article.content)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {searchTerm && filteredSections.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-600">
+                  Try different keywords or browse the topics in the sidebar.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

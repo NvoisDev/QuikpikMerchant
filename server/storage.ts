@@ -7,6 +7,10 @@ import {
   customerGroupMembers,
   negotiations,
   broadcasts,
+  messageTemplates,
+  templateProducts,
+  templateCampaigns,
+  campaignOrders,
   type User,
   type UpsertUser,
   type Product,
@@ -21,6 +25,14 @@ import {
   type InsertNegotiation,
   type Broadcast,
   type InsertBroadcast,
+  type MessageTemplate,
+  type InsertMessageTemplate,
+  type TemplateProduct,
+  type InsertTemplateProduct,
+  type TemplateCampaign,
+  type InsertTemplateCampaign,
+  type CampaignOrder,
+  type InsertCampaignOrder,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -108,6 +120,24 @@ export interface IStorage {
     recipientsReached: number;
     avgOpenRate: number;
   }>;
+
+  // Message Template operations
+  getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
+    products: (TemplateProduct & { product: Product })[];
+    campaigns: (TemplateCampaign & { customerGroup: CustomerGroup })[];
+  })[]>;
+  getMessageTemplate(id: number): Promise<(MessageTemplate & { 
+    products: (TemplateProduct & { product: Product })[];
+    campaigns: (TemplateCampaign & { customerGroup: CustomerGroup })[];
+  }) | undefined>;
+  createMessageTemplate(template: InsertMessageTemplate, products: InsertTemplateProduct[]): Promise<MessageTemplate>;
+  updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
+  deleteMessageTemplate(id: number): Promise<void>;
+  createTemplateCampaign(campaign: InsertTemplateCampaign): Promise<TemplateCampaign>;
+  getTemplateCampaigns(wholesalerId: string): Promise<(TemplateCampaign & { 
+    template: MessageTemplate;
+    customerGroup: CustomerGroup;
+  })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -794,6 +824,156 @@ export class DatabaseStorage implements IStorage {
       recipientsReached,
       avgOpenRate,
     };
+  }
+
+  // Message Template operations
+  async getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
+    products: (TemplateProduct & { product: Product })[];
+    campaigns: (TemplateCampaign & { customerGroup: CustomerGroup })[];
+  })[]> {
+    const templates = await db
+      .select()
+      .from(messageTemplates)
+      .where(eq(messageTemplates.wholesalerId, wholesalerId))
+      .orderBy(desc(messageTemplates.createdAt));
+
+    const templatesWithDetails = await Promise.all(
+      templates.map(async (template) => {
+        // Get template products
+        const templateProducts = await db
+          .select()
+          .from(templateProducts)
+          .leftJoin(products, eq(templateProducts.productId, products.id))
+          .where(eq(templateProducts.templateId, template.id));
+
+        // Get template campaigns
+        const campaigns = await db
+          .select()
+          .from(templateCampaigns)
+          .leftJoin(customerGroups, eq(templateCampaigns.customerGroupId, customerGroups.id))
+          .where(eq(templateCampaigns.templateId, template.id));
+
+        return {
+          ...template,
+          products: templateProducts.map(tp => ({
+            ...tp.template_products,
+            product: tp.products!
+          })),
+          campaigns: campaigns.map(c => ({
+            ...c.template_campaigns,
+            customerGroup: c.customer_groups!
+          }))
+        };
+      })
+    );
+
+    return templatesWithDetails;
+  }
+
+  async getMessageTemplate(id: number): Promise<(MessageTemplate & { 
+    products: (TemplateProduct & { product: Product })[];
+    campaigns: (TemplateCampaign & { customerGroup: CustomerGroup })[];
+  }) | undefined> {
+    const [template] = await db
+      .select()
+      .from(messageTemplates)
+      .where(eq(messageTemplates.id, id));
+
+    if (!template) return undefined;
+
+    // Get template products
+    const templateProducts = await db
+      .select()
+      .from(templateProducts)
+      .leftJoin(products, eq(templateProducts.productId, products.id))
+      .where(eq(templateProducts.templateId, template.id));
+
+    // Get template campaigns
+    const campaigns = await db
+      .select()
+      .from(templateCampaigns)
+      .leftJoin(customerGroups, eq(templateCampaigns.customerGroupId, customerGroups.id))
+      .where(eq(templateCampaigns.templateId, template.id));
+
+    return {
+      ...template,
+      products: templateProducts.map(tp => ({
+        ...tp.template_products,
+        product: tp.products!
+      })),
+      campaigns: campaigns.map(c => ({
+        ...c.template_campaigns,
+        customerGroup: c.customer_groups!
+      }))
+    };
+  }
+
+  async createMessageTemplate(template: InsertMessageTemplate, products: InsertTemplateProduct[]): Promise<MessageTemplate> {
+    const [newTemplate] = await db
+      .insert(messageTemplates)
+      .values(template)
+      .returning();
+
+    // Insert template products
+    if (products.length > 0) {
+      const templateProductsData = products.map(p => ({
+        ...p,
+        templateId: newTemplate.id
+      }));
+      
+      await db.insert(templateProducts).values(templateProductsData);
+    }
+
+    return newTemplate;
+  }
+
+  async updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
+    const [updatedTemplate] = await db
+      .update(messageTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(messageTemplates.id, id))
+      .returning();
+    
+    return updatedTemplate;
+  }
+
+  async deleteMessageTemplate(id: number): Promise<void> {
+    // Delete template products first (foreign key constraint)
+    await db.delete(templateProducts).where(eq(templateProducts.templateId, id));
+    
+    // Delete template campaigns
+    await db.delete(templateCampaigns).where(eq(templateCampaigns.templateId, id));
+    
+    // Delete the template
+    await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
+  }
+
+  async createTemplateCampaign(campaign: InsertTemplateCampaign): Promise<TemplateCampaign> {
+    const [newCampaign] = await db
+      .insert(templateCampaigns)
+      .values(campaign)
+      .returning();
+
+    return newCampaign;
+  }
+
+  async getTemplateCampaigns(wholesalerId: string): Promise<(TemplateCampaign & { 
+    template: MessageTemplate;
+    customerGroup: CustomerGroup;
+  })[]> {
+    const campaigns = await db
+      .select()
+      .from(templateCampaigns)
+      .leftJoin(messageTemplates, eq(templateCampaigns.templateId, messageTemplates.id))
+      .leftJoin(customerGroups, eq(templateCampaigns.customerGroupId, customerGroups.id))
+      .where(eq(messageTemplates.wholesalerId, wholesalerId))
+      .orderBy(desc(templateCampaigns.createdAt));
+
+    return campaigns.map(c => ({
+      ...c.template_campaigns,
+      template: c.message_templates!,
+      customerGroup: c.customer_groups!
+    }));
   }
 }
 

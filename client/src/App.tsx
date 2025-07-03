@@ -17,6 +17,8 @@ import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
+import Help from "@/pages/help";
+import MessageTemplates from "@/pages/message-templates";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -47,6 +49,8 @@ function Router() {
               <Route path="/subscription" component={Subscription} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/settings" component={Settings} />
+              <Route path="/message-templates" component={MessageTemplates} />
+              <Route path="/help" component={Help} />
             </>
           ) : (
             <>

@@ -177,6 +177,57 @@ export const broadcasts = pgTable("broadcasts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Message Templates for multi-product campaigns
+export const messageTemplates = pgTable("message_templates", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(), // Template name
+  title: varchar("title").notNull(), // Campaign title
+  description: text("description"), // Template description
+  customMessage: text("custom_message"), // Custom intro message
+  includeContact: boolean("include_contact").default(true), // Include contact info
+  includePurchaseLink: boolean("include_purchase_link").default(true), // Include purchase link
+  status: varchar("status").default("active"), // 'active', 'archived'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Template Products (products included in template)
+export const templateProducts = pgTable("template_products", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull().references(() => messageTemplates.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").notNull().default(1), // Suggested quantity
+  specialPrice: varchar("special_price"), // Optional special price for campaign
+  displayOrder: integer("display_order").default(0), // Order in template
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Template Campaigns (when templates are sent to groups)
+export const templateCampaigns = pgTable("template_campaigns", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull().references(() => messageTemplates.id),
+  customerGroupId: integer("customer_group_id").notNull().references(() => customerGroups.id),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  campaignUrl: varchar("campaign_url"), // Unique URL for this campaign
+  sentAt: timestamp("sent_at"),
+  status: varchar("status").default("pending"), // 'pending', 'sent', 'failed'
+  recipientCount: integer("recipient_count").default(0),
+  clickCount: integer("click_count").default(0),
+  orderCount: integer("order_count").default(0),
+  totalRevenue: varchar("total_revenue").default("0.00"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Enhanced orders to track campaign source
+export const campaignOrders = pgTable("campaign_orders", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  campaignId: integer("campaign_id").references(() => templateCampaigns.id),
+  templateId: integer("template_id").references(() => messageTemplates.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   products: many(products),
@@ -266,6 +317,57 @@ export const broadcastsRelations = relations(broadcasts, ({ one }) => ({
   }),
 }));
 
+export const messageTemplatesRelations = relations(messageTemplates, ({ one, many }) => ({
+  wholesaler: one(users, {
+    fields: [messageTemplates.wholesalerId],
+    references: [users.id],
+  }),
+  products: many(templateProducts),
+  campaigns: many(templateCampaigns),
+}));
+
+export const templateProductsRelations = relations(templateProducts, ({ one }) => ({
+  template: one(messageTemplates, {
+    fields: [templateProducts.templateId],
+    references: [messageTemplates.id],
+  }),
+  product: one(products, {
+    fields: [templateProducts.productId],
+    references: [products.id],
+  }),
+}));
+
+export const templateCampaignsRelations = relations(templateCampaigns, ({ one, many }) => ({
+  template: one(messageTemplates, {
+    fields: [templateCampaigns.templateId],
+    references: [messageTemplates.id],
+  }),
+  customerGroup: one(customerGroups, {
+    fields: [templateCampaigns.customerGroupId],
+    references: [customerGroups.id],
+  }),
+  wholesaler: one(users, {
+    fields: [templateCampaigns.wholesalerId],
+    references: [users.id],
+  }),
+  orders: many(campaignOrders),
+}));
+
+export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
+  order: one(orders, {
+    fields: [campaignOrders.orderId],
+    references: [orders.id],
+  }),
+  campaign: one(templateCampaigns, {
+    fields: [campaignOrders.campaignId],
+    references: [templateCampaigns.id],
+  }),
+  template: one(messageTemplates, {
+    fields: [campaignOrders.templateId],
+    references: [messageTemplates.id],
+  }),
+}));
+
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -314,3 +416,32 @@ export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({
 });
 export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
 export type Broadcast = typeof broadcasts.$inferSelect;
+
+export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
+
+export const insertTemplateProductSchema = createInsertSchema(templateProducts).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTemplateProduct = z.infer<typeof insertTemplateProductSchema>;
+export type TemplateProduct = typeof templateProducts.$inferSelect;
+
+export const insertTemplateCampaignSchema = createInsertSchema(templateCampaigns).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTemplateCampaign = z.infer<typeof insertTemplateCampaignSchema>;
+export type TemplateCampaign = typeof templateCampaigns.$inferSelect;
+
+export const insertCampaignOrderSchema = createInsertSchema(campaignOrders).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCampaignOrder = z.infer<typeof insertCampaignOrderSchema>;
+export type CampaignOrder = typeof campaignOrders.$inferSelect;

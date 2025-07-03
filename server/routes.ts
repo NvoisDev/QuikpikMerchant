@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { z } from "zod";
@@ -1464,6 +1464,151 @@ Write a professional, sales-focused description that highlights the key benefits
           fallback: true
         });
       }
+    }
+  });
+
+  // Message Template routes
+  app.get('/api/message-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const templates = await storage.getMessageTemplates(userId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching message templates:", error);
+      res.status(500).json({ message: "Failed to fetch message templates" });
+    }
+  });
+
+  app.get('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const template = await storage.getMessageTemplate(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching message template:", error);
+      res.status(500).json({ message: "Failed to fetch message template" });
+    }
+  });
+
+  app.post('/api/message-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { products, ...templateData } = req.body;
+
+      // Validate the template data
+      const validatedTemplate = insertMessageTemplateSchema.parse({
+        ...templateData,
+        wholesalerId: userId,
+        status: 'active'
+      });
+
+      // Validate the products
+      const validatedProducts = products.map((p: any) => 
+        insertTemplateProductSchema.parse(p)
+      );
+
+      const template = await storage.createMessageTemplate(validatedTemplate, validatedProducts);
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error creating message template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create message template" });
+    }
+  });
+
+  app.patch('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const updates = req.body;
+
+      const template = await storage.updateMessageTemplate(templateId, updates);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating message template:", error);
+      res.status(500).json({ message: "Failed to update message template" });
+    }
+  });
+
+  app.delete('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      await storage.deleteMessageTemplate(templateId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting message template:", error);
+      res.status(500).json({ message: "Failed to delete message template" });
+    }
+  });
+
+  app.post('/api/message-templates/send-campaign', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { templateId, customerGroupId } = req.body;
+
+      // Get the template with products
+      const template = await storage.getMessageTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Get customer group members
+      const members = await storage.getGroupMembers(customerGroupId);
+      
+      // Generate unique campaign URL (in production, this would be a proper campaign tracking URL)
+      const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${templateId}`;
+
+      // Create campaign record
+      const campaign = await storage.createTemplateCampaign({
+        templateId,
+        customerGroupId,
+        wholesalerId: userId,
+        campaignUrl,
+        status: 'sent',
+        sentAt: new Date(),
+        recipientCount: members.length,
+        clickCount: 0,
+        orderCount: 0,
+        totalRevenue: '0'
+      });
+
+      // Send WhatsApp messages to all group members
+      try {
+        await whatsappService.sendTemplateMessage(template, members, campaignUrl);
+      } catch (whatsappError) {
+        console.error("WhatsApp sending failed:", whatsappError);
+        // Campaign is created but delivery failed - update status
+        await storage.updateMessageTemplate(templateId, { status: 'failed' });
+        return res.status(500).json({ 
+          message: "Campaign created but WhatsApp delivery failed. Please check your WhatsApp settings." 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        campaign,
+        message: `Campaign sent to ${members.length} customers`
+      });
+    } catch (error) {
+      console.error("Error sending campaign:", error);
+      res.status(500).json({ message: "Failed to send campaign" });
+    }
+  });
+
+  app.get('/api/template-campaigns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campaigns = await storage.getTemplateCampaigns(userId);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching template campaigns:", error);
+      res.status(500).json({ message: "Failed to fetch template campaigns" });
     }
   });
 

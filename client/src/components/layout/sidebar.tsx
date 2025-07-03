@@ -15,7 +15,9 @@ import {
   Store,
   Menu,
   X,
-  Lock
+  Lock,
+  HelpCircle,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -27,8 +29,10 @@ const navigation = [
   { name: "Customer Groups", href: "/customer-groups", icon: Users },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Broadcasts", href: "/broadcasts", icon: MessageSquare },
+  { name: "Message Templates", href: "/message-templates", icon: FileText },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Help Hub", href: "/help", icon: HelpCircle },
 ];
 
 export default function Sidebar() {
