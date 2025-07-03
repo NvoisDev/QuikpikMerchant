@@ -70,7 +70,6 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -135,67 +134,59 @@ export default function ProductManagement() {
     }
   };
 
-  const handleGenerateImage = async () => {
-    try {
-      setIsGeneratingImage(true);
-      const productName = form.getValues("name");
-      const category = form.getValues("category");
-      const description = form.getValues("description");
+
+
+  const resizeImage = (file: File, maxSizeKB: number = 500): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
       
-      if (!productName) {
-        toast({
-          title: "Product Name Required",
-          description: "Please enter a product name first",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await apiRequest("POST", "/api/ai/generate-image", {
-        productName,
-        category,
-        description,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        form.setValue("imageUrl", data.imageUrl);
-        toast({
-          title: "Image Generated",
-          description: "AI-powered product image has been generated!",
-        });
-      } else {
-        const error = await response.json();
-        toast({
-          title: "Generation Failed",
-          description: error.message || "Failed to generate image",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate image",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingImage(false);
-    }
+      img.onload = () => {
+        // Calculate new dimensions maintaining aspect ratio
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 600;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = (height * MAX_WIDTH) / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = (width * MAX_HEIGHT) / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress image
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Start with high quality and reduce if needed
+        let quality = 0.9;
+        let result = canvas.toDataURL('image/jpeg', quality);
+        
+        // Reduce quality until under size limit
+        while (result.length > maxSizeKB * 1024 * 1.33 && quality > 0.1) { // 1.33 accounts for base64 overhead
+          quality -= 0.1;
+          result = canvas.toDataURL('image/jpeg', quality);
+        }
+        
+        resolve(result);
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please choose an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
@@ -207,16 +198,28 @@ export default function ProductManagement() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      onChange(result);
+    try {
+      // Show loading state
+      toast({
+        title: "Processing image",
+        description: "Optimizing your image...",
+      });
+
+      const resizedImage = await resizeImage(file, 500); // 500KB limit
+      onChange(resizedImage);
+      
+      const sizeKB = Math.round(resizedImage.length / 1024 * 0.75); // Approximate file size
       toast({
         title: "Image uploaded",
-        description: "Product image has been uploaded successfully!",
+        description: `Image optimized and uploaded successfully! (${sizeKB}KB)`,
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Failed to process the image file.",
+        variant: "destructive",
+      });
+    }
   };
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -543,23 +546,10 @@ export default function ProductManagement() {
                               <div className="space-y-4">
                                 <div className="flex space-x-2">
                                   <Input 
-                                    placeholder="Image URL or upload file" 
+                                    placeholder="Enter image URL or upload file" 
                                     {...field} 
                                     className="flex-1"
                                   />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleGenerateImage}
-                                    disabled={isGeneratingImage}
-                                    className="px-3"
-                                  >
-                                    {isGeneratingImage ? (
-                                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                                    ) : (
-                                      <Sparkles className="h-4 w-4" />
-                                    )}
-                                  </Button>
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -598,7 +588,7 @@ export default function ProductManagement() {
                                 )}
                                 
                                 <p className="text-sm text-gray-600">
-                                  Upload an image, paste a URL, or generate with AI using your product name and description.
+                                  Upload an image file or paste an image URL. Images are automatically optimized for best performance.
                                 </p>
                               </div>
                             </FormControl>
