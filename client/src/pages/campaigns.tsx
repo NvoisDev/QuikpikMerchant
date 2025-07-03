@@ -615,9 +615,8 @@ export default function Campaigns() {
                   <div className="max-h-24 overflow-y-auto space-y-1">
                     {campaign.products?.map((productItem: any, index: number) => (
                       <div key={index} className="bg-gray-50 px-2 py-1 rounded">
-                        <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center text-xs">
                           <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
-                          <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
                           <span>💰 {formatCurrency(Number(productItem.product?.price) || 0)}</span>
@@ -629,7 +628,7 @@ export default function Campaigns() {
                 </div>
               )}
               
-              {campaign.sentCampaigns.length > 0 && (
+              {campaign.sentCampaigns.length > 0 && campaign.campaignType === 'single' && (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Total Sent:</span>
@@ -638,10 +637,23 @@ export default function Campaigns() {
                   <div>
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
-                      campaign.campaignType === 'single' 
-                        ? (Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0)
-                        : campaign.products?.reduce((sum: number, p: any) => 
-                            sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
+                      (Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0)
+                    )}</div>
+                  </div>
+                </div>
+              )}
+
+              {campaign.sentCampaigns.length > 0 && campaign.campaignType === 'multi' && (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Total Sent:</span>
+                    <div className="font-medium text-lg">{campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Stock Value:</span>
+                    <div className="font-medium text-lg">{formatCurrency(
+                      campaign.products?.reduce((sum: number, p: any) => 
+                        sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
                     )}</div>
                   </div>
                 </div>
