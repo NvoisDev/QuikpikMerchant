@@ -495,7 +495,7 @@ function WhatsAppIntegrationSection() {
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h4 className="font-medium text-gray-800 mb-2">📚 Setup Guide</h4>
         <div className="text-sm text-gray-600 space-y-2">
-          <p><strong>Step 1:</strong> Create a Meta for Developers account at developers.facebook.com</p>
+          <p><strong>Step 1:</strong> Create a Meta for Developers account at <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">developers.facebook.com</a></p>
           <p><strong>Step 2:</strong> Set up WhatsApp Business API in your Meta Business account</p>
           <p><strong>Step 3:</strong> Get your verified business phone number and access token</p>
           <p><strong>Step 4:</strong> Add the credentials above and verify the connection</p>
