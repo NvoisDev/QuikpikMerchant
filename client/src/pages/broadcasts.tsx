@@ -14,6 +14,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/layout/sidebar";
 import { 
   MessageSquare, 
@@ -72,54 +73,19 @@ export default function Broadcasts() {
     },
   });
 
-  const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: ["/api/products", user?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/products?wholesalerId=${user?.id}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch products");
-      return response.json();
-    },
+  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+    enabled: !!user?.id,
   });
 
-  const { data: customerGroups, isLoading: groupsLoading } = useQuery<CustomerGroup[]>({
+  const { data: customerGroups = [], isLoading: groupsLoading } = useQuery<CustomerGroup[]>({
     queryKey: ["/api/customer-groups"],
+    enabled: !!user?.id,
   });
 
-  const { data: broadcasts, isLoading: broadcastsLoading } = useQuery({
+  const { data: broadcasts = [], isLoading: broadcastsLoading } = useQuery<Broadcast[]>({
     queryKey: ["/api/broadcasts"],
-    queryFn: async () => {
-      // Mock data for now - in real app this would fetch from backend
-      return [
-        {
-          id: 1,
-          productId: 1,
-          customerGroupId: 1,
-          message: "Fresh apples available! 50 units in stock at $2.50/kg.",
-          sentAt: new Date().toISOString(),
-          status: 'sent' as const,
-          recipientCount: 25,
-          openRate: 85,
-          clickRate: 12,
-          product: { name: "Fresh Red Apples", imageUrl: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=100&h=100&fit=crop" },
-          customerGroup: { name: "Premium Retailers" }
-        },
-        {
-          id: 2,
-          productId: 2,
-          customerGroupId: 2,
-          message: "New stock of organic rice - limited quantity available.",
-          sentAt: new Date(Date.now() - 86400000).toISOString(),
-          status: 'sent' as const,
-          recipientCount: 18,
-          openRate: 92,
-          clickRate: 8,
-          product: { name: "Organic Basmati Rice", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&h=100&fit=crop" },
-          customerGroup: { name: "Organic Stores" }
-        }
-      ] as Broadcast[];
-    },
+    enabled: !!user?.id,
   });
 
   const sendBroadcastMutation = useMutation({
@@ -141,6 +107,17 @@ export default function Broadcasts() {
       });
     },
     onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
         title: "Broadcast Failed",
         description: error.message,
