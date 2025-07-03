@@ -28,6 +28,7 @@ import {
   Users,
   Package,
   ShoppingCart,
+  RefreshCw,
   ExternalLink,
   BarChart3,
   Calendar,
@@ -56,7 +57,7 @@ const campaignFormSchema = z.object({
 type CampaignFormData = z.infer<typeof campaignFormSchema>;
 
 interface Campaign {
-  id: number;
+  id: string;
   title: string;
   customMessage?: string;
   includeContact: boolean;
@@ -90,6 +91,7 @@ export default function Campaigns() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [isStockRefreshOpen, setIsStockRefreshOpen] = useState(false);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
 
@@ -151,7 +153,7 @@ export default function Campaigns() {
 
   // Send campaign mutation
   const sendCampaignMutation = useMutation({
-    mutationFn: async ({ campaignId, customerGroupId }: { campaignId: number; customerGroupId: number }) => {
+    mutationFn: async ({ campaignId, customerGroupId }: { campaignId: string; customerGroupId: number }) => {
       const response = await apiRequest("POST", "/api/campaigns/send", {
         campaignId,
         customerGroupId,
@@ -169,6 +171,31 @@ export default function Campaigns() {
     onError: (error: any) => {
       toast({
         title: "Campaign Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Stock refresh mutation
+  const stockRefreshMutation = useMutation({
+    mutationFn: async ({ campaignId, customerGroupId }: { campaignId: string; customerGroupId: number }) => {
+      const response = await apiRequest("POST", `/api/campaigns/${campaignId}/refresh-stock`, {
+        customerGroupId,
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      setIsStockRefreshOpen(false);
+      toast({
+        title: "Stock Update Sent",
+        description: `Stock update sent to ${data.messagesSent} customers`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Stock Update Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -594,6 +621,20 @@ export default function Campaigns() {
                   <Eye className="h-4 w-4 mr-1" />
                   Preview
                 </Button>
+                {campaign.sentCampaigns.length > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setIsStockRefreshOpen(true);
+                    }}
+                    className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Stock Update
+                  </Button>
+                )}
                 <Button 
                   size="sm" 
                   onClick={() => {
@@ -603,7 +644,7 @@ export default function Campaigns() {
                   className="flex-1"
                 >
                   <Send className="h-4 w-4 mr-1" />
-                  Send
+                  {campaign.sentCampaigns.length > 0 ? 'Resend' : 'Send'}
                 </Button>
               </div>
             </CardContent>
@@ -693,6 +734,57 @@ export default function Campaigns() {
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsSendOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Refresh Dialog */}
+      <Dialog open={isStockRefreshOpen} onOpenChange={setIsStockRefreshOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Stock Update</DialogTitle>
+          </DialogHeader>
+          {selectedCampaign && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Customer Group
+                </label>
+                <Select onValueChange={(value) => {
+                  const groupId = parseInt(value);
+                  stockRefreshMutation.mutate({
+                    campaignId: selectedCampaign.id.toString(),
+                    customerGroupId: groupId,
+                  });
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose customer group for stock update" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(customerGroups as CustomerGroup[]).map((group: CustomerGroup) => (
+                      <SelectItem key={group.id} value={group.id.toString()}>
+                        {group.name} ({group.description})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center mb-2">
+                  <RefreshCw className="h-4 w-4 text-orange-600 mr-2" />
+                  <span className="font-medium text-orange-800">Stock Update Message</span>
+                </div>
+                <p className="text-sm text-orange-800">
+                  This will send a stock update for "{selectedCampaign.title}" with current pricing and availability to all members of the selected customer group.
+                  The message will be clearly marked as a "Stock Update" with refreshed product information.
+                </p>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsStockRefreshOpen(false)}>
                   Cancel
                 </Button>
               </div>

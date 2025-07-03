@@ -16,6 +16,53 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
   apiVersion: "2024-06-20",
 }) : null;
 
+// Helper function to generate stock update messages
+function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {
+  const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
+  const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
+  
+  let message = `📢 *Stock Update Alert*\n\n`;
+  message += `Product: *${product.name}*\n\n`;
+  
+  switch (notificationType) {
+    case 'out_of_stock':
+      message += `🚨 *OUT OF STOCK*\n`;
+      message += `This product is currently unavailable. We'll notify you when it's back in stock!\n\n`;
+      message += `📞 For alternative products or pre-orders, contact us:\n${businessName}\n📱 ${phone}`;
+      break;
+      
+    case 'low_stock':
+      message += `⚠️ *LOW STOCK ALERT*\n`;
+      message += `Only ${product.stock || 0} units remaining!\n\n`;
+      message += `💰 Price: ${product.price}\n`;
+      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `🛒 Order now to secure your stock!\n\n`;
+      message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      break;
+      
+    case 'restocked':
+      message += `✅ *BACK IN STOCK*\n`;
+      message += `Great news! This product is available again.\n\n`;
+      message += `📦 Stock: ${product.stock || 0} units available\n`;
+      message += `💰 Price: ${product.price}\n`;
+      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `🛒 Place your order now!\n\n`;
+      message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
+      break;
+      
+    case 'price_change':
+      message += `💰 *PRICE UPDATE*\n`;
+      message += `New price: ${product.price}\n`;
+      message += `📦 Stock: ${product.stock || 0} units available\n`;
+      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `📞 Questions? Contact us:\n${businessName}\n📱 ${phone}`;
+      break;
+  }
+  
+  message += `\n\n✨ Powered by Quikpik`;
+  return message;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -125,7 +172,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(stock !== undefined && { stock: parseInt(stock) })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
+      
+      // Check for stock changes before updating
+      const newStock = stock !== undefined ? parseInt(stock) : existingProduct.stock;
+      const newPrice = price !== undefined ? price.toString() : existingProduct.price;
+      
+      const stockChangeCheck = await storage.checkForStockChanges(id, newStock || 0, newPrice);
+      
+      // Update the product
       const product = await storage.updateProduct(id, productData);
+      
+      // If stock changes warrant notification, create notification and send messages
+      if (stockChangeCheck.shouldNotify) {
+        const campaignRecipients = await storage.getCampaignRecipients(id);
+        
+        // Create stock update notification record
+        const notification = await storage.createStockUpdateNotification({
+          productId: id,
+          wholesalerId: userId,
+          notificationType: stockChangeCheck.notificationType,
+          previousStock: existingProduct.stock,
+          newStock: newStock,
+          previousPrice: existingProduct.price,
+          newPrice: newPrice,
+          status: 'pending'
+        });
+
+        // Send notifications to campaign recipients (async, don't block response)
+        setImmediate(async () => {
+          try {
+            let totalMessagesSent = 0;
+            
+            for (const groupId of campaignRecipients.customerGroupIds) {
+              const members = await storage.getGroupMembers(groupId);
+              const message = generateStockUpdateMessage(product, stockChangeCheck.notificationType, req.user);
+              
+              for (const member of members) {
+                if (member.phoneNumber) {
+                  try {
+                    const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
+                    if (success) totalMessagesSent++;
+                  } catch (error) {
+                    console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
+                  }
+                }
+              }
+            }
+            
+            // Update notification status
+            await storage.updateStockNotificationStatus(
+              notification.id, 
+              'sent', 
+              new Date(), 
+              totalMessagesSent
+            );
+          } catch (error) {
+            console.error('Error sending stock update notifications:', error);
+            await storage.updateStockNotificationStatus(notification.id, 'failed');
+          }
+        });
+      }
+      
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1827,6 +1934,146 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("Error sending campaign:", error);
       res.status(500).json({ message: "Failed to send campaign" });
+    }
+  });
+
+  // Stock update refresh endpoint - resend campaign with current stock information
+  app.post('/api/campaigns/:id/refresh-stock', isAuthenticated, async (req: any, res) => {
+    try {
+      const campaignId = req.params.id;
+      const userId = req.user.claims.sub;
+      const { customerGroupId } = req.body;
+
+      if (!customerGroupId) {
+        return res.status(400).json({ message: "Customer group ID is required" });
+      }
+
+      // Determine campaign type and get details
+      const [type, numericId] = campaignId.split('_');
+      const campaignNumericId = parseInt(numericId);
+
+      if (type === 'broadcast') {
+        // Handle single product stock update
+        const broadcast = await storage.getBroadcasts(userId).then(broadcasts => 
+          broadcasts.find(b => b.id === campaignNumericId)
+        );
+        
+        if (!broadcast || broadcast.wholesalerId !== userId) {
+          return res.status(404).json({ message: "Campaign not found" });
+        }
+
+        // Get updated product information
+        const product = await storage.getProduct(broadcast.productId);
+        if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+        }
+
+        const members = await storage.getGroupMembers(customerGroupId);
+        const message = generateStockUpdateMessage(product, 'restocked', req.user);
+
+        let successCount = 0;
+        for (const member of members) {
+          if (member.phoneNumber) {
+            try {
+              const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
+              if (success) successCount++;
+            } catch (error) {
+              console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
+            }
+          }
+        }
+
+        // Create new stock update notification
+        await storage.createStockUpdateNotification({
+          productId: broadcast.productId,
+          campaignId: broadcast.id,
+          wholesalerId: userId,
+          notificationType: 'restocked',
+          previousStock: product.stock,
+          newStock: product.stock,
+          previousPrice: product.price,
+          newPrice: product.price,
+          messagesSent: successCount,
+          status: 'sent',
+          sentAt: new Date()
+        });
+
+        res.json({
+          success: true,
+          message: `Stock update sent to ${successCount} customers`,
+          messagesSent: successCount,
+          updateType: 'stock_refresh'
+        });
+
+      } else if (type === 'template') {
+        // Handle multi-product stock update
+        const template = await storage.getMessageTemplate(campaignNumericId);
+        if (!template || template.wholesalerId !== userId) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+
+        const members = await storage.getGroupMembers(customerGroupId);
+        let successCount = 0;
+
+        // Generate updated message with current stock levels
+        const wholesaler = req.user;
+        const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
+        const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
+        const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${campaignNumericId}`;
+
+        let message = `📢 *Stock Update - ${template.name}*\n\n`;
+        message += `Updated product availability:\n\n`;
+
+        template.products.forEach((item, index) => {
+          const price = item.specialPrice || item.product.price;
+          message += `${index + 1}. *${item.product.name}*\n`;
+          message += `   💰 Price: ${price}\n`;
+          message += `   📦 Stock: ${item.product.stock || 0} units available\n`;
+          message += `   📦 MOQ: ${item.product.moq} units\n\n`;
+        });
+
+        message += `🛒 Updated pricing and availability!\n\n`;
+        message += `📞 Contact us:\n${businessName}\n📱 ${phone}\n\n`;
+        message += `✨ Powered by Quikpik`;
+
+        for (const member of members) {
+          if (member.phoneNumber) {
+            try {
+              const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
+              if (success) successCount++;
+            } catch (error) {
+              console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
+            }
+          }
+        }
+
+        // Create template campaign record for the refresh
+        await storage.createTemplateCampaign({
+          templateId: campaignNumericId,
+          customerGroupId,
+          wholesalerId: userId,
+          campaignUrl,
+          status: 'sent',
+          sentAt: new Date(),
+          recipientCount: successCount,
+          clickCount: 0,
+          orderCount: 0,
+          totalRevenue: '0'
+        });
+
+        res.json({
+          success: true,
+          message: `Stock update sent to ${successCount} customers`,
+          messagesSent: successCount,
+          updateType: 'stock_refresh'
+        });
+
+      } else {
+        res.status(400).json({ message: "Invalid campaign type" });
+      }
+    } catch (error) {
+      console.error("Error refreshing campaign stock:", error);
+      res.status(500).json({ message: "Failed to refresh campaign stock" });
     }
   });
 

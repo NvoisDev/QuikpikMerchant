@@ -202,6 +202,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Enhanced multi-product campaign form to default quantity to available stock levels
   - Welcome messages introduce new customers to the platform capabilities and set expectations for future communications
   - Dashboard provides real-time insights into broadcast performance and customer engagement
+- July 03, 2025. Implemented comprehensive stock update refresh system for campaign management:
+  - Added "Stock Update" button to previously sent campaigns with orange styling for easy identification
+  - Created dedicated stock refresh API endpoint that sends updated product information with current stock levels and pricing
+  - Implemented stock refresh dialog allowing users to select customer groups for targeted stock updates
+  - Enhanced message generation to clearly mark refreshed campaigns as "Stock Update" with updated availability information
+  - Stock updates automatically track notification records and provide feedback on messages sent successfully
+  - System supports both single-product broadcasts and multi-product template campaigns for comprehensive stock management
 
 ## User Preferences
 

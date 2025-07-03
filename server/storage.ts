@@ -11,6 +11,7 @@ import {
   templateProducts,
   templateCampaigns,
   campaignOrders,
+  stockUpdateNotifications,
   type User,
   type UpsertUser,
   type Product,
@@ -33,6 +34,8 @@ import {
   type InsertTemplateCampaign,
   type CampaignOrder,
   type InsertCampaignOrder,
+  type StockUpdateNotification,
+  type InsertStockUpdateNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -138,6 +141,13 @@ export interface IStorage {
     template: MessageTemplate;
     customerGroup: CustomerGroup;
   })[]>;
+  
+  // Stock Update Notification operations
+  createStockUpdateNotification(notification: InsertStockUpdateNotification): Promise<StockUpdateNotification>;
+  getStockUpdateNotifications(wholesalerId: string): Promise<StockUpdateNotification[]>;
+  updateStockNotificationStatus(id: number, status: string, sentAt?: Date, messagesSent?: number): Promise<StockUpdateNotification>;
+  checkForStockChanges(productId: number, newStock: number, newPrice?: string): Promise<{ shouldNotify: boolean; notificationType: string }>;
+  getCampaignRecipients(productId: number): Promise<{ campaignIds: number[]; templateCampaignIds: number[]; customerGroupIds: number[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -974,6 +984,107 @@ export class DatabaseStorage implements IStorage {
       template: c.message_templates!,
       customerGroup: c.customer_groups!
     }));
+  }
+
+  // Stock Update Notification operations
+  async createStockUpdateNotification(notification: InsertStockUpdateNotification): Promise<StockUpdateNotification> {
+    const [newNotification] = await db
+      .insert(stockUpdateNotifications)
+      .values(notification)
+      .returning();
+    return newNotification;
+  }
+
+  async getStockUpdateNotifications(wholesalerId: string): Promise<StockUpdateNotification[]> {
+    return await db
+      .select()
+      .from(stockUpdateNotifications)
+      .where(eq(stockUpdateNotifications.wholesalerId, wholesalerId))
+      .orderBy(desc(stockUpdateNotifications.createdAt));
+  }
+
+  async updateStockNotificationStatus(
+    id: number, 
+    status: string, 
+    sentAt?: Date, 
+    messagesSent?: number
+  ): Promise<StockUpdateNotification> {
+    const [updated] = await db
+      .update(stockUpdateNotifications)
+      .set({ 
+        status, 
+        sentAt: sentAt || new Date(),
+        messagesSent: messagesSent || 0
+      })
+      .where(eq(stockUpdateNotifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async checkForStockChanges(
+    productId: number, 
+    newStock: number, 
+    newPrice?: string
+  ): Promise<{ shouldNotify: boolean; notificationType: string }> {
+    const product = await this.getProduct(productId);
+    if (!product) return { shouldNotify: false, notificationType: '' };
+
+    const currentStock = product.stock || 0;
+    const currentPrice = product.price;
+
+    // Check for stock level changes
+    if (currentStock > 0 && newStock === 0) {
+      return { shouldNotify: true, notificationType: 'out_of_stock' };
+    }
+    
+    if (currentStock > 10 && newStock <= 10 && newStock > 0) {
+      return { shouldNotify: true, notificationType: 'low_stock' };
+    }
+    
+    if (currentStock === 0 && newStock > 0) {
+      return { shouldNotify: true, notificationType: 'restocked' };
+    }
+
+    // Check for price changes (if price is provided)
+    if (newPrice && newPrice !== currentPrice) {
+      return { shouldNotify: true, notificationType: 'price_change' };
+    }
+
+    return { shouldNotify: false, notificationType: '' };
+  }
+
+  async getCampaignRecipients(productId: number): Promise<{ 
+    campaignIds: number[]; 
+    templateCampaignIds: number[]; 
+    customerGroupIds: number[] 
+  }> {
+    // Find broadcasts that featured this product
+    const broadcastResults = await db
+      .select({ id: broadcasts.id, customerGroupId: broadcasts.customerGroupId })
+      .from(broadcasts)
+      .where(eq(broadcasts.productId, productId));
+
+    // Find template campaigns that featured this product
+    const templateCampaignResults = await db
+      .select({ 
+        templateCampaignId: templateCampaigns.id,
+        customerGroupId: templateCampaigns.customerGroupId 
+      })
+      .from(templateCampaigns)
+      .leftJoin(templateProducts, eq(templateCampaigns.templateId, templateProducts.templateId))
+      .where(eq(templateProducts.productId, productId));
+
+    const campaignIds = broadcastResults.map(b => b.id);
+    const templateCampaignIds = templateCampaignResults.map(tc => tc.templateCampaignId);
+    
+    // Collect all unique customer group IDs
+    const allGroupIds = [
+      ...broadcastResults.map(b => b.customerGroupId).filter(Boolean),
+      ...templateCampaignResults.map(tc => tc.customerGroupId).filter(Boolean)
+    ];
+    const customerGroupIds = Array.from(new Set(allGroupIds));
+
+    return { campaignIds, templateCampaignIds, customerGroupIds };
   }
 }
 

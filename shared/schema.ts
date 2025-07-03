@@ -228,6 +228,24 @@ export const campaignOrders = pgTable("campaign_orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Stock update notifications for campaign recipients
+export const stockUpdateNotifications = pgTable("stock_update_notifications", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  campaignId: integer("campaign_id").references(() => broadcasts.id),
+  templateCampaignId: integer("template_campaign_id").references(() => templateCampaigns.id),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  notificationType: varchar("notification_type").notNull(), // 'low_stock', 'out_of_stock', 'restocked', 'price_change'
+  previousStock: integer("previous_stock"),
+  newStock: integer("new_stock"),
+  previousPrice: varchar("previous_price"),
+  newPrice: varchar("new_price"),
+  messagesSent: integer("messages_sent").default(0),
+  status: varchar("status").default("pending"), // 'pending', 'sent', 'failed'
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   products: many(products),
@@ -445,3 +463,10 @@ export const insertCampaignOrderSchema = createInsertSchema(campaignOrders).omit
 });
 export type InsertCampaignOrder = z.infer<typeof insertCampaignOrderSchema>;
 export type CampaignOrder = typeof campaignOrders.$inferSelect;
+
+export const insertStockUpdateNotificationSchema = createInsertSchema(stockUpdateNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertStockUpdateNotification = z.infer<typeof insertStockUpdateNotificationSchema>;
+export type StockUpdateNotification = typeof stockUpdateNotifications.$inferSelect;
