@@ -114,7 +114,7 @@ function Settings() {
                   onClick={() => setActiveTab("billing")}
                 >
                   <CreditCard className="h-5 w-5 mr-3" />
-                  <span>Billing</span>
+                  <span>Payments</span>
                 </div>
                 <div 
                   className={`flex items-center p-3 rounded-lg cursor-pointer ${
@@ -234,15 +234,7 @@ function Settings() {
               )}
 
               {activeTab === "billing" && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Billing & Subscription</h3>
-                    <p className="text-gray-600">Manage your billing information and subscription.</p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-blue-800">Billing management coming soon. Contact support for subscription changes.</p>
-                  </div>
-                </div>
+                <StripeConnectSection />
               )}
 
               {activeTab === "notifications" && (
@@ -510,6 +502,171 @@ function WhatsAppIntegrationSection() {
           <p><strong>Step 5:</strong> Test the integration and start sending broadcasts!</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StripeConnectSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Fetch Stripe Connect status
+  const { data: stripeStatus, isLoading } = useQuery({
+    queryKey: ["/api/stripe/connect-status"],
+  });
+
+  // Start onboarding mutation
+  const startOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/stripe/connect-onboarding");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Stripe onboarding
+      window.location.href = data.onboardingUrl;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Onboarding Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium mb-4">Payment Setup</h3>
+        <p className="text-gray-600">Set up your payment processing to receive payments from customers.</p>
+      </div>
+
+      {user?.role === 'wholesaler' ? (
+        <div className="space-y-4">
+          {/* Stripe Connect Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CreditCard className="mr-2 h-5 w-5" />
+                Stripe Connect Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!stripeStatus?.hasAccount ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Setup Payment Processing</h4>
+                    <p className="text-blue-800 mb-4">
+                      To receive payments from customers, you need to set up a Stripe Connect account. 
+                      This allows Quikpik to securely process payments and transfer funds to your bank account.
+                    </p>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Secure payment processing</p>
+                      <p>• Automatic fund transfers to your bank</p>
+                      <p>• Quikpik handles all payment security</p>
+                      <p>• 5% platform fee on successful transactions</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => startOnboardingMutation.mutate()}
+                    disabled={startOnboardingMutation.isPending}
+                    className="w-full"
+                  >
+                    {startOnboardingMutation.isPending ? "Setting up..." : "Set up Payment Processing"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-green-900">
+                        {stripeStatus.paymentsEnabled ? "✓ Payment Processing Active" : "⚠ Account Setup Required"}
+                      </h4>
+                      <p className="text-green-800 text-sm">
+                        {stripeStatus.paymentsEnabled 
+                          ? "Your account is ready to accept payments" 
+                          : "Please complete your account setup to accept payments"}
+                      </p>
+                    </div>
+                    {!stripeStatus.paymentsEnabled && (
+                      <Button 
+                        onClick={() => startOnboardingMutation.mutate()}
+                        disabled={startOnboardingMutation.isPending}
+                        size="sm"
+                      >
+                        Complete Setup
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm text-gray-600">Account Status</div>
+                      <div className="font-medium">
+                        {stripeStatus.detailsSubmitted ? "✓ Verified" : "⚠ Pending"}
+                      </div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm text-gray-600">Payment Processing</div>
+                      <div className="font-medium">
+                        {stripeStatus.paymentsEnabled ? "✓ Enabled" : "⚠ Disabled"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Revenue Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue & Fees</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">How Payment Processing Works</h4>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>• Customers pay the full order amount (including our 5% platform fee)</p>
+                    <p>• Quikpik collects the 5% platform fee to maintain and improve the platform</p>
+                    <p>• You receive 95% of the order value directly to your bank account</p>
+                    <p>• All transactions are secure and PCI-compliant through Stripe</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="text-sm text-green-600">You Keep</div>
+                    <div className="font-bold text-green-900">95%</div>
+                    <div className="text-xs text-green-700">of order value</div>
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-sm text-blue-600">Platform Fee</div>
+                    <div className="font-bold text-blue-900">5%</div>
+                    <div className="text-xs text-blue-700">for platform services</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-gray-800">Payment processing setup is only available for wholesaler accounts.</p>
+        </div>
+      )}
     </div>
   );
 }

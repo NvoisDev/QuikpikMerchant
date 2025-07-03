@@ -181,6 +181,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Implemented API verification system using Meta's Graph API endpoints
   - Enhanced error handling with fallback to test mode for network issues
   - Users can now send broadcasts from their own verified WhatsApp Business numbers
+- July 03, 2025. Implemented comprehensive Stripe Connect integration for platform revenue:
+  - Added Stripe Connect onboarding for wholesalers to receive direct payments
+  - Implemented 5% platform fee collection on all transactions (automatic revenue split)
+  - Created payment setup UI in Settings with onboarding flow and status tracking
+  - Added Connect account verification and payment processing status monitoring
+  - Enhanced order payment flow to use Connect accounts with application fees
+  - Wholesalers receive 95% of order value, Quikpik retains 5% platform fee
+  - Added comprehensive webhook handling for payment events and account updates
 
 ## User Preferences
 

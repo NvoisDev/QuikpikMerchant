@@ -13,7 +13,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2024-06-20",
 }) : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -638,7 +638,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe payment routes
+  // Stripe Connect onboarding for wholesalers
+  app.post("/api/stripe/connect-onboarding", isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.role !== 'wholesaler') {
+        return res.status(403).json({ message: "Only wholesalers can onboard to Stripe Connect" });
+      }
+
+      let accountId = user.stripeAccountId;
+
+      // Create Connect account if it doesn't exist
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: 'US',
+          email: user.email!,
+          business_profile: {
+            name: user.businessName || `${user.firstName} ${user.lastName}`,
+            support_email: user.email!,
+          },
+          metadata: {
+            userId: userId,
+            businessName: user.businessName || '',
+          }
+        });
+        accountId = account.id;
+        
+        // Save account ID to user
+        await storage.updateUserSettings(userId, { stripeAccountId: accountId });
+      }
+
+      // Create account link for onboarding
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=refresh`,
+        return_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=complete`,
+        type: 'account_onboarding',
+      });
+
+      res.json({ onboardingUrl: accountLink.url });
+    } catch (error: any) {
+      console.error("Error creating Stripe Connect onboarding:", error);
+      res.status(500).json({ message: "Error creating onboarding: " + error.message });
+    }
+  });
+
+  // Check Stripe Connect account status
+  app.get("/api/stripe/connect-status", isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeAccountId) {
+        return res.json({ 
+          hasAccount: false, 
+          onboardingComplete: false,
+          paymentsEnabled: false,
+          detailsSubmitted: false
+        });
+      }
+
+      const account = await stripe.accounts.retrieve(user.stripeAccountId);
+      
+      res.json({
+        hasAccount: true,
+        onboardingComplete: account.details_submitted,
+        paymentsEnabled: account.charges_enabled,
+        detailsSubmitted: account.details_submitted,
+        accountId: user.stripeAccountId
+      });
+    } catch (error: any) {
+      console.error("Error checking Stripe Connect status:", error);
+      res.status(500).json({ message: "Error checking account status: " + error.message });
+    }
+  });
+
+  // Stripe payment routes with Connect integration
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
@@ -657,13 +747,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to pay for this order" });
       }
 
+      // Get wholesaler's Stripe account
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler?.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler has not set up payment processing. Please contact them to complete their account setup." 
+        });
+      }
+
+      // Check if wholesaler's account can accept payments
+      const account = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+      if (!account.charges_enabled) {
+        return res.status(400).json({ 
+          message: "Wholesaler's payment account is not fully set up. Please contact them to complete verification." 
+        });
+      }
+
+      const totalAmount = Math.round(parseFloat(order.total) * 100); // Convert to cents
+      const platformFeeAmount = Math.round(parseFloat(order.platformFee) * 100); // 5% platform fee in cents
+
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(parseFloat(order.total) * 100), // Convert to cents
+        amount: totalAmount,
         currency: "usd",
+        application_fee_amount: platformFeeAmount, // Quikpik's platform fee
+        transfer_data: {
+          destination: wholesaler.stripeAccountId, // Money goes to wholesaler
+        },
         metadata: {
           orderId: order.id.toString(),
           retailerId: userId,
-          wholesalerId: order.wholesalerId
+          wholesalerId: order.wholesalerId,
+          platformFee: order.platformFee,
+          subtotal: order.subtotal
         }
       });
 
@@ -683,12 +798,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const event = req.body;
 
-      if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object;
-        const orderId = parseInt(paymentIntent.metadata.orderId);
-        
-        // Update order status to processing
-        await storage.updateOrderStatus(orderId, 'processing');
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object;
+          const orderId = parseInt(paymentIntent.metadata.orderId);
+          
+          // Update order status to processing
+          await storage.updateOrderStatus(orderId, 'processing');
+          
+          // Log successful payment and platform fee collection
+          console.log(`Order ${orderId} paid successfully. Platform fee: $${paymentIntent.application_fee_amount / 100}`);
+          break;
+
+        case 'payment_intent.payment_failed':
+          const failedPayment = event.data.object;
+          const failedOrderId = parseInt(failedPayment.metadata.orderId);
+          
+          // Update order status to failed
+          await storage.updateOrderStatus(failedOrderId, 'payment_failed');
+          break;
+
+        case 'account.updated':
+          // Handle when a Connect account is updated (e.g., verification completed)
+          const account = event.data.object;
+          console.log(`Stripe Connect account ${account.id} updated. Charges enabled: ${account.charges_enabled}`);
+          break;
+
+        case 'transfer.created':
+          // Handle when money is transferred to a Connect account
+          const transfer = event.data.object;
+          console.log(`Transfer created: $${transfer.amount / 100} to account ${transfer.destination}`);
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
       }
 
       res.json({ received: true });
