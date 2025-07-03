@@ -178,7 +178,9 @@ export default function ProductCard({
             <span className="font-semibold text-gray-900">
               {product.priceVisible ? (() => {
                 console.log('ProductCard currency debug:', { price: product.price, currency: product.currency, name: product.name });
-                return formatCurrency(parseFloat(product.price), product.currency || "GBP");
+                const result = formatCurrency(parseFloat(product.price), product.currency || "GBP");
+                console.log('formatCurrency result:', result);
+                return result;
               })() : "Hidden"}
             </span>
           </div>
