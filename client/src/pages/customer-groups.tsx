@@ -30,7 +30,9 @@ const customerGroupFormSchema = z.object({
 });
 
 const addMemberFormSchema = z.object({
-  phoneNumber: z.string().min(10, "Valid phone number is required"),
+  phoneNumber: z.string()
+    .min(10, "Valid phone number is required")
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   name: z.string().min(1, "Customer name is required"),
 });
 
@@ -142,6 +144,19 @@ export default function CustomerGroups() {
 
   const addMemberMutation = useMutation({
     mutationFn: async (data: AddMemberFormData & { groupId: number }) => {
+      // First check if phone number already exists in this group
+      const existingMembers = await fetch(`/api/customer-groups/${data.groupId}/members`, {
+        credentials: "include",
+      }).then(res => res.json());
+      
+      const duplicatePhone = existingMembers.find((member: any) => 
+        member.phoneNumber === data.phoneNumber
+      );
+      
+      if (duplicatePhone) {
+        throw new Error(`Phone number ${data.phoneNumber} is already in this group`);
+      }
+      
       const response = await apiRequest("POST", `/api/customer-groups/${data.groupId}/members`, {
         phoneNumber: data.phoneNumber,
         name: data.name,
@@ -150,6 +165,7 @@ export default function CustomerGroups() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups", selectedGroup?.id, "members"] });
       toast({
         title: "Success",
         description: "Customer added to group successfully",
@@ -159,7 +175,7 @@ export default function CustomerGroups() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Duplicate Phone Number",
         description: error.message || "Failed to add customer to group",
         variant: "destructive",
       });
@@ -265,7 +281,7 @@ export default function CustomerGroups() {
             </div>
 
             {/* Customer Groups Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {isLoading ? (
                 // Loading skeletons
                 Array.from({ length: 6 }).map((_, i) => (
@@ -294,27 +310,35 @@ export default function CustomerGroups() {
                 </div>
               ) : (
                 customerGroups.map((group: CustomerGroup) => (
-                  <Card key={group.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span className="truncate">{group.name}</span>
-                        <Badge variant="secondary">
+                  <Card key={group.id} className="hover:shadow-lg transition-all duration-200 border-gray-200 h-fit">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center justify-between gap-2">
+                        <span className="truncate text-lg font-semibold">{group.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            setIsManageDialogOpen(true);
+                          }}
+                        >
                           {group.memberCount || 0} members
-                        </Badge>
+                        </Button>
                       </CardTitle>
                       {group.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">{group.description}</p>
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">{group.description}</p>
                       )}
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
                         <div className="flex items-center space-x-2 text-sm text-gray-500">
                           <Users className="h-4 w-4" />
                           <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                         </div>
                         
                         {group.whatsappGroupId ? (
-                          <div className="flex items-center space-x-2 text-sm text-green-600">
+                          <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
                             <MessageSquare className="h-4 w-4" />
                             <span>WhatsApp group connected</span>
                           </div>
@@ -322,7 +346,7 @@ export default function CustomerGroups() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full disabled:opacity-50"
+                            className="w-full border-green-200 hover:bg-green-50 hover:border-green-300"
                             onClick={() => handleCreateWhatsAppGroup(group.id)}
                             disabled={createWhatsAppGroupMutation.isPending}
                           >
@@ -441,16 +465,46 @@ export default function CustomerGroups() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium">Members</span>
                 <Badge variant="secondary">{selectedGroup?.memberCount || 0}</Badge>
               </div>
-              <p className="text-sm text-gray-600">
-                {selectedGroup?.memberCount === 0 
-                  ? "No members yet. Add customers to start building your group."
-                  : `This group has ${selectedGroup?.memberCount} member${selectedGroup?.memberCount === 1 ? '' : 's'}.`
-                }
-              </p>
+              
+              {membersLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center space-x-3 animate-pulse">
+                      <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 bg-gray-300 rounded w-3/4"></div>
+                        <div className="h-2 bg-gray-300 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : groupMembers.length === 0 ? (
+                <p className="text-sm text-gray-600">
+                  No members yet. Add customers to start building your group.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {groupMembers.map((member: any, index: number) => (
+                    <div key={index} className="flex items-center space-x-3 p-2 bg-white rounded border">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {member.firstName || member.name || 'Customer'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {member.phoneNumber || 'No phone'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div className="p-4 bg-gray-50 rounded-lg">
