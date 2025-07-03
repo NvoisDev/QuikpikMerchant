@@ -574,10 +574,11 @@ export default function ProductManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Grains & Rice">Grains & Rice</SelectItem>
-                      <SelectItem value="Oils & Fats">Oils & Fats</SelectItem>
-                      <SelectItem value="Spices">Spices</SelectItem>
-                      <SelectItem value="Dairy Products">Dairy Products</SelectItem>
+                      {productCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -613,9 +614,12 @@ export default function ProductManagement() {
             </CardContent>
           </Card>
 
-          {/* Products Grid */}
+          {/* Products Grid/List */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className={viewMode === "grid" 
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              : "space-y-4"
+            }>
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <Card key={i} className="animate-pulse">
                   <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
@@ -630,7 +634,7 @@ export default function ProductManagement() {
                 </Card>
               ))}
             </div>
-          ) : (
+          ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product: any) => (
                 <ProductCard
@@ -640,6 +644,66 @@ export default function ProductManagement() {
                   onDelete={handleDelete}
                   onDuplicate={handleDuplicate}
                 />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProducts.map((product: any) => (
+                <Card key={product.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-6">
+                      <img 
+                        src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"} 
+                        alt={product.name}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+                            <Badge variant="secondary" className="mt-1">{product.category}</Badge>
+                            {product.description && (
+                              <p className="text-gray-600 text-sm mt-2 max-w-md">{product.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={product.status === "active" ? "default" : product.status === "inactive" ? "secondary" : "destructive"}>
+                              {product.status === "active" ? "Active" : product.status === "inactive" ? "Inactive" : "Out of Stock"}
+                            </Badge>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
+                              Edit
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700">
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4 mt-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Price:</span>
+                            <div className="font-semibold">
+                              {product.priceVisible ? formatCurrency(parseFloat(product.price), product.currency || "GBP") : "Hidden"}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">MOQ:</span>
+                            <div className="font-semibold">{product.moq} units</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Stock:</span>
+                            <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {product.stock} units
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Views:</span>
+                            <div className="font-semibold">142</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
