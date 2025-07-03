@@ -49,6 +49,12 @@ export const users = pgTable("users", {
   subscriptionEndsAt: timestamp("subscription_ends_at"),
   productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
   
+  // WhatsApp/Twilio fields
+  twilioPhoneNumber: varchar("twilio_phone_number"), // WhatsApp-enabled phone number from Twilio
+  twilioAccountSid: varchar("twilio_account_sid"), // Twilio subaccount SID for this wholesaler
+  twilioAuthToken: varchar("twilio_auth_token"), // Twilio auth token for this wholesaler
+  whatsappEnabled: boolean("whatsapp_enabled").default(false), // Whether WhatsApp is set up
+  
   // Settings
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
   timezone: varchar("timezone").default("UTC"),

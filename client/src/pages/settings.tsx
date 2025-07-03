@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/layout/sidebar";
 import { currencies } from "@/lib/currencies";
-import { User, Settings2, Building2, CreditCard, Bell } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare } from "lucide-react";
 
 const settingsFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -38,6 +38,14 @@ const notificationFormSchema = z.object({
 
 type SettingsFormData = z.infer<typeof settingsFormSchema>;
 type NotificationFormData = z.infer<typeof notificationFormSchema>;
+
+const whatsappFormSchema = z.object({
+  twilioAccountSid: z.string().min(1, "Twilio Account SID is required"),
+  twilioAuthToken: z.string().min(1, "Twilio Auth Token is required"),
+  twilioPhoneNumber: z.string().min(1, "Twilio Phone Number is required"),
+});
+
+type WhatsAppFormData = z.infer<typeof whatsappFormSchema>;
 
 export default function Settings() {
   const { user } = useAuth();
@@ -144,6 +152,17 @@ export default function Settings() {
                       <Bell className="h-5 w-5 mr-3" />
                       <span>Notifications</span>
                     </div>
+                    <div 
+                      className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                        activeTab === "whatsapp" 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setActiveTab("whatsapp")}
+                    >
+                      <MessageSquare className="h-5 w-5 mr-3" />
+                      <span>WhatsApp Integration</span>
+                    </div>
                   </nav>
                 </CardContent>
               </Card>
@@ -159,6 +178,7 @@ export default function Settings() {
                     {activeTab === "business" && "Business Settings"}
                     {activeTab === "billing" && "Billing & Subscription"}
                     {activeTab === "notifications" && "Notification Settings"}
+                    {activeTab === "whatsapp" && "WhatsApp Integration"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -438,12 +458,215 @@ export default function Settings() {
                       </div>
                     </div>
                   )}
+
+                  {activeTab === "whatsapp" && (
+                    <WhatsAppIntegrationSection />
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function WhatsAppIntegrationSection() {
+  const { toast } = useToast();
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+
+  const whatsappForm = useForm<WhatsAppFormData>({
+    resolver: zodResolver(whatsappFormSchema),
+    defaultValues: {
+      twilioAccountSid: "",
+      twilioAuthToken: "",
+      twilioPhoneNumber: "",
+    },
+  });
+
+  // Fetch WhatsApp status
+  const { data: whatsappStatus } = useQuery({
+    queryKey: ["/api/whatsapp/status"],
+  });
+
+  // Setup WhatsApp mutation
+  const setupMutation = useMutation({
+    mutationFn: async (data: WhatsAppFormData) => {
+      return await apiRequest("POST", "/api/whatsapp/setup", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      toast({
+        title: "WhatsApp Integration Configured",
+        description: "Your WhatsApp integration has been set up successfully!",
+      });
+      whatsappForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Setup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Test WhatsApp mutation
+  const testMutation = useMutation({
+    mutationFn: async (phoneNumber: string) => {
+      return await apiRequest("POST", "/api/whatsapp/test", { testPhoneNumber: phoneNumber });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test Message Sent",
+        description: "Test WhatsApp message sent successfully!",
+      });
+      setTestPhoneNumber("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Test Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitWhatsApp = (data: WhatsAppFormData) => {
+    setupMutation.mutate(data);
+  };
+
+  const handleTest = () => {
+    if (testPhoneNumber) {
+      testMutation.mutate(testPhoneNumber);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Status Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Integration Status</h3>
+        <div className={`p-4 rounded-lg border ${whatsappStatus?.configured ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`font-medium ${whatsappStatus?.configured ? 'text-green-800' : 'text-gray-800'}`}>
+                {whatsappStatus?.configured ? '✅ WhatsApp Integration Active' : '⚪ WhatsApp Integration Not Configured'}
+              </p>
+              {whatsappStatus?.phoneNumber && (
+                <p className="text-sm text-gray-600 mt-1">
+                  Phone Number: {whatsappStatus.phoneNumber}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Setup Instructions */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Twilio WhatsApp Setup</h3>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-800 mb-2">How to get your Twilio credentials:</h4>
+          <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1">
+            <li>Sign up for a Twilio account at <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="underline">twilio.com</a></li>
+            <li>Complete WhatsApp Business API setup in your Twilio Console</li>
+            <li>Get a WhatsApp-enabled phone number from Twilio</li>
+            <li>Copy your Account SID and Auth Token from the console</li>
+            <li>Enter these credentials below to enable WhatsApp messaging</li>
+          </ol>
+        </div>
+      </div>
+
+      {/* Configuration Form */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Configuration</h3>
+        <Form {...whatsappForm}>
+          <form onSubmit={whatsappForm.handleSubmit(onSubmitWhatsApp)} className="space-y-4">
+            <FormField
+              control={whatsappForm.control}
+              name="twilioAccountSid"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Twilio Account SID</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="AC..." 
+                      type="password"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={whatsappForm.control}
+              name="twilioAuthToken"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Twilio Auth Token</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="Enter your auth token" 
+                      type="password"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={whatsappForm.control}
+              name="twilioPhoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WhatsApp Phone Number</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="+1234567890" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button 
+              type="submit" 
+              disabled={setupMutation.isPending}
+              className="w-full"
+            >
+              {setupMutation.isPending ? "Setting up..." : "Configure WhatsApp Integration"}
+            </Button>
+          </form>
+        </Form>
+      </div>
+
+      {/* Test Section */}
+      {whatsappStatus?.configured && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Test Integration</h3>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter phone number (e.g., +1234567890)"
+              value={testPhoneNumber}
+              onChange={(e) => setTestPhoneNumber(e.target.value)}
+            />
+            <Button 
+              onClick={handleTest}
+              disabled={!testPhoneNumber || testMutation.isPending}
+            >
+              {testMutation.isPending ? "Sending..." : "Send Test Message"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
