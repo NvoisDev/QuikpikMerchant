@@ -77,7 +77,7 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
-      currency: "GBP",
+      currency: user?.preferredCurrency || "GBP",
       moq: "1",
       stock: "0",
       category: "",
@@ -325,6 +325,7 @@ export default function ProductManagement() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
+      currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
       category: product.category || "",
@@ -349,7 +350,7 @@ export default function ProductManagement() {
       name: `${product.name} (Copy)`,
       description: product.description || "",
       price: product.price.toString(),
-      currency: product.currency || "GBP",
+      currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
       category: product.category || "",
@@ -389,7 +390,19 @@ export default function ProductManagement() {
                 <DialogTrigger asChild>
                   <Button onClick={() => {
                     setEditingProduct(null);
-                    form.reset();
+                    form.reset({
+                      name: "",
+                      description: "",
+                      price: "",
+                      currency: user?.preferredCurrency || "GBP",
+                      moq: "1",
+                      stock: "0",
+                      category: "",
+                      imageUrl: "",
+                      priceVisible: true,
+                      negotiationEnabled: false,
+                      status: "active",
+                    });
                   }}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Product
@@ -854,7 +867,23 @@ export default function ProductManagement() {
               </p>
               {!(searchQuery || categoryFilter !== "all" || statusFilter !== "all") && (
                 <div className="mt-6">
-                  <Button onClick={() => setIsDialogOpen(true)}>
+                  <Button onClick={() => {
+                    setEditingProduct(null);
+                    form.reset({
+                      name: "",
+                      description: "",
+                      price: "",
+                      currency: user?.preferredCurrency || "GBP",
+                      moq: "1",
+                      stock: "0",
+                      category: "",
+                      imageUrl: "",
+                      priceVisible: true,
+                      negotiationEnabled: false,
+                      status: "active",
+                    });
+                    setIsDialogOpen(true);
+                  }}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Product
                   </Button>
