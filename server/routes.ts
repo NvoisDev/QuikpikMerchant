@@ -1742,7 +1742,9 @@ Write a professional, sales-focused description that highlights the key benefits
       } else {
         // Create a message template for multi-product
         const templateData = {
-          ...campaignData,
+          name: campaignData.title,
+          title: campaignData.title,
+          description: campaignData.customMessage || '',
           wholesalerId: userId,
           status: 'active'
         };
