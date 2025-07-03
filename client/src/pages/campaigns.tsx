@@ -194,40 +194,42 @@ export default function Campaigns() {
     const phone = user?.businessPhone || user?.phoneNumber || "+1234567890";
     const campaignUrl = "https://quikpik.co/campaign/abc123";
 
-    let message = `🛍️ *${campaign.title}*\n\n`;
+    let message = `🛍️ ${campaign.title}`;
     
     if (campaign.customMessage) {
-      message += `${campaign.customMessage}\n\n`;
+      message += `\n\n${campaign.customMessage}`;
     }
 
     if (campaign.campaignType === 'single' && campaign.product) {
-      message += `📦 *Featured Product:*\n`;
-      message += `*${campaign.product.name}*\n`;
-      message += `💰 ${formatCurrency(parseFloat(campaign.product.price))} (MOQ: ${campaign.product.moq})\n\n`;
+      message += `\n\n📦 Featured Product:\n${campaign.product.name}\n\n`;
+      message += `💰 Unit Price: ${formatCurrency(parseFloat(campaign.product.price))}\n`;
+      message += `📦 MOQ: ${campaign.product.moq} units\n`;
+      message += `📦 In Stock: ${campaign.product.stock || 'Available'} packs available`;
+      
       if (campaign.product.description) {
-        message += `📋 ${campaign.product.description}\n\n`;
+        message += `\n\n📋 ${campaign.product.description}`;
       }
     } else if (campaign.campaignType === 'multi' && campaign.products) {
-      message += `📦 *Featured Products:*\n`;
+      message += `\n\n📦 Featured Products:\n`;
       campaign.products.forEach((item, index) => {
         const price = item.specialPrice || item.product.price;
-        message += `${index + 1}. *${item.product.name}*\n`;
-        message += `   💰 ${formatCurrency(parseFloat(price))} (MOQ: ${item.product.moq})\n`;
-        message += `   📋 Suggested Qty: ${item.quantity}\n\n`;
+        message += `\n${index + 1}. ${item.product.name}\n`;
+        message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
+        message += `   📦 MOQ: ${item.product.moq} units\n`;
+        message += `   📦 Suggested Qty: ${item.quantity} units\n`;
+        message += `   📦 In Stock: ${item.product.stock || 'Available'} packs available`;
       });
     }
 
     if (campaign.includePurchaseLink) {
-      message += `🛒 *Order Now:* ${campaignUrl}\n\n`;
+      message += `\n\n🛒 Place Your Order Now:\n${campaignUrl}`;
     }
 
     if (campaign.includeContact) {
-      message += `📞 Questions? Contact us:\n`;
-      message += `*${businessName}*\n`;
-      message += `📱 ${phone}\n`;
+      message += `\n\n📞 Questions or Bulk Orders?\n${businessName}\n📱 ${phone}`;
     }
 
-    message += `\n✨ _Powered by Quikpik Merchant_`;
+    message += `\n\n✨ This update was powered by Quikpik Merchant`;
 
     return message;
   };

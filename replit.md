@@ -189,6 +189,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Enhanced order payment flow to use Connect accounts with application fees
   - Wholesalers receive 95% of order value, Quikpik retains 5% platform fee
   - Added comprehensive webhook handling for payment events and account updates
+- July 03, 2025. Consolidated broadcast and message template systems into unified "Broadcast" interface:
+  - Merged separate Broadcasts and Message Templates pages into single unified Broadcast system
+  - Updated navigation to use simple "Broadcast" tab name as requested by user
+  - Created unified campaigns page handling both single product broadcasts and multi-product campaigns
+  - Built consolidated backend API endpoints that combine broadcasts and templates data
+  - Enhanced message preview formatting with professional WhatsApp-style layout including product details, pricing, stock levels, and contact information
+  - Streamlined user experience by eliminating confusion between similar broadcast features
 
 ## User Preferences
 
