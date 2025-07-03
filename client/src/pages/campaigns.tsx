@@ -600,21 +600,31 @@ export default function Campaigns() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="flex items-center text-sm">
-                    <Package className="h-4 w-4 mr-2 text-gray-500" />
-                    <span className="text-gray-600 font-medium">{campaign.products?.length || 0} Products</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
-                    <span className="text-gray-600">
-                      💰 {formatCurrency(
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center">
+                      <Package className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-gray-600 font-medium">{campaign.products?.length || 0} Products</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      Total: {formatCurrency(
                         campaign.products?.reduce((sum: number, p: any) => 
-                          sum + (Number(p.specialPrice || p.product?.price) || 0) * (Number(p.quantity) || 1), 0) || 0
+                          sum + (Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0), 0) || 0
                       )}
                     </span>
-                    <span className="text-gray-600">
-                      📦 {campaign.products?.reduce((sum: number, p: any) => 
-                        sum + (Number(p.product?.stock) || 0), 0) || 0} total stock
-                    </span>
+                  </div>
+                  <div className="max-h-24 overflow-y-auto space-y-1">
+                    {campaign.products?.map((productItem: any, index: number) => (
+                      <div key={index} className="bg-gray-50 px-2 py-1 rounded">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
+                          <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-600">
+                          <span>💰 {formatCurrency(Number(productItem.product?.price) || 0)}</span>
+                          <span>📦 {productItem.product?.stock || 0} stock</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
