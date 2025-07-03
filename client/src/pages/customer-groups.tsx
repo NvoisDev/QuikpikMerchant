@@ -37,8 +37,13 @@ const addMemberFormSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
 });
 
+const bulkAddFormSchema = z.object({
+  contacts: z.string().min(1, "Please enter contact information"),
+});
+
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
 type AddMemberFormData = z.infer<typeof addMemberFormSchema>;
+type BulkAddFormData = z.infer<typeof bulkAddFormSchema>;
 
 interface CustomerGroup {
   id: number;
@@ -56,6 +61,7 @@ export default function CustomerGroups() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -98,6 +104,13 @@ export default function CustomerGroups() {
     defaultValues: {
       phoneNumber: "",
       name: "",
+    },
+  });
+
+  const bulkAddForm = useForm<BulkAddFormData>({
+    resolver: zodResolver(bulkAddFormSchema),
+    defaultValues: {
+      contacts: "",
     },
   });
 
@@ -214,6 +227,239 @@ export default function CustomerGroups() {
   const onAddMember = (data: AddMemberFormData) => {
     if (!selectedGroup) return;
     addMemberMutation.mutate({ ...data, groupId: selectedGroup.id });
+  };
+
+  const onBulkAddMembers = (data: BulkAddFormData) => {
+    if (!selectedGroup) return;
+    
+    // Parse multiple contacts from the input
+    const contacts = parseMultipleContacts(data.contacts);
+    
+    if (contacts.length === 0) {
+      toast({
+        title: "No Valid Contacts Found",
+        description: "Please check the format and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add each contact individually (could be optimized with bulk API)
+    contacts.forEach((contact, index) => {
+      setTimeout(() => {
+        addMemberMutation.mutate({ 
+          ...contact, 
+          groupId: selectedGroup.id 
+        });
+      }, index * 100); // Small delay to avoid overwhelming the server
+    });
+
+    toast({
+      title: "Adding Contacts",
+      description: `Adding ${contacts.length} contacts to the group...`,
+    });
+
+    setIsBulkAddDialogOpen(false);
+    bulkAddForm.reset();
+  };
+
+  const parseMultipleContacts = (input: string): AddMemberFormData[] => {
+    const contacts: AddMemberFormData[] = [];
+    const lines = input.trim().split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+      
+      // Try different formats:
+      // 1. "Name, Phone" or "Name: Phone"
+      // 2. "Phone - Name" or "Phone, Name"
+      // 3. Just phone numbers (will use placeholder names)
+      
+      let name = '', phoneNumber = '';
+      
+      if (trimmedLine.includes(',')) {
+        const parts = trimmedLine.split(',').map(p => p.trim());
+        // Check which part looks like a phone number
+        const phoneIndex = parts.findIndex(p => /[\d\+\-\s\(\)]{7,}/.test(p));
+        if (phoneIndex !== -1) {
+          phoneNumber = parts[phoneIndex];
+          name = parts[1 - phoneIndex] || `Contact ${contacts.length + 1}`;
+        }
+      } else if (trimmedLine.includes(':')) {
+        const [namePart, phonePart] = trimmedLine.split(':').map(p => p.trim());
+        if (/[\d\+\-\s\(\)]{7,}/.test(phonePart)) {
+          name = namePart;
+          phoneNumber = phonePart;
+        } else if (/[\d\+\-\s\(\)]{7,}/.test(namePart)) {
+          name = phonePart || `Contact ${contacts.length + 1}`;
+          phoneNumber = namePart;
+        }
+      } else if (trimmedLine.includes('-')) {
+        const parts = trimmedLine.split('-').map(p => p.trim());
+        const phoneIndex = parts.findIndex(p => /[\d\+\-\s\(\)]{7,}/.test(p));
+        if (phoneIndex !== -1) {
+          phoneNumber = parts[phoneIndex];
+          name = parts[1 - phoneIndex] || `Contact ${contacts.length + 1}`;
+        }
+      } else {
+        // Check if the line is just a phone number
+        if (/[\d\+\-\s\(\)]{7,}/.test(trimmedLine)) {
+          phoneNumber = trimmedLine;
+          name = `Contact ${contacts.length + 1}`;
+        } else {
+          // Skip lines that don't contain recognizable phone numbers
+          continue;
+        }
+      }
+      
+      // Clean phone number
+      if (phoneNumber) {
+        phoneNumber = phoneNumber.replace(/[^\+\d]/g, '');
+        if (phoneNumber.length >= 7) {
+          // Add UK country code if missing
+          if (!phoneNumber.startsWith('+') && phoneNumber.length <= 11) {
+            if (phoneNumber.startsWith('0')) {
+              phoneNumber = '+44' + phoneNumber.substring(1);
+            } else if (phoneNumber.length === 10) {
+              phoneNumber = '+44' + phoneNumber;
+            }
+          }
+          
+          contacts.push({ name, phoneNumber });
+        }
+      }
+    }
+    
+    return contacts;
+  };
+
+  const handleBulkImportContacts = () => {
+    // Create a file input element for bulk import
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv,.txt,.vcf,.xlsx,.xls';
+    fileInput.onchange = (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          const contacts: { name: string; phone: string }[] = [];
+          
+          if (file.name.endsWith('.vcf')) {
+            // Parse vCard format
+            const vCards = text.split('BEGIN:VCARD');
+            for (const vCard of vCards) {
+              if (vCard.includes('FN:') && vCard.includes('TEL:')) {
+                const nameMatch = vCard.match(/FN:(.+)/);
+                const phoneMatches = vCard.match(/TEL[^:]*:(.+)/g);
+                if (nameMatch && phoneMatches) {
+                  const name = nameMatch[1].trim();
+                  for (const phoneMatch of phoneMatches) {
+                    const phone = phoneMatch.split(':')[1]?.replace(/[^\+\d]/g, '');
+                    if (phone && phone.length >= 7) {
+                      contacts.push({ name, phone });
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            // Parse CSV/TXT format
+            const lines = text.split('\n');
+            let nameIndex = 0, phoneIndex = 1;
+            let startIndex = 0;
+            
+            if (lines[0]) {
+              const header = lines[0].toLowerCase();
+              if (header.includes('name') || header.includes('phone') || header.includes('mobile')) {
+                startIndex = 1;
+                const columns = header.split(',').map((col, idx) => ({ col: col.trim(), idx }));
+                
+                const nameCol = columns.find(c => 
+                  c.col.includes('name') || c.col.includes('first') || c.col.includes('last')
+                );
+                if (nameCol) nameIndex = nameCol.idx;
+                
+                const phoneCol = columns.find(c => 
+                  c.col.includes('phone') || c.col.includes('mobile') || c.col.includes('cell') || c.col.includes('tel')
+                );
+                if (phoneCol) phoneIndex = phoneCol.idx;
+              }
+            }
+            
+            for (let i = startIndex; i < lines.length; i++) {
+              const line = lines[i].trim();
+              if (!line) continue;
+              
+              let name = '', phone = '';
+              
+              if (line.includes(',')) {
+                const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+                name = columns[nameIndex] || '';
+                phone = columns[phoneIndex] || '';
+                
+                if (!phone) {
+                  for (let j = 0; j < columns.length; j++) {
+                    const potentialPhone = columns[j]?.replace(/[^\+\d]/g, '');
+                    if (potentialPhone && potentialPhone.length >= 7) {
+                      phone = potentialPhone;
+                      break;
+                    }
+                  }
+                }
+              } else if (line.includes('\t')) {
+                const columns = line.split('\t').map(col => col.trim());
+                name = columns[nameIndex] || '';
+                phone = columns[phoneIndex] || '';
+              } else {
+                const phoneRegex = /(\+?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,4}[\s\-]?\d{1,9})/;
+                const phoneMatch = line.match(phoneRegex);
+                if (phoneMatch) {
+                  phone = phoneMatch[1].replace(/[^\+\d]/g, '');
+                  name = line.replace(phoneMatch[0], '').trim();
+                }
+              }
+              
+              if (phone) {
+                phone = phone.replace(/[^\+\d]/g, '');
+                if (phone.length >= 7) {
+                  if (!phone.startsWith('+') && phone.length <= 11) {
+                    if (phone.startsWith('0')) {
+                      phone = '+44' + phone.substring(1);
+                    } else if (phone.length === 10) {
+                      phone = '+44' + phone;
+                    }
+                  }
+                  contacts.push({ name: name || 'Unknown Contact', phone });
+                }
+              }
+            }
+          }
+          
+          if (contacts.length > 0) {
+            // Format contacts for the textarea
+            const contactsText = contacts.map(contact => `${contact.name}, ${contact.phone}`).join('\n');
+            bulkAddForm.setValue('contacts', contactsText);
+            
+            toast({
+              title: "Contacts Imported",
+              description: `Imported ${contacts.length} contacts. Review and add them to the group.`,
+            });
+          } else {
+            toast({
+              title: "No Valid Contacts Found",
+              description: "Export your contacts as CSV from your phone's address book, or use vCard (.vcf) format.",
+              variant: "destructive",
+            });
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    fileInput.click();
   };
 
   const onDeleteMember = (customerId: string) => {
@@ -591,24 +837,39 @@ export default function CustomerGroups() {
                     </Button>
                   )}
                   
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setSelectedGroup(group);
-                        setIsAddMemberDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add Member
-                    </Button>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedGroup(group);
+                          setIsAddMemberDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add One
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedGroup(group);
+                          setIsBulkAddDialogOpen(true);
+                        }}
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        Bulk Add
+                      </Button>
+                    </div>
                     
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="w-full"
                       onClick={() => {
                         setSelectedGroup(group);
                         setIsManageDialogOpen(true);
@@ -625,6 +886,89 @@ export default function CustomerGroups() {
         )}
       </div>
       
+      {/* Bulk Add Members Dialog */}
+      <Dialog open={isBulkAddDialogOpen} onOpenChange={setIsBulkAddDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Multiple Customers to {selectedGroup?.name}</DialogTitle>
+            <DialogDescription>
+              Add multiple customers at once. Enter each contact on a new line in any of these formats:
+              <br />• Name, Phone Number
+              <br />• Phone Number, Name  
+              <br />• Name: Phone Number
+              <br />• Just phone numbers (auto-named)
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...bulkAddForm}>
+            <form onSubmit={bulkAddForm.handleSubmit(onBulkAddMembers)} className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSelectFromContacts()}
+                    className="flex-1"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Phone Contacts
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleBulkImportContacts()}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import File
+                  </Button>
+                </div>
+                
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                  Import contacts from your address book or type multiple contacts below.
+                </div>
+              </div>
+
+              <FormField
+                control={bulkAddForm.control}
+                name="contacts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contacts (one per line)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder={`John Smith, +44 7123 456789
+Jane Doe: +44 7987 654321
++44 7555 123456
+Mike Johnson, 07444 555666`}
+                        className="min-h-[200px] font-mono text-sm"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsBulkAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={addMemberMutation.isPending}
+                >
+                  {addMemberMutation.isPending ? "Adding..." : "Add All Contacts"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Member Dialog */}
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
         <DialogContent>
