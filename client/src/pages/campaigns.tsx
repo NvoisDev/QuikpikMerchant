@@ -320,7 +320,7 @@ export default function Campaigns() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-sm font-medium text-gray-600">Expected Revenue</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(campaigns.reduce((total, campaign) => 
                     total + campaign.sentCampaigns.reduce((sum, sent) => sum + parseFloat(sent.totalRevenue), 0), 0
@@ -533,40 +533,45 @@ export default function Campaigns() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {campaigns.map((campaign: Campaign) => (
           <Card key={campaign.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="truncate">{campaign.title}</span>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={campaign.campaignType === 'single' ? 'outline' : 'default'}>
-                    {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
-                  </Badge>
-                  <Badge variant={campaign.status === 'active' ? 'default' : 'secondary'}>
-                    {campaign.status}
-                  </Badge>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="text-lg font-semibold truncate">{campaign.title}</CardTitle>
+                <Badge variant={campaign.status === 'active' ? 'default' : 'secondary'}>
+                  {campaign.status}
+                </Badge>
+              </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center text-gray-600">
-                  <Package className="h-4 w-4 mr-1" />
-                  {campaign.campaignType === 'single' ? campaign.product?.name : `${campaign.products?.length || 0} products`}
-                </span>
+                <Badge variant={campaign.campaignType === 'single' ? 'outline' : 'default'}>
+                  {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
+                </Badge>
                 <span className="flex items-center text-gray-600">
                   <Send className="h-4 w-4 mr-1" />
-                  {campaign.sentCampaigns.length} sent
+                  {campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)} sent
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center text-sm">
+                <Package className="h-4 w-4 mr-2 text-gray-500" />
+                <span className="text-gray-600">
+                  {campaign.campaignType === 'single' ? campaign.product?.name : `${campaign.products?.length || 0} products included`}
                 </span>
               </div>
               
               {campaign.sentCampaigns.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Total Sent:</span>
-                    <div className="font-medium">{campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)}</div>
+                    <div className="font-medium text-lg">{campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)}</div>
                   </div>
                   <div>
-                    <span className="text-gray-500">Revenue:</span>
-                    <div className="font-medium">{formatCurrency(campaign.sentCampaigns.reduce((sum, c) => sum + parseFloat(c.totalRevenue), 0))}</div>
+                    <span className="text-gray-500">Stock Value:</span>
+                    <div className="font-medium text-lg">{formatCurrency(
+                      campaign.campaignType === 'single' 
+                        ? (Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0)
+                        : campaign.products?.reduce((sum: number, p: any) => 
+                            sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
+                    )}</div>
                   </div>
                 </div>
               )}
