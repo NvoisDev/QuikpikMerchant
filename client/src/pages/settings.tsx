@@ -359,7 +359,7 @@ export default function Settings() {
                                 type="checkbox" 
                                 id="email-notifications" 
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                defaultChecked={user?.notificationPreferences?.email !== false}
+                                defaultChecked={user?.notificationPreferences?.email !== false || true}
                               />
                               <label htmlFor="email-notifications" className="text-sm font-medium text-gray-700">
                                 Email notifications
@@ -371,7 +371,7 @@ export default function Settings() {
                                 type="checkbox" 
                                 id="sms-notifications" 
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                defaultChecked={user?.notificationPreferences?.sms !== false}
+                                defaultChecked={true}
                               />
                               <label htmlFor="sms-notifications" className="text-sm font-medium text-gray-700">
                                 Text/SMS notifications
@@ -389,7 +389,7 @@ export default function Settings() {
                                 type="checkbox" 
                                 id="order-updates" 
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                defaultChecked={user?.notificationPreferences?.orderUpdates !== false}
+                                defaultChecked={true}
                               />
                               <label htmlFor="order-updates" className="text-sm font-medium text-gray-700">
                                 Order updates and status changes
@@ -401,7 +401,7 @@ export default function Settings() {
                                 type="checkbox" 
                                 id="stock-alerts" 
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                defaultChecked={user?.notificationPreferences?.stockAlerts !== false}
+                                defaultChecked={true}
                               />
                               <label htmlFor="stock-alerts" className="text-sm font-medium text-gray-700">
                                 Low stock alerts and inventory warnings
@@ -413,7 +413,7 @@ export default function Settings() {
                                 type="checkbox" 
                                 id="marketing-emails" 
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                defaultChecked={user?.notificationPreferences?.marketingEmails === true}
+                                defaultChecked={false}
                               />
                               <label htmlFor="marketing-emails" className="text-sm font-medium text-gray-700">
                                 Marketing emails and product updates

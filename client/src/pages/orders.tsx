@@ -123,7 +123,7 @@ export default function Orders() {
     );
   };
 
-  const filteredOrders = orders.filter(order => 
+  const filteredOrders = orders.filter((order: any) => 
     statusFilter === "all" || order.status === statusFilter
   );
 
@@ -185,7 +185,7 @@ export default function Orders() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {filteredOrders.map((order) => (
+          {filteredOrders.map((order: any) => (
             <Card key={order.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -234,7 +234,7 @@ export default function Orders() {
                 {/* Order Items */}
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Order Items:</h4>
-                  {order.items.map((item) => (
+                  {order.items.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-2 border rounded">
                       <div className="flex items-center gap-3">
                         {item.product.imageUrl && (

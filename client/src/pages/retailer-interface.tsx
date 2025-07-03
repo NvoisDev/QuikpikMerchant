@@ -234,7 +234,12 @@ export default function RetailerInterface() {
       });
       return;
     }
-    addToCartMutation.mutate({ productId: product.id, quantity });
+    addToCartMutation.mutate({ 
+      productId: product.id, 
+      quantity, 
+      product: product,
+      wholesalerId: product.wholesalerId 
+    });
   };
 
   const getTotalCartItems = () => {

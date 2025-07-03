@@ -84,7 +84,7 @@ export default function WholesalerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatsCard
               title="Total Revenue"
-              value={stats ? formatCurrency(stats.totalRevenue) : "$0"}
+              value={stats ? formatCurrency(stats.totalRevenue || 0) : "$0"}
               change="+12.5% from last month"
               icon={DollarSign}
               iconColor="text-green-600"
@@ -93,7 +93,7 @@ export default function WholesalerDashboard() {
             />
             <StatsCard
               title="Orders This Month"
-              value={stats?.ordersCount?.toString() || "0"}
+              value={(stats?.ordersCount || 0).toString()}
               change="+8.2% from last month"
               icon={ShoppingCart}
               iconColor="text-blue-600"
@@ -102,8 +102,8 @@ export default function WholesalerDashboard() {
             />
             <StatsCard
               title="Active Products"
-              value={stats?.activeProducts?.toString() || "0"}
-              change={`${stats?.lowStockCount || 0} low stock alerts`}
+              value={(stats?.activeProducts || 0).toString()}
+              change={`${(stats?.lowStockCount || 0)} low stock alerts`}
               icon={Package}
               iconColor="text-purple-600"
               iconBg="bg-purple-100"
@@ -164,7 +164,7 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {topProducts?.slice(0, 3).map((product) => (
+                    {(topProducts || []).slice(0, 3).map((product: any) => (
                       <div key={product.id} className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <img 
@@ -239,7 +239,7 @@ export default function WholesalerDashboard() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {recentOrders?.slice(0, 5).map((order) => (
+                      {(recentOrders || []).slice(0, 5).map((order: any) => (
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             #ORD-{order.id}
