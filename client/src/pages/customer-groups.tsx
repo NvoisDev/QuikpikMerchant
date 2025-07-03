@@ -314,17 +314,15 @@ export default function CustomerGroups() {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center justify-between gap-2">
                         <span className="truncate text-lg font-semibold">{group.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full"
+                        <button
+                          className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
                           onClick={() => {
                             setSelectedGroup(group);
                             setIsManageDialogOpen(true);
                           }}
                         >
                           {group.memberCount || 0} members
-                        </Button>
+                        </button>
                       </CardTitle>
                       {group.description && (
                         <p className="text-sm text-gray-600 line-clamp-2 mt-1">{group.description}</p>

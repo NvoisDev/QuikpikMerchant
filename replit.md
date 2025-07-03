@@ -140,6 +140,7 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Fixed data type validation errors in product creation/update routes
   - Integrated OpenAI API for AI-powered product description generation
 - July 03, 2025. Resolved product creation validation errors by implementing proper data type conversion for numeric fields (price, MOQ, stock)
+- July 03, 2025. Enhanced Customer Groups page with improved layout, clickable member counts, duplicate phone number detection, and detailed member view dialog
 
 ## User Preferences
 
