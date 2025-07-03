@@ -840,7 +840,7 @@ export class DatabaseStorage implements IStorage {
     const templatesWithDetails = await Promise.all(
       templates.map(async (template) => {
         // Get template products
-        const templateProducts = await db
+        const templateProductsList = await db
           .select()
           .from(templateProducts)
           .leftJoin(products, eq(templateProducts.productId, products.id))
@@ -855,7 +855,7 @@ export class DatabaseStorage implements IStorage {
 
         return {
           ...template,
-          products: templateProducts.map(tp => ({
+          products: templateProductsList.map(tp => ({
             ...tp.template_products,
             product: tp.products!
           })),
@@ -882,7 +882,7 @@ export class DatabaseStorage implements IStorage {
     if (!template) return undefined;
 
     // Get template products
-    const templateProducts = await db
+    const templateProductsList = await db
       .select()
       .from(templateProducts)
       .leftJoin(products, eq(templateProducts.productId, products.id))
@@ -897,7 +897,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...template,
-      products: templateProducts.map(tp => ({
+      products: templateProductsList.map(tp => ({
         ...tp.template_products,
         product: tp.products!
       })),
