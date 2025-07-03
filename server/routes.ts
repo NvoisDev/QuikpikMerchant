@@ -1227,8 +1227,11 @@ Write a professional, sales-focused description that highlights the key benefits
 
       res.json({
         enabled: user.whatsappEnabled || false,
-        serviceProvider: "Quikpik Messaging Service",
-        configured: true // Always true for shared service
+        businessPhone: user.whatsappBusinessPhone || null,
+        apiToken: user.whatsappApiToken ? "configured" : null,
+        businessName: user.whatsappBusinessName || null,
+        serviceProvider: "WhatsApp Business API",
+        configured: !!(user.whatsappBusinessPhone && user.whatsappApiToken)
       });
     } catch (error: any) {
       console.error("Error fetching WhatsApp status:", error);

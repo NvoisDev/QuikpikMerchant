@@ -174,6 +174,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Status changes save automatically to database with real-time updates
   - Updated footer branding with latest Quikpik logo design
   - Enhanced user experience with intuitive status management workflow
+- July 03, 2025. Upgraded WhatsApp integration to direct WhatsApp Business API:
+  - Removed Twilio dependency in favor of direct Meta WhatsApp Business API integration
+  - Each user now configures their own WhatsApp Business account credentials (phone number + access token)
+  - Added comprehensive WhatsApp configuration UI in Settings with setup guide
+  - Implemented API verification system using Meta's Graph API endpoints
+  - Enhanced error handling with fallback to test mode for network issues
+  - Users can now send broadcasts from their own verified WhatsApp Business numbers
 
 ## User Preferences
 

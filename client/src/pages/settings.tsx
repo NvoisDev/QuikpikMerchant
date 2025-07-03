@@ -271,31 +271,56 @@ function Settings() {
 function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [whatsappConfig, setWhatsappConfig] = useState({
+    businessPhone: "",
+    apiToken: "",
+    businessName: ""
+  });
 
   // Fetch WhatsApp status
   const { data: whatsappStatus, isLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
   });
 
-  // Enable WhatsApp mutation
-  const enableMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/whatsapp/enable", {});
+  // Save WhatsApp configuration mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: typeof whatsappConfig) => {
+      return await apiRequest("POST", "/api/whatsapp/configure", config);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
       toast({
-        title: "WhatsApp Integration Enabled",
-        description: "Your WhatsApp integration is now active!",
+        title: "Configuration Saved",
+        description: "WhatsApp Business API configuration saved successfully!",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Enable Failed",
+        title: "Save Failed",
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  // Verify WhatsApp configuration mutation
+  const verifyConfigMutation = useMutation({
+    mutationFn: async (config: typeof whatsappConfig) => {
+      return await apiRequest("POST", "/api/whatsapp/verify", config);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Verification Successful",
+        description: "WhatsApp Business API configuration verified successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Test WhatsApp mutation
@@ -321,8 +346,28 @@ function WhatsAppIntegrationSection() {
     }
   });
 
-  const handleEnable = () => {
-    enableMutation.mutate();
+  const handleSaveWhatsAppConfig = () => {
+    if (!whatsappConfig.businessPhone || !whatsappConfig.apiToken) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both business phone number and API token.",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveConfigMutation.mutate(whatsappConfig);
+  };
+
+  const handleVerifyWhatsAppConfig = () => {
+    if (!whatsappConfig.businessPhone || !whatsappConfig.apiToken) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both business phone number and API token.",
+        variant: "destructive",
+      });
+      return;
+    }
+    verifyConfigMutation.mutate(whatsappConfig);
   };
 
   const handleTest = () => {
@@ -341,43 +386,100 @@ function WhatsAppIntegrationSection() {
     return <div>Loading WhatsApp integration status...</div>;
   }
 
+  const isConfigured = whatsappStatus?.enabled && whatsappStatus?.businessPhone && whatsappStatus?.apiToken;
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">WhatsApp Integration Status</h3>
-        {!whatsappStatus?.enabled ? (
+        <h3 className="text-lg font-medium">WhatsApp Business API Configuration</h3>
+        <p className="text-gray-600 text-sm">
+          Connect your WhatsApp Business API to send product broadcasts and updates to your customer groups.
+        </p>
+
+        {!isConfigured ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 font-medium mb-2">
-              🚀 Enable WhatsApp Integration
-            </p>
-            <p className="text-blue-700 text-sm mb-4">
-              This will allow you to send product broadcasts and updates to your customer groups.
-            </p>
-            <Button
-              onClick={handleEnable}
-              disabled={enableMutation.isPending}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              {enableMutation.isPending ? "Enabling..." : "Enable WhatsApp Integration"}
-            </Button>
+            <h4 className="text-blue-800 font-medium mb-3">
+              📱 Setup WhatsApp Business API
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Business Phone Number
+                </label>
+                <Input
+                  placeholder="e.g., +1234567890"
+                  value={whatsappConfig.businessPhone}
+                  onChange={(e) => setWhatsappConfig({...whatsappConfig, businessPhone: e.target.value})}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Include country code. This must be your verified WhatsApp Business number.
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Access Token
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Your Meta WhatsApp Business API token"
+                  value={whatsappConfig.apiToken}
+                  onChange={(e) => setWhatsappConfig({...whatsappConfig, apiToken: e.target.value})}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Get this from your Meta for Developers account under WhatsApp Business API.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Business Name (Optional)
+                </label>
+                <Input
+                  placeholder="Your business name"
+                  value={whatsappConfig.businessName}
+                  onChange={(e) => setWhatsappConfig({...whatsappConfig, businessName: e.target.value})}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleVerifyWhatsAppConfig}
+                  disabled={verifyConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+                  variant="outline"
+                >
+                  {verifyConfigMutation.isPending ? "Verifying..." : "Verify"}
+                </Button>
+                <Button
+                  onClick={handleSaveWhatsAppConfig}
+                  disabled={saveConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-green-800 font-medium">
-              ✅ WhatsApp integration is active and ready to use!
+              ✅ WhatsApp Business API is configured and ready to use!
             </p>
             <p className="text-green-700 text-sm mt-1">
+              Business Phone: {whatsappStatus.businessPhone}
+            </p>
+            <p className="text-green-700 text-sm">
               You can now create broadcasts in the Broadcasts section and send messages to your customer groups.
             </p>
           </div>
         )}
       </div>
 
-      {whatsappStatus?.enabled && (
+      {isConfigured && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Test Integration</h3>
           <p className="text-gray-600 text-sm">
-            Send a test message to verify your WhatsApp integration is working correctly.
+            Send a test message to verify your WhatsApp Business API integration is working correctly.
           </p>
           <div className="flex gap-2">
             <Input
@@ -393,10 +495,21 @@ function WhatsAppIntegrationSection() {
             </Button>
           </div>
           <p className="text-xs text-gray-500">
-            Note: Test messages will be sent from our shared business account.
+            Test messages will be sent from your configured WhatsApp Business number.
           </p>
         </div>
       )}
+
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-800 mb-2">📚 Setup Guide</h4>
+        <div className="text-sm text-gray-600 space-y-2">
+          <p><strong>Step 1:</strong> Create a Meta for Developers account at developers.facebook.com</p>
+          <p><strong>Step 2:</strong> Set up WhatsApp Business API in your Meta Business account</p>
+          <p><strong>Step 3:</strong> Get your verified business phone number and access token</p>
+          <p><strong>Step 4:</strong> Add the credentials above and verify the connection</p>
+          <p><strong>Step 5:</strong> Test the integration and start sending broadcasts!</p>
+        </div>
+      </div>
     </div>
   );
 }
