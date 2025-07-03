@@ -583,12 +583,32 @@ export default function Campaigns() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center text-sm">
-                <Package className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-gray-600">
-                  {campaign.campaignType === 'single' ? campaign.product?.name : `${campaign.products?.length || 0} products included`}
-                </span>
-              </div>
+              {campaign.campaignType === 'single' ? (
+                <div className="flex items-center text-sm">
+                  <Package className="h-4 w-4 mr-2 text-gray-500" />
+                  <span className="text-gray-600 truncate">{campaign.product?.name}</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <Package className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-gray-600 font-medium">Products Included:</span>
+                  </div>
+                  <div className="max-h-20 overflow-y-auto space-y-1">
+                    {campaign.products?.slice(0, 3).map((productItem: any, index: number) => (
+                      <div key={index} className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 px-2 py-1 rounded">
+                        <span className="truncate flex-1">{productItem.product?.name}</span>
+                        <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
+                      </div>
+                    ))}
+                    {campaign.products && campaign.products.length > 3 && (
+                      <div className="text-xs text-gray-500 italic">
+                        +{campaign.products.length - 3} more products
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               {campaign.sentCampaigns.length > 0 && (
                 <div className="grid grid-cols-2 gap-4 text-sm">
