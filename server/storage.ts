@@ -80,10 +80,17 @@ export interface IStorage {
   getMarketplaceProducts(filters: {
     search?: string;
     category?: string;
+    location?: string;
     sortBy?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]>;
   getMarketplaceWholesalers(filters: {
     search?: string;
+    location?: string;
+    category?: string;
+    minRating?: number;
   }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]>;
   getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined>;
 }
@@ -483,7 +490,11 @@ export class DatabaseStorage implements IStorage {
   async getMarketplaceProducts(filters: {
     search?: string;
     category?: string;
+    location?: string;
     sortBy?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
     // First get all active products from wholesalers
     let whereConditions = [
@@ -503,6 +514,18 @@ export class DatabaseStorage implements IStorage {
           sql`${users.businessName} ILIKE ${`%${filters.search}%`}`
         )!
       );
+    }
+
+    if (filters.minPrice !== undefined) {
+      whereConditions.push(sql`CAST(${products.price} AS DECIMAL) >= ${filters.minPrice}`);
+    }
+
+    if (filters.maxPrice !== undefined) {
+      whereConditions.push(sql`CAST(${products.price} AS DECIMAL) <= ${filters.maxPrice}`);
+    }
+
+    if (filters.location) {
+      whereConditions.push(sql`${users.businessAddress} ILIKE ${`%${filters.location}%`}`);
     }
 
     const productsList = await db
@@ -545,6 +568,9 @@ export class DatabaseStorage implements IStorage {
 
   async getMarketplaceWholesalers(filters: {
     search?: string;
+    location?: string;
+    category?: string;
+    minRating?: number;
   }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]> {
     // Get wholesalers
     let whereConditions = [eq(users.role, 'wholesaler')];
@@ -557,6 +583,10 @@ export class DatabaseStorage implements IStorage {
           sql`${users.lastName} ILIKE ${`%${filters.search}%`}`
         )!
       );
+    }
+
+    if (filters.location) {
+      whereConditions.push(sql`${users.businessAddress} ILIKE ${`%${filters.location}%`}`);
     }
 
     const wholesalers = await db
