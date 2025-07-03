@@ -174,7 +174,7 @@ export default function Analytics() {
             variant={activeTab === tab.id ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab(tab.id)}
-            className={activeTab === tab.id ? "bg-white shadow-sm" : ""}
+            className={activeTab === tab.id ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"}
           >
             <tab.icon className="h-4 w-4 mr-2" />
             {tab.label}
