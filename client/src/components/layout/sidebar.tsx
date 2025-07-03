@@ -23,7 +23,7 @@ import { useState } from "react";
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
-  { name: "Marketplace", href: "/marketplace", icon: Store },
+  { name: "Marketplace (coming soon)", href: "/marketplace", icon: Store },
   { name: "Customer Groups", href: "/customer-groups", icon: Users },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Broadcasts", href: "/broadcasts", icon: MessageSquare },
