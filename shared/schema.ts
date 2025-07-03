@@ -145,6 +145,25 @@ export const negotiations = pgTable("negotiations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  customerGroupId: integer("customer_group_id").notNull().references(() => customerGroups.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  customMessage: text("custom_message"),
+  status: varchar("status").notNull().default("pending"), // pending, sent, failed
+  recipientCount: integer("recipient_count").notNull().default(0),
+  sentAt: timestamp("sent_at"),
+  scheduledAt: timestamp("scheduled_at"),
+  openRate: integer("open_rate"), // percentage
+  clickRate: integer("click_rate"), // percentage
+  messageId: varchar("message_id"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   products: many(products),
@@ -219,6 +238,21 @@ export const negotiationsRelations = relations(negotiations, ({ one }) => ({
   }),
 }));
 
+export const broadcastsRelations = relations(broadcasts, ({ one }) => ({
+  wholesaler: one(users, {
+    fields: [broadcasts.wholesalerId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [broadcasts.productId],
+    references: [products.id],
+  }),
+  customerGroup: one(customerGroups, {
+    fields: [broadcasts.customerGroupId],
+    references: [customerGroups.id],
+  }),
+}));
+
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -259,3 +293,11 @@ export const insertNegotiationSchema = createInsertSchema(negotiations).omit({
 });
 export type InsertNegotiation = z.infer<typeof insertNegotiationSchema>;
 export type Negotiation = typeof negotiations.$inferSelect;
+
+export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
+export type Broadcast = typeof broadcasts.$inferSelect;

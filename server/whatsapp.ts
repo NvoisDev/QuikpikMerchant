@@ -34,21 +34,26 @@ export class WhatsAppService {
         throw new Error('Customer group not found');
       }
 
+      // Get actual members of the group
+      const members = await storage.getGroupMembers(customerGroupId);
+      const recipientCount = members.length;
+
       // For now, we'll simulate the WhatsApp message sending
       // In production, this would integrate with actual WhatsApp Business API
       const productMessage = this.generateProductMessage(product, message);
       
       // Simulate sending to customers
-      console.log(`Broadcasting to customer group "${targetGroup.name}":`, productMessage);
+      console.log(`Broadcasting to customer group "${targetGroup.name}" (${recipientCount} recipients):`, productMessage);
       
       // In real implementation, loop through customer phone numbers and send
-      // const results = await Promise.all(customers.map(customer => 
-      //   this.sendMessage(customer.phoneNumber, productMessage)
+      // const results = await Promise.all(members.map(member => 
+      //   this.sendMessage(member.phoneNumber, productMessage)
       // ));
 
       return {
         success: true,
         messageId: `broadcast_${Date.now()}`,
+        recipientCount,
       };
     } catch (error: any) {
       console.error('WhatsApp broadcast error:', error);

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { z } from "zod";
 
@@ -548,6 +548,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
       const wholesalerId = req.user.claims.sub;
 
+      // Validate the request data
+      const validatedData = insertBroadcastSchema.parse({
+        wholesalerId,
+        productId: parseInt(productId),
+        customerGroupId: parseInt(customerGroupId),
+        message: customMessage || '',
+        status: 'pending',
+        sentAt: scheduledAt ? new Date(scheduledAt) : null,
+      });
+
+      // Create broadcast record in database
+      const broadcast = await storage.createBroadcast(validatedData);
+
       // Send the broadcast via WhatsApp
       const result = await whatsappService.sendProductBroadcast(
         wholesalerId,
@@ -556,16 +569,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customMessage
       );
 
+      // Update broadcast status based on result
       if (result.success) {
+        await storage.updateBroadcastStatus(
+          broadcast.id,
+          'sent',
+          new Date(),
+          result.recipientCount,
+          result.messageId
+        );
+        
         res.json({
           success: true,
           messageId: result.messageId,
-          message: "Broadcast sent successfully"
+          message: "Broadcast sent successfully",
+          broadcastId: broadcast.id
         });
       } else {
+        await storage.updateBroadcastStatus(
+          broadcast.id,
+          'failed',
+          undefined,
+          undefined,
+          undefined,
+          result.error
+        );
+        
         res.status(400).json({
           success: false,
-          error: result.error
+          error: result.error,
+          broadcastId: broadcast.id
         });
       }
     } catch (error) {
@@ -577,41 +610,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/broadcasts', isAuthenticated, async (req: any, res) => {
     try {
       const wholesalerId = req.user.claims.sub;
-      
-      // For now, return mock data - in real implementation this would be stored in database
-      const broadcasts = [
-        {
-          id: 1,
-          productId: 1,
-          customerGroupId: 1,
-          message: "Fresh apples available! 50 units in stock at $2.50/kg.",
-          sentAt: new Date().toISOString(),
-          status: 'sent',
-          recipientCount: 25,
-          openRate: 85,
-          clickRate: 12,
-          product: { name: "Fresh Red Apples", imageUrl: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=100&h=100&fit=crop" },
-          customerGroup: { name: "Premium Retailers" }
-        },
-        {
-          id: 2,
-          productId: 2,
-          customerGroupId: 2,
-          message: "New stock of organic rice - limited quantity available.",
-          sentAt: new Date(Date.now() - 86400000).toISOString(),
-          status: 'sent',
-          recipientCount: 18,
-          openRate: 92,
-          clickRate: 8,
-          product: { name: "Organic Basmati Rice", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&h=100&fit=crop" },
-          customerGroup: { name: "Organic Stores" }
-        }
-      ];
-      
+      const broadcasts = await storage.getBroadcasts(wholesalerId);
       res.json(broadcasts);
     } catch (error) {
       console.error("Error fetching broadcasts:", error);
       res.status(500).json({ message: "Failed to fetch broadcasts" });
+    }
+  });
+
+  app.get('/api/broadcasts/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.claims.sub;
+      const stats = await storage.getBroadcastStats(wholesalerId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching broadcast stats:", error);
+      res.status(500).json({ message: "Failed to fetch broadcast statistics" });
     }
   });
 

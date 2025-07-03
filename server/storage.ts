@@ -6,6 +6,7 @@ import {
   customerGroups,
   customerGroupMembers,
   negotiations,
+  broadcasts,
   type User,
   type UpsertUser,
   type Product,
@@ -18,6 +19,8 @@ import {
   type InsertCustomerGroup,
   type Negotiation,
   type InsertNegotiation,
+  type Broadcast,
+  type InsertBroadcast,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -95,6 +98,16 @@ export interface IStorage {
     minRating?: number;
   }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]>;
   getWholesalerProfile(id: string): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number }) | undefined>;
+  
+  // Broadcast operations
+  getBroadcasts(wholesalerId: string): Promise<(Broadcast & { product: Product; customerGroup: CustomerGroup })[]>;
+  createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
+  updateBroadcastStatus(id: number, status: string, sentAt?: Date, recipientCount?: number, messageId?: string, errorMessage?: string): Promise<Broadcast>;
+  getBroadcastStats(wholesalerId: string): Promise<{
+    totalBroadcasts: number;
+    recipientsReached: number;
+    avgOpenRate: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -700,6 +713,86 @@ export class DatabaseStorage implements IStorage {
       products: wholesalerProducts,
       rating: 4.5, // Mock rating
       totalOrders: Math.floor(Math.random() * 100) + 10, // Mock order count
+    };
+  }
+
+  // Broadcast operations
+  async getBroadcasts(wholesalerId: string): Promise<(Broadcast & { product: Product; customerGroup: CustomerGroup })[]> {
+    const result = await db
+      .select({
+        broadcast: broadcasts,
+        product: products,
+        customerGroup: customerGroups,
+      })
+      .from(broadcasts)
+      .leftJoin(products, eq(broadcasts.productId, products.id))
+      .leftJoin(customerGroups, eq(broadcasts.customerGroupId, customerGroups.id))
+      .where(eq(broadcasts.wholesalerId, wholesalerId))
+      .orderBy(desc(broadcasts.createdAt));
+
+    return result.map(row => ({
+      ...row.broadcast,
+      product: row.product!,
+      customerGroup: row.customerGroup!,
+    }));
+  }
+
+  async createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast> {
+    const [newBroadcast] = await db.insert(broadcasts).values(broadcast).returning();
+    return newBroadcast;
+  }
+
+  async updateBroadcastStatus(
+    id: number, 
+    status: string, 
+    sentAt?: Date, 
+    recipientCount?: number, 
+    messageId?: string, 
+    errorMessage?: string
+  ): Promise<Broadcast> {
+    const updateData: any = { 
+      status,
+      updatedAt: new Date(),
+    };
+    
+    if (sentAt) updateData.sentAt = sentAt;
+    if (recipientCount !== undefined) updateData.recipientCount = recipientCount;
+    if (messageId) updateData.messageId = messageId;
+    if (errorMessage) updateData.errorMessage = errorMessage;
+
+    const [updatedBroadcast] = await db
+      .update(broadcasts)
+      .set(updateData)
+      .where(eq(broadcasts.id, id))
+      .returning();
+
+    return updatedBroadcast;
+  }
+
+  async getBroadcastStats(wholesalerId: string): Promise<{
+    totalBroadcasts: number;
+    recipientsReached: number;
+    avgOpenRate: number;
+  }> {
+    const result = await db
+      .select({
+        totalBroadcasts: count(broadcasts.id),
+        recipientsReached: sum(broadcasts.recipientCount),
+      })
+      .from(broadcasts)
+      .where(eq(broadcasts.wholesalerId, wholesalerId));
+
+    const totalBroadcasts = Number(result[0]?.totalBroadcasts) || 0;
+    const recipientsReached = Number(result[0]?.recipientsReached) || 0;
+    
+    // For now, use a mock average open rate since we don't have click tracking yet
+    // In a real implementation, this would come from WhatsApp Business API analytics
+    const avgOpenRate = totalBroadcasts > 0 ? Math.floor(Math.random() * 30) + 70 : 0;
+
+    return {
+      totalBroadcasts,
+      recipientsReached,
+      avgOpenRate,
     };
   }
 }

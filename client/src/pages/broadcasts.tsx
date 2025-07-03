@@ -88,6 +88,15 @@ export default function Broadcasts() {
     enabled: !!user?.id,
   });
 
+  const { data: broadcastStats = { totalBroadcasts: 0, recipientsReached: 0, avgOpenRate: 0 } } = useQuery<{
+    totalBroadcasts: number;
+    recipientsReached: number;
+    avgOpenRate: number;
+  }>({
+    queryKey: ["/api/broadcasts/stats"],
+    enabled: !!user?.id,
+  });
+
   const sendBroadcastMutation = useMutation({
     mutationFn: async (data: BroadcastFormData) => {
       return await apiRequest("POST", "/api/broadcasts", {
@@ -99,6 +108,7 @@ export default function Broadcasts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/broadcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/stats"] });
       setIsDialogOpen(false);
       form.reset();
       toast({
@@ -146,11 +156,6 @@ export default function Broadcasts() {
   const filteredBroadcasts = broadcasts?.filter(broadcast => 
     filterStatus === "all" || broadcast.status === filterStatus
   ) || [];
-
-  const totalSent = broadcasts?.filter(b => b.status === 'sent').length || 0;
-  const totalRecipients = broadcasts?.reduce((sum, b) => sum + (b.status === 'sent' ? b.recipientCount : 0), 0) || 0;
-  const avgOpenRate = broadcasts?.filter(b => b.status === 'sent' && b.openRate)
-    .reduce((sum, b, _, arr) => sum + (b.openRate! / arr.length), 0) || 0;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -304,7 +309,7 @@ export default function Broadcasts() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Broadcasts</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalSent}</p>
+                    <p className="text-2xl font-bold text-gray-900">{broadcastStats.totalBroadcasts}</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <MessageSquare className="h-6 w-6 text-blue-600" />
@@ -318,7 +323,7 @@ export default function Broadcasts() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Recipients Reached</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalRecipients}</p>
+                    <p className="text-2xl font-bold text-gray-900">{broadcastStats.recipientsReached}</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <Users className="h-6 w-6 text-green-600" />
@@ -332,7 +337,7 @@ export default function Broadcasts() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Avg. Open Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">{avgOpenRate.toFixed(1)}%</p>
+                    <p className="text-2xl font-bold text-gray-900">{broadcastStats.avgOpenRate}%</p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                     <Eye className="h-6 w-6 text-purple-600" />
