@@ -383,6 +383,7 @@ export default function ProductManagement() {
   };
 
   const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock") => {
+    console.log("Status change handler called:", id, status);
     updateProductStatusMutation.mutate({ id, status });
   };
 

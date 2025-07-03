@@ -91,6 +91,7 @@ export default function ProductCard({
   };
 
   const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock") => {
+    console.log("Status change requested:", product.id, newStatus);
     if (onStatusChange) {
       onStatusChange(product.id, newStatus);
     }
@@ -128,10 +129,14 @@ export default function ProductCard({
         <div className="absolute top-3 right-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Badge className={`cursor-pointer ${currentStatusConfig.className}`}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`px-3 py-1 rounded-full text-xs font-medium ${currentStatusConfig.className} hover:opacity-80`}
+              >
                 <div className={`w-2 h-2 rounded-full ${currentStatusConfig.dotColor} mr-2`}></div>
                 {currentStatusConfig.label}
-              </Badge>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem 
