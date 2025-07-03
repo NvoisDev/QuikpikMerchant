@@ -1962,11 +1962,7 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const campaignId = req.params.id;
       const userId = req.user.claims.sub;
-      const { customerGroupId } = req.body;
-
-      if (!customerGroupId) {
-        return res.status(400).json({ message: "Customer group ID is required" });
-      }
+      // No customer group needed for stock refresh - just update the data
 
       // Determine campaign type and get details
       const [type, numericId] = campaignId.split('_');

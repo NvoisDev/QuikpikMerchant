@@ -179,23 +179,21 @@ export default function Campaigns() {
 
   // Stock refresh mutation
   const stockRefreshMutation = useMutation({
-    mutationFn: async ({ campaignId, customerGroupId }: { campaignId: string; customerGroupId: number }) => {
-      const response = await apiRequest("POST", `/api/campaigns/${campaignId}/refresh-stock`, {
-        customerGroupId,
-      });
+    mutationFn: async ({ campaignId }: { campaignId: string }) => {
+      const response = await apiRequest("POST", `/api/campaigns/${campaignId}/refresh-stock`, {});
       return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       setIsStockRefreshOpen(false);
       toast({
-        title: "Stock Update Sent",
-        description: `Stock update sent to ${data.messagesSent} customers`,
+        title: "Stock Information Refreshed",
+        description: data.message || "Stock counts and pricing updated successfully",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Stock Update Failed",
+        title: "Stock Refresh Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -799,46 +797,31 @@ export default function Campaigns() {
       <Dialog open={isStockRefreshOpen} onOpenChange={setIsStockRefreshOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send Stock Update</DialogTitle>
+            <DialogTitle>Refresh Stock Information</DialogTitle>
           </DialogHeader>
           {selectedCampaign && (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Customer Group
-                </label>
-                <Select onValueChange={(value) => {
-                  const groupId = parseInt(value);
-                  stockRefreshMutation.mutate({
-                    campaignId: selectedCampaign.id.toString(),
-                    customerGroupId: groupId,
-                  });
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose customer group for stock update" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(customerGroups as CustomerGroup[]).map((group: CustomerGroup) => (
-                      <SelectItem key={group.id} value={group.id.toString()}>
-                        {group.name} ({group.description})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center mb-2">
-                  <RefreshCw className="h-4 w-4 text-orange-600 mr-2" />
-                  <span className="font-medium text-orange-800">Stock Update Message</span>
+                  <RefreshCw className="h-4 w-4 text-blue-600 mr-2" />
+                  <span className="font-medium text-blue-800">Stock Data Refresh</span>
                 </div>
-                <p className="text-sm text-orange-800">
-                  This will send a stock update for "{selectedCampaign.title}" with current pricing and availability to all members of the selected customer group.
-                  The message will be clearly marked as a "Stock Update" with refreshed product information.
+                <p className="text-sm text-blue-800">
+                  This will update the stock counts and pricing information for "{selectedCampaign.title}" with the current data from your products.
+                  No messages will be sent to customers - this just refreshes the campaign data.
                 </p>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsStockRefreshOpen(false)}>
                   Cancel
+                </Button>
+                <Button onClick={() => {
+                  stockRefreshMutation.mutate({
+                    campaignId: selectedCampaign.id.toString(),
+                  });
+                }}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Stock Data
                 </Button>
               </div>
             </div>
