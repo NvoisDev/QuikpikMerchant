@@ -185,7 +185,19 @@ export default function Campaigns() {
 
   const updateProduct = (index: number, field: string, value: any) => {
     const updated = [...selectedProducts];
-    updated[index] = { ...updated[index], [field]: value };
+    
+    if (field === 'productId') {
+      // When product is selected, set quantity to stock amount
+      const selectedProduct = (products as Product[]).find(p => p.id === parseInt(value));
+      updated[index] = { 
+        ...updated[index], 
+        [field]: value,
+        quantity: selectedProduct?.stock || 1
+      };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+    
     setSelectedProducts(updated);
   };
 
