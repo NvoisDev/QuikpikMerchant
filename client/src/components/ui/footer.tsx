@@ -1,4 +1,4 @@
-import quikpikLogo from "@assets/Quikpik - Products_1751540073200.png";
+import quikpikLogo from "@assets/Quikpik - Products (2)_1751561109558.png";
 
 interface FooterProps {
   className?: string;
