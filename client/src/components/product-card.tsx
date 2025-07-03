@@ -176,12 +176,7 @@ export default function ProductCard({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Price per unit:</span>
             <span className="font-semibold text-gray-900">
-              {product.priceVisible ? (() => {
-                console.log('ProductCard currency debug:', { price: product.price, currency: product.currency, name: product.name });
-                const result = formatCurrency(parseFloat(product.price), product.currency || "GBP");
-                console.log('formatCurrency result:', result);
-                return result;
-              })() : "Hidden"}
+              {product.priceVisible ? formatCurrency(parseFloat(product.price), product.currency || "GBP") : "Hidden"}
             </span>
           </div>
           <div className="flex justify-between items-center">

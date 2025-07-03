@@ -61,13 +61,14 @@ export function getCurrencySymbol(currencyCode: string): string {
 
 export function formatCurrency(amount: number | string, currencyCode: string = "GBP"): string {
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-  const symbol = getCurrencySymbol(currencyCode);
   
-  // Format with appropriate decimal places
+  // Use Intl.NumberFormat with the currency code for proper formatting
   const formatted = new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numAmount);
   
-  return `${symbol}${formatted}`;
+  return formatted;
 }
