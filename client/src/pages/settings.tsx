@@ -93,6 +93,38 @@ export default function Settings() {
     updateSettingsMutation.mutate(data);
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (limit to 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please choose an image smaller than 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please choose an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      onChange(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
@@ -325,26 +357,52 @@ export default function Settings() {
                         />
 
                         {form.watch("logoType") === "uploaded" && (
-                          <FormField
-                            control={form.control}
-                            name="logoUrl"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Logo URL</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    placeholder="Enter image URL or upload to image hosting service" 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                                <p className="text-sm text-gray-600">
-                                  Upload your logo to an image hosting service and paste the URL here. 
-                                  Recommended size: 200x200px or larger, square format preferred.
-                                </p>
-                              </FormItem>
-                            )}
-                          />
+                          <div className="space-y-4">
+                            <FormField
+                              control={form.control}
+                              name="logoUrl"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Upload Logo</FormLabel>
+                                  <FormControl>
+                                    <div className="space-y-4">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleImageUpload(e, field.onChange)}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                                      />
+                                      {field.value && (
+                                        <div className="flex items-center space-x-4">
+                                          <img 
+                                            src={field.value} 
+                                            alt="Logo preview" 
+                                            className="h-16 w-16 object-cover rounded-lg border"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => field.onChange("")}
+                                            className="text-red-600 hover:text-red-800 text-sm"
+                                          >
+                                            Remove logo
+                                          </button>
+                                        </div>
+                                      )}
+                                      <Input 
+                                        {...field} 
+                                        placeholder="Or paste image URL directly" 
+                                        className="mt-2"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                  <p className="text-sm text-gray-600">
+                                    Upload an image file or paste a URL. Recommended size: 200x200px or larger, square format preferred.
+                                  </p>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
                         )}
                       </div>
 
