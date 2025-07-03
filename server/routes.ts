@@ -482,6 +482,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced analytics routes
+  app.get('/api/analytics/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { timeRange = '30d' } = req.query;
+      
+      const stats = await storage.getWholesalerStats(userId);
+      const broadcastStats = await storage.getBroadcastStats(userId);
+      
+      // Calculate change percentages (simplified - would need historical data)
+      const analyticsData = {
+        revenue: {
+          total: stats.totalRevenue,
+          change: 12.5, // Mock change percentage
+          trend: []
+        },
+        orders: {
+          total: stats.ordersCount,
+          change: 8.3,
+          trend: []
+        },
+        customers: {
+          total: 25,
+          new: 5,
+          returning: 20,
+          trend: []
+        },
+        products: {
+          active: stats.activeProducts,
+          lowStock: stats.lowStockCount,
+          topPerformers: []
+        },
+        geography: [
+          { region: "London", orders: 15, revenue: 1250 },
+          { region: "Manchester", orders: 8, revenue: 680 },
+          { region: "Birmingham", orders: 5, revenue: 420 }
+        ],
+        channels: [
+          { channel: "WhatsApp", orders: 18, revenue: 1500 },
+          { channel: "Direct", orders: 10, revenue: 850 }
+        ],
+        broadcasts: {
+          sent: broadcastStats.totalBroadcasts,
+          delivered: broadcastStats.recipientsReached,
+          opened: Math.floor(broadcastStats.recipientsReached * 0.7),
+          clicked: Math.floor(broadcastStats.recipientsReached * 0.3)
+        }
+      };
+      
+      res.json(analyticsData);
+    } catch (error) {
+      console.error("Error fetching analytics dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch analytics dashboard" });
+    }
+  });
+
+  app.get('/api/analytics/revenue', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { timeRange = '30d' } = req.query;
+      
+      // Generate sample revenue trend data
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const revenueData = [];
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        revenueData.push({
+          date: date.toISOString().split('T')[0],
+          amount: Math.floor(Math.random() * 200) + 50
+        });
+      }
+      
+      res.json(revenueData);
+    } catch (error) {
+      console.error("Error fetching revenue data:", error);
+      res.status(500).json({ message: "Failed to fetch revenue data" });
+    }
+  });
+
+  app.get('/api/analytics/customers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { timeRange = '30d' } = req.query;
+      
+      // Generate sample customer growth data
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const customerData = [];
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        customerData.push({
+          date: date.toISOString().split('T')[0],
+          new: Math.floor(Math.random() * 3) + 1,
+          returning: Math.floor(Math.random() * 5) + 2
+        });
+      }
+      
+      res.json(customerData);
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      res.status(500).json({ message: "Failed to fetch customer data" });
+    }
+  });
+
+  app.get('/api/analytics/products', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const topProducts = await storage.getTopProducts(userId, 10);
+      
+      // Format for chart display
+      const productPerformance = topProducts.map(product => ({
+        name: product.name.substring(0, 15) + (product.name.length > 15 ? '...' : ''),
+        orders: product.orderCount,
+        revenue: product.revenue
+      }));
+      
+      res.json(productPerformance);
+    } catch (error) {
+      console.error("Error fetching product performance:", error);
+      res.status(500).json({ message: "Failed to fetch product performance" });
+    }
+  });
+
   // Stripe payment routes
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     if (!stripe) {

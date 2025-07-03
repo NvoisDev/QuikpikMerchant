@@ -16,6 +16,7 @@ import Subscription from "@/pages/subscription";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Orders from "@/pages/orders";
+import Analytics from "@/pages/analytics";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
               <Route path="/customer-groups" component={CustomerGroups} />
               <Route path="/orders" component={Orders} />
               <Route path="/subscription" component={Subscription} />
+              <Route path="/analytics" component={Analytics} />
               <Route path="/settings" component={Settings} />
             </>
           ) : (
