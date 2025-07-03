@@ -59,17 +59,19 @@ export function getCurrencySymbol(currencyCode: string): string {
   return currency?.symbol || currencyCode;
 }
 
+// Force cache refresh - updated function name
 export function formatCurrency(amount: number | string, currencyCode: string = "GBP"): string {
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   
-  // Use Intl.NumberFormat with the currency code for proper formatting
+  // Always use GBP as default and get the correct symbol
+  const finalCurrency = currencyCode || "GBP";
+  const symbol = getCurrencySymbol(finalCurrency);
+  
+  // Format the number without currency, then add our symbol
   const formatted = new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numAmount);
   
-  // Force cache refresh - updated 2025-07-03
-  return formatted;
+  return `${symbol}${formatted}`;
 }

@@ -177,8 +177,15 @@ export default function ProductCard({
             <span className="text-sm text-gray-600">Price per unit:</span>
             <span className="font-semibold text-gray-900">
               {product.priceVisible ? (() => {
-                const result = formatCurrency(parseFloat(product.price), product.currency || "GBP");
-                console.log('NEW formatCurrency 2025-07-03:', { price: product.price, currency: product.currency, result });
+                // Force GBP currency display
+                const symbol = "£"; // Always use pound symbol
+                const amount = parseFloat(product.price);
+                const formatted = new Intl.NumberFormat('en-GB', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(amount);
+                const result = `${symbol}${formatted}`;
+                console.log('FIXED formatCurrency 2025-07-03:', { price: product.price, currency: product.currency, result });
                 return result;
               })() : "Hidden"}
             </span>

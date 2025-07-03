@@ -22,6 +22,7 @@ import {
   Pizza
 } from "lucide-react";
 import { Link } from "wouter";
+import { formatCurrency } from "@/lib/currencies";
 
 export default function RetailerInterface() {
   const { user } = useAuth();
@@ -246,12 +247,7 @@ export default function RetailerInterface() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const formatCurrency = (amount: number | string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(typeof amount === 'string' ? parseFloat(amount) : amount);
-  };
+  // Remove local formatCurrency - will import from currencies.ts
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -395,7 +391,6 @@ export default function RetailerInterface() {
                 key={product.id}
                 product={product}
                 onAddToCart={handleAddToCart}
-                formatCurrency={formatCurrency}
               />
             ))}
           </div>
@@ -425,12 +420,10 @@ export default function RetailerInterface() {
 // Product Card Component for Retailer View
 function ProductRetailerCard({ 
   product, 
-  onAddToCart, 
-  formatCurrency 
+  onAddToCart
 }: { 
   product: any; 
   onAddToCart: (product: any, quantity: number) => void;
-  formatCurrency: (amount: number | string) => string;
 }) {
   const [quantity, setQuantity] = useState(product.moq || 1);
 
