@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -234,192 +234,185 @@ export default function CustomerGroups() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Customer Groups</h1>
-                <p className="text-gray-600">Manage your customer groups and WhatsApp connections</p>
-              </div>
-              
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Group
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Customer Groups</h1>
+          <p className="text-gray-600">Manage your customer groups and WhatsApp connections</p>
+        </div>
+        
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Group
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Customer Group</DialogTitle>
+              <DialogDescription>
+                Create a new customer group to organize your customers and send them targeted broadcasts.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...createGroupForm}>
+              <form onSubmit={createGroupForm.handleSubmit(onCreateGroup)} className="space-y-4">
+                <FormField
+                  control={createGroupForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Group Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter group name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={createGroupForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter group description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Cancel
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create Customer Group</DialogTitle>
-                    <DialogDescription>
-                      Create a new customer group to organize your customers and send them targeted broadcasts.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...createGroupForm}>
-                    <form onSubmit={createGroupForm.handleSubmit(onCreateGroup)} className="space-y-4">
-                      <FormField
-                        control={createGroupForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Group Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter group name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={createGroupForm.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description (Optional)</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="Enter group description" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="flex justify-end space-x-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setIsCreateDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          type="submit" 
-                          disabled={createGroupMutation.isPending}
-                        >
-                          {createGroupMutation.isPending ? "Creating..." : "Create Group"}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Customer Groups Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {isLoading ? (
-                // Loading skeletons
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardHeader>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="h-3 bg-gray-200 rounded"></div>
-                        <div className="h-8 bg-gray-200 rounded"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : customerGroups.length === 0 ? (
-                <div className="col-span-full text-center py-12">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No customer groups yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first customer group to start organizing your customers</p>
-                  <Button onClick={() => setIsCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Group
+                  <Button 
+                    type="submit" 
+                    disabled={createGroupMutation.isPending}
+                  >
+                    {createGroupMutation.isPending ? "Creating..." : "Create Group"}
                   </Button>
                 </div>
-              ) : (
-                customerGroups.map((group: CustomerGroup) => (
-                  <Card key={group.id} className="hover:shadow-lg transition-all duration-200 border-gray-200 h-fit">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center justify-between gap-2">
-                        <span className="truncate text-lg font-semibold">{group.name}</span>
-                        <button
-                          className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedGroup(group);
-                            setIsManageDialogOpen(true);
-                          }}
-                        >
-                          {group.memberCount || 0} members
-                        </button>
-                      </CardTitle>
-                      {group.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">{group.description}</p>
-                      )}
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-2 text-sm text-gray-500">
-                          <Users className="h-4 w-4" />
-                          <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        
-                        {group.whatsappGroupId ? (
-                          <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
-                            <MessageSquare className="h-4 w-4" />
-                            <span>WhatsApp group connected</span>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-green-200 hover:bg-green-50 hover:border-green-300"
-                            onClick={() => handleCreateWhatsAppGroup(group.id)}
-                            disabled={createWhatsAppGroupMutation.isPending}
-                          >
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Create WhatsApp Group
-                          </Button>
-                        )}
-                        
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => {
-                              setSelectedGroup(group);
-                              setIsAddMemberDialogOpen(true);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4 mr-1" />
-                            Add Member
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => {
-                              setSelectedGroup(group);
-                              setIsManageDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Manage
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
+      {/* Customer Groups Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {isLoading ? (
+          // Loading skeletons
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-8 bg-gray-200 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : customerGroups.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No customer groups yet</h3>
+            <p className="text-gray-600 mb-4">Create your first customer group to start organizing your customers</p>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Group
+            </Button>
+          </div>
+        ) : (
+          customerGroups.map((group: CustomerGroup) => (
+            <Card key={group.id} className="hover:shadow-lg transition-all duration-200 border-gray-200 h-fit">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between gap-2">
+                  <span className="truncate text-lg font-semibold">{group.name}</span>
+                  <button
+                    className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedGroup(group);
+                      setIsManageDialogOpen(true);
+                    }}
+                  >
+                    {group.memberCount || 0} members
+                  </button>
+                </CardTitle>
+                {group.description && (
+                  <p className="text-sm text-gray-600 line-clamp-2 mt-1">{group.description}</p>
+                )}
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Users className="h-4 w-4" />
+                    <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  
+                  {group.whatsappGroupId ? (
+                    <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>WhatsApp group connected</span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-green-200 hover:bg-green-50 hover:border-green-300"
+                      onClick={() => handleCreateWhatsAppGroup(group.id)}
+                      disabled={createWhatsAppGroupMutation.isPending}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Create WhatsApp Group
+                    </Button>
+                  )}
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setSelectedGroup(group);
+                        setIsAddMemberDialogOpen(true);
+                      }}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Add Member
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setSelectedGroup(group);
+                        setIsManageDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Manage
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+      
       {/* Add Member Dialog */}
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
         <DialogContent>
