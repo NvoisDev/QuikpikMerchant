@@ -602,26 +602,19 @@ export default function Campaigns() {
                 <div className="space-y-2">
                   <div className="flex items-center text-sm">
                     <Package className="h-4 w-4 mr-2 text-gray-500" />
-                    <span className="text-gray-600 font-medium">Products Included:</span>
+                    <span className="text-gray-600 font-medium">{campaign.products?.length || 0} Products</span>
                   </div>
-                  <div className="max-h-24 overflow-y-auto space-y-1">
-                    {campaign.products?.slice(0, 3).map((productItem: any, index: number) => (
-                      <div key={index} className="bg-gray-50 px-2 py-1 rounded space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
-                          <span className="text-gray-500 ml-2">×{productItem.quantity}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>💰 {formatCurrency(Number(productItem.specialPrice || productItem.product?.price) || 0)}</span>
-                          <span>📦 {productItem.product?.stock || 0} stock</span>
-                        </div>
-                      </div>
-                    ))}
-                    {campaign.products && campaign.products.length > 3 && (
-                      <div className="text-xs text-gray-500 italic px-2">
-                        +{campaign.products.length - 3} more products
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
+                    <span className="text-gray-600">
+                      💰 {formatCurrency(
+                        campaign.products?.reduce((sum: number, p: any) => 
+                          sum + (Number(p.specialPrice || p.product?.price) || 0) * (Number(p.quantity) || 1), 0) || 0
+                      )}
+                    </span>
+                    <span className="text-gray-600">
+                      📦 {campaign.products?.reduce((sum: number, p: any) => 
+                        sum + (Number(p.product?.stock) || 0), 0) || 0} total stock
+                    </span>
                   </div>
                 </div>
               )}
@@ -644,19 +637,32 @@ export default function Campaigns() {
                 </div>
               )}
 
-              <div className="flex space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedCampaign(campaign);
-                    setIsPreviewOpen(true);
-                  }}
-                  className="flex-1"
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Preview
-                </Button>
+              <div className="flex flex-col space-y-2 w-full">
+                <div className="flex space-x-2 w-full">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setIsPreviewOpen(true);
+                    }}
+                    className="flex-1 min-w-0"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Preview
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setIsSendOpen(true);
+                    }}
+                    className="flex-1 min-w-0"
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    {campaign.sentCampaigns.length > 0 ? 'Resend' : 'Send'}
+                  </Button>
+                </div>
                 {campaign.sentCampaigns.length > 0 && (
                   <Button 
                     size="sm" 
@@ -665,23 +671,12 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsStockRefreshOpen(true);
                     }}
-                    className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                    className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
                   >
                     <RefreshCw className="h-4 w-4 mr-1" />
                     Stock Update
                   </Button>
                 )}
-                <Button 
-                  size="sm" 
-                  onClick={() => {
-                    setSelectedCampaign(campaign);
-                    setIsSendOpen(true);
-                  }}
-                  className="flex-1"
-                >
-                  <Send className="h-4 w-4 mr-1" />
-                  {campaign.sentCampaigns.length > 0 ? 'Resend' : 'Send'}
-                </Button>
               </div>
             </CardContent>
           </Card>
