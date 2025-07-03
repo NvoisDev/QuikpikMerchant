@@ -1770,7 +1770,7 @@ Write a professional, sales-focused description that highlights the key benefits
         includeContact: true,
         includePurchaseLink: true,
         campaignType: 'single' as const,
-        status: broadcast.status,
+        status: broadcast.sentAt ? 'sent' : 'draft',
         createdAt: broadcast.createdAt,
         product: broadcast.product,
         sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
@@ -1792,7 +1792,7 @@ Write a professional, sales-focused description that highlights the key benefits
         includeContact: template.includeContact,
         includePurchaseLink: template.includePurchaseLink,
         campaignType: 'multi' as const,
-        status: template.status,
+        status: template.campaigns.length > 0 ? 'sent' : 'draft',
         createdAt: template.createdAt,
         products: template.products,
         sentCampaigns: template.campaigns.map(campaign => ({
@@ -1843,7 +1843,7 @@ Write a professional, sales-focused description that highlights the key benefits
           id: `broadcast_${broadcast.id}`,
           ...campaignData,
           campaignType: 'single',
-          status: broadcast.status,
+          status: 'draft',
           createdAt: broadcast.createdAt
         });
       } else {
@@ -1868,7 +1868,7 @@ Write a professional, sales-focused description that highlights the key benefits
           id: `template_${template.id}`,
           ...campaignData,
           campaignType: 'multi',
-          status: template.status,
+          status: 'draft',
           createdAt: template.createdAt
         });
       }

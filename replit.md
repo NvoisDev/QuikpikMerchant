@@ -210,9 +210,10 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Enhanced test mode for WhatsApp functionality - campaigns work even without WhatsApp API configuration
   - System supports both single-product broadcasts and multi-product template campaigns for comprehensive stock management
   
-**Order Status System:**
-- Active status in orders refers to orders in progress (pending, processing, shipped)
-- Complete order lifecycle: pending → processing → shipped → completed/cancelled
+**Status Systems:**
+- **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
+- **Order Status**: Active status refers to orders in progress (pending, processing, shipped)
+- Order lifecycle: pending → processing → shipped → completed/cancelled
 - Orders with "active status" are those not yet completed or cancelled
 
 ## User Preferences
