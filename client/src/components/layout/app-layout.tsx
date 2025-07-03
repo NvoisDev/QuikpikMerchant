@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "./sidebar";
+import Footer from "@/components/ui/footer";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,12 +10,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {user && <Sidebar />}
-      <div className={user ? "lg:ml-64" : ""}>
-        <main className="min-h-screen p-4 lg:p-8">
+      <div className={`flex-1 flex flex-col ${user ? "lg:ml-64" : ""}`}>
+        <main className="flex-1 p-4 lg:p-8">
           {children}
         </main>
+        <Footer />
       </div>
     </div>
   );

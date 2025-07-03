@@ -26,6 +26,8 @@ const settingsFormSchema = z.object({
   phoneNumber: z.string().optional(),
   preferredCurrency: z.string().min(1, "Currency is required"),
   timezone: z.string().optional(),
+  logoType: z.enum(["initials", "business_name", "uploaded"]).default("initials"),
+  logoUrl: z.string().optional(),
 });
 
 const notificationFormSchema = z.object({
@@ -293,6 +295,57 @@ export default function Settings() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      {/* Logo Settings */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Logo & Branding</h3>
+                        
+                        <FormField
+                          control={form.control}
+                          name="logoType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Logo Display</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Choose logo type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="initials">Use Initials</SelectItem>
+                                  <SelectItem value="business_name">Show Business Name</SelectItem>
+                                  <SelectItem value="uploaded">Upload Custom Logo</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {form.watch("logoType") === "uploaded" && (
+                          <FormField
+                            control={form.control}
+                            name="logoUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Logo URL</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    placeholder="Enter image URL or upload to image hosting service" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <p className="text-sm text-gray-600">
+                                  Upload your logo to an image hosting service and paste the URL here. 
+                                  Recommended size: 200x200px or larger, square format preferred.
+                                </p>
+                              </FormItem>
+                            )}
+                          />
+                        )}
                       </div>
 
                       {/* Preferences */}

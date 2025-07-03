@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Logo from "@/components/ui/logo";
+import Footer from "@/components/ui/footer";
 import { 
   Package, 
   MessageCircle, 
@@ -212,22 +213,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-secondary py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-primary mb-4">Quikpik Merchant</h3>
-            <p className="text-muted-foreground mb-4">
-              Empowering wholesalers with smart technology solutions
-            </p>
-            <div className="flex justify-center space-x-6">
-              <a href="#" className="text-muted-foreground hover:text-foreground">Privacy</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground">Terms</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground">Support</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

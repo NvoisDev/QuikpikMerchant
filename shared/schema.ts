@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),
   businessPhone: varchar("business_phone"),
+  logoUrl: varchar("logo_url"), // Custom uploaded logo
+  logoType: varchar("logo_type").default("initials"), // 'initials', 'business_name', 'uploaded'
   
   // Stripe fields
   stripeAccountId: varchar("stripe_account_id"),
