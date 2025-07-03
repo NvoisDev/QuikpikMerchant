@@ -70,5 +70,6 @@ export function formatCurrency(amount: number | string, currencyCode: string = "
     maximumFractionDigits: 2,
   }).format(numAmount);
   
+  // Force cache refresh - updated 2025-07-03
   return formatted;
 }
