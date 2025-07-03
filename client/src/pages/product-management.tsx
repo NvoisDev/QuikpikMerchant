@@ -311,6 +311,26 @@ export default function ProductManagement() {
     },
   });
 
+  const updateProductStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: "active" | "inactive" | "out_of_stock" }) => {
+      return await apiRequest("PATCH", `/api/products/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ProductFormData) => {
     if (editingProduct) {
       updateProductMutation.mutate({ ...data, id: editingProduct.id });
@@ -360,6 +380,10 @@ export default function ProductManagement() {
       status: product.status,
     });
     setIsDialogOpen(true);
+  };
+
+  const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock") => {
+    updateProductStatusMutation.mutate({ id, status });
   };
 
   const filteredProducts = products?.filter((product: any) => {
@@ -791,6 +815,7 @@ export default function ProductManagement() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onDuplicate={handleDuplicate}
+                  onStatusChange={handleStatusChange}
                 />
               ))}
             </div>

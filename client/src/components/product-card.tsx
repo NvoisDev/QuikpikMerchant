@@ -42,13 +42,15 @@ interface ProductCardProps {
   onEdit: (product: Product) => void;
   onDelete: (id: number) => void;
   onDuplicate?: (product: Product) => void;
+  onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock") => void;
 }
 
 export default function ProductCard({ 
   product, 
   onEdit, 
   onDelete, 
-  onDuplicate 
+  onDuplicate,
+  onStatusChange
 }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
@@ -59,18 +61,42 @@ export default function ProductCard({
     }).format(typeof amount === 'string' ? parseFloat(amount) : amount);
   };
 
-  const getStatusBadge = () => {
-    switch (product.status) {
+  const getStatusConfig = (status: string) => {
+    switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+        return { 
+          label: "Active", 
+          className: "bg-green-100 text-green-800 hover:bg-green-200", 
+          dotColor: "bg-green-500" 
+        };
       case "inactive":
-        return <Badge variant="secondary">Inactive</Badge>;
+        return { 
+          label: "Inactive", 
+          className: "bg-gray-100 text-gray-800 hover:bg-gray-200", 
+          dotColor: "bg-gray-500" 
+        };
       case "out_of_stock":
-        return <Badge className="bg-red-100 text-red-800">Out of Stock</Badge>;
+        return { 
+          label: "Out of Stock", 
+          className: "bg-red-100 text-red-800 hover:bg-red-200", 
+          dotColor: "bg-red-500" 
+        };
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return { 
+          label: "Unknown", 
+          className: "bg-gray-100 text-gray-800 hover:bg-gray-200", 
+          dotColor: "bg-gray-500" 
+        };
     }
   };
+
+  const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock") => {
+    if (onStatusChange) {
+      onStatusChange(product.id, newStatus);
+    }
+  };
+
+  const currentStatusConfig = getStatusConfig(product.status);
 
   const getStockStatus = () => {
     if (product.stock === 0) {
@@ -98,9 +124,39 @@ export default function ProductCard({
           className="w-full h-48 object-cover"
         />
         
-        {/* Status Badge */}
+        {/* Status Badge Dropdown */}
         <div className="absolute top-3 right-3">
-          {getStatusBadge()}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Badge className={`cursor-pointer ${currentStatusConfig.className}`}>
+                <div className={`w-2 h-2 rounded-full ${currentStatusConfig.dotColor} mr-2`}></div>
+                {currentStatusConfig.label}
+              </Badge>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem 
+                onClick={() => handleStatusChange("active")}
+                className="cursor-pointer"
+              >
+                <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                Active
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleStatusChange("inactive")}
+                className="cursor-pointer"
+              >
+                <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
+                Inactive
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleStatusChange("out_of_stock")}
+                className="cursor-pointer"
+              >
+                <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                Out of Stock
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Favorite Button */}
