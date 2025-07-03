@@ -161,6 +161,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Integrated OpenAI API for AI-powered product image generation using DALL-E 3
   - Enhanced product management with AI image generation, file upload, and URL input options
   - Added comprehensive error handling and user feedback for all upload/generation operations
+- July 03, 2025. Enhanced product image handling and currency management:
+  - Removed AI image generation due to OpenAI API limitations and policy restrictions
+  - Implemented automatic image resizing and compression (max 800x600px, under 500KB)
+  - Added smart image optimization that maintains quality while reducing file size
+  - Fixed currency defaulting to properly use user's preferred currency setting
+  - Enhanced product form to respect user currency preferences in all scenarios (new, edit, duplicate)
+  - Increased server payload limits to handle optimized image uploads
 
 ## User Preferences
 
