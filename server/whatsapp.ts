@@ -438,8 +438,7 @@ Update your inventory or restock soon.`;
     template.products.forEach((item: any, index: number) => {
       const price = item.specialPrice || item.product.price;
       message += `${index + 1}. *${item.product.name}*\n`;
-      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${item.product.moq})\n`;
-      message += `   📋 Suggested Qty: ${item.quantity}\n\n`;
+      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${item.product.moq})\n\n`;
     });
 
     if (template.includePurchaseLink) {

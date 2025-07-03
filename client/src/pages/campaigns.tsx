@@ -253,7 +253,6 @@ export default function Campaigns() {
         message += `\n${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
         message += `   📦 MOQ: ${item.product.moq} units\n`;
-        message += `   📦 Suggested Qty: ${item.quantity} units\n`;
         message += `   📦 In Stock: ${item.product.stock || 'Available'} packs available`;
       });
     }
