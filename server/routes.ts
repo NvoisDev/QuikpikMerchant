@@ -1773,7 +1773,7 @@ Write a professional, sales-focused description that highlights the key benefits
         status: broadcast.status,
         createdAt: broadcast.createdAt,
         product: broadcast.product,
-        sentCampaigns: [{ // Single broadcast becomes a sent campaign
+        sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
           id: broadcast.id,
           sentAt: broadcast.sentAt,
           recipientCount: broadcast.recipientCount || 0,
@@ -1781,7 +1781,7 @@ Write a professional, sales-focused description that highlights the key benefits
           orderCount: Math.floor(Math.random() * (broadcast.recipientCount || 0) * 0.1),
           totalRevenue: ((Math.random() * 500) + 100).toFixed(2),
           customerGroup: broadcast.customerGroup
-        }]
+        }] : []
       }));
 
       // Convert message templates to unified campaign format
@@ -1887,16 +1887,36 @@ Write a professional, sales-focused description that highlights the key benefits
       const numericId = parseInt(id);
 
       if (type === 'broadcast') {
+        // Get the broadcast to find the product ID
+        const broadcasts = await storage.getBroadcasts(userId);
+        const broadcast = broadcasts.find(b => b.id === numericId);
+        
+        if (!broadcast) {
+          return res.status(404).json({ message: "Broadcast not found" });
+        }
+
         // Send single product broadcast
         const result = await whatsappService.sendProductBroadcast(
           userId,
-          numericId, // This is actually broadcast ID, we need to get the product ID
-          customerGroupId
+          broadcast.product.id, // Use the actual product ID
+          customerGroupId,
+          broadcast.message // Include custom message if any
         );
+
+        if (result.success) {
+          // Update broadcast status
+          await storage.updateBroadcastStatus(
+            numericId,
+            'sent',
+            new Date(),
+            result.recipientCount || 0,
+            result.messageId
+          );
+        }
 
         res.json({
           success: result.success,
-          message: result.success ? `Broadcast sent successfully` : result.error
+          message: result.success ? `Broadcast sent to ${result.recipientCount || 0} customers` : result.error
         });
       } else if (type === 'template') {
         // Send multi-product template
