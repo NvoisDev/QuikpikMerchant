@@ -587,6 +587,11 @@ function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [isEnabled, setIsEnabled] = useState(false);
+  const [whatsappConfig, setWhatsappConfig] = useState({
+    businessPhone: "",
+    apiToken: "",
+    businessName: ""
+  });
 
   // Fetch WhatsApp status
   const { data: whatsappStatus, isLoading } = useQuery({
@@ -636,6 +641,47 @@ function WhatsAppIntegrationSection() {
     },
   });
 
+  // Save WhatsApp configuration mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: typeof whatsappConfig) => {
+      return await apiRequest("POST", "/api/whatsapp/configure", config);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      toast({
+        title: "Configuration Saved",
+        description: "WhatsApp Business API configuration saved successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Verify WhatsApp configuration mutation
+  const verifyConfigMutation = useMutation({
+    mutationFn: async (config: typeof whatsappConfig) => {
+      return await apiRequest("POST", "/api/whatsapp/verify", config);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Verification Successful",
+        description: "WhatsApp Business API configuration verified successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEnable = () => {
     enableMutation.mutate();
   };
@@ -644,6 +690,14 @@ function WhatsAppIntegrationSection() {
     if (testPhoneNumber) {
       testMutation.mutate(testPhoneNumber);
     }
+  };
+
+  const handleSaveWhatsAppConfig = () => {
+    saveConfigMutation.mutate(whatsappConfig);
+  };
+
+  const handleVerifyWhatsAppConfig = () => {
+    verifyConfigMutation.mutate(whatsappConfig);
   };
 
   if (isLoading) {
@@ -679,6 +733,85 @@ function WhatsAppIntegrationSection() {
                   Messages sent via: {whatsappStatus.serviceProvider || 'Quikpik Messaging Service'}
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* WhatsApp Business API Configuration */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">WhatsApp Business API Configuration</h3>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-medium text-yellow-800 mb-2">Direct WhatsApp Business API Integration</h4>
+          <p className="text-sm text-yellow-700 mb-4">
+            Configure your own WhatsApp Business number for sending broadcasts directly through the WhatsApp Business API.
+          </p>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  WhatsApp Business Phone Number
+                </label>
+                <Input
+                  placeholder="+1234567890"
+                  value={whatsappConfig.businessPhone || ''}
+                  onChange={(e) => setWhatsappConfig({...whatsappConfig, businessPhone: e.target.value})}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Your verified WhatsApp Business phone number
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  WhatsApp Business API Token
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Your WhatsApp API Token"
+                  value={whatsappConfig.apiToken || ''}
+                  onChange={(e) => setWhatsappConfig({...whatsappConfig, apiToken: e.target.value})}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Get this from your WhatsApp Business API dashboard
+                </p>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Business Display Name
+              </label>
+              <Input
+                placeholder="Your Business Name"
+                value={whatsappConfig.businessName || ''}
+                onChange={(e) => setWhatsappConfig({...whatsappConfig, businessName: e.target.value})}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This name will appear as the sender in WhatsApp messages
+              </p>
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button 
+                onClick={handleSaveWhatsAppConfig}
+                disabled={saveConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={handleVerifyWhatsAppConfig}
+                disabled={verifyConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+              >
+                {verifyConfigMutation.isPending ? "Verifying..." : "Verify Setup"}
+              </Button>
             </div>
           </div>
         </div>

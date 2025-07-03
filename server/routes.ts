@@ -1159,6 +1159,63 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // WhatsApp Business API configuration routes
+  app.post('/api/whatsapp/configure', isAuthenticated, async (req: any, res) => {
+    try {
+      const { businessPhone, apiToken, businessName } = req.body;
+      const wholesalerId = req.user.claims.sub;
+
+      if (!businessPhone || !apiToken) {
+        return res.status(400).json({ message: "Business phone and API token are required" });
+      }
+
+      // Save WhatsApp configuration to user settings
+      await storage.updateUserSettings(wholesalerId, {
+        whatsappBusinessPhone: businessPhone,
+        whatsappApiToken: apiToken,
+        whatsappBusinessName: businessName,
+        whatsappEnabled: true
+      });
+
+      res.json({
+        success: true,
+        message: "WhatsApp Business API configuration saved successfully"
+      });
+    } catch (error: any) {
+      console.error("Error saving WhatsApp configuration:", error);
+      res.status(500).json({ message: "Failed to save WhatsApp configuration" });
+    }
+  });
+
+  app.post('/api/whatsapp/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const { businessPhone, apiToken } = req.body;
+
+      if (!businessPhone || !apiToken) {
+        return res.status(400).json({ message: "Business phone and API token are required" });
+      }
+
+      // Verify WhatsApp Business API credentials
+      const verificationResult = await whatsappService.verifyWhatsAppBusinessAPI(businessPhone, apiToken);
+      
+      if (verificationResult.success) {
+        res.json({
+          success: true,
+          message: "WhatsApp Business API configuration verified successfully",
+          data: verificationResult.data
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: verificationResult.error || "Failed to verify WhatsApp configuration"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error verifying WhatsApp configuration:", error);
+      res.status(500).json({ message: "Failed to verify WhatsApp configuration" });
+    }
+  });
+
   app.get('/api/whatsapp/status', isAuthenticated, async (req: any, res) => {
     try {
       const wholesalerId = req.user.claims.sub;

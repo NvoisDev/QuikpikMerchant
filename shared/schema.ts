@@ -57,6 +57,11 @@ export const users = pgTable("users", {
   twilioAuthToken: varchar("twilio_auth_token"), // Twilio auth token for this wholesaler
   whatsappEnabled: boolean("whatsapp_enabled").default(false), // Whether WhatsApp is set up
   
+  // WhatsApp Business API fields (direct integration)
+  whatsappBusinessPhone: varchar("whatsapp_business_phone"), // WhatsApp Business phone number
+  whatsappApiToken: varchar("whatsapp_api_token"), // WhatsApp Business API token
+  whatsappBusinessName: varchar("whatsapp_business_name"), // Display name for WhatsApp messages
+  
   // Settings
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
   timezone: varchar("timezone").default("UTC"),

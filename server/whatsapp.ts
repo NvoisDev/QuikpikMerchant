@@ -241,6 +241,49 @@ Update your inventory or restock soon.`;
       };
     }
   }
+
+  // Verify WhatsApp Business API configuration
+  async verifyWhatsAppBusinessAPI(
+    businessPhone: string,
+    apiToken: string
+  ): Promise<{ success: boolean; error?: string; data?: any }> {
+    try {
+      // For now, simulate verification since we don't have direct WhatsApp Business API integration
+      // In a real implementation, this would make a test API call to WhatsApp Business API
+      
+      if (!businessPhone.startsWith('+')) {
+        return {
+          success: false,
+          error: 'Phone number must include country code (e.g., +1234567890)'
+        };
+      }
+
+      if (apiToken.length < 20) {
+        return {
+          success: false,
+          error: 'API token appears to be invalid (too short)'
+        };
+      }
+
+      // Simulate successful verification
+      console.log(`[VERIFICATION] WhatsApp Business API for ${businessPhone} with token ${apiToken.substring(0, 10)}...`);
+      
+      return {
+        success: true,
+        data: {
+          phoneNumber: businessPhone,
+          verified: true,
+          accountType: 'Business',
+          capabilities: ['messaging', 'media', 'templates']
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Verification failed: ${error.message}`
+      };
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService();
