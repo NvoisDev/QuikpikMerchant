@@ -475,37 +475,29 @@ export default function Settings() {
 function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
-
-  const whatsappForm = useForm<WhatsAppFormData>({
-    resolver: zodResolver(whatsappFormSchema),
-    defaultValues: {
-      twilioAccountSid: "",
-      twilioAuthToken: "",
-      twilioPhoneNumber: "",
-    },
-  });
+  const [isEnabled, setIsEnabled] = useState(false);
 
   // Fetch WhatsApp status
-  const { data: whatsappStatus } = useQuery({
+  const { data: whatsappStatus, isLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
   });
 
-  // Setup WhatsApp mutation
-  const setupMutation = useMutation({
-    mutationFn: async (data: WhatsAppFormData) => {
-      return await apiRequest("POST", "/api/whatsapp/setup", data);
+  // Enable WhatsApp mutation
+  const enableMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/whatsapp/enable", {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      setIsEnabled(true);
       toast({
-        title: "WhatsApp Integration Configured",
-        description: "Your WhatsApp integration has been set up successfully!",
+        title: "WhatsApp Integration Enabled",
+        description: "Your WhatsApp integration is now active!",
       });
-      whatsappForm.reset();
     },
     onError: (error: any) => {
       toast({
-        title: "Setup Failed",
+        title: "Enable Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -533,8 +525,8 @@ function WhatsAppIntegrationSection() {
     },
   });
 
-  const onSubmitWhatsApp = (data: WhatsAppFormData) => {
-    setupMutation.mutate(data);
+  const handleEnable = () => {
+    enableMutation.mutate();
   };
 
   const handleTest = () => {
@@ -543,20 +535,37 @@ function WhatsAppIntegrationSection() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-20 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Status Section */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Integration Status</h3>
-        <div className={`p-4 rounded-lg border ${whatsappStatus?.configured ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+        <div className={`p-4 rounded-lg border ${whatsappStatus?.enabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`font-medium ${whatsappStatus?.configured ? 'text-green-800' : 'text-gray-800'}`}>
-                {whatsappStatus?.configured ? '✅ WhatsApp Integration Active' : '⚪ WhatsApp Integration Not Configured'}
+              <p className={`font-medium ${whatsappStatus?.enabled ? 'text-green-800' : 'text-gray-800'}`}>
+                {whatsappStatus?.enabled ? '✅ WhatsApp Integration Active' : '⚪ WhatsApp Integration Disabled'}
               </p>
-              {whatsappStatus?.phoneNumber && (
+              <p className="text-sm text-gray-600 mt-1">
+                {whatsappStatus?.enabled 
+                  ? 'You can now send WhatsApp broadcasts to your customer groups'
+                  : 'Enable WhatsApp integration to start sending broadcasts'
+                }
+              </p>
+              {whatsappStatus?.enabled && (
                 <p className="text-sm text-gray-600 mt-1">
-                  Phone Number: {whatsappStatus.phoneNumber}
+                  Messages sent via: {whatsappStatus.serviceProvider || 'Quikpik Messaging Service'}
                 </p>
               )}
             </div>
@@ -564,94 +573,57 @@ function WhatsAppIntegrationSection() {
         </div>
       </div>
 
-      {/* Setup Instructions */}
+      {/* About Section */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Twilio WhatsApp Setup</h3>
+        <h3 className="text-lg font-medium">About WhatsApp Integration</h3>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-800 mb-2">How to get your Twilio credentials:</h4>
-          <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1">
-            <li>Sign up for a Twilio account at <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="underline">twilio.com</a></li>
-            <li>Complete WhatsApp Business API setup in your Twilio Console</li>
-            <li>Get a WhatsApp-enabled phone number from Twilio</li>
-            <li>Copy your Account SID and Auth Token from the console</li>
-            <li>Enter these credentials below to enable WhatsApp messaging</li>
-          </ol>
+          <h4 className="font-medium text-blue-800 mb-2">Quikpik Messaging Service</h4>
+          <div className="text-sm text-blue-700 space-y-2">
+            <p>✓ <strong>No setup required:</strong> We handle all the technical WhatsApp integration for you</p>
+            <p>✓ <strong>Instant activation:</strong> Enable WhatsApp messaging with one click</p>
+            <p>✓ <strong>Professional delivery:</strong> Messages are sent from verified business accounts</p>
+            <p>✓ <strong>Reliable service:</strong> Built on enterprise-grade messaging infrastructure</p>
+            <p>✓ <strong>Full compliance:</strong> All messages follow WhatsApp Business policies</p>
+          </div>
         </div>
       </div>
 
-      {/* Configuration Form */}
+      {/* Enable/Disable Section */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Configuration</h3>
-        <Form {...whatsappForm}>
-          <form onSubmit={whatsappForm.handleSubmit(onSubmitWhatsApp)} className="space-y-4">
-            <FormField
-              control={whatsappForm.control}
-              name="twilioAccountSid"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Twilio Account SID</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="AC..." 
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={whatsappForm.control}
-              name="twilioAuthToken"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Twilio Auth Token</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="Enter your auth token" 
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={whatsappForm.control}
-              name="twilioPhoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WhatsApp Phone Number</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="+1234567890" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+        <h3 className="text-lg font-medium">Activate Integration</h3>
+        {!whatsappStatus?.enabled ? (
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Click the button below to enable WhatsApp messaging for your business. 
+              This will allow you to send product broadcasts and updates to your customer groups.
+            </p>
             <Button 
-              type="submit" 
-              disabled={setupMutation.isPending}
-              className="w-full"
+              onClick={handleEnable}
+              disabled={enableMutation.isPending}
+              className="w-full bg-green-600 hover:bg-green-700"
             >
-              {setupMutation.isPending ? "Setting up..." : "Configure WhatsApp Integration"}
+              {enableMutation.isPending ? "Enabling..." : "Enable WhatsApp Integration"}
             </Button>
-          </form>
-        </Form>
+          </div>
+        ) : (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 font-medium">
+              ✅ WhatsApp integration is active and ready to use!
+            </p>
+            <p className="text-green-700 text-sm mt-1">
+              You can now create broadcasts in the Broadcasts section and send messages to your customer groups.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Test Section */}
-      {whatsappStatus?.configured && (
+      {whatsappStatus?.enabled && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Test Integration</h3>
+          <p className="text-gray-600 text-sm">
+            Send a test message to verify your WhatsApp integration is working correctly.
+          </p>
           <div className="flex gap-2">
             <Input
               placeholder="Enter phone number (e.g., +1234567890)"
@@ -665,6 +637,9 @@ function WhatsAppIntegrationSection() {
               {testMutation.isPending ? "Sending..." : "Send Test Message"}
             </Button>
           </div>
+          <p className="text-xs text-gray-500">
+            Note: Test messages will be sent from our shared business account.
+          </p>
         </div>
       )}
     </div>

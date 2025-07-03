@@ -974,68 +974,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // WhatsApp/Twilio Setup API Routes
-  app.post('/api/whatsapp/setup', isAuthenticated, async (req: any, res) => {
-    try {
-      const { twilioAccountSid, twilioAuthToken, twilioPhoneNumber } = req.body;
-      const wholesalerId = req.user.claims.sub;
-
-      if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-        return res.status(400).json({ 
-          message: "Missing required Twilio credentials" 
-        });
-      }
-
-      const result = await whatsappService.setupWholesalerWhatsApp(
-        wholesalerId,
-        twilioAccountSid,
-        twilioAuthToken,
-        twilioPhoneNumber
-      );
-
-      if (result.success) {
-        res.json({ 
-          success: true, 
-          message: "WhatsApp integration configured successfully" 
-        });
-      } else {
-        res.status(400).json({ 
-          success: false, 
-          error: result.error 
-        });
-      }
-    } catch (error: any) {
-      console.error("Error setting up WhatsApp:", error);
-      res.status(500).json({ message: "Failed to setup WhatsApp integration" });
-    }
-  });
-
-  app.post('/api/whatsapp/validate', isAuthenticated, async (req: any, res) => {
-    try {
-      const { twilioAccountSid, twilioAuthToken, twilioPhoneNumber } = req.body;
-
-      if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-        return res.status(400).json({ 
-          valid: false,
-          error: "Missing required Twilio credentials" 
-        });
-      }
-
-      const result = await whatsappService.validateTwilioCredentials(
-        twilioAccountSid,
-        twilioAuthToken,
-        twilioPhoneNumber
-      );
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error validating Twilio credentials:", error);
-      res.status(500).json({ 
-        valid: false, 
-        error: "Failed to validate credentials" 
-      });
-    }
-  });
+  // WhatsApp API Routes (Shared Service)
 
   app.post('/api/whatsapp/test', isAuthenticated, async (req: any, res) => {
     try {
@@ -1073,16 +1012,31 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ message: "User not found" });
       }
 
-      const isConfigured = !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber);
-
       res.json({
-        configured: isConfigured,
-        phoneNumber: user.twilioPhoneNumber || null,
-        enabled: user.whatsappEnabled || false
+        enabled: user.whatsappEnabled || false,
+        serviceProvider: "Quikpik Messaging Service",
+        configured: true // Always true for shared service
       });
     } catch (error: any) {
       console.error("Error fetching WhatsApp status:", error);
       res.status(500).json({ message: "Failed to fetch WhatsApp status" });
+    }
+  });
+
+  app.post('/api/whatsapp/enable', isAuthenticated, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.claims.sub;
+      
+      // Enable WhatsApp for this user
+      await storage.updateUserSettings(wholesalerId, { whatsappEnabled: true });
+
+      res.json({
+        success: true,
+        message: "WhatsApp integration enabled successfully"
+      });
+    } catch (error: any) {
+      console.error("Error enabling WhatsApp:", error);
+      res.status(500).json({ message: "Failed to enable WhatsApp integration" });
     }
   });
 
