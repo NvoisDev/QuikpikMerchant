@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/ui/logo";
 import { 
   LayoutDashboard, 
   Package, 
@@ -66,9 +67,9 @@ export default function Sidebar() {
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-primary">Quikpik Merchant</h2>
-              <p className="text-sm text-gray-600 mt-1">
+            <div className="flex flex-col">
+              <Logo size="lg" className="mb-2" />
+              <p className="text-xs text-gray-600">
                 {user?.businessName || "Wholesale Business"}
               </p>
             </div>

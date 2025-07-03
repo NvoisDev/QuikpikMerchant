@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Logo from "@/components/ui/logo";
 import { 
   Package, 
   MessageCircle, 
@@ -21,31 +22,31 @@ export default function Landing() {
       icon: Package,
       title: "Smart Inventory Management",
       description: "Track stock levels, set minimum order quantities, and get automated alerts when inventory runs low.",
-      color: "bg-blue-100 text-blue-600"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: MessageCircle,
       title: "WhatsApp Broadcasting",
       description: "Send product updates and promotions directly to your retail customers via WhatsApp with rich media support.",
-      color: "bg-green-100 text-green-600"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: CreditCard,
       title: "Secure Payments",
       description: "Accept payments online with Stripe integration. Automatic invoice generation and transparent 5% platform fee.",
-      color: "bg-yellow-100 text-yellow-600"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: BarChart3,
       title: "Analytics Dashboard",
       description: "Track sales performance, popular products, customer behavior, and broadcasting effectiveness in real-time.",
-      color: "bg-purple-100 text-purple-600"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: Handshake,
       title: "Price Negotiation",
       description: "Enable flexible pricing with built-in negotiation tools. Accept, decline, or counter customer offers seamlessly.",
-      color: "bg-red-100 text-red-600"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: Users,
@@ -68,7 +69,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-primary">Quikpik Merchant</h1>
+              <Logo size="lg" />
             </div>
             <div className="hidden md:flex items-center space-x-4">
               <a href="#features" className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium">

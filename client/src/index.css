@@ -13,18 +13,28 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --primary: hsl(151, 77%, 36%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(151, 30%, 95%);
+  --secondary-foreground: hsl(151, 77%, 20%);
   --accent: hsl(151, 77%, 36%);
-  --accent-foreground: hsl(60, 9.1%, 97.8%);
+  --accent-foreground: hsl(0, 0%, 100%);
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
+  --ring: hsl(151, 77%, 36%);
   --radius: 0.5rem;
   --warning: hsl(38, 92%, 50%);
   --warning-foreground: hsl(48, 96%, 89%);
+}
+
+/* Custom gradient for brand colors */
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(151, 77%, 36%) 0%, hsl(151, 77%, 30%) 100%);
+}
+
+/* Brand shadow for elevated elements */
+.shadow-brand {
+  box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.2);
 }
 
 .dark {
@@ -38,12 +48,12 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
+  --primary: hsl(151, 77%, 40%);
+  --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(151, 77%, 36%);
-  --accent-foreground: hsl(0, 0%, 98%);
+  --secondary-foreground: hsl(151, 50%, 80%);
+  --accent: hsl(151, 77%, 40%);
+  --accent-foreground: hsl(0, 0%, 100%);
   --destructive: hsl(0, 62.8%, 30.6%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(240, 4.9%, 83.9%);
