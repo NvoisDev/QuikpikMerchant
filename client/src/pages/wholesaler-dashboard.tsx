@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { formatNumber } from "@/lib/utils";
 
 import StatsCard from "@/components/stats-card";
 import { 
@@ -93,7 +94,7 @@ export default function WholesalerDashboard() {
             />
             <StatsCard
               title="Orders This Month"
-              value={(stats?.ordersCount || 0).toString()}
+              value={formatNumber(stats?.ordersCount || 0)}
               change="+8.2% from last month"
               icon={ShoppingCart}
               iconColor="text-blue-600"
@@ -102,8 +103,8 @@ export default function WholesalerDashboard() {
             />
             <StatsCard
               title="Active Products"
-              value={(stats?.activeProducts || 0).toString()}
-              change={`${(stats?.lowStockCount || 0)} low stock alerts`}
+              value={formatNumber(stats?.activeProducts || 0)}
+              change={`${formatNumber(stats?.lowStockCount || 0)} low stock alerts`}
               icon={Package}
               iconColor="text-purple-600"
               iconBg="bg-purple-100"
@@ -112,7 +113,7 @@ export default function WholesalerDashboard() {
             />
             <StatsCard
               title="WhatsApp Reach"
-              value="1,245"
+              value={formatNumber(1245)}
               change="85% open rate"
               icon={MessageSquare}
               iconColor="text-green-600"

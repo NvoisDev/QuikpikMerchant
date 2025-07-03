@@ -16,6 +16,13 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
   apiVersion: "2024-06-20",
 }) : null;
 
+// Helper function to format numbers with commas
+function formatNumber(value: number | string): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '0';
+  return num.toLocaleString('en-US');
+}
+
 // Helper function to generate stock update messages
 function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {
   const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
@@ -33,9 +40,9 @@ function generateStockUpdateMessage(product: any, notificationType: string, whol
       
     case 'low_stock':
       message += `⚠️ *LOW STOCK ALERT*\n`;
-      message += `Only ${product.stock || 0} units remaining!\n\n`;
+      message += `Only ${formatNumber(product.stock || 0)} units remaining!\n\n`;
       message += `💰 Price: ${product.price}\n`;
-      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
       message += `🛒 Order now to secure your stock!\n\n`;
       message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
@@ -43,9 +50,9 @@ function generateStockUpdateMessage(product: any, notificationType: string, whol
     case 'restocked':
       message += `✅ *BACK IN STOCK*\n`;
       message += `Great news! This product is available again.\n\n`;
-      message += `📦 Stock: ${product.stock || 0} units available\n`;
+      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
       message += `💰 Price: ${product.price}\n`;
-      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
       message += `🛒 Place your order now!\n\n`;
       message += `📞 Contact us:\n${businessName}\n📱 ${phone}`;
       break;
@@ -53,8 +60,8 @@ function generateStockUpdateMessage(product: any, notificationType: string, whol
     case 'price_change':
       message += `💰 *PRICE UPDATE*\n`;
       message += `New price: ${product.price}\n`;
-      message += `📦 Stock: ${product.stock || 0} units available\n`;
-      message += `📦 MOQ: ${product.moq} units\n\n`;
+      message += `📦 Stock: ${formatNumber(product.stock || 0)} units available\n`;
+      message += `📦 MOQ: ${formatNumber(product.moq)} units\n\n`;
       message += `📞 Questions? Contact us:\n${businessName}\n📱 ${phone}`;
       break;
   }

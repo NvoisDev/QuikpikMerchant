@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
+import { formatNumber } from "@/lib/utils";
 import { 
   MessageSquare, 
   Plus,
@@ -240,8 +241,8 @@ export default function Campaigns() {
     if (campaign.campaignType === 'single' && campaign.product) {
       message += `\n\n📦 Featured Product:\n${campaign.product.name}\n\n`;
       message += `💰 Unit Price: ${formatCurrency(parseFloat(campaign.product.price))}\n`;
-      message += `📦 MOQ: ${campaign.product.moq} units\n`;
-      message += `📦 In Stock: ${campaign.product.stock || 'Available'} packs available`;
+      message += `📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
+      message += `📦 In Stock: ${formatNumber(campaign.product.stock)} packs available`;
       
       if (campaign.product.description) {
         message += `\n\n📋 ${campaign.product.description}`;
@@ -252,8 +253,8 @@ export default function Campaigns() {
         const price = item.specialPrice || item.product.price;
         message += `\n${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
-        message += `   📦 MOQ: ${item.product.moq} units\n`;
-        message += `   📦 In Stock: ${item.product.stock || 'Available'} packs available`;
+        message += `   📦 MOQ: ${formatNumber(item.product.moq)} units\n`;
+        message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available`;
       });
     }
 
@@ -617,7 +618,7 @@ export default function Campaigns() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
                           <span>💰 {formatCurrency(Number(productItem.product?.price) || 0)}</span>
-                          <span>📦 {productItem.product?.stock || 0} stock</span>
+                          <span>📦 {formatNumber(productItem.product?.stock || 0)} stock</span>
                         </div>
                       </div>
                     ))}

@@ -6,6 +6,13 @@ export class WhatsAppService {
     // No shared credentials needed - each user has their own WhatsApp Business API access
   }
 
+  // Format numbers with commas for better readability
+  private formatNumber(value: number | string): string {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '0';
+    return num.toLocaleString('en-US');
+  }
+
   async sendProductBroadcast(
     wholesalerId: string,
     productId: number,
@@ -193,9 +200,9 @@ export class WhatsAppService {
 
     return `🛍️ *${product.name}* is now available!
 
-📦 Stock: ${product.stock} units
+📦 Stock: ${this.formatNumber(product.stock)} units
 💰 Price: ${price}
-📋 Min Order: ${product.moq} units
+📋 Min Order: ${this.formatNumber(product.moq)} units
 
 ${product.description || ''}
 
@@ -438,7 +445,7 @@ Update your inventory or restock soon.`;
     template.products.forEach((item: any, index: number) => {
       const price = item.specialPrice || item.product.price;
       message += `${index + 1}. *${item.product.name}*\n`;
-      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${item.product.moq})\n\n`;
+      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${this.formatNumber(item.product.moq)})\n\n`;
     });
 
     if (template.includePurchaseLink) {
