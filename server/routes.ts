@@ -392,6 +392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create or find customer with phone number
       let customer = await storage.getUserByPhone(phoneNumber);
+      let isNewCustomer = false;
+      
       if (!customer) {
         // Create a new customer/retailer account
         customer = await storage.createCustomer({
@@ -399,14 +401,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: name,
           role: "retailer",
         });
+        isNewCustomer = true;
       }
 
       // Add customer to the group
       await storage.addCustomerToGroup(groupId, customer.id);
+
+      // Send welcome message to new customers
+      if (isNewCustomer) {
+        try {
+          const wholesaler = await storage.getUser(userId);
+          const businessName = wholesaler?.businessName || "Your Supplier";
+          
+          const welcomeMessage = `🎉 Welcome to ${businessName}!\n\n` +
+            `Hi ${name}! 👋\n\n` +
+            `You've been added to our customer network and can now:\n\n` +
+            `🛒 Browse our latest products\n` +
+            `📱 Receive instant stock updates\n` +
+            `💬 Place orders directly via WhatsApp\n` +
+            `🚚 Track your deliveries\n` +
+            `💰 Access special wholesale pricing\n\n` +
+            `We'll keep you updated with:\n` +
+            `• New product arrivals\n` +
+            `• Special promotions\n` +
+            `• Stock availability alerts\n\n` +
+            `Questions? Just reply to this message!\n\n` +
+            `✨ This message was powered by Quikpik Merchant`;
+
+          await whatsappService.sendMessage(phoneNumber, welcomeMessage, userId);
+          console.log(`Welcome message sent to new customer: ${phoneNumber}`);
+        } catch (welcomeError) {
+          console.error(`Failed to send welcome message to ${phoneNumber}:`, welcomeError);
+          // Don't fail the whole operation if welcome message fails
+        }
+      }
       
       res.json({
         success: true,
-        message: `${name} added to ${group.name} successfully`,
+        message: isNewCustomer ? `${name} added to ${group.name} and welcome message sent!` : `${name} added to ${group.name} successfully`,
         customer: {
           id: customer.id,
           name: customer.firstName,

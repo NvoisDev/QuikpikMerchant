@@ -196,6 +196,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Built consolidated backend API endpoints that combine broadcasts and templates data
   - Enhanced message preview formatting with professional WhatsApp-style layout including product details, pricing, stock levels, and contact information
   - Streamlined user experience by eliminating confusion between similar broadcast features
+- July 03, 2025. Enhanced broadcast system with dashboard and automated customer onboarding:
+  - Added comprehensive broadcast dashboard showing campaign metrics, messages sent, orders, and revenue
+  - Implemented automatic welcome message system for new customers added to groups
+  - Enhanced multi-product campaign form to default quantity to available stock levels
+  - Welcome messages introduce new customers to the platform capabilities and set expectations for future communications
+  - Dashboard provides real-time insights into broadcast performance and customer engagement
 
 ## User Preferences
 
