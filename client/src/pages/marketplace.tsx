@@ -507,6 +507,17 @@ function ProductsView({
       {products.map((product) => (
         <Card key={product.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
+            {/* Store name and icon in top right */}
+            <div className="flex justify-end mb-2">
+              <div className="flex items-center space-x-1">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={product.wholesaler.profileImageUrl} />
+                  <AvatarFallback>{product.wholesaler.businessName?.[0]}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-gray-600">{product.wholesaler.businessName}</span>
+              </div>
+            </div>
+            
             <div className="flex items-start space-x-4">
               <img 
                 src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200"} 
@@ -522,14 +533,7 @@ function ProductsView({
                   </span>
                   <Badge variant="secondary">MOQ: {product.moq}</Badge>
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center space-x-1">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={product.wholesaler.profileImageUrl} />
-                      <AvatarFallback>{product.wholesaler.businessName?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-gray-600">{product.wholesaler.businessName}</span>
-                  </div>
+                <div className="flex justify-end mt-2">
                   <Button size="sm">View Details</Button>
                 </div>
               </div>
