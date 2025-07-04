@@ -409,8 +409,14 @@ Update your inventory or restock soon.`;
         throw new Error('Wholesaler not found');
       }
 
-      // Check if WhatsApp is configured for this wholesaler
-      if (!wholesaler.whatsappEnabled || !wholesaler.whatsappBusinessPhone || !wholesaler.whatsappApiToken) {
+      // Check if Twilio WhatsApp is configured for this wholesaler
+      console.log(`Checking Twilio config for template ${template.wholesalerId}:`, {
+        accountSid: !!wholesaler.twilioAccountSid,
+        authToken: !!wholesaler.twilioAuthToken, 
+        phoneNumber: !!wholesaler.twilioPhoneNumber
+      });
+      
+      if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
         console.log(`WhatsApp not configured for wholesaler ${template.wholesalerId}`);
         
         // Return test mode success (don't actually send messages)
@@ -427,19 +433,26 @@ Update your inventory or restock soon.`;
       // Create Twilio client using wholesaler's credentials
       const twilioClient = twilio(wholesaler.twilioAccountSid!, wholesaler.twilioAuthToken!);
       
-      // Send WhatsApp messages using wholesaler's own WhatsApp Business API
+      // Send WhatsApp messages using Twilio (same as single product broadcasts)
       const promises = members.map(async (member) => {
         if (!member.businessPhone) {
           console.warn(`No phone number for member ${member.id}`);
           return false;
         }
 
-        return await this.sendTwilioWhatsAppMessage(
-          twilioClient,
-          wholesaler.twilioPhoneNumber || '',
-          member.businessPhone || '',
-          templateMessage
-        );
+        try {
+          const result = await twilioClient.messages.create({
+            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+            to: `whatsapp:${member.businessPhone}`,
+            body: templateMessage
+          });
+          
+          console.log(`Twilio WhatsApp template message sent to ${member.businessPhone}, SID: ${result.sid}`);
+          return true;
+        } catch (error: any) {
+          console.error(`Failed to send Twilio WhatsApp template to ${member.businessPhone}:`, error.message);
+          return false;
+        }
       });
 
       const results = await Promise.all(promises);
