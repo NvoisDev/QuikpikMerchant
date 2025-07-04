@@ -48,6 +48,12 @@ export class WhatsAppService {
       const productMessage = message || this.generateProductMessage(product);
 
       // Check if Twilio WhatsApp is configured for this wholesaler
+      console.log(`Checking Twilio config for ${wholesalerId}:`, {
+        accountSid: !!wholesaler.twilioAccountSid,
+        authToken: !!wholesaler.twilioAuthToken, 
+        phoneNumber: !!wholesaler.twilioPhoneNumber
+      });
+      
       if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
         console.log(`Twilio WhatsApp not configured for wholesaler ${wholesalerId}`);
         
