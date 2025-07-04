@@ -10,7 +10,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -870,6 +870,18 @@ function WhatsAppIntegrationSection() {
           </p>
         </div>
       )}
+
+      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-orange-600 mt-1" />
+          <div>
+            <p className="text-sm text-orange-800 font-medium">Sandbox Mode Limitation</p>
+            <p className="text-sm text-orange-700 mt-1">
+              Currently using Twilio sandbox mode - messages only reach your test number. For customer delivery, upgrade to production WhatsApp API and ensure customers opt-in by messaging your business number first.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h4 className="font-medium text-gray-800 mb-2">📚 Setup Guide</h4>

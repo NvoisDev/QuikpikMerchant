@@ -45,7 +45,7 @@ export class WhatsAppService {
       const recipientCount = members.length;
 
       // Use custom message if provided, otherwise generate default message
-      const productMessage = message || this.generateProductMessage(product);
+      const productMessage = message || this.generateProductMessage(product, undefined, wholesaler);
 
       // Check if Twilio WhatsApp is configured for this wholesaler
       console.log(`Checking Twilio config for ${wholesalerId}:`, {
@@ -218,9 +218,10 @@ export class WhatsAppService {
     return `phone_number_id_${phoneNumber.replace(/\D/g, '')}`;
   }
 
-  private generateProductMessage(product: any, customMessage?: string): string {
+  private generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
     const productUrl = `${process.env.APP_URL || 'http://localhost:5000'}/product/${product.id}`;
-    const price = product.priceVisible ? `$${product.price}` : 'Request Quote';
+    const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
+    const price = product.priceVisible ? `${currencySymbol}${product.price}` : 'Request Quote';
     
     if (customMessage) {
       return `${customMessage}\n\n🛒 Order now: ${productUrl}`;
@@ -489,8 +490,11 @@ Update your inventory or restock soon.`;
     
     template.products.forEach((item: any, index: number) => {
       const price = item.specialPrice || item.product.price;
-      message += `${index + 1}. *${item.product.name}*\n`;
-      message += `   💰 $${parseFloat(price).toFixed(2)} (MOQ: ${this.formatNumber(item.product.moq)})\n\n`;
+      const currencySymbol = wholesaler.defaultCurrency === 'GBP' ? '£' : wholesaler.defaultCurrency === 'EUR' ? '€' : '$';
+      message += `${index + 1}. ${item.product.name}\n`;
+      message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
+      message += `   📦 MOQ: ${this.formatNumber(item.product.moq)} units\n`;
+      message += `   📦 In Stock: ${this.formatNumber(item.product.stock)} packs available\n`;
     });
 
     if (template.includePurchaseLink) {
