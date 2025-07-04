@@ -296,6 +296,27 @@ export default function CustomerGroups() {
     },
   });
 
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (groupId: number) => {
+      const response = await apiRequest("DELETE", `/api/customer-groups/${groupId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups"] });
+      toast({
+        title: "Success",
+        description: "Customer group deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer group",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onCreateGroup = (data: CustomerGroupFormData) => {
     createGroupMutation.mutate(data);
   };
@@ -961,18 +982,31 @@ export default function CustomerGroups() {
                   <CardTitle className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <span className="truncate text-lg font-semibold">{group.name}</span>
-                      <button
-                        className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                        onClick={() => {
-                          setSelectedGroup(group);
-                          editGroupForm.setValue('name', group.name);
-                          editGroupForm.setValue('description', group.description || '');
-                          setIsEditDialogOpen(true);
-                        }}
-                        title="Edit group name"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            editGroupForm.setValue('name', group.name);
+                            editGroupForm.setValue('description', group.description || '');
+                            setIsEditDialogOpen(true);
+                          }}
+                          title="Edit group name"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 rounded transition-colors"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all members from the group.`)) {
+                              deleteGroupMutation.mutate(group.id);
+                            }
+                          }}
+                          title="Delete group"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </CardTitle>
                   

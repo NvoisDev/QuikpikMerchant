@@ -481,6 +481,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete customer group
+  app.delete('/api/customer-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id);
+
+      // Verify the user owns this customer group
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Delete the customer group (this should cascade delete members)
+      await storage.deleteCustomerGroup(groupId);
+      
+      res.json({
+        success: true,
+        message: "Customer group deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting customer group:", error);
+      res.status(500).json({ message: "Failed to delete customer group" });
+    }
+  });
+
   // WhatsApp group creation
   app.post('/api/customer-groups/:groupId/whatsapp-group', isAuthenticated, async (req: any, res) => {
     try {

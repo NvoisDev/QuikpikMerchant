@@ -856,10 +856,18 @@ export default function Campaigns() {
                 </label>
                 <Select onValueChange={(value) => {
                   const groupId = parseInt(value);
-                  sendCampaignMutation.mutate({
-                    campaignId: selectedCampaign.id,
-                    customerGroupId: groupId,
-                  });
+                  const selectedGroup = (customerGroups as CustomerGroup[]).find(g => g.id === groupId);
+                  
+                  if (selectedGroup) {
+                    const confirmMessage = `Are you sure you want to send "${selectedCampaign.title}" to all ${selectedGroup.memberCount || 0} members of "${selectedGroup.name}"?\n\nThis action will immediately send WhatsApp messages to all group members and cannot be undone.`;
+                    
+                    if (window.confirm(confirmMessage)) {
+                      sendCampaignMutation.mutate({
+                        campaignId: selectedCampaign.id,
+                        customerGroupId: groupId,
+                      });
+                    }
+                  }
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose customer group to send to" />

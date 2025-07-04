@@ -63,6 +63,7 @@ export interface IStorage {
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
   updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
+  deleteCustomerGroup(id: number): Promise<void>;
   getGroupMembers(groupId: number): Promise<User[]>;
   searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
@@ -328,6 +329,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(customerGroups.id, id))
       .returning();
     return customerGroup;
+  }
+
+  async deleteCustomerGroup(id: number): Promise<void> {
+    // First delete all members from the group
+    await db
+      .delete(customerGroupMembers)
+      .where(eq(customerGroupMembers.groupId, id));
+    
+    // Then delete the group itself
+    await db
+      .delete(customerGroups)
+      .where(eq(customerGroups.id, id));
   }
 
   async getGroupMembers(groupId: number): Promise<User[]> {

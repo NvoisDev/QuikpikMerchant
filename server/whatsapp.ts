@@ -417,6 +417,9 @@ Update your inventory or restock soon.`;
       const recipientCount = members.length;
       const templateMessage = customMessage || this.generateTemplateMessage(template, wholesaler, campaignUrl);
       
+      // Create Twilio client using wholesaler's credentials
+      const twilioClient = twilio(wholesaler.twilioAccountSid!, wholesaler.twilioAuthToken!);
+      
       // Send WhatsApp messages using wholesaler's own WhatsApp Business API
       const promises = members.map(async (member) => {
         if (!member.businessPhone) {
@@ -424,11 +427,11 @@ Update your inventory or restock soon.`;
           return false;
         }
 
-        return await this.sendWhatsAppMessage(
-          wholesaler.whatsappBusinessPhone,
-          member.businessPhone,
-          templateMessage,
-          wholesaler.whatsappApiToken
+        return await this.sendTwilioWhatsAppMessage(
+          twilioClient,
+          wholesaler.twilioPhoneNumber || '',
+          member.businessPhone || '',
+          templateMessage
         );
       });
 
