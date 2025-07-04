@@ -242,7 +242,11 @@ export class WhatsAppService {
   }
 
   private generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
-    const campaignUrl = `https://quikpik.co/campaign/abc123`;
+    // Extract the first domain from REPLIT_DOMAINS which contains the main app URL
+    const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
+    const domain = replitDomains.split(',')[0].trim();
+    const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+    const campaignUrl = `${baseUrl}/marketplace?product=${product.id}`;
     const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
     const businessName = wholesaler?.businessName || "Your Business";
     const phone = wholesaler?.businessPhone || wholesaler?.phoneNumber || "+1234567890";

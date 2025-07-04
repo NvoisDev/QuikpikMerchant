@@ -2045,7 +2045,10 @@ Write a professional, sales-focused description that highlights the key benefits
         }
 
         const members = await storage.getGroupMembers(customerGroupId);
-        const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${numericId}`;
+        // Generate proper campaign URL using Replit domain or request host
+        const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0]?.trim();
+        const baseUrl = replitDomain ? `https://${replitDomain}` : `${req.protocol}://${req.get('host')}`;
+        const campaignUrl = `${baseUrl}/marketplace?campaign=${Date.now()}${numericId}`;
 
         // Create campaign record
         await storage.createTemplateCampaign({

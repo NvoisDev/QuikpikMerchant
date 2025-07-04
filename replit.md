@@ -265,6 +265,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Product Image Integration**: Added automatic product image inclusion in WhatsApp messages for both single and multi-product campaigns
   - **Sandbox Limitation Warning**: Added clear notification in settings explaining Twilio sandbox delivery limitations to test numbers only
   - **Template Configuration Fix**: Multi-product campaigns now use proper Twilio configuration instead of WhatsApp Business API fields
+- July 04, 2025. Fixed WhatsApp media attachment and campaign link issues:
+  - **Media Attachment Fix**: Resolved base64 image URL incompatibility with Twilio WhatsApp API by adding 📸 emoji indicators for products with images
+  - **Image Availability Notifications**: Added "Product images available online" messaging to inform customers about visual content
+  - **Campaign Link Repair**: Fixed broken campaign URLs from placeholder "quikpik.co" to working application URLs using Replit domains
+  - **Dynamic URL Generation**: Campaign links now automatically use correct application domain (https://your-app.replit.dev/marketplace)
+  - **Enhanced Multi-Product Templates**: Added image indicators and availability notifications to template campaigns
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
