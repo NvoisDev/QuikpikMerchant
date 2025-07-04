@@ -1,9 +1,10 @@
 import { storage } from "./storage";
+import twilio from "twilio";
 
-// Direct WhatsApp Business API integration using individual user credentials
+// Twilio WhatsApp integration using individual user credentials
 export class WhatsAppService {
   constructor() {
-    // No shared credentials needed - each user has their own WhatsApp Business API access
+    // No shared Twilio credentials needed - each user has their own Twilio account
   }
 
   // Format numbers with commas for better readability
@@ -45,9 +46,9 @@ export class WhatsAppService {
 
       const productMessage = this.generateProductMessage(product, message);
 
-      // Check if WhatsApp is configured for this wholesaler
-      if (!wholesaler.whatsappEnabled || !wholesaler.whatsappBusinessPhone || !wholesaler.whatsappApiToken) {
-        console.log(`WhatsApp not configured for wholesaler ${wholesalerId}`);
+      // Check if Twilio WhatsApp is configured for this wholesaler
+      if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
+        console.log(`Twilio WhatsApp not configured for wholesaler ${wholesalerId}`);
         
         // Return test mode success (don't actually send messages)
         return {
@@ -57,7 +58,9 @@ export class WhatsAppService {
         };
       }
       
-      // Send WhatsApp messages using wholesaler's own WhatsApp Business API
+      // Send WhatsApp messages using Twilio
+      const twilioClient = twilio(wholesaler.twilioAccountSid!, wholesaler.twilioAuthToken!);
+      
       const promises = members.map(async (member) => {
         if (!member.businessPhone) {
           console.warn(`No phone number for member ${member.id}`);
@@ -65,17 +68,16 @@ export class WhatsAppService {
         }
 
         try {
-          const result = await this.sendWhatsAppMessage(
-            wholesaler.whatsappBusinessPhone!,
-            wholesaler.whatsappApiToken!,
-            member.businessPhone,
-            productMessage
-          );
+          const result = await twilioClient.messages.create({
+            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+            to: `whatsapp:${member.businessPhone}`,
+            body: productMessage
+          });
           
-          console.log(`WhatsApp message sent to ${member.businessPhone}`);
-          return result;
+          console.log(`Twilio WhatsApp message sent to ${member.businessPhone}, SID: ${result.sid}`);
+          return true;
         } catch (error: any) {
-          console.error(`Failed to send WhatsApp to ${member.businessPhone}:`, error.message);
+          console.error(`Failed to send Twilio WhatsApp to ${member.businessPhone}:`, error.message);
           return false;
         }
       });
@@ -112,19 +114,24 @@ export class WhatsAppService {
         return true;
       }
 
-      // Get wholesaler WhatsApp credentials
+      // Get wholesaler Twilio credentials
       const wholesaler = await storage.getUser(wholesalerId);
-      if (!wholesaler?.whatsappEnabled || !wholesaler.whatsappBusinessPhone || !wholesaler.whatsappApiToken) {
-        console.log(`WhatsApp not configured for wholesaler ${wholesalerId}`);
+      if (!wholesaler?.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
+        console.log(`Twilio not configured for wholesaler ${wholesalerId}`);
         return false;
       }
 
-      return await this.sendWhatsAppMessage(
-        wholesaler.whatsappBusinessPhone,
-        wholesaler.whatsappApiToken,
-        phoneNumber,
-        message
-      );
+      // Send message using Twilio
+      const twilioClient = twilio(wholesaler.twilioAccountSid, wholesaler.twilioAuthToken);
+      
+      const result = await twilioClient.messages.create({
+        from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+        to: `whatsapp:${phoneNumber}`,
+        body: message
+      });
+
+      console.log(`Twilio WhatsApp message sent to ${phoneNumber}, SID: ${result.sid}`);
+      return true;
     } catch (error) {
       console.error('Failed to send WhatsApp message:', error);
       return false;
@@ -132,50 +139,26 @@ export class WhatsAppService {
   }
 
   /**
-   * Send WhatsApp message using WhatsApp Business API
+   * Send WhatsApp message using Twilio API
    */
-  private async sendWhatsAppMessage(
+  private async sendTwilioWhatsAppMessage(
+    twilioClient: any,
     fromPhoneNumber: string,
-    accessToken: string,
     toPhoneNumber: string,
     message: string
   ): Promise<boolean> {
     try {
-      // Extract phone number ID from the business phone number
-      // This would typically come from the WhatsApp Business API setup
-      const phoneNumberId = this.extractPhoneNumberId(fromPhoneNumber);
-      
-      const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
-      
-      const payload = {
-        messaging_product: "whatsapp",
-        to: toPhoneNumber.replace(/\D/g, ''), // Remove non-digits
-        type: "text",
-        text: {
-          body: message
-        }
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+      const result = await twilioClient.messages.create({
+        from: `whatsapp:${fromPhoneNumber}`,
+        to: `whatsapp:${toPhoneNumber}`,
+        body: message
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`WhatsApp API error: ${errorData.error?.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log(`WhatsApp message sent successfully: ${result.messages?.[0]?.id}`);
+      console.log(`Twilio WhatsApp message sent successfully, SID: ${result.sid}`);
       return true;
 
     } catch (error: any) {
-      console.error('WhatsApp API error:', error.message);
+      console.error('Twilio WhatsApp API error:', error.message);
       return false;
     }
   }
@@ -257,14 +240,14 @@ Update your inventory or restock soon.`;
         };
       }
 
-      if (!wholesaler.whatsappEnabled || !wholesaler.whatsappBusinessPhone || !wholesaler.whatsappApiToken) {
+      if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
         return {
           success: false,
-          error: 'WhatsApp Business API is not configured. Please add your business phone number and API token in Settings.'
+          error: 'Twilio WhatsApp is not configured. Please add your Twilio Account SID, Auth Token, and WhatsApp-enabled phone number in Settings.'
         };
       }
 
-      const testMessage = `🧪 *Test Message from Quikpik*\n\nThis is a test message to verify your WhatsApp Business API integration is working correctly.\n\nBusiness: ${wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName}\nTime: ${new Date().toLocaleString()}\n\n✅ Integration is working!`;
+      const testMessage = `🧪 *Test Message from Quikpik*\n\nThis is a test message to verify your Twilio WhatsApp integration is working correctly.\n\nBusiness: ${wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName}\nTime: ${new Date().toLocaleString()}\n\n✅ Integration is working!`;
       
       const result = await this.sendMessage(testPhoneNumber, testMessage, wholesalerId);
 

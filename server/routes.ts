@@ -8,6 +8,7 @@ import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { z } from "zod";
 import OpenAI from "openai";
+import twilio from "twilio";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -1484,60 +1485,62 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // WhatsApp Business API configuration routes
+  // Twilio WhatsApp configuration routes
   app.post('/api/whatsapp/configure', isAuthenticated, async (req: any, res) => {
     try {
-      const { businessPhone, apiToken, businessName } = req.body;
+      const { accountSid, authToken, phoneNumber } = req.body;
       const wholesalerId = req.user.claims.sub;
 
-      if (!businessPhone || !apiToken) {
-        return res.status(400).json({ message: "Business phone and API token are required" });
+      if (!accountSid || !authToken || !phoneNumber) {
+        return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
       }
 
-      // Save WhatsApp configuration to user settings
+      // Save Twilio configuration to user settings
       await storage.updateUserSettings(wholesalerId, {
-        whatsappBusinessPhone: businessPhone,
-        whatsappApiToken: apiToken,
-        whatsappBusinessName: businessName,
+        twilioAccountSid: accountSid,
+        twilioAuthToken: authToken,
+        twilioPhoneNumber: phoneNumber,
         whatsappEnabled: true
       });
 
       res.json({
         success: true,
-        message: "WhatsApp Business API configuration saved successfully"
+        message: "Twilio WhatsApp configuration saved successfully"
       });
     } catch (error: any) {
-      console.error("Error saving WhatsApp configuration:", error);
-      res.status(500).json({ message: "Failed to save WhatsApp configuration" });
+      console.error("Error saving Twilio configuration:", error);
+      res.status(500).json({ message: "Failed to save Twilio configuration" });
     }
   });
 
   app.post('/api/whatsapp/verify', isAuthenticated, async (req: any, res) => {
     try {
-      const { businessPhone, apiToken } = req.body;
+      const { accountSid, authToken, phoneNumber } = req.body;
 
-      if (!businessPhone || !apiToken) {
-        return res.status(400).json({ message: "Business phone and API token are required" });
+      if (!accountSid || !authToken || !phoneNumber) {
+        return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
       }
 
-      // Verify WhatsApp Business API credentials
-      const verificationResult = await whatsappService.verifyWhatsAppBusinessAPI(businessPhone, apiToken);
-      
-      if (verificationResult.success) {
+      // Test Twilio credentials by creating a client
+      try {
+        const twilioClient = twilio(accountSid, authToken);
+        // Test the connection by fetching account info
+        const account = await twilioClient.api.v2010.accounts(accountSid).fetch();
+        
         res.json({
           success: true,
-          message: "WhatsApp Business API configuration verified successfully",
-          data: verificationResult.data
+          message: "Twilio WhatsApp configuration verified successfully",
+          data: { accountSid: account.sid, status: account.status }
         });
-      } else {
+      } catch (twilioError: any) {
         res.status(400).json({
           success: false,
-          message: verificationResult.error || "Failed to verify WhatsApp configuration"
+          message: `Twilio verification failed: ${twilioError.message}`
         });
       }
     } catch (error: any) {
-      console.error("Error verifying WhatsApp configuration:", error);
-      res.status(500).json({ message: "Failed to verify WhatsApp configuration" });
+      console.error("Error verifying Twilio configuration:", error);
+      res.status(500).json({ message: "Failed to verify Twilio configuration" });
     }
   });
 
@@ -1552,11 +1555,11 @@ Write a professional, sales-focused description that highlights the key benefits
 
       res.json({
         enabled: user.whatsappEnabled || false,
-        businessPhone: user.whatsappBusinessPhone || null,
-        apiToken: user.whatsappApiToken ? "configured" : null,
-        businessName: user.whatsappBusinessName || null,
-        serviceProvider: "WhatsApp Business API",
-        configured: !!(user.whatsappBusinessPhone && user.whatsappApiToken)
+        twilioAccountSid: user.twilioAccountSid || null,
+        twilioAuthToken: user.twilioAuthToken ? "configured" : null,
+        twilioPhoneNumber: user.twilioPhoneNumber || null,
+        serviceProvider: "Twilio WhatsApp",
+        configured: !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber)
       });
     } catch (error: any) {
       console.error("Error fetching WhatsApp status:", error);

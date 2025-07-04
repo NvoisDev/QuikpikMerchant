@@ -585,10 +585,10 @@ function Settings() {
 function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
-  const [whatsappConfig, setWhatsappConfig] = useState({
-    businessPhone: "",
-    apiToken: "",
-    businessName: ""
+  const [twilioConfig, setTwilioConfig] = useState({
+    accountSid: "",
+    authToken: "", 
+    phoneNumber: ""
   });
 
   // Fetch WhatsApp status
@@ -598,14 +598,14 @@ function WhatsAppIntegrationSection() {
 
   // Save WhatsApp configuration mutation
   const saveConfigMutation = useMutation({
-    mutationFn: async (config: typeof whatsappConfig) => {
+    mutationFn: async (config: typeof twilioConfig) => {
       return await apiRequest("POST", "/api/whatsapp/configure", config);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
       toast({
         title: "Configuration Saved",
-        description: "WhatsApp Business API configuration saved successfully!",
+        description: "Twilio WhatsApp configuration saved successfully!",
       });
     },
     onError: (error: any) => {
@@ -619,13 +619,13 @@ function WhatsAppIntegrationSection() {
 
   // Verify WhatsApp configuration mutation
   const verifyConfigMutation = useMutation({
-    mutationFn: async (config: typeof whatsappConfig) => {
+    mutationFn: async (config: typeof twilioConfig) => {
       return await apiRequest("POST", "/api/whatsapp/verify", config);
     },
     onSuccess: () => {
       toast({
         title: "Verification Successful",
-        description: "WhatsApp Business API configuration verified successfully!",
+        description: "Twilio WhatsApp configuration verified successfully!",
       });
     },
     onError: (error: any) => {
@@ -660,28 +660,28 @@ function WhatsAppIntegrationSection() {
     }
   });
 
-  const handleSaveWhatsAppConfig = () => {
-    if (!whatsappConfig.businessPhone || !whatsappConfig.apiToken) {
+  const handleSaveTwilioConfig = () => {
+    if (!twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber) {
       toast({
         title: "Missing Information",
-        description: "Please provide both business phone number and API token.",
+        description: "Please provide Twilio Account SID, Auth Token, and WhatsApp phone number.",
         variant: "destructive",
       });
       return;
     }
-    saveConfigMutation.mutate(whatsappConfig);
+    saveConfigMutation.mutate(twilioConfig);
   };
 
-  const handleVerifyWhatsAppConfig = () => {
-    if (!whatsappConfig.businessPhone || !whatsappConfig.apiToken) {
+  const handleVerifyTwilioConfig = () => {
+    if (!twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber) {
       toast({
         title: "Missing Information",
-        description: "Please provide both business phone number and API token.",
+        description: "Please provide Twilio Account SID, Auth Token, and WhatsApp phone number.",
         variant: "destructive",
       });
       return;
     }
-    verifyConfigMutation.mutate(whatsappConfig);
+    verifyConfigMutation.mutate(twilioConfig);
   };
 
   const handleTest = () => {
@@ -700,73 +700,76 @@ function WhatsAppIntegrationSection() {
     return <div>Loading WhatsApp integration status...</div>;
   }
 
-  const isConfigured = whatsappStatus?.enabled && whatsappStatus?.businessPhone && whatsappStatus?.apiToken;
+  const isConfigured = whatsappStatus?.twilioAccountSid && whatsappStatus?.twilioAuthToken && whatsappStatus?.twilioPhoneNumber;
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">WhatsApp Business API Configuration</h3>
+        <h3 className="text-lg font-medium">Twilio WhatsApp Configuration</h3>
         <p className="text-gray-600 text-sm">
-          Connect your WhatsApp Business API to send product broadcasts and updates to your customer groups.
+          Connect your Twilio WhatsApp integration to send product broadcasts and updates to your customer groups.
         </p>
 
         {!isConfigured ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-blue-800 font-medium mb-3">
-              📱 Setup WhatsApp Business API
+              📱 Setup Twilio WhatsApp Integration
             </h4>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Phone Number
+                  Twilio Account SID
                 </label>
                 <Input
-                  placeholder="e.g., +1234567890"
-                  value={whatsappConfig.businessPhone}
-                  onChange={(e) => setWhatsappConfig({...whatsappConfig, businessPhone: e.target.value})}
+                  placeholder="Your Twilio Account SID"
+                  value={twilioConfig.accountSid}
+                  onChange={(e) => setTwilioConfig({...twilioConfig, accountSid: e.target.value})}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Include country code. This must be your verified WhatsApp Business number.
+                  Find this in your Twilio Console dashboard.
                 </p>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Access Token
+                  Twilio Auth Token
                 </label>
                 <Input
                   type="password"
-                  placeholder="Your Meta WhatsApp Business API token"
-                  value={whatsappConfig.apiToken}
-                  onChange={(e) => setWhatsappConfig({...whatsappConfig, apiToken: e.target.value})}
+                  placeholder="Your Twilio Auth Token"
+                  value={twilioConfig.authToken}
+                  onChange={(e) => setTwilioConfig({...twilioConfig, authToken: e.target.value})}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Get this from your Meta for Developers account under WhatsApp Business API.
+                  Find this in your Twilio Console dashboard under Auth Token.
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Name (Optional)
+                  WhatsApp Phone Number
                 </label>
                 <Input
-                  placeholder="Your business name"
-                  value={whatsappConfig.businessName}
-                  onChange={(e) => setWhatsappConfig({...whatsappConfig, businessName: e.target.value})}
+                  placeholder="e.g., +1234567890"
+                  value={twilioConfig.phoneNumber}
+                  onChange={(e) => setTwilioConfig({...twilioConfig, phoneNumber: e.target.value})}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Your Twilio WhatsApp-enabled phone number (include country code).
+                </p>
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  onClick={handleVerifyWhatsAppConfig}
-                  disabled={verifyConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+                  onClick={handleVerifyTwilioConfig}
+                  disabled={verifyConfigMutation.isPending || !twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber}
                   variant="outline"
                 >
                   {verifyConfigMutation.isPending ? "Verifying..." : "Verify"}
                 </Button>
                 <Button
-                  onClick={handleSaveWhatsAppConfig}
-                  disabled={saveConfigMutation.isPending || !whatsappConfig.businessPhone || !whatsappConfig.apiToken}
+                  onClick={handleSaveTwilioConfig}
+                  disabled={saveConfigMutation.isPending || !twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
@@ -777,13 +780,13 @@ function WhatsAppIntegrationSection() {
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-green-800 font-medium">
-              ✅ WhatsApp Business API is configured and ready to use!
+              ✅ Twilio WhatsApp is configured and ready to use!
             </p>
             <p className="text-green-700 text-sm mt-1">
-              Business Phone: {whatsappStatus.businessPhone}
+              WhatsApp Phone: {whatsappStatus?.twilioPhoneNumber}
             </p>
             <p className="text-green-700 text-sm">
-              You can now create broadcasts in the Broadcasts section and send messages to your customer groups.
+              You can now create campaigns and send messages to your customer groups.
             </p>
           </div>
         )}
