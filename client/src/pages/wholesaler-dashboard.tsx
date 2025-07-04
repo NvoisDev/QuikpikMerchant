@@ -106,6 +106,7 @@ export default function WholesalerDashboard() {
               iconColor="text-green-600"
               iconBg="bg-green-100"
               loading={statsLoading}
+              tooltip="Total earnings from all completed orders and sales"
             />
             <StatsCard
               title="Orders This Month"
@@ -115,6 +116,7 @@ export default function WholesalerDashboard() {
               iconColor="text-blue-600"
               iconBg="bg-blue-100"
               loading={statsLoading}
+              tooltip="Number of orders received from customers this month"
             />
             <StatsCard
               title="Active Products"
@@ -125,6 +127,7 @@ export default function WholesalerDashboard() {
               iconBg="bg-purple-100"
               loading={statsLoading}
               changeColor="text-orange-600"
+              tooltip="Products currently available for sale in your inventory"
             />
             <StatsCard
               title="WhatsApp Reach"
@@ -133,6 +136,7 @@ export default function WholesalerDashboard() {
               icon={MessageSquare}
               iconColor="text-green-600"
               iconBg="bg-green-100"
+              tooltip="Total customers reached through WhatsApp broadcast campaigns"
             />
           </div>
 

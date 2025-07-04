@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   MessageSquare, 
   Plus,
@@ -301,9 +302,18 @@ export default function Campaigns() {
                 <p className="text-sm font-medium text-gray-600">Total Campaigns</p>
                 <p className="text-2xl font-bold text-gray-900">{campaigns.length}</p>
               </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <MessageSquare className="h-4 w-4 text-blue-600" />
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
+                      <MessageSquare className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total number of broadcast campaigns created</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -319,9 +329,18 @@ export default function Campaigns() {
                   )}
                 </p>
               </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Send className="h-4 w-4 text-green-600" />
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center cursor-help">
+                      <Send className="h-4 w-4 text-green-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total WhatsApp messages sent to customers</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -337,9 +356,18 @@ export default function Campaigns() {
                   )}
                 </p>
               </div>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <ShoppingCart className="h-4 w-4 text-purple-600" />
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center cursor-help">
+                      <ShoppingCart className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Orders generated from campaign broadcasts</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ interface StatsCardProps {
   iconBg?: string;
   loading?: boolean;
   className?: string;
+  tooltip?: string;
 }
 
 export default function StatsCard({
@@ -23,7 +25,8 @@ export default function StatsCard({
   iconColor = "text-blue-600",
   iconBg = "bg-blue-100",
   loading = false,
-  className
+  className,
+  tooltip
 }: StatsCardProps) {
   if (loading) {
     return (
@@ -59,9 +62,24 @@ export default function StatsCard({
               </p>
             )}
           </div>
-          <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center", iconBg)}>
-            <Icon className={cn("h-6 w-6", iconColor)} />
-          </div>
+          {tooltip ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center cursor-help", iconBg)}>
+                    <Icon className={cn("h-6 w-6", iconColor)} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center", iconBg)}>
+              <Icon className={cn("h-6 w-6", iconColor)} />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
