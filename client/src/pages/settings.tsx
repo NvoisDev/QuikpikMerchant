@@ -10,21 +10,102 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, CreditCard, Bell, MessageSquare } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const settingsFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  businessName: z.string().optional(),
+  businessName: z.string().min(1, "Business name is required"),
   businessAddress: z.string().optional(),
   businessPhone: z.string().optional(),
   phoneNumber: z.string().optional(),
   preferredCurrency: z.string().min(1, "Currency is required"),
   timezone: z.string().optional(),
+  streetAddress: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+});
+
+const businessFormSchema = z.object({
+  businessName: z.string().min(1, "Business name is required"),
+  businessAddress: z.string().optional(),
+  businessPhone: z.string().optional(),
+  preferredCurrency: z.string().min(1, "Currency is required"),
+  streetAddress: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsFormSchema>;
+type BusinessFormData = z.infer<typeof businessFormSchema>;
+
+// Comprehensive list of supported currencies
+const CURRENCIES = [
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "CAD", name: "Canadian Dollar", symbol: "C$" },
+  { code: "AUD", name: "Australian Dollar", symbol: "A$" },
+  { code: "JPY", name: "Japanese Yen", symbol: "¥" },
+  { code: "CHF", name: "Swiss Franc", symbol: "CHF" },
+  { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
+  { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "SGD", name: "Singapore Dollar", symbol: "S$" },
+  { code: "HKD", name: "Hong Kong Dollar", symbol: "HK$" },
+  { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$" },
+  { code: "SEK", name: "Swedish Krona", symbol: "kr" },
+  { code: "NOK", name: "Norwegian Krone", symbol: "kr" },
+  { code: "DKK", name: "Danish Krone", symbol: "kr" },
+  { code: "PLN", name: "Polish Zloty", symbol: "zł" },
+  { code: "CZK", name: "Czech Koruna", symbol: "Kč" },
+  { code: "HUF", name: "Hungarian Forint", symbol: "Ft" },
+  { code: "RON", name: "Romanian Leu", symbol: "lei" },
+  { code: "BGN", name: "Bulgarian Lev", symbol: "лв" },
+  { code: "HRK", name: "Croatian Kuna", symbol: "kn" },
+  { code: "RUB", name: "Russian Ruble", symbol: "₽" },
+  { code: "TRY", name: "Turkish Lira", symbol: "₺" },
+  { code: "ZAR", name: "South African Rand", symbol: "R" },
+  { code: "BRL", name: "Brazilian Real", symbol: "R$" },
+  { code: "MXN", name: "Mexican Peso", symbol: "$" },
+  { code: "ARS", name: "Argentine Peso", symbol: "$" },
+  { code: "CLP", name: "Chilean Peso", symbol: "$" },
+  { code: "COP", name: "Colombian Peso", symbol: "$" },
+  { code: "PEN", name: "Peruvian Sol", symbol: "S/" },
+  { code: "KRW", name: "South Korean Won", symbol: "₩" },
+  { code: "THB", name: "Thai Baht", symbol: "฿" },
+  { code: "MYR", name: "Malaysian Ringgit", symbol: "RM" },
+  { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp" },
+  { code: "PHP", name: "Philippine Peso", symbol: "₱" },
+  { code: "VND", name: "Vietnamese Dong", symbol: "₫" },
+  { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
+  { code: "SAR", name: "Saudi Riyal", symbol: "﷼" },
+  { code: "QAR", name: "Qatari Riyal", symbol: "ر.ق" },
+  { code: "KWD", name: "Kuwaiti Dinar", symbol: "د.ك" },
+  { code: "BHD", name: "Bahraini Dinar", symbol: ".د.ب" },
+  { code: "OMR", name: "Omani Rial", symbol: "ر.ع." },
+  { code: "JOD", name: "Jordanian Dinar", symbol: "د.ا" },
+  { code: "LBP", name: "Lebanese Pound", symbol: "ل.ل" },
+  { code: "EGP", name: "Egyptian Pound", symbol: "£" },
+  { code: "MAD", name: "Moroccan Dirham", symbol: "د.م." },
+  { code: "TND", name: "Tunisian Dinar", symbol: "د.ت" },
+  { code: "DZD", name: "Algerian Dinar", symbol: "د.ج" },
+  { code: "LYD", name: "Libyan Dinar", symbol: "ل.د" },
+  { code: "NGN", name: "Nigerian Naira", symbol: "₦" },
+  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵" },
+  { code: "KES", name: "Kenyan Shilling", symbol: "Sh" },
+  { code: "UGX", name: "Ugandan Shilling", symbol: "Sh" },
+  { code: "TZS", name: "Tanzanian Shilling", symbol: "Sh" },
+  { code: "ETB", name: "Ethiopian Birr", symbol: "Br" },
+  { code: "XOF", name: "West African CFA Franc", symbol: "Fr" },
+  { code: "XAF", name: "Central African CFA Franc", symbol: "Fr" },
+];
 
 function Settings() {
   const { user } = useAuth();
@@ -40,8 +121,29 @@ function Settings() {
       businessName: user?.businessName || "",
       businessAddress: user?.businessAddress || "",
       businessPhone: user?.businessPhone || "",
+      phoneNumber: user?.phoneNumber || "",
       preferredCurrency: user?.preferredCurrency || "GBP",
       timezone: user?.timezone || "UTC",
+      streetAddress: user?.streetAddress || "",
+      city: user?.city || "",
+      state: user?.state || "",
+      postalCode: user?.postalCode || "",
+      country: user?.country || "United Kingdom",
+    },
+  });
+
+  const businessForm = useForm<BusinessFormData>({
+    resolver: zodResolver(businessFormSchema),
+    defaultValues: {
+      businessName: user?.businessName || "Lanre Foods",
+      businessAddress: user?.businessAddress || "",
+      businessPhone: user?.businessPhone || "",
+      preferredCurrency: user?.preferredCurrency || "GBP",
+      streetAddress: user?.streetAddress || "",
+      city: user?.city || "",
+      state: user?.state || "",
+      postalCode: user?.postalCode || "",
+      country: user?.country || "United Kingdom",
     },
   });
 
@@ -66,8 +168,33 @@ function Settings() {
     },
   });
 
+  const updateBusinessMutation = useMutation({
+    mutationFn: async (data: BusinessFormData) => {
+      const response = await apiRequest("PATCH", "/api/settings", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Business Information Updated",
+        description: "Your business information has been successfully updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: SettingsFormData) => {
     updateSettingsMutation.mutate(data);
+  };
+
+  const onBusinessSubmit = (data: BusinessFormData) => {
+    updateBusinessMutation.mutate(data);
   };
 
   return (
@@ -222,15 +349,210 @@ function Settings() {
               )}
 
               {activeTab === "business" && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Business Information</h3>
-                    <p className="text-gray-600">Manage your business profile and settings.</p>
-                  </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-yellow-800">Business settings coming soon. Contact support for custom business configurations.</p>
-                  </div>
-                </div>
+                <Form {...businessForm}>
+                  <form onSubmit={businessForm.handleSubmit(onBusinessSubmit)} className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-medium">Company Information</h3>
+                      </div>
+                      <p className="text-gray-600 mb-6">Manage your business profile, location, and currency settings.</p>
+                      
+                      {/* Business Name */}
+                      <FormField
+                        control={businessForm.control}
+                        name="businessName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Name *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter your business name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Business Description */}
+                      <FormField
+                        control={businessForm.control}
+                        name="businessAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Brief description of your business"
+                                className="min-h-[100px]"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Contact Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mt-6 mb-4">
+                          <MapPin className="h-5 w-5 text-primary" />
+                          <h4 className="text-md font-medium">Contact Information</h4>
+                        </div>
+
+                        <FormField
+                          control={businessForm.control}
+                          name="businessPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="+44 1234 567890" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Address Fields */}
+                        <FormField
+                          control={businessForm.control}
+                          name="streetAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Street Address</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="123 Business Street" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={businessForm.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="London" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={businessForm.control}
+                            name="state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State/Province</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="England" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={businessForm.control}
+                            name="postalCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Postal Code</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="SW1A 1AA" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={businessForm.control}
+                            name="country"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Country</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="United Kingdom" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Currency Settings */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mt-6 mb-4">
+                          <Globe className="h-5 w-5 text-primary" />
+                          <h4 className="text-md font-medium">Currency & Localization</h4>
+                        </div>
+
+                        <FormField
+                          control={businessForm.control}
+                          name="preferredCurrency"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Default Currency *</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your default currency" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="max-h-60">
+                                  {CURRENCIES.map((currency) => (
+                                    <SelectItem key={currency.code} value={currency.code}>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono text-sm">{currency.symbol}</span>
+                                        <span>{currency.code}</span>
+                                        <span className="text-gray-500">- {currency.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-sm text-gray-500 mt-1">
+                                This will be the default currency for new products and pricing displays
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-2">
+                            <Globe className="h-4 w-4 text-blue-600 mt-1" />
+                            <div>
+                              <p className="text-sm text-blue-800 font-medium">Multi-Currency Support</p>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Your default currency will be used for new products. You can still create products in different currencies when needed.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-6 border-t">
+                      <Button 
+                        type="submit" 
+                        disabled={updateBusinessMutation.isPending}
+                        className="min-w-[120px]"
+                      >
+                        {updateBusinessMutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
               )}
 
               {activeTab === "billing" && (

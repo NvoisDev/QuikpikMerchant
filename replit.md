@@ -233,6 +233,15 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **AI Insights Generation**: OpenAI-powered financial analysis providing personalized business recommendations and risk assessment
   - **Predictive Analytics**: Revenue forecasting, growth opportunity identification, and risk factor monitoring
   - **UI Updates**: Temporarily hidden "Monitor Health" option from Business Performance Quick Overview per user request
+- July 04, 2025. Enhanced Business Settings with comprehensive company information and multi-currency support:
+  - **Company Information Form**: Complete business profile management with name, description, contact details, and address fields
+  - **Multi-Currency Support**: Added comprehensive currency selector with 50+ international currencies and symbols
+  - **Default Currency Integration**: Business default currency automatically applies to new product creation forms
+  - **Business Name Integration**: Business name now displays prominently on dashboard header and sidebar
+  - **Address Management**: Full address capture including street, city, state, postal code, and country fields
+  - **Currency Localization**: Professional currency display with symbols, codes, and full names for easy identification
+  - **Form Validation**: Robust validation for required business information and currency selection
+  - **Default Values**: Business name defaults to "Lanre Foods" as requested by user
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
