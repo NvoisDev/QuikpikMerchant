@@ -1503,6 +1503,15 @@ Write a professional, sales-focused description that highlights the key benefits
         });
       }
 
+      // Check if user is using the correct sandbox setup
+      const user = await storage.getUser(wholesalerId);
+      if (user?.twilioPhoneNumber && user.twilioPhoneNumber !== '+14155238886') {
+        return res.status(400).json({ 
+          success: false,
+          error: "For testing, please use Twilio sandbox number: +14155238886. Also ensure you've joined the sandbox by texting your sandbox code to +1 (415) 523-8886 from your WhatsApp." 
+        });
+      }
+
       const result = await whatsappService.testWholesalerWhatsApp(
         wholesalerId,
         testPhoneNumber
