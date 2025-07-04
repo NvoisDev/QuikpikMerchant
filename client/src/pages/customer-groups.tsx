@@ -897,24 +897,27 @@ export default function CustomerGroups() {
           customerGroups.map((group: CustomerGroup) => (
             <Card key={group.id} className="hover:shadow-lg transition-all duration-200 border-gray-200 h-fit">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="truncate text-lg font-semibold">{group.name}</span>
-                    <button
-                      className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                      onClick={() => {
-                        setSelectedGroup(group);
-                        editGroupForm.setValue('name', group.name);
-                        editGroupForm.setValue('description', group.description || '');
-                        setIsEditDialogOpen(true);
-                      }}
-                      title="Edit group name"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="space-y-3">
+                  <CardTitle className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="truncate text-lg font-semibold">{group.name}</span>
+                      <button
+                        className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                        onClick={() => {
+                          setSelectedGroup(group);
+                          editGroupForm.setValue('name', group.name);
+                          editGroupForm.setValue('description', group.description || '');
+                          setIsEditDialogOpen(true);
+                        }}
+                        title="Edit group name"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </CardTitle>
+                  
                   <button
-                    className="flex-shrink-0 h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                    className="flex-shrink-0 h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors cursor-pointer w-fit"
                     onClick={() => {
                       setSelectedGroup(group);
                       setIsManageDialogOpen(true);
@@ -922,10 +925,11 @@ export default function CustomerGroups() {
                   >
                     {group.memberCount || 0} members
                   </button>
-                </CardTitle>
-                {group.description && (
-                  <p className="text-sm text-gray-600 line-clamp-2 mt-1">{group.description}</p>
-                )}
+                  
+                  {group.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2">{group.description}</p>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-4">
