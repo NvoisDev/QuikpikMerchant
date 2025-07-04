@@ -1997,9 +1997,11 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const userId = req.user.claims.sub;
       const { campaignId, customerGroupId, customMessage } = req.body;
+      console.log(`Campaign send request: userId=${userId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
 
       const [type, id] = campaignId.split('_');
       const numericId = parseInt(id);
+      console.log(`Campaign type: ${type}, numericId: ${numericId}`);
 
       if (type === 'broadcast') {
         // Get the broadcast to find the product ID
