@@ -2034,6 +2034,230 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Stripe Invoice API endpoints for financials
+  app.get('/api/stripe/invoices', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const userId = req.user.claims.sub;
+      const { search, status, date_range } = req.query;
+
+      // Get user's Stripe Connect account ID
+      const user = await storage.getUser(userId);
+      if (!user?.stripeAccountId) {
+        return res.json([]);
+      }
+
+      // Build Stripe query parameters
+      const stripeParams: any = {
+        limit: 100,
+        expand: ['data.customer'],
+      };
+
+      if (status && status !== 'all') {
+        stripeParams.status = status;
+      }
+
+      if (date_range && date_range !== 'all') {
+        const now = new Date();
+        let created_gte;
+        
+        switch (date_range) {
+          case 'today':
+            created_gte = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
+            break;
+          case 'week':
+            created_gte = Math.floor(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime() / 1000);
+            break;
+          case 'month':
+            created_gte = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
+            break;
+          case 'quarter':
+            const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+            created_gte = Math.floor(quarterStart.getTime() / 1000);
+            break;
+          case 'year':
+            created_gte = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
+            break;
+        }
+        
+        if (created_gte) {
+          stripeParams.created = { gte: created_gte };
+        }
+      }
+
+      // Fetch invoices from Stripe Connect account
+      const invoices = await stripe.invoices.list(stripeParams, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      // Filter by search term if provided
+      let filteredInvoices = invoices.data;
+      if (search) {
+        const searchLower = search.toString().toLowerCase();
+        filteredInvoices = invoices.data.filter(invoice => 
+          invoice.number?.toLowerCase().includes(searchLower) ||
+          invoice.customer_name?.toLowerCase().includes(searchLower) ||
+          invoice.customer_email?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Format invoices for frontend
+      const formattedInvoices = filteredInvoices.map(invoice => ({
+        id: invoice.id,
+        number: invoice.number,
+        status: invoice.status,
+        amount_due: invoice.amount_due,
+        amount_paid: invoice.amount_paid,
+        amount_remaining: invoice.amount_remaining,
+        currency: invoice.currency,
+        created: invoice.created,
+        due_date: invoice.due_date,
+        customer_name: invoice.customer_name,
+        customer_email: invoice.customer_email,
+        description: invoice.description,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+        invoice_pdf: invoice.invoice_pdf,
+      }));
+
+      res.json(formattedInvoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
+  app.get('/api/stripe/financial-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeAccountId) {
+        return res.json({
+          totalRevenue: 0,
+          revenueChange: 0,
+          paidInvoices: 0,
+          paidInvoicesChange: 0,
+          pendingAmount: 0,
+          pendingCount: 0,
+          platformFees: 0
+        });
+      }
+
+      // Get current month and last month dates
+      const now = new Date();
+      const currentMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
+      const lastMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime() / 1000);
+      const lastMonthEnd = currentMonthStart - 1;
+
+      // Fetch current month invoices
+      const currentMonthInvoices = await stripe.invoices.list({
+        created: { gte: currentMonthStart },
+        limit: 100
+      }, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      // Fetch last month invoices for comparison
+      const lastMonthInvoices = await stripe.invoices.list({
+        created: { gte: lastMonthStart, lte: lastMonthEnd },
+        limit: 100
+      }, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      // Calculate current month metrics
+      const currentRevenue = currentMonthInvoices.data
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
+
+      const currentPaidCount = currentMonthInvoices.data
+        .filter(inv => inv.status === 'paid').length;
+
+      // Calculate last month metrics for comparison
+      const lastRevenue = lastMonthInvoices.data
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
+
+      const lastPaidCount = lastMonthInvoices.data
+        .filter(inv => inv.status === 'paid').length;
+
+      // Calculate pending amounts
+      const pendingInvoices = currentMonthInvoices.data.filter(inv => inv.status === 'open');
+      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount_due, 0) / 100;
+
+      // Calculate changes
+      const revenueChange = lastRevenue > 0 ? ((currentRevenue - lastRevenue) / lastRevenue * 100) : 0;
+      const paidInvoicesChange = lastPaidCount > 0 ? ((currentPaidCount - lastPaidCount) / lastPaidCount * 100) : 0;
+
+      // Platform fees (5% of total revenue)
+      const platformFees = currentRevenue * 0.05;
+
+      res.json({
+        totalRevenue: currentRevenue,
+        revenueChange: Math.round(revenueChange * 10) / 10,
+        paidInvoices: currentPaidCount,
+        paidInvoicesChange: Math.round(paidInvoicesChange * 10) / 10,
+        pendingAmount,
+        pendingCount: pendingInvoices.length,
+        platformFees: Math.round(platformFees * 100) / 100
+      });
+    } catch (error) {
+      console.error("Error fetching financial summary:", error);
+      res.status(500).json({ message: "Failed to fetch financial summary" });
+    }
+  });
+
+  app.get('/api/stripe/invoices/:invoiceId/download', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const userId = req.user.claims.sub;
+      const { invoiceId } = req.params;
+
+      const user = await storage.getUser(userId);
+      if (!user?.stripeAccountId) {
+        return res.status(404).json({ message: "Stripe account not found" });
+      }
+
+      // Get invoice from Stripe
+      const invoice = await stripe.invoices.retrieve(invoiceId, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      if (!invoice.invoice_pdf) {
+        return res.status(404).json({ message: "Invoice PDF not available" });
+      }
+
+      // Fetch the PDF
+      const response = await fetch(invoice.invoice_pdf);
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice PDF');
+      }
+
+      const buffer = await response.arrayBuffer();
+      
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.pdf"`,
+        'Content-Length': buffer.byteLength.toString()
+      });
+
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      res.status(500).json({ message: "Failed to download invoice" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

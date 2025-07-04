@@ -20,6 +20,8 @@ import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
 import MessageTemplates from "@/pages/message-templates";
 import Campaigns from "@/pages/campaigns";
+import BusinessPerformance from "@/pages/business-performance";
+import Financials from "@/pages/financials";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -48,6 +50,8 @@ function Router() {
               <Route path="/orders" component={Orders} />
               <Route path="/subscription" component={Subscription} />
               <Route path="/analytics" component={Analytics} />
+              <Route path="/business-performance" component={BusinessPerformance} />
+              <Route path="/financials" component={Financials} />
               <Route path="/settings" component={Settings} />
               <Route path="/campaigns" component={Campaigns} />
               {/* Legacy route redirect */}
