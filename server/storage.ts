@@ -332,12 +332,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCustomerGroup(id: number): Promise<void> {
-    // First delete all members from the group
+    // Delete all related records first to avoid foreign key constraint violations
+    
+    // 1. Delete template campaigns that reference this group
+    await db
+      .delete(templateCampaigns)
+      .where(eq(templateCampaigns.customerGroupId, id));
+    
+    // 2. Delete broadcast records that reference this group
+    await db
+      .delete(broadcasts)
+      .where(eq(broadcasts.customerGroupId, id));
+    
+    // 3. Delete all members from the group
     await db
       .delete(customerGroupMembers)
       .where(eq(customerGroupMembers.groupId, id));
     
-    // Then delete the group itself
+    // 4. Finally delete the group itself
     await db
       .delete(customerGroups)
       .where(eq(customerGroups.id, id));
