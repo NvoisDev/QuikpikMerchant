@@ -121,11 +121,11 @@ export default function Sidebar() {
         {/* User Profile & Actions */}
         <div className="absolute bottom-6 left-6 right-6">
           <div className="flex items-center mb-4">
-            <img 
-              src={user?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&h=50"} 
-              alt="Profile" 
-              className="w-10 h-10 rounded-full object-cover"
-            />
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-sm font-bold text-white">
+                {user?.firstName?.charAt(0) || 'U'}{user?.lastName?.charAt(0) || ''}
+              </span>
+            </div>
             <div className="ml-3 flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.firstName} {user?.lastName}
