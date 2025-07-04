@@ -257,6 +257,8 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Visual Indicators**: Clear indicators when custom messages are ready to be sent
   - **Template Integration**: Extended editing support to both single and multi-product campaigns
   - **Seamless Workflow**: Direct preview-to-send flow with custom message preservation
+  - **Fixed Custom Message Sending**: WhatsApp service now properly uses custom edited messages instead of default templates
+  - **Customer Phone Number Isolation**: Updated test customers to use individual phone numbers separate from test number
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
