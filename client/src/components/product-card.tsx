@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import {
   Trash2, 
   Eye, 
   ShoppingCart,
-  Heart,
   AlertTriangle
 } from "lucide-react";
 import {
@@ -53,7 +52,6 @@ export default function ProductCard({
   onDuplicate,
   onStatusChange
 }: ProductCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
 
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat('en-US', {
@@ -174,18 +172,7 @@ export default function ProductCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
-        {/* Favorite Button */}
-        <div className="absolute top-3 left-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="bg-white/90 hover:bg-white rounded-full shadow-sm"
-            onClick={() => setIsLiked(!isLiked)}
-          >
-            <Heart className={`h-4 w-4 ${isLiked ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
-          </Button>
-        </div>
+
 
         {/* Low Stock Warning */}
         {product.stock < 10 && product.stock > 0 && (
