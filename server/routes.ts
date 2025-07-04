@@ -2012,6 +2012,7 @@ Write a professional, sales-focused description that highlights the key benefits
 
         // Send single product broadcast with custom message if provided
         const messageToSend = customMessage || broadcast.message;
+        console.log(`Broadcasting: userId=${userId}, productId=${broadcast.product.id}, groupId=${customerGroupId}`);
         const result = await whatsappService.sendProductBroadcast(
           userId,
           broadcast.product.id, // Use the actual product ID
