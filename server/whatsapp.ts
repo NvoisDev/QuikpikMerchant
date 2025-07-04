@@ -44,7 +44,8 @@ export class WhatsAppService {
       const members = await storage.getGroupMembers(customerGroupId);
       const recipientCount = members.length;
 
-      const productMessage = this.generateProductMessage(product, message);
+      // Use custom message if provided, otherwise generate default message
+      const productMessage = message || this.generateProductMessage(product);
 
       // Check if Twilio WhatsApp is configured for this wholesaler
       if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
