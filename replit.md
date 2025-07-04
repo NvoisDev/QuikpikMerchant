@@ -232,6 +232,7 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Financial Health Analysis**: 5-component health scoring system (revenue, profitability, cash flow, growth, efficiency) with intelligent recommendations
   - **AI Insights Generation**: OpenAI-powered financial analysis providing personalized business recommendations and risk assessment
   - **Predictive Analytics**: Revenue forecasting, growth opportunity identification, and risk factor monitoring
+  - **UI Updates**: Temporarily hidden "Monitor Health" option from Business Performance Quick Overview per user request
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)

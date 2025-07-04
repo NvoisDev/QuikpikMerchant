@@ -121,7 +121,7 @@ export default function BusinessPerformance() {
           <p className="text-sm text-gray-600">Key metrics at a glance - click to explore</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link href="/analytics">
               <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-blue-50 transition-colors border-2 hover:border-blue-200">
                 <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -149,16 +149,6 @@ export default function BusinessPerformance() {
                 </div>
                 <p className="text-2xl font-bold text-gray-900">Track</p>
                 <p className="text-sm text-gray-600">Payments</p>
-              </div>
-            </Link>
-            
-            <Link href="/financial-health">
-              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-orange-50 transition-colors border-2 hover:border-orange-200">
-                <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <DollarSign className="h-6 w-6 text-orange-600" />
-                </div>
-                <p className="text-2xl font-bold text-gray-900">Monitor</p>
-                <p className="text-sm text-gray-600">Health</p>
               </div>
             </Link>
           </div>
