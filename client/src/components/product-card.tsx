@@ -34,6 +34,7 @@ interface Product {
   status: "active" | "inactive" | "out_of_stock";
   priceVisible: boolean;
   negotiationEnabled: boolean;
+  editCount?: number;
   createdAt?: string;
 }
 
@@ -125,6 +126,16 @@ export default function ProductCard({
           className="w-full h-48 object-cover"
         />
         
+        {/* Edit Count Badge */}
+        <div className="absolute top-3 left-3">
+          <Badge 
+            variant={(product.editCount || 0) >= 3 ? "destructive" : "outline"}
+            className="text-xs"
+          >
+            {product.editCount || 0}/3 edits
+          </Badge>
+        </div>
+
         {/* Status Badge Dropdown */}
         <div className="absolute top-3 right-3">
           <DropdownMenu>
@@ -205,9 +216,13 @@ export default function ProductCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(product)}>
+              <DropdownMenuItem 
+                onClick={() => onEdit(product)}
+                disabled={(product.editCount || 0) >= 3}
+                className={(product.editCount || 0) >= 3 ? "opacity-50 cursor-not-allowed" : ""}
+              >
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                Edit {(product.editCount || 0) >= 3 && "(Limit reached)"}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDuplicate}>
                 <Copy className="mr-2 h-4 w-4" />

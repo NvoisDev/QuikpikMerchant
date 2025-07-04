@@ -175,6 +175,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
+      // Check edit limit (3 edits maximum)
+      const currentEditCount = existingProduct.editCount || 0;
+      if (currentEditCount >= 3) {
+        return res.status(403).json({ 
+          message: "Product limit reached! You've used all 3 product edits. Upgrade your plan to edit more products.",
+          editCount: currentEditCount,
+          maxEdits: 3
+        });
+      }
+
       // Convert numeric fields from frontend to appropriate types
       const { price, moq, stock, ...otherData } = req.body;
       const convertedData = {
@@ -191,8 +201,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const stockChangeCheck = await storage.checkForStockChanges(id, newStock || 0, newPrice);
       
-      // Update the product
-      const product = await storage.updateProduct(id, productData);
+      // Increment edit count and update the product
+      const productDataWithEditCount = {
+        ...productData,
+        editCount: currentEditCount + 1
+      };
+      const product = await storage.updateProduct(id, productDataWithEditCount);
       
       // If stock changes warrant notification, create notification and send messages
       if (stockChangeCheck.shouldNotify) {

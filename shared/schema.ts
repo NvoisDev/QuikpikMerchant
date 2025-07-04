@@ -100,6 +100,7 @@ export const products = pgTable("products", {
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock'
   priceVisible: boolean("price_visible").notNull().default(true),
   negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
+  editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
