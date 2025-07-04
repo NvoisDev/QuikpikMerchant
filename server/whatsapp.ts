@@ -8,6 +8,16 @@ export class WhatsAppService {
   }
 
   // Format numbers with commas for better readability
+  private isValidImageUrl(url: string): boolean {
+    try {
+      // Check if it's a valid HTTP/HTTPS URL
+      const parsedUrl = new URL(url);
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
   private formatNumber(value: number | string): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '0';
@@ -82,8 +92,8 @@ export class WhatsAppService {
             body: productMessage
           };
 
-          // Add product image if available
-          if (product.imageUrl) {
+          // Add product image if available and valid URL
+          if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
             messageData.mediaUrl = [product.imageUrl];
           }
 
@@ -464,8 +474,10 @@ Update your inventory or restock soon.`;
             body: templateMessage
           };
 
-          // Add first product image if available
-          const firstProductWithImage = template.products.find((item: any) => item.product.imageUrl);
+          // Add first product image if available and valid URL
+          const firstProductWithImage = template.products.find((item: any) => 
+            item.product.imageUrl && this.isValidImageUrl(item.product.imageUrl)
+          );
           if (firstProductWithImage?.product.imageUrl) {
             messageData.mediaUrl = [firstProductWithImage.product.imageUrl];
           }
