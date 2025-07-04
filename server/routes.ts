@@ -175,13 +175,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // Check edit limit (3 edits maximum)
+      // Check edit limit based on subscription tier
       const currentEditCount = existingProduct.editCount || 0;
-      if (currentEditCount >= 3) {
+      const user = await storage.getUser(userId);
+      const subscriptionTier = user?.subscriptionTier || "free";
+      
+      let editLimit = 3; // Default for free
+      switch (subscriptionTier) {
+        case "standard":
+          editLimit = 10;
+          break;
+        case "premium":
+          editLimit = -1; // Unlimited
+          break;
+        default:
+          editLimit = 3; // Free tier
+      }
+      
+      // Only check limit if not premium (unlimited)
+      if (editLimit !== -1 && currentEditCount >= editLimit) {
         return res.status(403).json({ 
-          message: "Product limit reached! You've used all 3 product edits. Upgrade your plan to edit more products.",
+          message: `Product edit limit reached! You've used all ${editLimit} product edits for the ${subscriptionTier} plan. Upgrade your plan to edit more products.`,
           editCount: currentEditCount,
-          maxEdits: 3
+          maxEdits: editLimit,
+          tier: subscriptionTier
         });
       }
 

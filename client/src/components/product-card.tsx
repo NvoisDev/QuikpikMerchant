@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currencies";
+import { useQuery } from "@tanstack/react-query";
 import { 
   MoreHorizontal, 
   Edit, 
@@ -53,6 +54,18 @@ export default function ProductCard({
   onStatusChange
 }: ProductCardProps) {
 
+  // Fetch subscription status
+  const { data: subscription } = useQuery({
+    queryKey: ["/api/subscription/status"],
+    queryFn: async () => {
+      const response = await fetch("/api/subscription/status", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch subscription");
+      return response.json();
+    },
+  });
+
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -96,6 +109,49 @@ export default function ProductCard({
     }
   };
 
+  // Get edit limit information based on subscription tier
+  const getEditLimitInfo = () => {
+    const tier = subscription?.subscriptionTier || "free";
+    const currentEdits = product.editCount || 0;
+
+    switch (tier) {
+      case "free":
+        return {
+          limit: 3,
+          current: currentEdits,
+          showCounter: true,
+          disabled: currentEdits >= 3,
+          label: `${currentEdits}/3 edits`
+        };
+      case "standard":
+        return {
+          limit: 10,
+          current: currentEdits,
+          showCounter: true,
+          disabled: currentEdits >= 10,
+          label: `${currentEdits}/10 edits`
+        };
+      case "premium":
+        return {
+          limit: -1, // unlimited
+          current: currentEdits,
+          showCounter: false, // Hide counter for premium
+          disabled: false,
+          label: "Unlimited edits"
+        };
+      default:
+        return {
+          limit: 3,
+          current: currentEdits,
+          showCounter: true,
+          disabled: currentEdits >= 3,
+          label: `${currentEdits}/3 edits`
+        };
+    }
+  };
+
+  const editInfo = getEditLimitInfo();
+
   const currentStatusConfig = getStatusConfig(product.status);
 
   const getStockStatus = () => {
@@ -124,15 +180,17 @@ export default function ProductCard({
           className="w-full h-48 object-cover"
         />
         
-        {/* Edit Count Badge */}
-        <div className="absolute top-3 left-3">
-          <Badge 
-            variant={(product.editCount || 0) >= 3 ? "destructive" : "outline"}
-            className="text-xs"
-          >
-            {product.editCount || 0}/3 edits
-          </Badge>
-        </div>
+        {/* Edit Count Badge - Only show for non-premium users */}
+        {editInfo.showCounter && (
+          <div className="absolute top-3 left-3">
+            <Badge 
+              variant={editInfo.disabled ? "destructive" : "outline"}
+              className="text-xs"
+            >
+              {editInfo.label}
+            </Badge>
+          </div>
+        )}
 
         {/* Status Badge Dropdown */}
         <div className="absolute top-3 right-3">
@@ -205,11 +263,11 @@ export default function ProductCard({
             <DropdownMenuContent align="end">
               <DropdownMenuItem 
                 onClick={() => onEdit(product)}
-                disabled={(product.editCount || 0) >= 3}
-                className={(product.editCount || 0) >= 3 ? "opacity-50 cursor-not-allowed" : ""}
+                disabled={editInfo.disabled}
+                className={editInfo.disabled ? "opacity-50 cursor-not-allowed" : ""}
               >
                 <Edit className="mr-2 h-4 w-4" />
-                Edit {(product.editCount || 0) >= 3 && "(Limit reached)"}
+                Edit {editInfo.disabled && "(Limit reached)"}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDuplicate}>
                 <Copy className="mr-2 h-4 w-4" />
