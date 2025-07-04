@@ -41,9 +41,16 @@ const bulkAddFormSchema = z.object({
   contacts: z.string().min(1, "Please enter contact information"),
 });
 
+const editMemberFormSchema = z.object({
+  phoneNumber: z.string()
+    .min(10, "Valid phone number is required")
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
+});
+
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
 type AddMemberFormData = z.infer<typeof addMemberFormSchema>;
 type BulkAddFormData = z.infer<typeof bulkAddFormSchema>;
+type EditMemberFormData = z.infer<typeof editMemberFormSchema>;
 
 interface CustomerGroup {
   id: number;
@@ -64,6 +71,8 @@ export default function CustomerGroups() {
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Fetch group members when manage dialog opens
@@ -120,6 +129,13 @@ export default function CustomerGroups() {
     defaultValues: {
       name: "",
       description: "",
+    },
+  });
+
+  const editMemberForm = useForm<EditMemberFormData>({
+    resolver: zodResolver(editMemberFormSchema),
+    defaultValues: {
+      phoneNumber: "",
     },
   });
 
@@ -248,6 +264,33 @@ export default function CustomerGroups() {
       toast({
         title: "Error",
         description: error.message || "Failed to remove customer from group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editMemberMutation = useMutation({
+    mutationFn: async ({ groupId, customerId, phoneNumber }: { groupId: number; customerId: string; phoneNumber: string }) => {
+      const response = await apiRequest("PATCH", `/api/customer-groups/${groupId}/members/${customerId}`, {
+        phoneNumber
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-groups", selectedGroup?.id, "members"] });
+      toast({
+        title: "Success",
+        description: "Customer phone number updated successfully",
+      });
+      setIsEditMemberDialogOpen(false);
+      setEditingMember(null);
+      editMemberForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer phone number",
         variant: "destructive",
       });
     },
@@ -510,6 +553,23 @@ export default function CustomerGroups() {
     if (selectedGroup) {
       deleteMemberMutation.mutate({ groupId: selectedGroup.id, customerId });
     }
+  };
+
+  const onEditMember = (member: any) => {
+    setEditingMember(member);
+    editMemberForm.reset({
+      phoneNumber: member.phoneNumber || "",
+    });
+    setIsEditMemberDialogOpen(true);
+  };
+
+  const onSaveEditMember = (data: EditMemberFormData) => {
+    if (!selectedGroup || !editingMember) return;
+    editMemberMutation.mutate({
+      groupId: selectedGroup.id,
+      customerId: editingMember.id,
+      phoneNumber: data.phoneNumber,
+    });
   };
 
   const handleCreateWhatsAppGroup = (groupId: number) => {
@@ -1241,15 +1301,26 @@ Mike Johnson, 07444 555666`}
                           </div>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteMember(member.id)}
-                        disabled={deleteMemberMutation.isPending}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50 flex-shrink-0"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex space-x-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditMember(member)}
+                          disabled={editMemberMutation.isPending}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteMember(member.id)}
+                          disabled={deleteMemberMutation.isPending}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1303,6 +1374,58 @@ Mike Johnson, 07444 555666`}
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Customer Phone Number</DialogTitle>
+            <DialogDescription>
+              Update the phone number for {editingMember?.firstName} {editingMember?.lastName || ''}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editMemberForm}>
+            <form onSubmit={editMemberForm.handleSubmit(onSaveEditMember)} className="space-y-4">
+              <FormField
+                control={editMemberForm.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., +44 7123 456789" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditMemberDialogOpen(false);
+                    setEditingMember(null);
+                    editMemberForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={editMemberMutation.isPending}
+                >
+                  {editMemberMutation.isPending ? "Updating..." : "Update Phone Number"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

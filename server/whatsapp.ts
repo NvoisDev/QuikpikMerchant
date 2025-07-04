@@ -107,6 +107,38 @@ export class WhatsAppService {
     }
   }
 
+  private formatPhoneForTwilio(phoneNumber: string): string {
+    // Remove all spaces, dashes, parentheses
+    let cleaned = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    
+    // If it already starts with +, use as is
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    
+    // If starts with 0 (UK local format), convert to international
+    if (cleaned.startsWith('0')) {
+      return '+44' + cleaned.substring(1);
+    }
+    
+    // If it's 10 digits, assume UK mobile without leading 0
+    if (cleaned.length === 10 && /^\d{10}$/.test(cleaned)) {
+      return '+44' + cleaned;
+    }
+    
+    // If it starts with 44, add the +
+    if (cleaned.startsWith('44') && cleaned.length >= 12) {
+      return '+' + cleaned;
+    }
+    
+    // Default: add +44 for UK numbers that don't match other patterns
+    if (/^\d+$/.test(cleaned) && cleaned.length >= 10) {
+      return '+44' + cleaned;
+    }
+    
+    return cleaned; // Return as-is if we can't format it
+  }
+
   async sendMessage(phoneNumber: string, message: string, wholesalerId?: string): Promise<boolean> {
     try {
       if (!wholesalerId) {
@@ -121,16 +153,22 @@ export class WhatsAppService {
         return false;
       }
 
+      // Format phone numbers for Twilio
+      const fromNumber = this.formatPhoneForTwilio(wholesaler.twilioPhoneNumber);
+      const toNumber = this.formatPhoneForTwilio(phoneNumber);
+
+      console.log(`Sending WhatsApp message via Twilio from ${fromNumber} to ${toNumber}`);
+
       // Send message using Twilio
       const twilioClient = twilio(wholesaler.twilioAccountSid, wholesaler.twilioAuthToken);
       
       const result = await twilioClient.messages.create({
-        from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-        to: `whatsapp:${phoneNumber}`,
+        from: `whatsapp:${fromNumber}`,
+        to: `whatsapp:${toNumber}`,
         body: message
       });
 
-      console.log(`Twilio WhatsApp message sent to ${phoneNumber}, SID: ${result.sid}`);
+      console.log(`Twilio WhatsApp message sent to ${toNumber}, SID: ${result.sid}`);
       return true;
     } catch (error) {
       console.error('Failed to send WhatsApp message:', error);

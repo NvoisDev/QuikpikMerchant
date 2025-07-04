@@ -69,6 +69,7 @@ export interface IStorage {
   createCustomer(customer: { phoneNumber: string; firstName: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
+  updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   
   // Analytics operations
   getWholesalerStats(wholesalerId: string): Promise<{
@@ -416,6 +417,13 @@ export class DatabaseStorage implements IStorage {
           eq(customerGroupMembers.customerId, customerId)
         )
       );
+  }
+
+  async updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ phoneNumber })
+      .where(eq(users.id, customerId));
   }
 
   // Analytics operations

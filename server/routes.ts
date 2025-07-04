@@ -659,6 +659,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update customer phone number in group
+  app.patch('/api/customer-groups/:groupId/members/:customerId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId);
+      const customerId = req.params.customerId;
+      const { phoneNumber } = req.body;
+
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Verify group ownership
+      const groups = await storage.getCustomerGroups(userId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Update customer phone number
+      await storage.updateCustomerPhone(customerId, phoneNumber);
+      
+      res.json({
+        success: true,
+        message: "Customer phone number updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating customer phone number:", error);
+      res.status(500).json({ message: "Failed to update customer phone number" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/stats', isAuthenticated, async (req: any, res) => {
     try {
