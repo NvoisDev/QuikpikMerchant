@@ -10,6 +10,11 @@ export class WhatsAppService {
   // Format numbers with commas for better readability
   private isValidImageUrl(url: string): boolean {
     try {
+      // Skip base64 data URLs (Twilio doesn't support them)
+      if (url.startsWith('data:image/')) {
+        return false;
+      }
+      
       // Check if it's a valid HTTP/HTTPS URL
       const parsedUrl = new URL(url);
       return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
@@ -246,10 +251,14 @@ export class WhatsAppService {
       return `${customMessage}\n\n🛒 Place Your Order Now:\n${campaignUrl}`;
     }
 
+    const hasImage = product.imageUrl && product.imageUrl.length > 0;
+    const imageNote = hasImage ? "📸 Product images available online" : "";
+    
     return `🛍️ ${product.name} Promotion
 
 📦 Featured Product:
 ${product.name}
+${imageNote}
 
 💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}
 📦 MOQ: ${this.formatNumber(product.moq)} units
@@ -524,10 +533,17 @@ Update your inventory or restock soon.`;
 
     message += `📦 *Featured Products:*\n`;
     
+    const hasAnyImages = template.products.some((item: any) => 
+      item.product.imageUrl && item.product.imageUrl.length > 0
+    );
+    
     template.products.forEach((item: any, index: number) => {
       const price = item.specialPrice || item.product.price;
       const currencySymbol = wholesaler.defaultCurrency === 'GBP' ? '£' : wholesaler.defaultCurrency === 'EUR' ? '€' : '$';
-      message += `${index + 1}. ${item.product.name}\n`;
+      const hasImage = item.product.imageUrl && item.product.imageUrl.length > 0;
+      const imageNote = hasImage ? " 📸" : "";
+      
+      message += `${index + 1}. ${item.product.name}${imageNote}\n`;
       message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
       message += `   📦 MOQ: ${this.formatNumber(item.product.moq)} units\n`;
       message += `   📦 In Stock: ${this.formatNumber(item.product.stock)} packs available\n`;
@@ -535,6 +551,10 @@ Update your inventory or restock soon.`;
 
     if (template.includePurchaseLink) {
       message += `🛒 *Order Now:* ${campaignUrl}\n\n`;
+    }
+
+    if (hasAnyImages) {
+      message += `\n📸 Product images available online\n`;
     }
 
     if (template.includeContact) {
