@@ -46,33 +46,42 @@ export default function Logo({
     return "QP";
   };
 
-  // Determine what to show based on user settings
+  // Determine what to show based on user settings hierarchy
   const renderLogo = () => {
-    // If user has uploaded a custom logo
-    if (user?.logoType === "uploaded" && user?.logoUrl) {
+    // 1. Custom uploaded logo (highest priority)
+    if (user?.logoType === "custom" && user?.logoUrl) {
       return (
         <img 
           src={user.logoUrl} 
-          alt={user.businessName || "Logo"} 
-          className={`${sizeClasses[size]} w-auto object-contain`}
+          alt={user.businessName || "Business logo"} 
+          className={`${sizeClasses[size]} w-auto object-contain rounded`}
         />
       );
     }
     
-    // If user wants to show business name
-    if (user?.logoType === "business_name" && user?.businessName) {
+    // 2. Business name initials
+    if (user?.logoType === "business" && user?.businessName) {
+      const businessInitials = user.businessName
+        .split(' ')
+        .map((word: string) => word.charAt(0).toUpperCase())
+        .join('')
+        .substring(0, 2);
+      
       return (
-        <div className={`${textSizeClasses[size]} font-bold text-primary`}>
-          {user.businessName}
+        <div className={`${sizeClasses[size]} aspect-square bg-primary rounded-full flex items-center justify-center`}>
+          <span className={`${textSizeClasses[size]} font-bold text-white`}>
+            {businessInitials}
+          </span>
         </div>
       );
     }
     
-    // Default: Show initials
+    // 3. Name initials (fallback - default)
+    const nameInitials = getInitials();
     return (
       <div className={`${sizeClasses[size]} aspect-square bg-primary rounded-full flex items-center justify-center`}>
         <span className={`${textSizeClasses[size]} font-bold text-white`}>
-          {getInitials()}
+          {nameInitials}
         </span>
       </div>
     );

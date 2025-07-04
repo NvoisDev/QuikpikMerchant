@@ -41,6 +41,8 @@ const businessFormSchema = z.object({
   state: z.string().optional(),
   postalCode: z.string().optional(),
   country: z.string().optional(),
+  logoType: z.enum(["initials", "business", "custom"]).optional(),
+  logoUrl: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsFormSchema>;
@@ -144,6 +146,8 @@ function Settings() {
       state: user?.state || "",
       postalCode: user?.postalCode || "",
       country: user?.country || "United Kingdom",
+      logoType: (user?.logoType as "custom" | "initials" | "business") || "initials",
+      logoUrl: user?.logoUrl || "",
     },
   });
 
@@ -486,6 +490,98 @@ function Settings() {
                               </FormItem>
                             )}
                           />
+                        </div>
+                      </div>
+
+                      {/* Logo Settings */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mt-6 mb-4">
+                          <User className="h-5 w-5 text-primary" />
+                          <h4 className="text-md font-medium">Business Logo</h4>
+                        </div>
+
+                        <FormField
+                          control={businessForm.control}
+                          name="logoType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Logo Display Option</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || "initials"}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Choose how to display your logo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="initials">Name Initials (Default)</SelectItem>
+                                  <SelectItem value="business">Business Name Initials</SelectItem>
+                                  <SelectItem value="custom">Custom Logo Upload</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {businessForm.watch("logoType") === "custom" && (
+                          <FormField
+                            control={businessForm.control}
+                            name="logoUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Upload Logo</FormLabel>
+                                <FormControl>
+                                  <div className="space-y-2">
+                                    <Input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            field.onChange(reader.result as string);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                      className="cursor-pointer"
+                                    />
+                                    {field.value && (
+                                      <div className="flex items-center gap-2">
+                                        <img
+                                          src={field.value}
+                                          alt="Logo preview"
+                                          className="h-12 w-12 object-cover rounded border"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => field.onChange("")}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-2">
+                            <User className="h-4 w-4 text-blue-600 mt-1" />
+                            <div>
+                              <p className="text-sm text-blue-800 font-medium">Logo Hierarchy</p>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Custom logo → Business name initials → Your name initials (MO). The logo will appear in the header replacing "MO".
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
