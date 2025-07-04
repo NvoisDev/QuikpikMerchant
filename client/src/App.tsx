@@ -22,6 +22,7 @@ import MessageTemplates from "@/pages/message-templates";
 import Campaigns from "@/pages/campaigns";
 import BusinessPerformance from "@/pages/business-performance";
 import Financials from "@/pages/financials";
+import FinancialHealth from "@/pages/financial-health";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
               <Route path="/analytics" component={Analytics} />
               <Route path="/business-performance" component={BusinessPerformance} />
               <Route path="/financials" component={Financials} />
+              <Route path="/financial-health" component={FinancialHealth} />
               <Route path="/settings" component={Settings} />
               <Route path="/campaigns" component={Campaigns} />
               {/* Legacy route redirect */}

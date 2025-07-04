@@ -118,41 +118,49 @@ export default function BusinessPerformance() {
       <Card>
         <CardHeader>
           <CardTitle>Quick Overview</CardTitle>
-          <p className="text-sm text-gray-600">Key metrics at a glance</p>
+          <p className="text-sm text-gray-600">Key metrics at a glance - click to explore</p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+            <Link href="/analytics">
+              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-blue-50 transition-colors border-2 hover:border-blue-200">
+                <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">View</p>
+                <p className="text-sm text-gray-600">Analytics</p>
               </div>
-              <p className="text-2xl font-bold text-gray-900">View</p>
-              <p className="text-sm text-gray-600">Analytics</p>
-            </div>
+            </Link>
             
-            <div className="text-center">
-              <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Receipt className="h-6 w-6 text-green-600" />
+            <Link href="/financials">
+              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-green-50 transition-colors border-2 hover:border-green-200">
+                <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Receipt className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">Manage</p>
+                <p className="text-sm text-gray-600">Invoices</p>
               </div>
-              <p className="text-2xl font-bold text-gray-900">Manage</p>
-              <p className="text-sm text-gray-600">Invoices</p>
-            </div>
+            </Link>
             
-            <div className="text-center">
-              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                <CreditCard className="h-6 w-6 text-purple-600" />
+            <Link href="/financials">
+              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-purple-50 transition-colors border-2 hover:border-purple-200">
+                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CreditCard className="h-6 w-6 text-purple-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">Track</p>
+                <p className="text-sm text-gray-600">Payments</p>
               </div>
-              <p className="text-2xl font-bold text-gray-900">Track</p>
-              <p className="text-sm text-gray-600">Payments</p>
-            </div>
+            </Link>
             
-            <div className="text-center">
-              <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                <DollarSign className="h-6 w-6 text-orange-600" />
+            <Link href="/financial-health">
+              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-orange-50 transition-colors border-2 hover:border-orange-200">
+                <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <DollarSign className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">Monitor</p>
+                <p className="text-sm text-gray-600">Health</p>
               </div>
-              <p className="text-2xl font-bold text-gray-900">Monitor</p>
-              <p className="text-sm text-gray-600">Revenue</p>
-            </div>
+            </Link>
           </div>
         </CardContent>
       </Card>
