@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -585,6 +585,7 @@ function Settings() {
 function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [isEditingConfig, setIsEditingConfig] = useState(false);
   const [twilioConfig, setTwilioConfig] = useState({
     accountSid: "",
     authToken: "", 
@@ -596,6 +597,17 @@ function WhatsAppIntegrationSection() {
     queryKey: ["/api/whatsapp/status"],
   });
 
+  // Populate form when editing existing configuration
+  useEffect(() => {
+    if (isEditingConfig && whatsappStatus) {
+      setTwilioConfig({
+        accountSid: whatsappStatus.twilioAccountSid || "",
+        authToken: whatsappStatus.twilioAuthToken || "",
+        phoneNumber: whatsappStatus.twilioPhoneNumber || ""
+      });
+    }
+  }, [isEditingConfig, whatsappStatus]);
+
   // Save WhatsApp configuration mutation
   const saveConfigMutation = useMutation({
     mutationFn: async (config: typeof twilioConfig) => {
@@ -603,6 +615,7 @@ function WhatsAppIntegrationSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      setIsEditingConfig(false);
       toast({
         title: "Configuration Saved",
         description: "Twilio WhatsApp configuration saved successfully!",
@@ -710,7 +723,7 @@ function WhatsAppIntegrationSection() {
           Connect your Twilio WhatsApp integration to send product broadcasts and updates to your customer groups.
         </p>
 
-        {!isConfigured ? (
+        {!isConfigured || isEditingConfig ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-blue-800 font-medium mb-3">
               📱 Setup Twilio WhatsApp Integration
@@ -749,14 +762,34 @@ function WhatsAppIntegrationSection() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   WhatsApp Phone Number
                 </label>
-                <Input
-                  placeholder="e.g., +1234567890"
-                  value={twilioConfig.phoneNumber}
-                  onChange={(e) => setTwilioConfig({...twilioConfig, phoneNumber: e.target.value})}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Your Twilio WhatsApp-enabled phone number (include country code).
-                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g., +1234567890"
+                    value={twilioConfig.phoneNumber}
+                    onChange={(e) => setTwilioConfig({...twilioConfig, phoneNumber: e.target.value})}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTwilioConfig({...twilioConfig, phoneNumber: '+14155238886'})}
+                    className="whitespace-nowrap"
+                  >
+                    Use Sandbox
+                  </Button>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                  <p className="text-xs text-blue-800 font-medium mb-1">📱 Sandbox Setup Required:</p>
+                  <p className="text-xs text-blue-700 mb-1">
+                    1. Use Twilio sandbox number: <strong>+14155238886</strong>
+                  </p>
+                  <p className="text-xs text-blue-700 mb-1">
+                    2. First, text your unique sandbox code to +1 (415) 523-8886 from your WhatsApp
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    3. Find your sandbox code in your Twilio Console → Messaging → Try it Out → WhatsApp
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -774,20 +807,41 @@ function WhatsAppIntegrationSection() {
                 >
                   {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
                 </Button>
+                {isEditingConfig && (
+                  <Button
+                    onClick={() => setIsEditingConfig(false)}
+                    variant="outline"
+                    className="border-gray-300"
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800 font-medium">
-              ✅ Twilio WhatsApp is configured and ready to use!
-            </p>
-            <p className="text-green-700 text-sm mt-1">
-              WhatsApp Phone: {whatsappStatus?.twilioPhoneNumber}
-            </p>
-            <p className="text-green-700 text-sm">
-              You can now create campaigns and send messages to your customer groups.
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-800 font-medium">
+                  ✅ Twilio WhatsApp is configured and ready to use!
+                </p>
+                <p className="text-green-700 text-sm mt-1">
+                  WhatsApp Phone: {whatsappStatus?.twilioPhoneNumber}
+                </p>
+                <p className="text-green-700 text-sm">
+                  You can now create campaigns and send messages to your customer groups.
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsEditingConfig(true)}
+                variant="outline"
+                size="sm"
+                className="text-green-700 border-green-300 hover:bg-green-100"
+              >
+                Edit Configuration
+              </Button>
+            </div>
           </div>
         )}
       </div>
