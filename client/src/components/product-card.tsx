@@ -282,11 +282,11 @@ export default function ProductCard({
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center text-xs text-gray-500">
+            <div className="flex items-center text-xs text-gray-500" title="Product views - how many times customers have viewed this product">
               <Eye className="h-3 w-3 mr-1" />
               <span>142</span>
             </div>
-            <div className="flex items-center text-xs text-gray-500">
+            <div className="flex items-center text-xs text-gray-500" title="Times added to cart - how many customers have added this to their cart">
               <ShoppingCart className="h-3 w-3 mr-1" />
               <span>28</span>
             </div>
