@@ -219,25 +219,32 @@ export class WhatsAppService {
   }
 
   private generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
-    const productUrl = `${process.env.APP_URL || 'http://localhost:5000'}/product/${product.id}`;
+    const campaignUrl = `https://quikpik.co/campaign/abc123`;
     const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
-    const price = product.priceVisible ? `${currencySymbol}${product.price}` : 'Request Quote';
+    const businessName = wholesaler?.businessName || "Your Business";
+    const phone = wholesaler?.businessPhone || wholesaler?.phoneNumber || "+1234567890";
     
     if (customMessage) {
-      return `${customMessage}\n\n🛒 Order now: ${productUrl}`;
+      return `${customMessage}\n\n🛒 Place Your Order Now:\n${campaignUrl}`;
     }
 
-    return `🛍️ *${product.name}* is now available!
+    return `🛍️ ${product.name} Promotion
 
-📦 Stock: ${this.formatNumber(product.stock)} units
-💰 Price: ${price}
-📋 Min Order: ${this.formatNumber(product.moq)} units
+📦 Featured Product:
+${product.name}
 
-${product.description || ''}
+💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}
+📦 MOQ: ${this.formatNumber(product.moq)} units
+📦 In Stock: ${this.formatNumber(product.stock)} packs available
 
-🛒 Order now: ${productUrl}
+🛒 Place Your Order Now:
+${campaignUrl}
 
-Reply STOP to unsubscribe`;
+📞 Questions or Bulk Orders?
+${businessName}
+📱 ${phone}
+
+✨ This update was powered by Quikpik Merchant`;
   }
 
   async sendOrderNotification(
