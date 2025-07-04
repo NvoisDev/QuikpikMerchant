@@ -44,14 +44,15 @@ function Router() {
             <>
               <Route path="/" component={WholesalerDashboard} />
               <Route path="/products" component={ProductManagement} />
-              <Route path="/broadcasts" component={Broadcasts} />
               <Route path="/customer-groups" component={CustomerGroups} />
               <Route path="/orders" component={Orders} />
               <Route path="/subscription" component={Subscription} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/settings" component={Settings} />
-              <Route path="/message-templates" component={MessageTemplates} />
               <Route path="/campaigns" component={Campaigns} />
+              {/* Legacy route redirect */}
+              <Route path="/broadcasts" component={Campaigns} />
+              <Route path="/message-templates" component={Campaigns} />
               <Route path="/help" component={Help} />
             </>
           ) : (

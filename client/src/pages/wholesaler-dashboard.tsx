@@ -13,7 +13,8 @@ import {
   MessageSquare,
   Plus,
   Bell,
-  TrendingUp
+  TrendingUp,
+  Users
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -60,11 +61,23 @@ export default function WholesalerDashboard() {
                 Welcome back! Here's what's happening with your business.
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Link href="/products">
-                <Button>
+                <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
-                  New Product
+                  Add Product
+                </Button>
+              </Link>
+              <Link href="/campaigns">
+                <Button variant="outline" size="sm">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Create Campaign
+                </Button>
+              </Link>
+              <Link href="/customer-groups">
+                <Button variant="outline" size="sm">
+                  <Users className="mr-2 h-4 w-4" />
+                  Add Customers
                 </Button>
               </Link>
               <div className="relative">
@@ -120,6 +133,65 @@ export default function WholesalerDashboard() {
               iconBg="bg-green-100"
             />
           </div>
+
+          {/* Quick Actions Section */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <p className="text-sm text-gray-600">Get started with common tasks</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link href="/products">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/20">
+                    <CardContent className="flex flex-col items-center p-6 text-center">
+                      <div className="bg-blue-100 p-3 rounded-full mb-3">
+                        <Package className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900">Add Products</h3>
+                      <p className="text-sm text-gray-500 mt-1">List new inventory items</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+                
+                <Link href="/campaigns">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/20">
+                    <CardContent className="flex flex-col items-center p-6 text-center">
+                      <div className="bg-green-100 p-3 rounded-full mb-3">
+                        <MessageSquare className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900">Send Campaign</h3>
+                      <p className="text-sm text-gray-500 mt-1">Broadcast to customers</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+                
+                <Link href="/customer-groups">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/20">
+                    <CardContent className="flex flex-col items-center p-6 text-center">
+                      <div className="bg-purple-100 p-3 rounded-full mb-3">
+                        <Users className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900">Manage Customers</h3>
+                      <p className="text-sm text-gray-500 mt-1">Add or organize groups</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+                
+                <Link href="/orders">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary/20">
+                    <CardContent className="flex flex-col items-center p-6 text-center">
+                      <div className="bg-orange-100 p-3 rounded-full mb-3">
+                        <ShoppingCart className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900">View Orders</h3>
+                      <p className="text-sm text-gray-500 mt-1">Process recent orders</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Charts and Tables Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
