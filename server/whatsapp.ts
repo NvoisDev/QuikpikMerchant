@@ -371,7 +371,8 @@ Update your inventory or restock soon.`;
   async sendTemplateMessage(
     template: any,
     members: any[],
-    campaignUrl: string
+    campaignUrl: string,
+    customMessage?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string; recipientCount?: number }> {
     try {
       // Get wholesaler details and WhatsApp credentials
@@ -393,7 +394,7 @@ Update your inventory or restock soon.`;
       }
 
       const recipientCount = members.length;
-      const templateMessage = this.generateTemplateMessage(template, wholesaler, campaignUrl);
+      const templateMessage = customMessage || this.generateTemplateMessage(template, wholesaler, campaignUrl);
       
       // Send WhatsApp messages using wholesaler's own WhatsApp Business API
       const promises = members.map(async (member) => {

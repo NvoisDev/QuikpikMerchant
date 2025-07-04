@@ -1907,7 +1907,7 @@ Write a professional, sales-focused description that highlights the key benefits
   app.post('/api/campaigns/send', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { campaignId, customerGroupId } = req.body;
+      const { campaignId, customerGroupId, customMessage } = req.body;
 
       const [type, id] = campaignId.split('_');
       const numericId = parseInt(id);
@@ -1921,12 +1921,13 @@ Write a professional, sales-focused description that highlights the key benefits
           return res.status(404).json({ message: "Broadcast not found" });
         }
 
-        // Send single product broadcast
+        // Send single product broadcast with custom message if provided
+        const messageToSend = customMessage || broadcast.message;
         const result = await whatsappService.sendProductBroadcast(
           userId,
           broadcast.product.id, // Use the actual product ID
           customerGroupId,
-          broadcast.message // Include custom message if any
+          messageToSend // Use custom message or original message
         );
 
         if (result.success) {
@@ -1968,7 +1969,7 @@ Write a professional, sales-focused description that highlights the key benefits
           totalRevenue: '0'
         });
 
-        const result = await whatsappService.sendTemplateMessage(template, members, campaignUrl);
+        const result = await whatsappService.sendTemplateMessage(template, members, campaignUrl, customMessage);
         
         res.json({
           success: result.success,

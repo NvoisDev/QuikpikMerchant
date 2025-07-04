@@ -95,6 +95,8 @@ export default function Campaigns() {
   const [isStockRefreshOpen, setIsStockRefreshOpen] = useState(false);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
+  const [editableMessage, setEditableMessage] = useState<string>("");
+  const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
@@ -158,6 +160,7 @@ export default function Campaigns() {
       const response = await apiRequest("POST", "/api/campaigns/send", {
         campaignId,
         customerGroupId,
+        customMessage: editableMessage || undefined, // Include edited message if exists
       });
       return response.json();
     },
@@ -721,9 +724,24 @@ export default function Campaigns() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Message Preview</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              WhatsApp Message Preview
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!isEditingMessage) {
+                    setEditableMessage(generatePreviewMessage(selectedCampaign!));
+                  }
+                  setIsEditingMessage(!isEditingMessage);
+                }}
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                {isEditingMessage ? "View" : "Edit"}
+              </Button>
+            </DialogTitle>
           </DialogHeader>
           {selectedCampaign && (
             <div className="space-y-4">
@@ -732,14 +750,53 @@ export default function Campaigns() {
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
                     <MessageSquare className="h-4 w-4 text-white" />
                   </div>
-                  <span className="font-medium">WhatsApp Message Preview</span>
+                  <span className="font-medium">WhatsApp Message</span>
                 </div>
                 <div className="bg-white p-3 rounded-lg shadow-sm">
-                  <pre className="whitespace-pre-wrap text-sm">{generatePreviewMessage(selectedCampaign)}</pre>
+                  {isEditingMessage ? (
+                    <Textarea
+                      value={editableMessage}
+                      onChange={(e) => setEditableMessage(e.target.value)}
+                      placeholder="Edit your WhatsApp message..."
+                      className="min-h-[200px] font-mono text-sm resize-none"
+                    />
+                  ) : (
+                    <pre className="whitespace-pre-wrap text-sm">{generatePreviewMessage(selectedCampaign)}</pre>
+                  )}
                 </div>
               </div>
-              <div className="flex justify-end">
-                <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
+              
+              {isEditingMessage && (
+                <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>Tip:</strong> You can edit the message text while keeping the formatting. 
+                    Changes will be saved for when you send this campaign.
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <div className="text-sm text-gray-500">
+                  Character count: {(isEditingMessage ? editableMessage : generatePreviewMessage(selectedCampaign)).length}
+                </div>
+                <div className="flex space-x-2">
+                  {isEditingMessage && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setEditableMessage(generatePreviewMessage(selectedCampaign!));
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                  <Button onClick={() => {
+                    setIsPreviewOpen(false);
+                    setIsEditingMessage(false);
+                  }}>
+                    Close
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -754,6 +811,17 @@ export default function Campaigns() {
           </DialogHeader>
           {selectedCampaign && (
             <div className="space-y-4">
+              {editableMessage && (
+                <div className="p-3 bg-green-50 rounded border border-green-200">
+                  <p className="text-sm text-green-800 font-medium">
+                    📝 Custom Message Ready
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    You've edited the WhatsApp message. Your custom version will be sent to customers.
+                  </p>
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Customer Group
@@ -777,13 +845,25 @@ export default function Campaigns() {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-800">
                   This will send the "{selectedCampaign.title}" campaign to all members of the selected customer group.
                   Each customer will receive a personalized WhatsApp message with a unique purchase link.
                 </p>
               </div>
-              <div className="flex justify-end space-x-2">
+              
+              <div className="flex justify-between space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsSendOpen(false);
+                    setIsPreviewOpen(true);
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Message
+                </Button>
                 <Button variant="outline" onClick={() => setIsSendOpen(false)}>
                   Cancel
                 </Button>
