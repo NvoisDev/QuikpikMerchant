@@ -75,11 +75,19 @@ export class WhatsAppService {
         }
 
         try {
-          const result = await twilioClient.messages.create({
+          // Create message with media if product has image
+          const messageData: any = {
             from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
             to: `whatsapp:${member.businessPhone}`,
             body: productMessage
-          });
+          };
+
+          // Add product image if available
+          if (product.imageUrl) {
+            messageData.mediaUrl = [product.imageUrl];
+          }
+
+          const result = await twilioClient.messages.create(messageData);
           
           console.log(`Twilio WhatsApp message sent to ${member.businessPhone}, SID: ${result.sid}`);
           return true;
@@ -449,11 +457,20 @@ Update your inventory or restock soon.`;
         }
 
         try {
-          const result = await twilioClient.messages.create({
+          // Create message with media if products have images
+          const messageData: any = {
             from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
             to: `whatsapp:${member.businessPhone}`,
             body: templateMessage
-          });
+          };
+
+          // Add first product image if available
+          const firstProductWithImage = template.products.find((item: any) => item.product.imageUrl);
+          if (firstProductWithImage?.product.imageUrl) {
+            messageData.mediaUrl = [firstProductWithImage.product.imageUrl];
+          }
+
+          const result = await twilioClient.messages.create(messageData);
           
           console.log(`Twilio WhatsApp template message sent to ${member.businessPhone}, SID: ${result.sid}`);
           return true;

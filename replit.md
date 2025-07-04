@@ -259,6 +259,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Seamless Workflow**: Direct preview-to-send flow with custom message preservation
   - **Fixed Custom Message Sending**: WhatsApp service now properly uses custom edited messages instead of default templates
   - **Customer Phone Number Isolation**: Updated test customers to use individual phone numbers separate from test number
+- July 04, 2025. Comprehensive WhatsApp messaging system improvements:
+  - **Fixed Currency Display**: Both single and multi-product campaigns now display correct currency (£ for GBP) instead of hardcoded dollars
+  - **Unified Message Format**: Single product broadcasts now match preview format exactly with proper structure and business contact information
+  - **Product Image Integration**: Added automatic product image inclusion in WhatsApp messages for both single and multi-product campaigns
+  - **Sandbox Limitation Warning**: Added clear notification in settings explaining Twilio sandbox delivery limitations to test numbers only
+  - **Template Configuration Fix**: Multi-product campaigns now use proper Twilio configuration instead of WhatsApp Business API fields
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
