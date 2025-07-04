@@ -28,9 +28,9 @@ const navigation = [
   { name: "Customer Groups", href: "/customer-groups", icon: Users },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare },
-  { name: "Marketplace (coming soon)", href: "/marketplace", icon: Store },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Marketplace (coming soon)", href: "/marketplace", icon: Store },
   { name: "Help Hub", href: "/help", icon: HelpCircle },
 ];
 

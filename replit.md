@@ -209,6 +209,11 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - Created clear functional separation: Stock Update for data refresh only, Send/Resend for customer communication
   - Enhanced test mode for WhatsApp functionality - campaigns work even without WhatsApp API configuration
   - System supports both single-product broadcasts and multi-product template campaigns for comprehensive stock management
+- July 04, 2025. Enhanced number formatting and navigation organization:
+  - Implemented comprehensive comma formatting for all stock numbers in WhatsApp broadcasts (e.g., "10,000" instead of "10000")
+  - Updated both single and multi-product campaign message formatting for better readability
+  - Applied consistent number formatting to dashboard statistics and analytics displays
+  - Reorganized sidebar navigation to position Marketplace under Analytics as requested by user
   
 **Status Systems:**
 - **Campaign Status**: Only "sent" or "draft" (campaigns that have been sent vs those still being prepared)
