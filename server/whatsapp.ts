@@ -241,7 +241,7 @@ export class WhatsAppService {
     return `phone_number_id_${phoneNumber.replace(/\D/g, '')}`;
   }
 
-  private generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
+  generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
     // Extract the first domain from REPLIT_DOMAINS which contains the main app URL
     const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
     const domain = replitDomains.split(',')[0].trim();
@@ -525,7 +525,7 @@ Update your inventory or restock soon.`;
     }
   }
 
-  private generateTemplateMessage(template: any, wholesaler: any, campaignUrl: string): string {
+  generateTemplateMessage(template: any, wholesaler: any, campaignUrl: string): string {
     const businessName = wholesaler.businessName || "Your Business";
     const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
 

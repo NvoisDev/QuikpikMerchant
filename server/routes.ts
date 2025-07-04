@@ -2079,6 +2079,75 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Campaign preview endpoint - generate preview message without sending
+  app.get('/api/campaigns/:id/preview', async (req, res) => {
+    try {
+      const campaignId = req.params.id;
+      const [type, id] = campaignId.split('_');
+      const numericId = parseInt(id);
+
+      if (type === 'broadcast') {
+        // Preview single product broadcast
+        const product = await storage.getProduct(numericId);
+        if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+        }
+
+        const wholesaler = await storage.getUser(product.wholesalerId);
+        if (!wholesaler) {
+          return res.status(404).json({ message: "Wholesaler not found" });
+        }
+
+        const message = whatsappService.generateProductMessage(product, undefined, wholesaler);
+        
+        res.json({
+          type: 'single',
+          title: `${product.name} Promotion`,
+          message,
+          product,
+          wholesaler: {
+            businessName: wholesaler.businessName,
+            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber
+          }
+        });
+      } else if (type === 'template') {
+        // Preview multi-product template
+        const template = await storage.getMessageTemplate(numericId);
+        if (!template) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+
+        const wholesaler = await storage.getUser(template.wholesalerId);
+        if (!wholesaler) {
+          return res.status(404).json({ message: "Wholesaler not found" });
+        }
+
+        const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0]?.trim();
+        const baseUrl = replitDomain ? `https://${replitDomain}` : 'https://localhost:5000';
+        const campaignUrl = `${baseUrl}/marketplace?campaign=${Date.now()}${numericId}`;
+        
+        const message = whatsappService.generateTemplateMessage(template, wholesaler, campaignUrl);
+        
+        res.json({
+          type: 'multi',
+          title: template.title,
+          message,
+          template,
+          wholesaler: {
+            businessName: wholesaler.businessName,
+            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber
+          },
+          campaignUrl
+        });
+      } else {
+        res.status(400).json({ message: "Invalid campaign type" });
+      }
+    } catch (error) {
+      console.error("Error generating campaign preview:", error);
+      res.status(500).json({ message: "Failed to generate preview" });
+    }
+  });
+
   // Stock update refresh endpoint - resend campaign with current stock information
   app.post('/api/campaigns/:id/refresh-stock', isAuthenticated, async (req: any, res) => {
     try {

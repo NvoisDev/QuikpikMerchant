@@ -23,6 +23,7 @@ import Campaigns from "@/pages/campaigns";
 import BusinessPerformance from "@/pages/business-performance";
 import Financials from "@/pages/financials";
 import FinancialHealth from "@/pages/financial-health";
+import CampaignPreview from "@/pages/campaign-preview";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -38,6 +39,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - accessible without authentication */}
+      <Route path="/campaign/:id" component={CampaignPreview} />
+      
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
