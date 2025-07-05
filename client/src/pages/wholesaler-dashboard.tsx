@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatNumber } from "@/lib/utils";
 
 import StatsCard from "@/components/stats-card";
+import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -110,46 +111,57 @@ export default function WholesalerDashboard() {
         <div className="p-8">
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard
-              title="Total Revenue"
-              value={stats ? formatCurrency(stats.totalRevenue || 0) : "$0"}
-              change="+12.5% from last month"
-              icon={DollarSign}
-              iconColor="text-green-600"
-              iconBg="bg-green-100"
-              loading={statsLoading}
-              tooltip="Total earnings from all completed orders and sales"
-            />
-            <StatsCard
-              title="Orders This Month"
-              value={formatNumber(stats?.ordersCount || 0)}
-              change="+8.2% from last month"
-              icon={ShoppingCart}
-              iconColor="text-blue-600"
-              iconBg="bg-blue-100"
-              loading={statsLoading}
-              tooltip="Number of orders received from customers this month"
-            />
-            <StatsCard
-              title="Active Products"
-              value={formatNumber(stats?.activeProducts || 0)}
-              change={`${formatNumber(stats?.lowStockCount || 0)} low stock alerts`}
-              icon={Package}
-              iconColor="text-purple-600"
-              iconBg="bg-purple-100"
-              loading={statsLoading}
-              changeColor="text-orange-600"
-              tooltip="Products currently available for sale in your inventory"
-            />
-            <StatsCard
-              title="WhatsApp Reach"
-              value={formatNumber(1245)}
-              change="85% open rate"
-              icon={MessageSquare}
-              iconColor="text-green-600"
-              iconBg="bg-green-100"
-              tooltip="Total customers reached through WhatsApp broadcast campaigns"
-            />
+            {statsLoading ? (
+              <>
+                <AnalyticsCardSkeleton />
+                <AnalyticsCardSkeleton />
+                <AnalyticsCardSkeleton />
+                <AnalyticsCardSkeleton />
+              </>
+            ) : (
+              <>
+                <StatsCard
+                  title="Total Revenue"
+                  value={stats ? formatCurrency(stats.totalRevenue || 0) : "$0"}
+                  change="+12.5% from last month"
+                  icon={DollarSign}
+                  iconColor="text-green-600"
+                  iconBg="bg-green-100"
+                  loading={statsLoading}
+                  tooltip="Total earnings from all completed orders and sales"
+                />
+                <StatsCard
+                  title="Orders This Month"
+                  value={formatNumber(stats?.ordersCount || 0)}
+                  change="+8.2% from last month"
+                  icon={ShoppingCart}
+                  iconColor="text-blue-600"
+                  iconBg="bg-blue-100"
+                  loading={statsLoading}
+                  tooltip="Number of orders received from customers this month"
+                />
+                <StatsCard
+                  title="Active Products"
+                  value={formatNumber(stats?.activeProducts || 0)}
+                  change={`${formatNumber(stats?.lowStockCount || 0)} low stock alerts`}
+                  icon={Package}
+                  iconColor="text-purple-600"
+                  iconBg="bg-purple-100"
+                  loading={statsLoading}
+                  changeColor="text-orange-600"
+                  tooltip="Products currently available for sale in your inventory"
+                />
+                <StatsCard
+                  title="WhatsApp Reach"
+                  value={formatNumber(1245)}
+                  change="85% open rate"
+                  icon={MessageSquare}
+                  iconColor="text-green-600"
+                  iconBg="bg-green-100"
+                  tooltip="Total customers reached through WhatsApp broadcast campaigns"
+                />
+              </>
+            )}
           </div>
 
           {/* Quick Actions Section */}

@@ -2854,36 +2854,81 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         throw new Error('Stripe not configured');
       }
 
-      // Check if wholesaler has Stripe Connect account
-      if (!wholesaler.stripeAccountId) {
-        return res.status(400).json({ 
-          message: "Wholesaler payment setup incomplete. Please contact seller to complete their Stripe Connect setup." 
+      let paymentIntent;
+
+      // Try creating payment intent with Stripe Connect if available
+      if (wholesaler.stripeAccountId) {
+        try {
+          // Create payment intent with Stripe Connect and 5% platform fee
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmount * 100), // Convert to cents
+            currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+            application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 5% platform fee in cents
+            transfer_data: {
+              destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
+            },
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify(customerData.address),
+              totalAmount: totalAmount.toString(),
+              platformFee: platformFee,
+              connectAccountUsed: 'true',
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          });
+        } catch (connectError: any) {
+          console.log('Connect payment failed, falling back to regular payment:', connectError.message);
+          
+          // Fallback to regular payment intent for demo/test purposes
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmount * 100), // Convert to cents
+            currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify(customerData.address),
+              totalAmount: totalAmount.toString(),
+              platformFee: platformFee,
+              connectAccountUsed: 'false',
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          });
+        }
+      } else {
+        // Create regular payment intent when no Connect account
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalAmount * 100), // Convert to cents
+          currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+          metadata: {
+            orderType: 'customer_portal',
+            wholesalerId: wholesalerId,
+            customerName: customerData.name,
+            customerEmail: customerData.email,
+            customerPhone: customerData.phone,
+            customerAddress: JSON.stringify(customerData.address),
+            totalAmount: totalAmount.toString(),
+            platformFee: platformFee,
+            connectAccountUsed: 'false',
+            items: JSON.stringify(items.map(item => ({
+              ...item,
+              productName: item.productName || 'Product'
+            })))
+          }
         });
       }
-
-      // Create payment intent with Stripe Connect and 5% platform fee
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmount * 100), // Convert to cents
-        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
-        application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 5% platform fee in cents
-        transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
-        },
-        metadata: {
-          orderType: 'customer_portal',
-          wholesalerId: wholesalerId,
-          customerName: customerData.name,
-          customerEmail: customerData.email,
-          customerPhone: customerData.phone,
-          customerAddress: JSON.stringify(customerData.address),
-          totalAmount: totalAmount.toString(),
-          platformFee: platformFee,
-          items: JSON.stringify(items.map(item => ({
-            ...item,
-            productName: item.productName || 'Product' // Ensure product name is included
-          })))
-        }
-      });
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
 import ProductCard from "@/components/product-card";
+import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -842,24 +843,7 @@ export default function ProductManagement() {
 
           {/* Products Grid/List */}
           {isLoading ? (
-            <div className={viewMode === "grid" 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              : "space-y-4"
-            }>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
-                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-300 rounded w-full"></div>
-                      <div className="h-3 bg-gray-300 rounded w-5/6"></div>
-                      <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ProductGridSkeleton count={8} />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product: any) => (
