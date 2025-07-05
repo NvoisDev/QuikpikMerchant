@@ -265,87 +265,129 @@ export default function Orders() {
         </DialogTitle>
       </DialogHeader>
       
-      <div className="space-y-6">
-        {/* Order Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold text-primary">#{order.id}</div>
-            <div className="text-sm text-muted-foreground">Order ID</div>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold">{formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}</div>
-            <div className="text-sm text-muted-foreground">Total Amount</div>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <div className="text-2xl font-bold">{order.items.length}</div>
-            <div className="text-sm text-muted-foreground">Items</div>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            {getStatusBadge(order.status)}
-            <div className="text-sm text-muted-foreground mt-1">Status</div>
+      <div className="space-y-8">
+        {/* Order Header */}
+        <div className="border-b pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-semibold text-foreground">Order #{order.id}</h3>
+              <p className="text-sm text-muted-foreground">
+                Placed on {new Date(order.createdAt).toLocaleDateString('en-GB', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-primary">
+                {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                {getStatusBadge(order.status)}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Order Items */}
         <div>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Order Items
-          </h3>
-          <div className="space-y-3">
-            {order.items.map((item: any) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                    <Package className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <div className="font-medium">{item.product.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Quantity: {item.quantity} × {formatCurrency(parseFloat(item.unitPrice), order.wholesaler?.preferredCurrency || 'GBP')}
+          <div className="flex items-center gap-2 mb-6">
+            <Package className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Items Ordered ({order.items.length})</h3>
+          </div>
+          <div className="space-y-4">
+            {order.items.map((item: any, index: number) => (
+              <div key={item.id} className="border border-border/40 rounded-lg p-4 bg-background/50">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Package className="h-7 w-7 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground mb-2">{item.product.name}</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Quantity:</span>
+                          <span className="ml-2 font-medium">{item.quantity.toLocaleString()} units</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Unit Price:</span>
+                          <span className="ml-2 font-medium">{formatCurrency(parseFloat(item.unitPrice), order.wholesaler?.preferredCurrency || 'GBP')}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="font-semibold">
-                  {formatCurrency(parseFloat(item.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                  <div className="text-right">
+                    <div className="text-lg font-semibold text-primary">
+                      {formatCurrency(parseFloat(item.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Subtotal</div>
+                  </div>
                 </div>
               </div>
             ))}
+            
+            {/* Order Total */}
+            <div className="border-t pt-4 mt-6">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-medium">Order Total</span>
+                <span className="text-2xl font-bold text-primary">
+                  {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Customer Information */}
-        <div className="bg-muted/30 p-4 rounded-lg">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Customer Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="font-medium">
-                {[order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || order.retailer?.businessName || 'Unknown Customer'}
-              </div>
-              {order.retailer?.email && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Mail className="h-3 w-3" />
-                  {order.retailer.email}
+        <div>
+          <div className="flex items-center gap-2 mb-6">
+            <User className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Customer Details</h3>
+          </div>
+          <div className="border border-border/40 rounded-lg p-6 bg-background/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
+                  <div className="text-base font-medium text-foreground mt-1">
+                    {[order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || order.retailer?.businessName || 'Unknown Customer'}
+                  </div>
                 </div>
-              )}
-              {order.retailer?.phoneNumber && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
-                  {order.retailer.phoneNumber}
+                
+                {order.retailer?.phoneNumber && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-base text-foreground">{order.retailer.phoneNumber}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {order.retailer?.email && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-base text-foreground">{order.retailer.email}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {order.deliveryAddress && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Delivery Address</label>
+                  <div className="flex items-start gap-2 mt-1">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <span className="text-base text-foreground">{order.deliveryAddress}</span>
+                  </div>
                 </div>
               )}
             </div>
-            {order.deliveryAddress && (
-              <div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {order.deliveryAddress}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
