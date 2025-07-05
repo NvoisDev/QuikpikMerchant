@@ -54,8 +54,8 @@ export interface IStorage {
   deleteProduct(id: number): Promise<void>;
   
   // Order operations
-  getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[] })[]>;
-  getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined>;
+  getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
+  getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   
@@ -219,18 +219,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Order operations
-  async getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[] })[]> {
-    let query = db.select().from(orders);
+  async getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
+    let orderList;
     
     if (wholesalerId) {
-      query = query.where(eq(orders.wholesalerId, wholesalerId));
+      orderList = await db.select().from(orders).where(eq(orders.wholesalerId, wholesalerId)).orderBy(desc(orders.createdAt));
     } else if (retailerId) {
-      query = query.where(eq(orders.retailerId, retailerId));
+      orderList = await db.select().from(orders).where(eq(orders.retailerId, retailerId)).orderBy(desc(orders.createdAt));
+    } else {
+      orderList = await db.select().from(orders).orderBy(desc(orders.createdAt));
     }
     
-    const orderList = await query.orderBy(desc(orders.createdAt));
-    
-    // Get items for each order
+    // Get items, retailer, and wholesaler info for each order
     const ordersWithItems = await Promise.all(
       orderList.map(async (order) => {
         const items = await db
@@ -239,8 +239,22 @@ export class DatabaseStorage implements IStorage {
           .leftJoin(products, eq(orderItems.productId, products.id))
           .where(eq(orderItems.orderId, order.id));
         
+        // Get retailer info
+        const [retailer] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, order.retailerId));
+        
+        // Get wholesaler info
+        const [wholesaler] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, order.wholesalerId));
+        
         return {
           ...order,
+          retailer: retailer!,
+          wholesaler: wholesaler!,
           items: items.map(item => ({
             ...item.order_items,
             product: item.products!
@@ -252,7 +266,7 @@ export class DatabaseStorage implements IStorage {
     return ordersWithItems;
   }
 
-  async getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined> {
+  async getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined> {
     const [order] = await db.select().from(orders).where(eq(orders.id, id));
     if (!order) return undefined;
     
@@ -262,8 +276,22 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(products, eq(orderItems.productId, products.id))
       .where(eq(orderItems.orderId, id));
     
+    // Get retailer info
+    const [retailer] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, order.retailerId));
+    
+    // Get wholesaler info
+    const [wholesaler] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, order.wholesalerId));
+    
     return {
       ...order,
+      retailer: retailer!,
+      wholesaler: wholesaler!,
       items: items.map(item => ({
         ...item.order_items,
         product: item.products!
