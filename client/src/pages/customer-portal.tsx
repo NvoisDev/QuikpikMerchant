@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -275,9 +276,16 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
 };
 
 export default function CustomerPortal() {
-  const { id: wholesalerId } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+  const { id: wholesalerIdParam } = useParams<{ id: string }>();
+  const [location] = useLocation();
+  const { user } = useAuth();
   const { toast } = useToast();
+
+  // Detect if this is preview mode (accessed via /preview-store)
+  const isPreviewMode = location === '/preview-store';
+  
+  // Use authenticated user's ID in preview mode, otherwise use URL parameter
+  const wholesalerId = isPreviewMode ? user?.id : wholesalerIdParam;
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -306,8 +314,7 @@ export default function CustomerPortal() {
     notes: ''
   });
 
-  // Check if this is preview mode
-  const isPreviewMode = window.location.pathname.includes('/preview-store');
+
   
   // Get featured product ID from URL
   const urlParams = new URLSearchParams(window.location.search);
