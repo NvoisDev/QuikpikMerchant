@@ -825,7 +825,7 @@ export default function CustomerPortal() {
               
               <div className="flex items-center space-x-3">
                 <Label>Quantity:</Label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-1">
                   <Button
                     variant="outline"
                     size="sm"
@@ -838,12 +838,27 @@ export default function CustomerPortal() {
                     type="number"
                     value={editQuantity}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value) || selectedProduct.moq;
-                      setEditQuantity(Math.max(selectedProduct.moq, value));
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value) || value < selectedProduct.moq) {
+                        setEditQuantity(selectedProduct.moq);
+                      } else if (value > selectedProduct.stock) {
+                        setEditQuantity(selectedProduct.stock);
+                      } else {
+                        setEditQuantity(value);
+                      }
                     }}
-                    className="w-20 text-center"
+                    onBlur={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value) || value < selectedProduct.moq) {
+                        setEditQuantity(selectedProduct.moq);
+                      } else if (value > selectedProduct.stock) {
+                        setEditQuantity(selectedProduct.stock);
+                      }
+                    }}
+                    className="w-24 text-center"
                     min={selectedProduct.moq}
                     max={selectedProduct.stock}
+                    placeholder={`${selectedProduct.moq}-${selectedProduct.stock}`}
                   />
                   <Button
                     variant="outline"
@@ -855,6 +870,20 @@ export default function CustomerPortal() {
                   </Button>
                 </div>
               </div>
+              
+              {/* Stock limit warning */}
+              {editQuantity >= selectedProduct.stock && (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.stock)} units)
+                </div>
+              )}
+              
+              {/* MOQ reminder */}
+              {editQuantity === selectedProduct.moq && selectedProduct.moq > 1 && (
+                <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                  ℹ️ Minimum order quantity is {formatNumber(selectedProduct.moq)} units
+                </div>
+              )}
               
               <div className="text-lg font-semibold">
                 Total: {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(selectedProduct.price) * editQuantity).toFixed(2)}
