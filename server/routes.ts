@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: price.toString(),
         moq: parseInt(moq),
         stock: parseInt(stock),
-        minimumBidPrice: minimumBidPrice ? parseFloat(minimumBidPrice) : null,
+        minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null,
         wholesalerId: userId
       });
       const product = await storage.createProduct(productData);
@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(price !== undefined && { price: price.toString() }),
         ...(moq !== undefined && { moq: parseInt(moq) }),
         ...(stock !== undefined && { stock: parseInt(stock) }),
-        ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? parseFloat(minimumBidPrice) : null })
+        ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
