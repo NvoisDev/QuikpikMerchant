@@ -3072,6 +3072,92 @@ Please contact the customer to confirm this order.
     return message;
   }
 
+  // Marketplace negotiations endpoint (public - no auth required)
+  app.post('/api/marketplace/negotiations', async (req, res) => {
+    try {
+      const { productId, retailerId, originalPrice, offeredPrice, quantity, message } = req.body;
+      
+      if (!productId || !retailerId || !originalPrice || !offeredPrice || !quantity) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get product to validate and get wholesaler
+      const product = await storage.getProduct(parseInt(productId));
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Check if product allows negotiation
+      if (!product.negotiationEnabled) {
+        return res.status(400).json({ message: "This product is not available for price negotiation" });
+      }
+      
+      // Validate quantity against MOQ
+      if (quantity < product.moq) {
+        return res.status(400).json({ 
+          message: `Minimum order quantity is ${product.moq} units` 
+        });
+      }
+      
+      // Create negotiation record
+      const negotiationData = {
+        productId: product.id,
+        retailerId: retailerId,
+        originalPrice: originalPrice.toString(),
+        offeredPrice: offeredPrice.toString(),
+        quantity: parseInt(quantity),
+        message: message || '',
+        status: 'pending'
+      };
+      
+      const negotiation = await storage.createNegotiation(negotiationData);
+      
+      // Send WhatsApp notification to wholesaler about price quote request
+      try {
+        const wholesaler = await storage.getUser(product.wholesalerId);
+        if (wholesaler?.twilioAccountSid && wholesaler?.twilioAuthToken && wholesaler?.twilioPhoneNumber) {
+          const customerInfo = retailerId.includes('customer_') ? 'Customer' : 'Retailer';
+          const total = (parseFloat(offeredPrice) * parseInt(quantity)).toFixed(2);
+          const currency = wholesaler.preferredCurrency || 'GBP';
+          const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+          
+          const notificationMessage = `💬 Price Quote Request!
+
+Product: ${product.name}
+Current Price: ${currencySymbol}${originalPrice}
+Requested Price: ${currencySymbol}${offeredPrice}
+Quantity: ${quantity.toLocaleString()} units
+Total Value: ${currencySymbol}${total}
+
+${message ? `Customer Message: "${message}"` : ''}
+
+Review and respond to this price request in your Quikpik dashboard.
+
+${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER?.toLowerCase()}.replit.dev` : 'https://your-app.replit.dev'}`;
+
+          await whatsappService.sendMessage(
+            wholesaler.businessPhone || '',
+            notificationMessage,
+            wholesaler.id
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send negotiation notification:', notificationError);
+        // Don't fail the negotiation creation if notification fails
+      }
+      
+      res.status(201).json({
+        success: true,
+        negotiationId: negotiation.id,
+        message: "Price quote request submitted successfully"
+      });
+      
+    } catch (error) {
+      console.error("Error creating negotiation:", error);
+      res.status(500).json({ message: "Failed to submit price quote request" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

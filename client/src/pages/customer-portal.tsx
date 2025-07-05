@@ -31,6 +31,8 @@ interface Product {
   category?: string;
   imageUrl?: string;
   status: string;
+  priceVisible: boolean;
+  negotiationEnabled: boolean;
   wholesaler: {
     id: string;
     businessName: string;
@@ -70,6 +72,13 @@ export default function CustomerPortal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showNegotiation, setShowNegotiation] = useState(false);
+  const [negotiationProduct, setNegotiationProduct] = useState<Product | null>(null);
+  const [negotiationData, setNegotiationData] = useState({
+    quantity: 1,
+    offeredPrice: '',
+    message: ''
+  });
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
     email: '',
@@ -114,6 +123,16 @@ export default function CustomerPortal() {
     setSelectedProduct(product);
     setEditQuantity(product.moq);
     setShowQuantityEditor(true);
+  };
+
+  const openNegotiation = (product: Product) => {
+    setNegotiationProduct(product);
+    setNegotiationData({
+      quantity: product.moq,
+      offeredPrice: '',
+      message: ''
+    });
+    setShowNegotiation(true);
   };
 
   const addToCart = (product: Product, quantity: number) => {
@@ -245,6 +264,61 @@ export default function CustomerPortal() {
       });
     }
   });
+
+  // Create negotiation mutation
+  const createNegotiationMutation = useMutation({
+    mutationFn: async () => {
+      if (!negotiationProduct) throw new Error("No product selected");
+      
+      const response = await apiRequest("POST", "/api/marketplace/negotiations", {
+        productId: negotiationProduct.id,
+        retailerId: `customer_${Date.now()}`, // Temporary customer ID
+        originalPrice: parseFloat(negotiationProduct.price),
+        offeredPrice: parseFloat(negotiationData.offeredPrice),
+        quantity: negotiationData.quantity,
+        message: negotiationData.message
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Price Quote Requested",
+        description: `Your request for ${negotiationProduct?.name} has been sent to ${negotiationProduct?.wholesaler.businessName}. They will respond with their best price.`,
+      });
+      setShowNegotiation(false);
+      setNegotiationProduct(null);
+      setNegotiationData({ quantity: 1, offeredPrice: '', message: '' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to send price request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleNegotiationSubmit = () => {
+    if (!negotiationData.offeredPrice || parseFloat(negotiationData.offeredPrice) <= 0) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price for your request.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (negotiationData.quantity < (negotiationProduct?.moq || 1)) {
+      toast({
+        title: "Quantity Too Low",
+        description: `Minimum order quantity is ${negotiationProduct?.moq} units.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    createNegotiationMutation.mutate();
+  };
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -620,23 +694,46 @@ export default function CustomerPortal() {
                             <Store className="w-3 h-3 mr-1" />
                             {product.wholesaler.businessName}
                           </div>
+                          {/* Negotiation Indicator */}
+                          {product.negotiationEnabled && (
+                            <div className="mb-2">
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                💬 Price Negotiable
+                              </Badge>
+                            </div>
+                          )}
+                          
                           <div className="flex space-x-2 pt-2">
-                            <Button 
-                              onClick={() => openQuantityEditor(product)}
-                              size="sm"
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                            >
-                              <Plus className="w-3 h-3 mr-1" />
-                              Add to Cart
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              size="sm"
-                              className="px-2"
-                              title="Request Quote"
-                            >
-                              <Mail className="w-3 h-3" />
-                            </Button>
+                            {product.negotiationEnabled ? (
+                              <>
+                                <Button 
+                                  onClick={() => openNegotiation(product)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Mail className="w-3 h-3 mr-1" />
+                                  Request Quote
+                                </Button>
+                                <Button 
+                                  onClick={() => openQuantityEditor(product)}
+                                  size="sm"
+                                  className="px-3 bg-green-600 hover:bg-green-700"
+                                  title="Add to cart at listed price"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                onClick={() => openQuantityEditor(product)}
+                                size="sm"
+                                className="w-full bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Add to Cart
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -700,22 +797,44 @@ export default function CustomerPortal() {
 
                           {/* Action Buttons */}
                           <div className="flex flex-col space-y-2">
-                            <Button 
-                              onClick={() => openQuantityEditor(product)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add to Cart
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              size="sm"
-                              title="Request Quote"
-                            >
-                              <Mail className="w-4 h-4 mr-1" />
-                              Quote
-                            </Button>
+                            {product.negotiationEnabled ? (
+                              <>
+                                <Button 
+                                  onClick={() => openNegotiation(product)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Mail className="w-4 h-4 mr-1" />
+                                  Request Quote
+                                </Button>
+                                <Button 
+                                  onClick={() => openQuantityEditor(product)}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  title="Add to cart at listed price"
+                                >
+                                  <Plus className="w-4 h-4 mr-1" />
+                                  Add to Cart
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                onClick={() => openQuantityEditor(product)}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add to Cart
+                              </Button>
+                            )}
+                            
+                            {/* Negotiation Indicator for List View */}
+                            {product.negotiationEnabled && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 self-start">
+                                💬 Price Negotiable
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -1011,6 +1130,139 @@ export default function CustomerPortal() {
               </Elements>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Negotiation Dialog */}
+      <Dialog open={showNegotiation} onOpenChange={setShowNegotiation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Price Quote</DialogTitle>
+            <p className="text-sm text-gray-600">
+              Request a custom price for {negotiationProduct?.name}
+            </p>
+          </DialogHeader>
+          {negotiationProduct && (
+            <div className="space-y-4">
+              {/* Product Info */}
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex items-center space-x-3">
+                  {negotiationProduct.imageUrl && (
+                    <img 
+                      src={negotiationProduct.imageUrl} 
+                      alt={negotiationProduct.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  )}
+                  <div>
+                    <h4 className="font-medium">{negotiationProduct.name}</h4>
+                    <p className="text-sm text-gray-600">
+                      Listed at {currencySymbol}{negotiationProduct.price}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Supplier: {negotiationProduct.wholesaler.businessName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Quantity</label>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNegotiationData({
+                      ...negotiationData,
+                      quantity: Math.max(negotiationProduct.moq, negotiationData.quantity - 1)
+                    })}
+                    disabled={negotiationData.quantity <= negotiationProduct.moq}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="w-12 text-center font-medium">{negotiationData.quantity}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNegotiationData({
+                      ...negotiationData,
+                      quantity: Math.min(negotiationProduct.stock, negotiationData.quantity + 1)
+                    })}
+                    disabled={negotiationData.quantity >= negotiationProduct.stock}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Min: {negotiationProduct.moq} units | Available: {negotiationProduct.stock.toLocaleString()}
+                </p>
+              </div>
+
+              {/* Offered Price Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Your Offered Price (per unit)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-500">{currencySymbol}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={negotiationData.offeredPrice}
+                    onChange={(e) => setNegotiationData({
+                      ...negotiationData,
+                      offeredPrice: e.target.value
+                    })}
+                    className="w-full pl-8 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter your desired price"
+                  />
+                </div>
+                {negotiationData.offeredPrice && (
+                  <p className="text-xs text-gray-500">
+                    Total: {currencySymbol}{(parseFloat(negotiationData.offeredPrice) * negotiationData.quantity).toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              {/* Message Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Message (Optional)</label>
+                <textarea
+                  value={negotiationData.message}
+                  onChange={(e) => setNegotiationData({
+                    ...negotiationData,
+                    message: e.target.value
+                  })}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add a message to your request..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowNegotiation(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleNegotiationSubmit}
+                  disabled={createNegotiationMutation.isPending || !negotiationData.offeredPrice}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {createNegotiationMutation.isPending ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  ) : (
+                    <Mail className="w-4 h-4 mr-2" />
+                  )}
+                  Send Request
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
