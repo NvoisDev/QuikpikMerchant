@@ -107,13 +107,38 @@ export default function Orders() {
     },
   });
 
+  // Resend confirmation email mutation
+  const resendConfirmationMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await apiRequest("POST", `/api/orders/${orderId}/resend-confirmation`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email Sent",
+        description: "Order confirmation email has been resent successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Email Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { variant: "secondary" as const, icon: Clock, label: "Pending" },
+      unfulfilled: { variant: "destructive" as const, icon: AlertCircle, label: "Unfulfilled" },
       confirmed: { variant: "default" as const, icon: CheckCircle, label: "Confirmed" },
+      paid: { variant: "default" as const, icon: DollarSign, label: "Paid" },
       processing: { variant: "default" as const, icon: Package, label: "Processing" },
       shipped: { variant: "default" as const, icon: Truck, label: "Shipped" },
       delivered: { variant: "default" as const, icon: CheckCircle, label: "Delivered" },
+      fulfilled: { variant: "default" as const, icon: CheckCircle, label: "Fulfilled" },
+      archived: { variant: "secondary" as const, icon: Package, label: "Archived" },
       cancelled: { variant: "destructive" as const, icon: XCircle, label: "Cancelled" },
     };
 
@@ -148,32 +173,58 @@ export default function Orders() {
       {
         status: 'confirmed',
         title: 'Order Confirmed',
-        description: 'Order has been confirmed',
-        timestamp: order.status === 'confirmed' || ['processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
-        completed: order.status === 'confirmed' || ['processing', 'shipped', 'delivered'].includes(order.status)
+        description: 'Order has been confirmed by wholesaler',
+        timestamp: order.status === 'confirmed' || ['paid', 'processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'confirmed' || ['paid', 'processing', 'shipped', 'delivered'].includes(order.status),
+        emailSent: true
+      },
+      {
+        status: 'paid',
+        title: 'Payment Received',
+        description: 'Payment has been processed successfully',
+        timestamp: order.status === 'paid' || ['processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'paid' || ['processing', 'shipped', 'delivered'].includes(order.status)
       },
       {
         status: 'processing',
         title: 'Processing',
-        description: 'Order is being prepared',
+        description: 'Order is being prepared for shipment',
         timestamp: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
         completed: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status)
       },
       {
         status: 'shipped',
         title: 'Shipped',
-        description: 'Order has been shipped',
+        description: 'Order has been shipped to customer',
         timestamp: order.status === 'shipped' || order.status === 'delivered' ? order.updatedAt : null,
         completed: order.status === 'shipped' || order.status === 'delivered'
       },
       {
         status: 'delivered',
         title: 'Delivered',
-        description: 'Order has been delivered',
-        timestamp: order.status === 'delivered' ? order.updatedAt : null,
-        completed: order.status === 'delivered'
+        description: 'Order has been delivered successfully',
+        timestamp: order.status === 'delivered' || ['fulfilled', 'archived'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'delivered' || ['fulfilled', 'archived'].includes(order.status)
+      },
+      {
+        status: 'fulfilled',
+        title: 'Fulfilled',
+        description: 'Order has been completed and fulfilled',
+        timestamp: order.status === 'fulfilled' || order.status === 'archived' ? order.updatedAt : null,
+        completed: order.status === 'fulfilled' || order.status === 'archived'
       }
     ];
+
+    // Handle special statuses
+    if (order.status === 'unfulfilled') {
+      events.push({
+        status: 'unfulfilled',
+        title: 'Unfulfilled',
+        description: 'Order could not be fulfilled',
+        timestamp: order.updatedAt,
+        completed: true
+      });
+    }
 
     if (order.status === 'cancelled') {
       events.push({
@@ -264,7 +315,9 @@ export default function Orders() {
                   {event.status === 'processing' && <Package className="h-4 w-4" />}
                   {event.status === 'shipped' && <Truck className="h-4 w-4" />}
                   {event.status === 'delivered' && <CheckCircle className="h-4 w-4" />}
+                  {event.status === 'fulfilled' && <CheckCircle className="h-4 w-4" />}
                   {event.status === 'cancelled' && <XCircle className="h-4 w-4" />}
+                  {event.status === 'unfulfilled' && <AlertCircle className="h-4 w-4" />}
                 </div>
                 <div className="flex-1">
                   <div className={`font-medium ${event.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -274,6 +327,25 @@ export default function Orders() {
                   {event.timestamp && (
                     <div className="text-xs text-muted-foreground">
                       {new Date(event.timestamp).toLocaleString()}
+                    </div>
+                  )}
+                  {/* Show email notification for confirmed orders */}
+                  {event.status === 'confirmed' && event.completed && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                        ✓ Confirmation email sent automatically
+                      </div>
+                      {user?.role === 'wholesaler' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => resendConfirmationMutation.mutate(order.id)}
+                          disabled={resendConfirmationMutation.isPending}
+                          className="text-xs h-6"
+                        >
+                          Resend Email
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -327,10 +399,13 @@ export default function Orders() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="unfulfilled">Unfulfilled</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="fulfilled">Fulfilled</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
@@ -370,10 +445,14 @@ export default function Orders() {
           <SelectContent>
             <SelectItem value="all">All Orders</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="unfulfilled">Unfulfilled</SelectItem>
             <SelectItem value="confirmed">Confirmed</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
             <SelectItem value="shipped">Shipped</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
+            <SelectItem value="fulfilled">Fulfilled</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>

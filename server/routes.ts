@@ -530,10 +530,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedOrder = await storage.updateOrderStatus(id, status);
+
+      // Auto-archive fulfilled orders
+      if (status === 'fulfilled') {
+        setTimeout(async () => {
+          try {
+            await storage.updateOrderStatus(id, 'archived');
+            console.log(`Order ${id} auto-archived after fulfillment`);
+          } catch (error) {
+            console.error(`Failed to auto-archive order ${id}:`, error);
+          }
+        }, 24 * 60 * 60 * 1000); // Archive after 24 hours
+      }
+
       res.json(updatedOrder);
     } catch (error) {
       console.error("Error updating order status:", error);
       res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Resend order confirmation email
+  app.post('/api/orders/:id/resend-confirmation', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can resend confirmation emails
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to resend confirmation for this order" });
+      }
+
+      const wholesaler = await storage.getUser(userId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // Send confirmation email to customer
+      try {
+        await sendCustomerInvoiceEmail(order.retailer, order, order.items, wholesaler);
+        res.json({ message: "Confirmation email sent successfully" });
+      } catch (emailError) {
+        console.error("Email sending failed:", emailError);
+        res.status(500).json({ message: "Failed to send confirmation email" });
+      }
+    } catch (error) {
+      console.error("Error resending confirmation email:", error);
+      res.status(500).json({ message: "Failed to resend confirmation email" });
     }
   });
 
