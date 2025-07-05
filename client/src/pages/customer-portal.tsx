@@ -120,9 +120,6 @@ interface StripeCheckoutFormProps {
 }
 
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [clientSecret, setClientSecret] = useState("");
   const { toast } = useToast();
 
@@ -156,48 +153,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       createPaymentIntent();
     }
   }, [cart, customerData, wholesaler, totalAmount]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!stripe || !elements || !clientSecret) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/payment-success`,
-        },
-        redirect: "if_required",
-      });
-
-      if (error) {
-        toast({
-          title: "Payment Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Payment Successful!",
-          description: "Your order has been placed successfully.",
-        });
-        onSuccess();
-      }
-    } catch (error) {
-      toast({
-        title: "Payment Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   if (!clientSecret) {
     return (
