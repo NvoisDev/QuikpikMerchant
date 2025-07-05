@@ -457,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe payment intent with Connect account
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalAmountWithFee * 100), // Convert to cents
-        currency: (wholesaler.defaultCurrency?.toLowerCase() || 'usd') as string,
+        currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
         transfer_data: {
           destination: wholesaler.stripeAccountId,
         },
@@ -2816,7 +2816,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           businessPhone: wholesaler.businessPhone,
           businessAddress: wholesaler.businessAddress,
           profileImageUrl: wholesaler.profileImageUrl,
-          defaultCurrency: wholesaler.defaultCurrency
+          defaultCurrency: wholesaler.preferredCurrency
         }
       });
     } catch (error) {

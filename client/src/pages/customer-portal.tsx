@@ -254,8 +254,10 @@ export default function CustomerPortal() {
     createPaymentMutation.mutate(orderData);
   };
 
-  const currencySymbol = featuredProduct?.wholesaler?.defaultCurrency === 'GBP' ? '£' : 
-                        featuredProduct?.wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
+  // Use GBP as fallback since it's the default in schema
+  const wholesalerCurrency = featuredProduct?.wholesaler?.defaultCurrency || 'GBP';
+  const currencySymbol = wholesalerCurrency === 'GBP' ? '£' : 
+                        wholesalerCurrency === 'EUR' ? '€' : '$';
 
   // Payment form component
   const PaymentForm = () => {
