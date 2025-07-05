@@ -30,13 +30,13 @@ Lanre Foods
    💰 Unit Price: £0.75
    📦 MOQ: 48 units
    📦 In Stock: 1,000 packs available
+   🛒 Order this: https://36968463-8f91-452e-bda0-e9a38544c6b8-00-p1kaa4ro8p7u.janeway.replit.dev/marketplace/product/5
 
 2. Rice Bags 📸
    💰 Unit Price: £25.00
    📦 MOQ: 10 units
    📦 In Stock: 500 packs available
-
-🛒 Order Now: https://36968463-8f91-452e-bda0-e9a38544c6b8-00-p1kaa4ro8p7u.janeway.replit.dev/marketplace
+   🛒 Order this: https://36968463-8f91-452e-bda0-e9a38544c6b8-00-p1kaa4ro8p7u.janeway.replit.dev/marketplace/product/6
 
 📸 Product images available online
 

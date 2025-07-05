@@ -547,15 +547,22 @@ Update your inventory or restock soon.`;
       const hasImage = item.product.imageUrl && item.product.imageUrl.length > 0;
       const imageNote = hasImage ? " 📸" : "";
       
+      // Generate direct product link for each item
+      const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
+      const domain = replitDomains.split(',')[0].trim();
+      const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      const productUrl = `${baseUrl}/marketplace/product/${item.product.id}`;
+      
       message += `${index + 1}. ${item.product.name}${imageNote}\n`;
       message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
       message += `   📦 MOQ: ${this.formatNumber(item.product.moq)} units\n`;
       message += `   📦 In Stock: ${this.formatNumber(item.product.stock)} packs available\n`;
+      
+      if (template.includePurchaseLink) {
+        message += `   🛒 Order this: ${productUrl}\n`;
+      }
+      message += `\n`;
     });
-
-    if (template.includePurchaseLink) {
-      message += `🛒 *Order Now:* ${campaignUrl}\n\n`;
-    }
 
     if (hasAnyImages) {
       message += `\n📸 Product images available online\n`;
