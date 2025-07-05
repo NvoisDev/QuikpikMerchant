@@ -2821,7 +2821,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
       
       // Return product with wholesaler information
-      res.json({
+      const response = {
         ...product,
         wholesaler: {
           id: wholesaler.id,
@@ -2835,7 +2835,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           lastName: wholesaler.lastName,
           defaultCurrency: wholesaler.preferredCurrency
         }
+      };
+      
+      // Debug: Log negotiation fields
+      console.log(`Product ${productId} negotiation data:`, {
+        negotiationEnabled: product.negotiationEnabled,
+        minimumBidPrice: product.minimumBidPrice
       });
+      
+      res.json(response);
     } catch (error) {
       console.error("Error fetching product:", error);
       res.status(500).json({ message: "Failed to fetch product" });
