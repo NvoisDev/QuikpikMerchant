@@ -46,18 +46,24 @@ export default function StatsCard({
   }
 
   return (
-    <Card className={cn("hover:shadow-lg transition-shadow duration-200", className)}>
+    <Card className={cn(
+      "group cursor-pointer transform transition-all duration-300 ease-out", 
+      "hover:shadow-xl hover:-translate-y-1 hover:scale-105",
+      "hover:bg-gradient-to-r hover:from-white hover:to-gray-50",
+      "border border-gray-200 hover:border-primary/20",
+      className
+    )}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-600 mb-1">
+          <div className="flex-1 transition-colors duration-300">
+            <p className="text-sm font-medium text-gray-600 mb-1 group-hover:text-gray-700 transition-colors duration-300">
               {title}
             </p>
-            <p className="text-2xl font-bold text-gray-900 mb-1">
+            <p className="text-2xl font-bold text-gray-900 mb-1 group-hover:text-primary transition-colors duration-300">
               {value}
             </p>
             {change && (
-              <p className={cn("text-sm", changeColor)}>
+              <p className={cn("text-sm transition-colors duration-300", changeColor, "group-hover:opacity-80")}>
                 {change}
               </p>
             )}
@@ -66,8 +72,13 @@ export default function StatsCard({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center cursor-help", iconBg)}>
-                    <Icon className={cn("h-6 w-6", iconColor)} />
+                  <div className={cn(
+                    "w-12 h-12 rounded-lg flex items-center justify-center cursor-help",
+                    "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
+                    "group-hover:shadow-lg",
+                    iconBg
+                  )}>
+                    <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", iconColor)} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -76,8 +87,13 @@ export default function StatsCard({
               </Tooltip>
             </TooltipProvider>
           ) : (
-            <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center", iconBg)}>
-              <Icon className={cn("h-6 w-6", iconColor)} />
+            <div className={cn(
+              "w-12 h-12 rounded-lg flex items-center justify-center",
+              "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
+              "group-hover:shadow-lg",
+              iconBg
+            )}>
+              <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", iconColor)} />
             </div>
           )}
         </div>

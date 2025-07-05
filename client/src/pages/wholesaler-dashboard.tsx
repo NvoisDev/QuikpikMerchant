@@ -85,7 +85,7 @@ export default function WholesalerDashboard() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="border-green-600 text-green-600 hover:bg-green-50"
+                    className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
                   >
                     <Package className="mr-2 h-4 w-4" />
                     Preview Store
