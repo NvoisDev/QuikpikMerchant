@@ -70,6 +70,7 @@ function Router() {
               <Route path="/broadcasts" component={Campaigns} />
               <Route path="/message-templates" component={Campaigns} />
               <Route path="/help" component={Help} />
+              <Route path="/preview-store" component={CustomerPortal} />
             </>
           ) : (
             <>

@@ -420,6 +420,14 @@ export default function ProductManagement() {
               <p className="text-gray-600 mt-1">Manage your inventory, pricing, and product details.</p>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+                onClick={() => window.open('/preview-store', '_blank')}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Preview Store
+              </Button>
               <Button variant="outline">
                 <Download className="mr-2 h-4 w-4" />
                 Export

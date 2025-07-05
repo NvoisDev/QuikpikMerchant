@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
@@ -60,6 +60,9 @@ export default function CustomerPortal() {
   const params = useParams<{ id?: string }>();
   const [location] = useLocation();
   const { toast } = useToast();
+  
+  // Check if this is preview mode (accessed by wholesaler)
+  const isPreviewMode = location === '/preview-store';
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -440,24 +443,43 @@ export default function CustomerPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      {/* Preview Mode Banner */}
+      {isPreviewMode && (
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 text-center text-sm font-medium">
+          🔍 Store Preview Mode - This is how your customers see your store. Changes you make will be reflected here.
+        </div>
+      )}
+      
       {/* Customer Portal Header */}
-      <div className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <div className="bg-white/95 backdrop-blur-sm border-b border-green-100 sticky top-0 z-50 shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Logo size="sm" variant="full" />
-              <span className="text-gray-400">|</span>
-              <span className="text-sm text-gray-600">Customer Portal</span>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
+                <Logo size="sm" variant="full" />
+              </div>
+              <div className="h-8 w-px bg-gradient-to-b from-green-200 to-green-400"></div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
+                  Welcome to {featuredProduct?.wholesaler?.businessName || 'Our Store'}
+                </h1>
+                <p className="text-sm text-gray-600 font-medium">🛍️ Premium quality products at wholesale prices</p>
+              </div>
             </div>
             
             {/* Cart Summary */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <ShoppingCart className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium">
-                  {getTotalItems()} items - {currencySymbol}{getTotalAmount().toFixed(2)}
-                </span>
+              <div className="flex items-center space-x-3 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-3 rounded-xl border border-green-200 shadow-sm">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <ShoppingCart className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-700">Your Cart</p>
+                  <p className="text-lg font-bold text-green-800">
+                    {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'} • {currencySymbol}{getTotalAmount().toFixed(2)}
+                  </p>
+                </div>
               </div>
               {cart.length > 0 && (
                 <Button 
@@ -473,16 +495,51 @@ export default function CustomerPortal() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Welcome Banner */}
+        <div className="mb-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl shadow-xl overflow-hidden">
+          <div className="px-8 py-12 text-white">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-4xl font-bold mb-4">
+                ✨ Welcome to {featuredProduct?.wholesaler?.businessName || 'Premium Shopping'}
+              </h2>
+              <p className="text-xl opacity-90 mb-6">
+                Discover high-quality products at wholesale prices. Fast delivery, excellent service guaranteed!
+              </p>
+              <div className="flex items-center justify-center space-x-6 text-white/90">
+                <div className="flex items-center space-x-2">
+                  <Package className="w-5 h-5" />
+                  <span className="font-medium">Quality Guaranteed</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Store className="w-5 h-5" />
+                  <span className="font-medium">Fast Shipping</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Star className="w-5 h-5" />
+                  <span className="font-medium">Top Rated</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Featured Product Section */}
         {featuredProduct && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Star className="w-5 h-5 text-yellow-500" />
-                <span>Featured Product</span>
+          <Card className="mb-8 shadow-xl border-0 bg-gradient-to-br from-white to-green-50">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 border-b border-green-100">
+              <CardTitle className="flex items-center space-x-3 text-2xl">
+                <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl shadow-lg">
+                  <Star className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                    🌟 Today's Special Offer
+                  </span>
+                  <p className="text-sm text-gray-600 font-normal mt-1">Handpicked just for you</p>
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Product Image */}
                 <div>
@@ -538,12 +595,22 @@ export default function CustomerPortal() {
                   </div>
 
                   <Button 
-                    onClick={() => openQuantityEditor(featuredProduct)}
+                    onClick={() => {
+                      if (isPreviewMode) {
+                        toast({
+                          title: "Preview Mode",
+                          description: "Cart functionality is disabled in preview mode.",
+                          variant: "default"
+                        });
+                        return;
+                      }
+                      openQuantityEditor(featuredProduct);
+                    }}
                     className="w-full bg-green-600 hover:bg-green-700"
                     size="lg"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add to Cart ({featuredProduct.moq} units minimum)
+                    {isPreviewMode ? 'Preview: Add to Cart' : `Add to Cart (${featuredProduct.moq} units minimum)`}
                   </Button>
                 </div>
               </div>
@@ -552,18 +619,26 @@ export default function CustomerPortal() {
         )}
 
         {/* Products Section */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2">
-                <Package className="w-5 h-5" />
-                <span>{featuredProduct ? 'More Products Available' : 'All Products'}</span>
+              <CardTitle className="flex items-center space-x-3 text-xl">
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-green-500 rounded-xl shadow-lg">
+                  <Store className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+                    {featuredProduct ? '🛍️ Discover More Products' : '🏪 Browse Our Collection'}
+                  </span>
+                  <p className="text-sm text-gray-600 font-normal mt-1">
+                    {filteredProducts.length} products available
+                  </p>
+                </div>
               </CardTitle>
               {featuredProduct && !showAllProducts && (
                 <Button 
                   onClick={() => setShowAllProducts(true)}
-                  variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50"
+                  className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg"
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   See All Products
@@ -571,7 +646,7 @@ export default function CustomerPortal() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-8">
             {/* Search and Filter Controls */}
             {(showAllProducts || !featuredProduct) && (
               <div className="mb-6 space-y-4">

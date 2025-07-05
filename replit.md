@@ -316,6 +316,15 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Smart Validation**: Automatic validation ensures minimum order quantities when users finish editing
   - **Fixed Negotiation Errors**: Resolved foreign key constraint violations by implementing automatic guest customer creation
   - **Default List View**: Customer portal now defaults to list view for better product browsing experience
+- July 05, 2025. Implemented Customer Portal Preview System for Wholesalers:
+  - **Preview Store Route**: Added `/preview-store` route accessible to authenticated wholesalers for real-time store preview
+  - **Preview Mode Detection**: Automatic detection when portal is accessed in preview mode with visual indicators
+  - **Preview Banner**: Orange banner at top clearly indicates preview mode with explanation text
+  - **Disabled Transactions**: Cart and checkout functionality disabled in preview mode to prevent accidental orders
+  - **Dashboard Integration**: Added "Preview Store" button to dashboard header for easy access
+  - **Product Management Integration**: Added "Preview Store" button to product management page that opens in new tab
+  - **Real-time Updates**: Changes to products, settings, and branding immediately visible in preview mode
+  - **Wholesaler Business Name Integration**: Customer portal header and welcome banner now display actual wholesaler business name
 
   
 **Status Systems:**

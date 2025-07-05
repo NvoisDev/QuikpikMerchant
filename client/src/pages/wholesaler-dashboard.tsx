@@ -64,6 +64,16 @@ export default function WholesalerDashboard() {
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              <Link href="/preview-store">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Preview Store
+                </Button>
+              </Link>
               <Link href="/products">
                 <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
