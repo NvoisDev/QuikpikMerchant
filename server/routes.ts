@@ -3382,7 +3382,7 @@ Please contact the customer to confirm this order.
         
         const msg = {
           to: customer.email,
-          from: 'noreply@quikpik.co', // Use verified sender
+          from: 'hello@quikpik.co', // Use verified sender
           subject: `Order Confirmation #${order.id} - ${wholesaler.businessName || 'Wholesale Store'}`,
           html: emailHtml,
         };
@@ -3614,6 +3614,49 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Error creating negotiation:", error);
       res.status(500).json({ message: "Failed to submit price quote request" });
+    }
+  });
+
+  // Test email endpoint for order confirmation
+  app.post('/api/test-order-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const { orderId, testEmail } = req.body;
+      
+      if (!orderId || !testEmail) {
+        return res.status(400).json({ message: "Order ID and test email are required" });
+      }
+
+      // Get the order with all details
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Get wholesaler details
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // Create test customer data
+      const testCustomer = {
+        name: `${order.retailer.firstName || 'Test'} ${order.retailer.lastName || 'Customer'}`,
+        email: testEmail,
+        phone: order.retailer.businessPhone || 'N/A',
+        address: order.deliveryAddress || 'Test Address'
+      };
+
+      // Send test email
+      await sendCustomerInvoiceEmail(testCustomer, order, order.items, wholesaler);
+      
+      res.json({ 
+        message: "Test email sent successfully",
+        sentTo: testEmail,
+        orderId: orderId
+      });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email", error: error.message });
     }
   });
 
