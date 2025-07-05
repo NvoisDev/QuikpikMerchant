@@ -338,6 +338,9 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Summary Card Interface**: Clean order summary cards with key information and expandable details via eye icon
   - **Status-based Filtering**: Filter orders by all available statuses including new ones
   - **Backend API Enhancements**: Added `/api/orders/:id/resend-confirmation` endpoint for email management
+  - **Simplified Order Workflow**: Streamlined to 4 core statuses: Order Placed, Order Confirmed, Payment Received (all auto-populated), and Fulfilled (manual action only)
+  - **Auto-populated Indicators**: Clear visual indicators showing which statuses are automatic vs require manual wholesaler action
+  - **Manual Action Control**: Only "Fulfilled" status requires wholesaler intervention, all other statuses update automatically based on customer actions and payment processing
 
   
 **Status Systems:**

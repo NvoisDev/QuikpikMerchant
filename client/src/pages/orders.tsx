@@ -166,52 +166,35 @@ export default function Orders() {
       {
         status: 'pending',
         title: 'Order Placed',
-        description: 'Customer placed the order',
+        description: 'Customer placed the order (Auto-populated)',
         timestamp: order.createdAt,
-        completed: true
+        completed: true,
+        autoPopulated: true
       },
       {
         status: 'confirmed',
         title: 'Order Confirmed',
-        description: 'Order has been confirmed by wholesaler',
-        timestamp: order.status === 'confirmed' || ['paid', 'processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
-        completed: order.status === 'confirmed' || ['paid', 'processing', 'shipped', 'delivered'].includes(order.status),
-        emailSent: true
+        description: 'Order has been confirmed (Auto-populated)',
+        timestamp: order.status === 'confirmed' || ['paid', 'fulfilled', 'archived'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'confirmed' || ['paid', 'fulfilled', 'archived'].includes(order.status),
+        emailSent: true,
+        autoPopulated: true
       },
       {
         status: 'paid',
         title: 'Payment Received',
-        description: 'Payment has been processed successfully',
-        timestamp: order.status === 'paid' || ['processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
-        completed: order.status === 'paid' || ['processing', 'shipped', 'delivered'].includes(order.status)
-      },
-      {
-        status: 'processing',
-        title: 'Processing',
-        description: 'Order is being prepared for shipment',
-        timestamp: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
-        completed: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status)
-      },
-      {
-        status: 'shipped',
-        title: 'Shipped',
-        description: 'Order has been shipped to customer',
-        timestamp: order.status === 'shipped' || order.status === 'delivered' ? order.updatedAt : null,
-        completed: order.status === 'shipped' || order.status === 'delivered'
-      },
-      {
-        status: 'delivered',
-        title: 'Delivered',
-        description: 'Order has been delivered successfully',
-        timestamp: order.status === 'delivered' || ['fulfilled', 'archived'].includes(order.status) ? order.updatedAt : null,
-        completed: order.status === 'delivered' || ['fulfilled', 'archived'].includes(order.status)
+        description: 'Payment has been processed successfully (Auto-populated)',
+        timestamp: order.status === 'paid' || ['fulfilled', 'archived'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'paid' || ['fulfilled', 'archived'].includes(order.status),
+        autoPopulated: true
       },
       {
         status: 'fulfilled',
         title: 'Fulfilled',
-        description: 'Order has been completed and fulfilled',
+        description: 'Order has been completed and fulfilled (Manual action required)',
         timestamp: order.status === 'fulfilled' || order.status === 'archived' ? order.updatedAt : null,
-        completed: order.status === 'fulfilled' || order.status === 'archived'
+        completed: order.status === 'fulfilled' || order.status === 'archived',
+        manualAction: true
       }
     ];
 
@@ -222,7 +205,10 @@ export default function Orders() {
         title: 'Unfulfilled',
         description: 'Order could not be fulfilled',
         timestamp: order.updatedAt,
-        completed: true
+        completed: true,
+        autoPopulated: false,
+        emailSent: false,
+        manualAction: false
       });
     }
 
@@ -232,7 +218,10 @@ export default function Orders() {
         title: 'Cancelled',
         description: 'Order was cancelled',
         timestamp: order.updatedAt,
-        completed: true
+        completed: true,
+        autoPopulated: false,
+        emailSent: false,
+        manualAction: false
       });
     }
 
@@ -312,9 +301,7 @@ export default function Orders() {
                 }`}>
                   {event.status === 'pending' && <ShoppingCart className="h-4 w-4" />}
                   {event.status === 'confirmed' && <CheckCircle className="h-4 w-4" />}
-                  {event.status === 'processing' && <Package className="h-4 w-4" />}
-                  {event.status === 'shipped' && <Truck className="h-4 w-4" />}
-                  {event.status === 'delivered' && <CheckCircle className="h-4 w-4" />}
+                  {event.status === 'paid' && <CheckCircle className="h-4 w-4" />}
                   {event.status === 'fulfilled' && <CheckCircle className="h-4 w-4" />}
                   {event.status === 'cancelled' && <XCircle className="h-4 w-4" />}
                   {event.status === 'unfulfilled' && <AlertCircle className="h-4 w-4" />}
@@ -329,6 +316,25 @@ export default function Orders() {
                       {new Date(event.timestamp).toLocaleString()}
                     </div>
                   )}
+                  
+                  {/* Show auto-populated indicator */}
+                  {event.autoPopulated && (
+                    <div className="mt-1">
+                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                        Auto-populated
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Show manual action required indicator */}
+                  {event.manualAction && !event.completed && (
+                    <div className="mt-1">
+                      <span className="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded">
+                        Manual action required
+                      </span>
+                    </div>
+                  )}
+                  
                   {/* Show email notification for confirmed orders */}
                   {event.status === 'confirmed' && event.completed && (
                     <div className="mt-2 flex items-center gap-2">
@@ -383,7 +389,7 @@ export default function Orders() {
         </div>
 
         {/* Order Actions */}
-        {user?.role === 'wholesaler' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+        {user?.role === 'wholesaler' && order.status === 'paid' && (
           <div className="flex gap-2">
             <Select
               value={order.status}
@@ -398,17 +404,18 @@ export default function Orders() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="unfulfilled">Unfulfilled</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="fulfilled">Fulfilled</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="paid">Payment Received</SelectItem>
+                <SelectItem value="fulfilled">Mark as Fulfilled</SelectItem>
+                <SelectItem value="cancelled">Cancel Order</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        )}
+        
+        {user?.role === 'wholesaler' && order.status !== 'paid' && order.status !== 'cancelled' && order.status !== 'fulfilled' && order.status !== 'archived' && (
+          <div className="text-sm text-muted-foreground px-3 py-2 bg-muted/30 rounded">
+            {order.status === 'pending' && 'Order placed - awaiting confirmation'}
+            {order.status === 'confirmed' && 'Order confirmed - awaiting payment'}
           </div>
         )}
       </div>
@@ -444,13 +451,9 @@ export default function Orders() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="unfulfilled">Unfulfilled</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="shipped">Shipped</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
+            <SelectItem value="pending">Order Placed</SelectItem>
+            <SelectItem value="confirmed">Order Confirmed</SelectItem>
+            <SelectItem value="paid">Payment Received</SelectItem>
             <SelectItem value="fulfilled">Fulfilled</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
