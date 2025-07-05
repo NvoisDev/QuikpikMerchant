@@ -1148,9 +1148,34 @@ export default function CustomerPortal() {
                           <Minus className="w-3 h-3" />
                         </Button>
                         
-                        <div className="text-center min-w-[60px]">
-                          <div className="font-medium">{formatNumber(item.quantity)}</div>
-                          <div className="text-xs text-gray-500">units</div>
+                        <div className="text-center min-w-[80px]">
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newQuantity = parseInt(e.target.value) || 0;
+                              if (newQuantity >= item.product.moq && newQuantity <= item.product.stock) {
+                                setCart(cart.map(cartItem => 
+                                  cartItem.product.id === item.product.id 
+                                    ? { ...cartItem, quantity: newQuantity }
+                                    : cartItem
+                                ));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const newQuantity = parseInt(e.target.value) || item.product.moq;
+                              const validQuantity = Math.min(Math.max(newQuantity, item.product.moq), item.product.stock);
+                              setCart(cart.map(cartItem => 
+                                cartItem.product.id === item.product.id 
+                                  ? { ...cartItem, quantity: validQuantity }
+                                  : cartItem
+                              ));
+                            }}
+                            min={item.product.moq}
+                            max={item.product.stock}
+                            className="h-8 text-center text-sm"
+                          />
+                          <div className="text-xs text-gray-500 mt-1">units</div>
                         </div>
                         
                         <Button
