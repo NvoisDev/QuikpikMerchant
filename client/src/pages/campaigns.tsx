@@ -236,7 +236,8 @@ export default function Campaigns() {
   const generatePreviewMessage = (campaign: Campaign) => {
     const businessName = user?.businessName || "Your Business";
     const phone = user?.businessPhone || user?.phoneNumber || "+1234567890";
-    const campaignUrl = "https://quikpik.co/campaign/abc123";
+    const baseUrl = window.location.origin;
+    const customerPortalUrl = `${baseUrl}/customer/${user?.id}`;
 
     let message = `🛍️ ${campaign.title}`;
     
@@ -291,7 +292,11 @@ export default function Campaigns() {
     }
 
     if (campaign.includePurchaseLink) {
-      message += `\n\n🛒 Place Your Order Now:\n${campaignUrl}`;
+      if (campaign.campaignType === 'single' && campaign.product) {
+        message += `\n\n🛒 Place Your Order Now:\n${customerPortalUrl}?product=${campaign.product.id}`;
+      } else {
+        message += `\n\n🛒 Place Your Order Now:\n${customerPortalUrl}`;
+      }
     }
 
     if (campaign.includeContact) {
