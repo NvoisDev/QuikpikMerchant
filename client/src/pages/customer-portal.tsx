@@ -74,7 +74,11 @@ export default function CustomerPortal() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [negotiationProduct, setNegotiationProduct] = useState<Product | null>(null);
-  const [negotiationData, setNegotiationData] = useState({
+  const [negotiationData, setNegotiationData] = useState<{
+    quantity: number | string;
+    offeredPrice: string;
+    message: string;
+  }>({
     quantity: 1,
     offeredPrice: '',
     message: ''
@@ -275,7 +279,7 @@ export default function CustomerPortal() {
         retailerId: `customer_${Date.now()}`, // Temporary customer ID
         originalPrice: parseFloat(negotiationProduct.price),
         offeredPrice: parseFloat(negotiationData.offeredPrice),
-        quantity: negotiationData.quantity,
+        quantity: typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity,
         message: negotiationData.message,
         customerEmail: `guest${Date.now()}@guest.com`,
         customerName: 'Guest Customer',
@@ -311,7 +315,8 @@ export default function CustomerPortal() {
       return;
     }
 
-    if (negotiationData.quantity < (negotiationProduct?.moq || 1)) {
+    const currentQty = typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity;
+    if (currentQty < (negotiationProduct?.moq || 1)) {
       toast({
         title: "Quantity Too Low",
         description: `Minimum order quantity is ${negotiationProduct?.moq} units.`,
@@ -1176,11 +1181,14 @@ export default function CustomerPortal() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setNegotiationData({
-                      ...negotiationData,
-                      quantity: Math.max(negotiationProduct?.moq || 1, negotiationData.quantity - 1)
-                    })}
-                    disabled={negotiationData.quantity <= (negotiationProduct?.moq || 1)}
+                    onClick={() => {
+                      const currentQty = typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity;
+                      setNegotiationData({
+                        ...negotiationData,
+                        quantity: Math.max(negotiationProduct?.moq || 1, currentQty - 1)
+                      });
+                    }}
+                    disabled={(typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity) <= (negotiationProduct?.moq || 1)}
                     className="h-10 w-10 rounded-full p-0 border-2 hover:bg-gray-50"
                   >
                     <Minus className="w-4 h-4" />
@@ -1188,27 +1196,50 @@ export default function CustomerPortal() {
                   <div className="flex-1 max-w-20">
                     <input
                       type="number"
-                      min={negotiationProduct?.moq || 1}
-                      max={negotiationProduct?.stock || 999999}
                       value={negotiationData.quantity}
                       onChange={(e) => {
-                        const newQuantity = parseInt(e.target.value) || negotiationProduct?.moq || 1;
-                        setNegotiationData({
-                          ...negotiationData,
-                          quantity: Math.max(negotiationProduct?.moq || 1, Math.min(negotiationProduct?.stock || 999999, newQuantity))
-                        });
+                        const value = e.target.value;
+                        if (value === '') {
+                          // Allow empty field for editing
+                          setNegotiationData({
+                            ...negotiationData,
+                            quantity: ''
+                          });
+                        } else {
+                          const newQuantity = parseInt(value);
+                          if (!isNaN(newQuantity) && newQuantity > 0) {
+                            setNegotiationData({
+                              ...negotiationData,
+                              quantity: newQuantity
+                            });
+                          }
+                        }
                       }}
+                      onBlur={(e) => {
+                        // When user finishes editing, ensure minimum quantity
+                        const value = e.target.value;
+                        if (value === '' || parseInt(value) < (negotiationProduct?.moq || 1)) {
+                          setNegotiationData({
+                            ...negotiationData,
+                            quantity: negotiationProduct?.moq || 1
+                          });
+                        }
+                      }}
+                      placeholder={`Min: ${negotiationProduct?.moq || 1}`}
                       className="w-full text-center text-lg font-medium border rounded-lg py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setNegotiationData({
-                      ...negotiationData,
-                      quantity: Math.min(negotiationProduct?.stock || 999999, negotiationData.quantity + 1)
-                    })}
-                    disabled={negotiationData.quantity >= (negotiationProduct?.stock || 999999)}
+                    onClick={() => {
+                      const currentQty = typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity;
+                      setNegotiationData({
+                        ...negotiationData,
+                        quantity: Math.min(negotiationProduct?.stock || 999999, currentQty + 1)
+                      });
+                    }}
+                    disabled={(typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity) >= (negotiationProduct?.stock || 999999)}
                     className="h-10 w-10 rounded-full p-0 border-2 hover:bg-gray-50"
                   >
                     <Plus className="w-4 h-4" />
@@ -1242,7 +1273,7 @@ export default function CustomerPortal() {
                 </div>
                 {negotiationData.offeredPrice && (
                   <p className="text-xs text-gray-500">
-                    Total: {currencySymbol}{(parseFloat(negotiationData.offeredPrice) * negotiationData.quantity).toFixed(2)}
+                    Total: {currencySymbol}{(parseFloat(negotiationData.offeredPrice) * (typeof negotiationData.quantity === 'string' ? parseInt(negotiationData.quantity) || 1 : negotiationData.quantity)).toFixed(2)}
                   </p>
                 )}
               </div>
