@@ -169,7 +169,8 @@ export default function Orders() {
         description: 'Customer placed the order (Auto-populated)',
         timestamp: order.createdAt,
         completed: true,
-        autoPopulated: true
+        autoPopulated: true,
+        emailSent: false
       },
       {
         status: 'confirmed',
@@ -186,7 +187,8 @@ export default function Orders() {
         description: 'Payment has been processed successfully (Auto-populated)',
         timestamp: order.status === 'paid' || ['fulfilled', 'archived'].includes(order.status) ? order.updatedAt : null,
         completed: order.status === 'paid' || ['fulfilled', 'archived'].includes(order.status),
-        autoPopulated: true
+        autoPopulated: true,
+        emailSent: false
       },
       {
         status: 'fulfilled',
@@ -194,24 +196,13 @@ export default function Orders() {
         description: 'Order has been completed and fulfilled (Manual action required)',
         timestamp: order.status === 'fulfilled' || order.status === 'archived' ? order.updatedAt : null,
         completed: order.status === 'fulfilled' || order.status === 'archived',
-        manualAction: true
+        manualAction: true,
+        emailSent: false,
+        autoPopulated: false
       }
     ];
 
     // Handle special statuses
-    if (order.status === 'unfulfilled') {
-      events.push({
-        status: 'unfulfilled',
-        title: 'Unfulfilled',
-        description: 'Order could not be fulfilled',
-        timestamp: order.updatedAt,
-        completed: true,
-        autoPopulated: false,
-        emailSent: false,
-        manualAction: false
-      });
-    }
-
     if (order.status === 'cancelled') {
       events.push({
         status: 'cancelled',
@@ -220,8 +211,7 @@ export default function Orders() {
         timestamp: order.updatedAt,
         completed: true,
         autoPopulated: false,
-        emailSent: false,
-        manualAction: false
+        emailSent: false
       });
     }
 
@@ -336,7 +326,7 @@ export default function Orders() {
                   )}
                   
                   {/* Show email notification for confirmed orders */}
-                  {event.status === 'confirmed' && event.completed && (
+                  {event.emailSent && event.completed && (
                     <div className="mt-2 flex items-center gap-2">
                       <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
                         ✓ Confirmation email sent automatically
