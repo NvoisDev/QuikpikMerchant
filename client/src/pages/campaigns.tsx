@@ -321,6 +321,27 @@ export default function Campaigns() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Sandbox Notification Banner */}
+      {user?.twilioPhoneNumber === '+14155238886' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-amber-600 text-sm font-bold">!</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-amber-800 font-medium mb-1">Using Twilio WhatsApp Sandbox</h4>
+              <p className="text-amber-700 text-sm">
+                Your broadcasts will only reach customers who have first texted "join [your-sandbox-code]" to +1 (415) 523-8886. 
+                Messages to unregistered numbers will show as "Undelivered". 
+                <a href="/settings" className="underline ml-1 hover:text-amber-800">Check Settings for setup details</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Broadcast Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>

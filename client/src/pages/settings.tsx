@@ -874,17 +874,16 @@ function WhatsAppIntegrationSection() {
                     Use Sandbox
                   </Button>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                  <p className="text-xs text-blue-800 font-medium mb-1">📱 Sandbox Setup Required:</p>
-                  <p className="text-xs text-blue-700 mb-1">
-                    1. Use Twilio sandbox number: <strong>+14155238886</strong>
-                  </p>
-                  <p className="text-xs text-blue-700 mb-1">
-                    2. First, text your unique sandbox code to +1 (415) 523-8886 from your WhatsApp
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    3. Find your sandbox code in your Twilio Console → Messaging → Try it Out → WhatsApp
-                  </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                  <p className="text-xs text-amber-800 font-medium mb-2">⚠️ Important Sandbox Requirements:</p>
+                  <div className="space-y-1 text-xs text-amber-700">
+                    <p><strong>Step 1:</strong> Use sandbox number: <strong>+14155238886</strong></p>
+                    <p><strong>Step 2:</strong> Each customer must first text "join [your-sandbox-code]" to +1 (415) 523-8886</p>
+                    <p><strong>Step 3:</strong> Find your sandbox code in Twilio Console → Messaging → WhatsApp → Sandbox</p>
+                    <p className="pt-2 font-medium text-amber-800">
+                      💡 Without Step 2, all broadcasts will show "Undelivered" status
+                    </p>
+                  </div>
                 </div>
               </div>
 

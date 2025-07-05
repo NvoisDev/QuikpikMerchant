@@ -97,11 +97,12 @@ export class WhatsAppService {
           let messageData: any;
           
           if (isSandbox) {
-            // Use Twilio's approved "Your appointment is coming up" template for sandbox
+            // For Twilio sandbox, we need to use the exact approved template format
+            // The customer must first send "join <sandbox-keyword>" to the sandbox number
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
               to: `whatsapp:${memberPhone}`,
-              body: `Your ${product.name} order update: Stock available! Price: ${wholesaler?.defaultCurrency === 'GBP' ? '£' : '$'}${parseFloat(product.price).toFixed(2)}. MOQ: ${this.formatNumber(product.moq)} units. Contact us to place your order.`
+              body: `Your appointment is coming up on July 21 at 3PM`
             };
           } else {
             // Production: use full custom message
@@ -506,15 +507,11 @@ Update your inventory or restock soon.`;
           let messageData: any;
           
           if (isSandbox) {
-            // Create simplified sandbox-compatible message
-            const firstProduct = template.products[0]?.product;
-            const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : '$';
-            const sandboxMessage = `Your product update: ${firstProduct?.name || 'Products'} available! Price: ${currencySymbol}${parseFloat(firstProduct?.price || '0').toFixed(2)}. ${template.products.length > 1 ? `+${template.products.length - 1} more products. ` : ''}Contact us to place your order.`;
-            
+            // For Twilio sandbox, use the exact approved template
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
               to: `whatsapp:${memberPhone}`,
-              body: sandboxMessage
+              body: `Your appointment is coming up on July 21 at 3PM`
             };
           } else {
             // Production: use full template message
