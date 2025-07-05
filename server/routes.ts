@@ -2821,38 +2821,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         throw new Error('Stripe not configured');
       }
 
-      // Check if wholesaler has Stripe account set up
-      if (!wholesaler.stripeAccountId) {
-        // Create regular payment intent without Connect for demo purposes
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalAmount * 100), // Convert to cents
-          currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
-          metadata: {
-            orderType: 'customer_portal',
-            wholesalerId: wholesalerId,
-            customerName: customerData.name,
-            customerEmail: customerData.email,
-            customerPhone: customerData.phone,
-            customerAddress: customerData.address,
-            totalAmount: totalAmount.toString(),
-            platformFee: platformFee,
-            items: JSON.stringify(items)
-          }
-        });
-
-        return res.json({ 
-          clientSecret: paymentIntent.client_secret,
-          platformFee: platformFee 
-        });
-      }
-
+      // For now, create regular payment intent without Connect
+      // This will work for demo purposes and can be enhanced later
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalAmount * 100), // Convert to cents
         currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
-        application_fee_amount: Math.round(parseFloat(platformFee) * 100),
-        transfer_data: {
-          destination: wholesaler.stripeAccountId,
-        },
         metadata: {
           orderType: 'customer_portal',
           wholesalerId: wholesalerId,
