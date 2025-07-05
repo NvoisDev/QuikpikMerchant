@@ -1169,33 +1169,50 @@ export default function CustomerPortal() {
               {/* Quantity Input */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quantity</label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-3">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setNegotiationData({
                       ...negotiationData,
-                      quantity: Math.max(negotiationProduct.moq, negotiationData.quantity - 1)
+                      quantity: Math.max(negotiationProduct?.moq || 1, negotiationData.quantity - 1)
                     })}
-                    disabled={negotiationData.quantity <= negotiationProduct.moq}
+                    disabled={negotiationData.quantity <= (negotiationProduct?.moq || 1)}
+                    className="h-10 w-10 rounded-full p-0 border-2 hover:bg-gray-50"
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
-                  <span className="w-12 text-center font-medium">{negotiationData.quantity}</span>
+                  <div className="flex-1 max-w-20">
+                    <input
+                      type="number"
+                      min={negotiationProduct?.moq || 1}
+                      max={negotiationProduct?.stock || 999999}
+                      value={negotiationData.quantity}
+                      onChange={(e) => {
+                        const newQuantity = parseInt(e.target.value) || negotiationProduct?.moq || 1;
+                        setNegotiationData({
+                          ...negotiationData,
+                          quantity: Math.max(negotiationProduct?.moq || 1, Math.min(negotiationProduct?.stock || 999999, newQuantity))
+                        });
+                      }}
+                      className="w-full text-center text-lg font-medium border rounded-lg py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setNegotiationData({
                       ...negotiationData,
-                      quantity: Math.min(negotiationProduct.stock, negotiationData.quantity + 1)
+                      quantity: Math.min(negotiationProduct?.stock || 999999, negotiationData.quantity + 1)
                     })}
-                    disabled={negotiationData.quantity >= negotiationProduct.stock}
+                    disabled={negotiationData.quantity >= (negotiationProduct?.stock || 999999)}
+                    className="h-10 w-10 rounded-full p-0 border-2 hover:bg-gray-50"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Min: {negotiationProduct.moq} units | Available: {negotiationProduct.stock.toLocaleString()}
+                <p className="text-xs text-gray-500 text-center">
+                  Min: {negotiationProduct?.moq || 1} units | Available: {(negotiationProduct?.stock || 0).toLocaleString()}
                 </p>
               </div>
 
