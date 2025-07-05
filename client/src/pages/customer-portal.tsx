@@ -1119,28 +1119,75 @@ export default function CustomerPortal() {
                 <h3 className="font-semibold mb-3">Order Summary</h3>
                 <div className="space-y-2">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex justify-between items-center">
+                    <div key={item.product.id} className="flex justify-between items-center py-2">
                       <div className="flex-1">
                         <span className="font-medium">{item.product.name}</span>
                         <div className="text-sm text-gray-500">
-                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} × {formatNumber(item.quantity)} units
+                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} per unit
                         </div>
                       </div>
-                      <div className="text-right">
+                      
+                      {/* Quantity Editor */}
+                      <div className="flex items-center space-x-2 mx-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newQuantity = Math.max(item.product.moq, item.quantity - 1);
+                            if (newQuantity !== item.quantity) {
+                              setCart(cart.map(cartItem => 
+                                cartItem.product.id === item.product.id 
+                                  ? { ...cartItem, quantity: newQuantity }
+                                  : cartItem
+                              ));
+                            }
+                          }}
+                          disabled={item.quantity <= item.product.moq}
+                          className="w-8 h-8 p-0"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        
+                        <div className="text-center min-w-[60px]">
+                          <div className="font-medium">{formatNumber(item.quantity)}</div>
+                          <div className="text-xs text-gray-500">units</div>
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newQuantity = Math.min(item.product.stock, item.quantity + 1);
+                            if (newQuantity !== item.quantity) {
+                              setCart(cart.map(cartItem => 
+                                cartItem.product.id === item.product.id 
+                                  ? { ...cartItem, quantity: newQuantity }
+                                  : cartItem
+                              ));
+                            }
+                          }}
+                          disabled={item.quantity >= item.product.stock}
+                          className="w-8 h-8 p-0"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      
+                      <div className="text-right flex items-center space-x-2">
                         <span className="font-semibold">
                           {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
                         </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCart(cart.filter(cartItem => cartItem.product.id !== item.product.id));
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 w-8 h-8 p-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setCart(cart.filter(cartItem => cartItem.product.id !== item.product.id));
-                        }}
-                        className="ml-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
