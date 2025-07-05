@@ -18,6 +18,12 @@ import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, M
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+// Initialize Stripe
+if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
+  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+}
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
 // Utility functions
 const formatNumber = (num: number | string): string => {
   const number = typeof num === 'string' ? parseInt(num) : num;
@@ -104,7 +110,135 @@ interface CustomerData {
   notes: string;
 }
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+// Stripe Checkout Form Component
+interface StripeCheckoutFormProps {
+  cart: CartItem[];
+  customerData: CustomerData;
+  wholesaler: any;
+  totalAmount: number;
+  onSuccess: () => void;
+}
+
+const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
+  const { toast } = useToast();
+
+  // Create payment intent when form loads
+  useEffect(() => {
+    if (cart.length > 0 && wholesaler) {
+      const createPaymentIntent = async () => {
+        try {
+          const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
+            items: cart.map(item => ({
+              productId: item.product.id,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.product.price)
+            })),
+            customerData,
+            wholesalerId: wholesaler.id,
+            totalAmount
+          });
+          const data = await response.json();
+          setClientSecret(data.clientSecret);
+        } catch (error) {
+          console.error("Error creating payment intent:", error);
+          toast({
+            title: "Payment Error",
+            description: "Unable to initialize payment. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
+
+      createPaymentIntent();
+    }
+  }, [cart, customerData, wholesaler, totalAmount]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements || !clientSecret) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment-success`,
+        },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        toast({
+          title: "Payment Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Payment Successful!",
+          description: "Your order has been placed successfully.",
+        });
+        onSuccess();
+      }
+    } catch (error) {
+      toast({
+        title: "Payment Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (!clientSecret) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <p>Preparing payment...</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="p-4 border rounded-lg">
+        <PaymentElement />
+      </div>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+        <div className="flex items-center space-x-2 mb-2">
+          <ShieldCheck className="w-4 h-4" />
+          <span className="font-semibold">Secure Payment Processing</span>
+        </div>
+        <p>Your payment is processed securely through Stripe. A 5% platform fee is included in the total.</p>
+      </div>
+
+      <Button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+      >
+        {isProcessing ? (
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>Processing Payment...</span>
+          </div>
+        ) : (
+          `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${totalAmount.toFixed(2)}`
+        )}
+      </Button>
+    </form>
+  );
+};
 
 export default function CustomerPortal() {
   const { id: wholesalerId } = useParams<{ id: string }>();
@@ -921,6 +1055,147 @@ export default function CustomerPortal() {
                 >
                   Add to Cart
                 </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Checkout Modal with Stripe Integration */}
+      {showCheckout && (
+        <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <ShoppingCart className="w-5 h-5" />
+                <span>Checkout</span>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Cart Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Order Summary</h3>
+                <div className="space-y-2">
+                  {cart.map((item) => (
+                    <div key={item.product.id} className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <span className="font-medium">{item.product.name}</span>
+                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold">
+                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCart(cart.filter(cartItem => cartItem.product.id !== item.product.id));
+                        }}
+                        className="ml-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Separator className="my-3" />
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>Total:</span>
+                  <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Customer Information Form */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Customer Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="customerName">Full Name *</Label>
+                    <Input
+                      id="customerName"
+                      value={customerData.name}
+                      onChange={(e) => setCustomerData({...customerData, name: e.target.value})}
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerEmail">Email Address *</Label>
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      value={customerData.email}
+                      onChange={(e) => setCustomerData({...customerData, email: e.target.value})}
+                      placeholder="your.email@example.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerPhone">Phone Number *</Label>
+                    <Input
+                      id="customerPhone"
+                      value={customerData.phone}
+                      onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
+                      placeholder="+44 7700 900000"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerAddress">Delivery Address *</Label>
+                    <Input
+                      id="customerAddress"
+                      value={customerData.address}
+                      onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
+                      placeholder="Street, City, Postal Code"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="customerNotes">Order Notes (Optional)</Label>
+                  <Textarea
+                    id="customerNotes"
+                    value={customerData.notes}
+                    onChange={(e) => setCustomerData({...customerData, notes: e.target.value})}
+                    placeholder="Any special delivery instructions or notes..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center space-x-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Payment Information</span>
+                </h3>
+                
+                {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address ? (
+                  <Elements stripe={stripePromise}>
+                    <StripeCheckoutForm 
+                      cart={cart}
+                      customerData={customerData}
+                      wholesaler={wholesaler}
+                      totalAmount={cartStats.totalValue}
+                      onSuccess={() => {
+                        setCart([]);
+                        setShowCheckout(false);
+                        toast({
+                          title: "Order Placed Successfully!",
+                          description: "You will receive an email confirmation shortly.",
+                        });
+                      }}
+                    />
+                  </Elements>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Please complete all required customer information to proceed with payment</p>
+                  </div>
+                )}
               </div>
             </div>
           </DialogContent>

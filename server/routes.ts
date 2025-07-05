@@ -2797,6 +2797,60 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     }
   });
 
+  // Create payment intent for customer portal orders (public - no auth required)
+  app.post('/api/marketplace/create-payment-intent', async (req, res) => {
+    try {
+      const { items, customerData, wholesalerId, totalAmount } = req.body;
+      
+      if (!items || !customerData || !wholesalerId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      // Get wholesaler information 
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: 'Wholesaler not found' });
+      }
+
+      // Calculate platform fee (5%)
+      const platformFee = (totalAmount * 0.05).toFixed(2);
+      const wholesalerAmount = (totalAmount - parseFloat(platformFee)).toFixed(2);
+
+      // Create payment intent with Stripe Connect (application fee)
+      if (!stripe) {
+        throw new Error('Stripe not configured');
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(totalAmount * 100), // Convert to cents
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        application_fee_amount: Math.round(parseFloat(platformFee) * 100),
+        transfer_data: {
+          destination: wholesaler.stripeAccountId || '',
+        },
+        metadata: {
+          orderType: 'customer_portal',
+          wholesalerId: wholesalerId,
+          customerName: customerData.name,
+          customerEmail: customerData.email,
+          customerPhone: customerData.phone,
+          customerAddress: customerData.address,
+          totalAmount: totalAmount.toString(),
+          platformFee: platformFee,
+          items: JSON.stringify(items)
+        }
+      });
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        platformFee: platformFee 
+      });
+    } catch (error: any) {
+      console.error('Error creating payment intent:', error);
+      res.status(500).json({ message: 'Error creating payment intent: ' + error.message });
+    }
+  });
+
   // Marketplace product detail endpoint (public - no auth required)
   app.get('/api/marketplace/products/:id', async (req, res) => {
     try {
