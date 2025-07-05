@@ -159,8 +159,8 @@ export default function Marketplace() {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-2">All Products</h1>
-            <p className="text-lg text-blue-100">Browse products from verified wholesalers across the UK</p>
+            <h1 className="text-4xl font-bold mb-2">Marketplace Discovery</h1>
+            <p className="text-lg text-blue-100">Connect with verified wholesalers across the UK</p>
             <div className="mt-6 max-w-2xl mx-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
