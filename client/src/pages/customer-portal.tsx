@@ -1089,12 +1089,12 @@ export default function CustomerPortal() {
                     <Minus className="w-4 h-4" />
                   </Button>
                   
-                  <Input
+                  <input
                     id="quantity"
                     type="number"
                     value={editQuantity}
                     onChange={(e) => handleQuantityInput(e.target.value)}
-                    className="w-24 text-center"
+                    className="w-24 text-center border border-gray-300 rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                     min={selectedProduct.moq}
                     max={selectedProduct.stock}
                   />
