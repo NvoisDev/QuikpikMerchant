@@ -115,7 +115,7 @@ export default function CustomerPortal() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAllProducts, setShowAllProducts] = useState(false);
   
   // Modal states
@@ -599,96 +599,209 @@ export default function CustomerPortal() {
               }
               
               return productsToShow.map((product: Product) => (
-                <Card key={product.id} className="border hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    {/* Product Image */}
-                    <div className="mb-3">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <Package className="w-16 h-16 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                        {product.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                viewMode === "grid" ? (
+                  // Grid View
+                  <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      {/* Product Image */}
+                      <div className="mb-3">
+                        {product.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <Package className="w-16 h-16 text-gray-400" />
+                          </div>
                         )}
                       </div>
                       
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Price:</span>
-                          <span className="font-semibold">{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}</span>
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                          {product.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                          )}
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Min order:</span>
-                          <span>{formatNumber(product.moq)} units</span>
+                        
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Price:</span>
+                            <span className="font-semibold">{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Min order:</span>
+                            <span>{formatNumber(product.moq)} units</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Stock:</span>
+                            <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} units</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Stock:</span>
-                          <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} units</span>
+                        
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <Store className="w-3 h-3 mr-1" />
+                          {product.wholesaler.businessName}
                         </div>
-                      </div>
-                      
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <Store className="w-3 h-3 mr-1" />
-                        {product.wholesaler.businessName}
-                      </div>
-                      
-                      {/* Negotiation Indicator */}
-                      {product.negotiationEnabled && (
-                        <div className="mb-2">
-                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                            💬 Price Negotiable
-                          </Badge>
-                        </div>
-                      )}
-                      
-                      {/* Action Buttons */}
-                      <div className="flex space-x-2 pt-2">
-                        {product.negotiationEnabled ? (
-                          <>
-                            <Button 
-                              onClick={() => openNegotiation(product)}
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
-                            >
-                              <Mail className="w-3 h-3 mr-1" />
-                              Quote
-                            </Button>
+                        
+                        {/* Negotiation Indicator */}
+                        {product.negotiationEnabled && (
+                          <div className="mb-2">
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              💬 Price Negotiable
+                            </Badge>
+                          </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="flex space-x-2 pt-2">
+                          {product.negotiationEnabled ? (
+                            <>
+                              <Button 
+                                onClick={() => openNegotiation(product)}
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                              >
+                                <Mail className="w-3 h-3 mr-1" />
+                                Quote
+                              </Button>
+                              <Button 
+                                onClick={() => openQuantityEditor(product)}
+                                size="sm"
+                                className="px-3 bg-green-600 hover:bg-green-700"
+                                title="Add to cart at listed price"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </>
+                          ) : (
                             <Button 
                               onClick={() => openQuantityEditor(product)}
                               size="sm"
-                              className="px-3 bg-green-600 hover:bg-green-700"
-                              title="Add to cart at listed price"
+                              className="w-full bg-green-600 hover:bg-green-700"
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add to Cart
                             </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            onClick={() => openQuantityEditor(product)}
-                            size="sm"
-                            className="w-full bg-green-600 hover:bg-green-700"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add to Cart
-                          </Button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // List View - Optimized horizontal layout
+                  <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-4">
+                        {/* Small Product Image on Left */}
+                        <div className="flex-shrink-0">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
+                              <Package className="w-8 h-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
+                              {product.category && (
+                                <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md mt-1">
+                                  {product.category}
+                                </span>
+                              )}
+                              {product.description && (
+                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
+                              )}
+                            </div>
+                            
+                            {/* Price and Action Buttons */}
+                            <div className="flex-shrink-0 text-right ml-4">
+                              <div className="text-lg font-bold text-gray-900 mb-2">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
+                              </div>
+                              
+                              {/* Action Buttons */}
+                              <div className="flex space-x-2">
+                                {product.negotiationEnabled ? (
+                                  <>
+                                    <Button 
+                                      onClick={() => openNegotiation(product)}
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    >
+                                      <Mail className="w-3 h-3 mr-1" />
+                                      Quote
+                                    </Button>
+                                    <Button 
+                                      onClick={() => openQuantityEditor(product)}
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button 
+                                    onClick={() => openQuantityEditor(product)}
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add to Cart
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Product Stats */}
+                          <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                            <div>
+                              <span className="text-gray-500">MOQ:</span>
+                              <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Stock:</span>
+                              <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
+                                {formatNumber(product.stock)} units
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Supplier:</span>
+                              <div className="font-medium text-gray-900 truncate flex items-center">
+                                <Store className="w-3 h-3 mr-1" />
+                                {product.wholesaler.businessName}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Negotiation Indicator */}
+                          {product.negotiationEnabled && (
+                            <div className="mt-2">
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                💬 Price Negotiable
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
               ));
             })()}
           </div>
