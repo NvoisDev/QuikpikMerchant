@@ -1202,6 +1202,9 @@ export default function CustomerPortal() {
               {/* Offered Price Input */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Your Offered Price (per unit)</label>
+                <div className="text-xs text-gray-500 mb-1">
+                  Enter amount in {wholesalerCurrency === 'GBP' ? 'pounds (e.g., 0.30 for 30p)' : wholesalerCurrency}
+                </div>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">{currencySymbol}</span>
                   <input
@@ -1214,7 +1217,7 @@ export default function CustomerPortal() {
                       offeredPrice: e.target.value
                     })}
                     className="w-full pl-8 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your desired price"
+                    placeholder={wholesalerCurrency === 'GBP' ? "0.30" : "Enter your desired price"}
                   />
                 </div>
                 {negotiationData.offeredPrice && (

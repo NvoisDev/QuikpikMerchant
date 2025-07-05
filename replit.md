@@ -305,6 +305,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Real-time Payment Processing**: Seamless checkout flow from cart to payment completion
   - **Multi-Currency Support**: Respects wholesaler's preferred currency settings
   - **Error Handling**: Comprehensive error handling for payment failures and validation issues
+- July 05, 2025. Enhanced Product Negotiation System with Minimum Bid Price:
+  - **Minimum Bid Price Field**: Added minimum bid price setting to product management form with conditional visibility
+  - **Automatic Bid Rejection**: System automatically declines customer offers below minimum threshold via email notification
+  - **Backend Validation**: Server-side validation and proper data type handling for minimum bid price fields
+  - **Customer Portal Clarity**: Added helpful currency format hints in negotiation form (e.g., "0.30 for 30p")
+  - **Email Integration**: SendGrid configured for automated decline notifications to customers
+  - **Database Schema**: Updated products table with minimumBidPrice decimal field for precise pricing
 
   
 **Status Systems:**
