@@ -1,0 +1,523 @@
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin } from "lucide-react";
+import Logo from "@/components/ui/logo";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/currencies";
+
+interface Product {
+  id: number;
+  name: string;
+  description?: string;
+  price: string;
+  moq: number;
+  stock: number;
+  category?: string;
+  imageUrl?: string;
+  status: string;
+  wholesaler: {
+    id: string;
+    businessName: string;
+    businessPhone?: string;
+    businessAddress?: string;
+    profileImageUrl?: string;
+    defaultCurrency?: string;
+  };
+}
+
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+interface CustomerData {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes?: string;
+}
+
+export default function CustomerPortal() {
+  const params = useParams<{ id?: string }>();
+  const [location] = useLocation();
+  const { toast } = useToast();
+  
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [customerData, setCustomerData] = useState<CustomerData>({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    notes: ''
+  });
+
+  // Get featured product ID from URL
+  const featuredProductId = params?.id ? parseInt(params.id) : null;
+
+  // Fetch featured product if specified
+  const { data: featuredProduct } = useQuery({
+    queryKey: [`/api/marketplace/products/${featuredProductId}`],
+    enabled: !!featuredProductId
+  });
+
+  // Fetch all available products for browsing
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/marketplace/products']
+  });
+
+  // Filter out featured product from "other products" list
+  const otherProducts = allProducts.filter(p => p.id !== featuredProductId);
+
+  const addToCart = (product: Product, quantity: number = product.moq) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.product.id === product.id);
+      if (existingItem) {
+        return prevCart.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [...prevCart, { product, quantity }];
+    });
+    
+    toast({
+      title: "Added to Cart",
+      description: `${product.name} (${quantity} units) added to your cart`,
+    });
+  };
+
+  const updateCartQuantity = (productId: number, newQuantity: number) => {
+    if (newQuantity === 0) {
+      removeFromCart(productId);
+      return;
+    }
+    
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
+    );
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
+    toast({
+      title: "Removed from Cart",
+      description: "Item removed from your cart",
+    });
+  };
+
+  const getTotalAmount = () => {
+    return cart.reduce((total, item) => {
+      return total + (parseFloat(item.product.price) * item.quantity);
+    }, 0);
+  };
+
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  // Order submission mutation
+  const orderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const response = await apiRequest("POST", "/api/customer/orders", orderData);
+      if (!response.ok) {
+        throw new Error("Failed to create order");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Order #${data.orderId} has been created. You'll receive an email confirmation shortly.`,
+      });
+      setCart([]);
+      setShowCheckout(false);
+      setCustomerData({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        notes: ''
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleCheckout = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Cart Empty",
+        description: "Please add items to your cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const orderData = {
+      customerName: customerData.name,
+      customerEmail: customerData.email,
+      customerPhone: customerData.phone,
+      customerAddress: customerData.address,
+      items: cart.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+        total: (parseFloat(item.product.price) * item.quantity).toFixed(2)
+      })),
+      totalAmount: getTotalAmount().toFixed(2),
+      notes: customerData.notes
+    };
+
+    orderMutation.mutate(orderData);
+  };
+
+  const currencySymbol = featuredProduct?.wholesaler?.defaultCurrency === 'GBP' ? '£' : 
+                        featuredProduct?.wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Customer Portal Header */}
+      <div className="bg-white border-b sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Logo size="sm" variant="full" />
+              <span className="text-gray-400">|</span>
+              <span className="text-sm text-gray-600">Customer Portal</span>
+            </div>
+            
+            {/* Cart Summary */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <ShoppingCart className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium">
+                  {getTotalItems()} items - {currencySymbol}{getTotalAmount().toFixed(2)}
+                </span>
+              </div>
+              {cart.length > 0 && (
+                <Button 
+                  onClick={() => setShowCheckout(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Checkout
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Featured Product Section */}
+        {featuredProduct && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                <span>Featured Product</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Product Image */}
+                <div>
+                  {featuredProduct.imageUrl ? (
+                    <img 
+                      src={featuredProduct.imageUrl} 
+                      alt={featuredProduct.name}
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <Package className="w-16 h-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">{featuredProduct.name}</h2>
+                    {featuredProduct.description && (
+                      <p className="text-gray-600 mt-2">{featuredProduct.description}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Price per unit:</span>
+                      <span className="font-semibold text-xl">{currencySymbol}{parseFloat(featuredProduct.price).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Minimum order:</span>
+                      <span className="font-medium">{featuredProduct.moq} units</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Available stock:</span>
+                      <span className="font-medium">{featuredProduct.stock} units</span>
+                    </div>
+                  </div>
+
+                  {/* Supplier Info */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Store className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">{featuredProduct.wholesaler.businessName}</span>
+                    </div>
+                    {featuredProduct.wholesaler.businessPhone && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Phone className="w-4 h-4" />
+                        <span>{featuredProduct.wholesaler.businessPhone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button 
+                    onClick={() => addToCart(featuredProduct)}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add to Cart ({featuredProduct.moq} units minimum)
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* All Products Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="w-5 h-5" />
+              <span>{featuredProduct ? 'More Products Available' : 'All Products'}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(featuredProduct ? otherProducts : allProducts).map((product) => (
+                <Card key={product.id} className="border">
+                  <CardContent className="p-4">
+                    {/* Product Image */}
+                    <div className="mb-3">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center">
+                          <Package className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">{product.name}</h3>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>Price: {currencySymbol}{parseFloat(product.price).toFixed(2)}</div>
+                        <div>MOQ: {product.moq} units</div>
+                        <div>Stock: {product.stock} units</div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        by {product.wholesaler.businessName}
+                      </div>
+                      <Button 
+                        onClick={() => addToCart(product)}
+                        size="sm"
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Checkout Modal */}
+      {showCheckout && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Checkout</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Cart Items */}
+              <div>
+                <h3 className="font-semibold mb-3">Order Summary</h3>
+                <div className="space-y-2">
+                  {cart.map((item) => (
+                    <div key={item.product.id} className="flex items-center justify-between p-2 border rounded">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{item.product.name}</div>
+                        <div className="text-xs text-gray-600">
+                          {currencySymbol}{parseFloat(item.product.price).toFixed(2)} × {item.quantity} units
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <span className="w-12 text-center text-sm">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFromCart(item.product.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="w-20 text-right font-medium">
+                        {currencySymbol}{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Separator className="my-4" />
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Total:</span>
+                  <span>{currencySymbol}{getTotalAmount().toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Customer Information */}
+              <div>
+                <h3 className="font-semibold mb-3">Customer Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="customerName">Full Name *</Label>
+                    <Input
+                      id="customerName"
+                      value={customerData.name}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerPhone">Phone Number *</Label>
+                    <Input
+                      id="customerPhone"
+                      value={customerData.phone}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+1234567890"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="customerEmail">Email Address *</Label>
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      value={customerData.email}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="customerAddress">Delivery Address *</Label>
+                    <Textarea
+                      id="customerAddress"
+                      value={customerData.address}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="123 Street Name, City, State, Postal Code"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="notes">Additional Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={customerData.notes}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Any special instructions..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCheckout(false)}
+                  className="flex-1"
+                >
+                  Continue Shopping
+                </Button>
+                <Button 
+                  onClick={handleCheckout}
+                  disabled={orderMutation.isPending || !customerData.name || !customerData.email || !customerData.phone || !customerData.address}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {orderMutation.isPending ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Place Order & Send Invoice
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="mt-16 bg-white border-t">
+        <div className="max-w-6xl mx-auto px-4 py-6 text-center">
+          <div className="flex items-center justify-center space-x-2 text-gray-600">
+            <span>Powered by</span>
+            <Logo size="sm" variant="full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

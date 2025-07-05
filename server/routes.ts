@@ -2762,6 +2762,146 @@ Please contact the customer to confirm this order.
     }
   });
 
+  // Customer portal order endpoints
+  app.post("/api/customer/orders", async (req, res) => {
+    try {
+      const { customerName, customerEmail, customerPhone, customerAddress, items, totalAmount, notes } = req.body;
+
+      if (!customerName || !customerEmail || !customerPhone || !customerAddress || !items || items.length === 0) {
+        return res.status(400).json({ message: "Missing required customer or order information" });
+      }
+
+      // Get the first product's wholesaler for the order
+      const firstProduct = await storage.getProduct(items[0].productId);
+      if (!firstProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Create or get customer
+      let customer;
+      try {
+        customer = await storage.getUserByPhone(customerPhone);
+        if (!customer) {
+          customer = await storage.createCustomer({
+            phoneNumber: customerPhone,
+            firstName: customerName.split(' ')[0],
+            role: 'retailer',
+            email: customerEmail,
+            streetAddress: customerAddress,
+          });
+        }
+      } catch (error) {
+        console.error("Error creating customer:", error);
+        return res.status(500).json({ message: "Failed to create customer record" });
+      }
+
+      // Calculate platform fee (5%)
+      const subtotal = parseFloat(totalAmount);
+      const platformFee = subtotal * 0.05;
+      const finalTotal = subtotal;
+
+      // Create the order
+      const order = await storage.createOrder(
+        {
+          retailerId: customer.id,
+          wholesalerId: firstProduct.wholesalerId,
+          subtotal: subtotal.toFixed(2),
+          platformFee: platformFee.toFixed(2),
+          total: finalTotal.toFixed(2),
+          status: 'pending',
+          deliveryAddress: customerAddress,
+          notes: notes || ''
+        },
+        items.map((item: any) => ({
+          ...item,
+          orderId: 0 // Will be set by the storage layer
+        }))
+      );
+
+      // Get wholesaler info for email
+      const wholesaler = await storage.getUser(firstProduct.wholesalerId);
+
+      // Send email invoice to customer
+      try {
+        await sendCustomerInvoiceEmail(customer, order, items, wholesaler);
+      } catch (error) {
+        console.error("Failed to send customer invoice email:", error);
+        // Don't fail the order creation if email fails
+      }
+
+      // Notify wholesaler via WhatsApp
+      try {
+        const wholesaler = await storage.getUser(firstProduct.wholesalerId);
+        if (wholesaler && wholesaler.businessPhone) {
+          const message = generateOrderNotificationMessage(order, customer, items);
+          await whatsappService.sendMessage(wholesaler.businessPhone, message, wholesaler.id);
+        }
+      } catch (error) {
+        console.error("Failed to send WhatsApp notification:", error);
+        // Don't fail the order creation if notification fails
+      }
+
+      res.json({
+        success: true,
+        orderId: order.id,
+        message: "Order placed successfully! You'll receive an email invoice and the wholesaler will contact you shortly."
+      });
+
+    } catch (error) {
+      console.error("Error creating customer order:", error);
+      res.status(500).json({ message: "Failed to place order" });
+    }
+  });
+
+  // Email invoice function for customers
+  async function sendCustomerInvoiceEmail(customer: any, order: any, items: any[], wholesaler: any) {
+    // This would integrate with your email service (e.g., SendGrid, AWS SES)
+    // For now, we'll log the invoice details
+    console.log("Customer Invoice Email:", {
+      to: customer.email,
+      subject: `Invoice for Order #${order.id}`,
+      customerName: customer.firstName,
+      orderId: order.id,
+      items: items,
+      total: order.total,
+      wholesaler: wholesaler?.businessName || 'Wholesaler'
+    });
+    
+    // TODO: Implement actual email sending service
+    // Example with a service like SendGrid:
+    // await emailService.send({
+    //   to: customer.email,
+    //   subject: `Invoice for Order #${order.id}`,
+    //   template: 'customer-invoice',
+    //   data: { customer, order, items, wholesaler }
+    // });
+  }
+
+  function generateOrderNotificationMessage(order: any, customer: any, items: any[]): string {
+    let message = `🛒 New Order Received!\n\n`;
+    message += `Order #${order.id}\n`;
+    message += `Customer: ${customer.firstName}\n`;
+    message += `Phone: ${customer.phoneNumber}\n`;
+    message += `Email: ${customer.email}\n\n`;
+    
+    message += `Items Ordered:\n`;
+    items.forEach((item: any, index: number) => {
+      message += `${index + 1}. Product ID ${item.productId}\n`;
+      message += `   Quantity: ${item.quantity} units\n`;
+      message += `   Unit Price: ${item.unitPrice}\n`;
+      message += `   Total: ${item.total}\n\n`;
+    });
+    
+    message += `Order Total: ${order.total}\n\n`;
+    if (order.notes) {
+      message += `Customer Notes: ${order.notes}\n\n`;
+    }
+    
+    message += `Please contact the customer to confirm delivery details.`;
+    
+    return message;
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }
