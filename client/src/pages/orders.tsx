@@ -295,8 +295,14 @@ export default function Orders() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="font-medium">
-                {order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ')}
+                {[order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || order.retailer?.businessName || 'Unknown Customer'}
               </div>
+              {order.retailer?.email && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Mail className="h-3 w-3" />
+                  {order.retailer.email}
+                </div>
+              )}
               {order.retailer?.phoneNumber && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Phone className="h-3 w-3" />
