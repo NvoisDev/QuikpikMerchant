@@ -2901,6 +2901,19 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       const order = await storage.createOrder(orderData, orderItems);
       
+      // Send confirmation email to customer
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      if (wholesaler && customerEmail) {
+        try {
+          await sendCustomerInvoiceEmail(customer, order, orderItems.map(item => ({
+            ...item,
+            product: { name: product.name, price: item.unitPrice }
+          })), wholesaler);
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+        }
+      }
+      
       // Send WhatsApp notification to wholesaler if configured
       try {
         const wholesaler = await storage.getUser(product.wholesalerId);
