@@ -84,7 +84,9 @@ export class WhatsAppService {
       const twilioClient = twilio(wholesaler.twilioAccountSid!, wholesaler.twilioAuthToken!);
       
       const promises = members.map(async (member) => {
-        if (!member.businessPhone) {
+        // Use phoneNumber field from users table
+        const memberPhone = member.phoneNumber || member.businessPhone;
+        if (!memberPhone) {
           console.warn(`No phone number for member ${member.id}`);
           return false;
         }
@@ -93,7 +95,7 @@ export class WhatsAppService {
           // Create message with media if product has image
           const messageData: any = {
             from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-            to: `whatsapp:${member.businessPhone}`,
+            to: `whatsapp:${memberPhone}`,
             body: productMessage
           };
 
@@ -104,10 +106,10 @@ export class WhatsAppService {
 
           const result = await twilioClient.messages.create(messageData);
           
-          console.log(`Twilio WhatsApp message sent to ${member.businessPhone}, SID: ${result.sid}`);
+          console.log(`Twilio WhatsApp message sent to ${memberPhone}, SID: ${result.sid}`);
           return true;
         } catch (error: any) {
-          console.error(`Failed to send Twilio WhatsApp to ${member.businessPhone}:`, error.message);
+          console.error(`Failed to send Twilio WhatsApp to ${memberPhone}:`, error.message);
           return false;
         }
       });
@@ -478,7 +480,9 @@ Update your inventory or restock soon.`;
       
       // Send WhatsApp messages using Twilio (same as single product broadcasts)
       const promises = members.map(async (member) => {
-        if (!member.businessPhone) {
+        // Use phoneNumber field from users table
+        const memberPhone = member.phoneNumber || member.businessPhone;
+        if (!memberPhone) {
           console.warn(`No phone number for member ${member.id}`);
           return false;
         }
@@ -487,7 +491,7 @@ Update your inventory or restock soon.`;
           // Create message with media if products have images
           const messageData: any = {
             from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-            to: `whatsapp:${member.businessPhone}`,
+            to: `whatsapp:${memberPhone}`,
             body: templateMessage
           };
 
@@ -501,10 +505,10 @@ Update your inventory or restock soon.`;
 
           const result = await twilioClient.messages.create(messageData);
           
-          console.log(`Twilio WhatsApp template message sent to ${member.businessPhone}, SID: ${result.sid}`);
+          console.log(`Twilio WhatsApp template message sent to ${memberPhone}, SID: ${result.sid}`);
           return true;
         } catch (error: any) {
-          console.error(`Failed to send Twilio WhatsApp template to ${member.businessPhone}:`, error.message);
+          console.error(`Failed to send Twilio WhatsApp template to ${memberPhone}:`, error.message);
           return false;
         }
       });
