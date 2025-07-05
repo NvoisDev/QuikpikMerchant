@@ -55,6 +55,7 @@ const productFormSchema = z.object({
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   priceVisible: z.boolean(),
   negotiationEnabled: z.boolean(),
+  minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
 });
 
@@ -84,6 +85,7 @@ export default function ProductManagement() {
       imageUrl: "",
       priceVisible: true,
       negotiationEnabled: false,
+      minimumBidPrice: "",
       status: "active",
     },
   });
@@ -361,6 +363,7 @@ export default function ProductManagement() {
       imageUrl: product.imageUrl || "",
       priceVisible: product.priceVisible,
       negotiationEnabled: product.negotiationEnabled,
+      minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
     });
     setIsDialogOpen(true);
@@ -386,6 +389,7 @@ export default function ProductManagement() {
       imageUrl: product.imageUrl || "",
       priceVisible: product.priceVisible,
       negotiationEnabled: product.negotiationEnabled,
+      minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
     });
     setIsDialogOpen(true);
@@ -435,6 +439,7 @@ export default function ProductManagement() {
                       imageUrl: "",
                       priceVisible: true,
                       negotiationEnabled: false,
+                      minimumBidPrice: "",
                       status: "active",
                     });
                   }}>
@@ -711,6 +716,31 @@ export default function ProductManagement() {
                               </FormItem>
                             )}
                           />
+                          {form.watch("negotiationEnabled") && (
+                            <FormField
+                              control={form.control}
+                              name="minimumBidPrice"
+                              render={({ field }) => (
+                                <FormItem className="rounded-lg border p-4">
+                                  <div className="space-y-2">
+                                    <FormLabel className="text-base">Minimum Bid Price</FormLabel>
+                                    <div className="text-sm text-muted-foreground">
+                                      Set the lowest price you'll accept for negotiations. Bids below this amount will be automatically declined.
+                                    </div>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="e.g., 15.00"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -915,6 +945,7 @@ export default function ProductManagement() {
                       imageUrl: "",
                       priceVisible: true,
                       negotiationEnabled: false,
+                      minimumBidPrice: "",
                       status: "active",
                     });
                     setIsDialogOpen(true);

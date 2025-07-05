@@ -146,12 +146,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, moq, stock, ...otherData } = req.body;
+      const { price, moq, stock, minimumBidPrice, ...otherData } = req.body;
       const productData = insertProductSchema.parse({
         ...otherData,
         price: price.toString(),
         moq: parseInt(moq),
         stock: parseInt(stock),
+        minimumBidPrice: minimumBidPrice ? parseFloat(minimumBidPrice) : null,
         wholesalerId: userId
       });
       const product = await storage.createProduct(productData);
@@ -204,12 +205,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, moq, stock, ...otherData } = req.body;
+      const { price, moq, stock, minimumBidPrice, ...otherData } = req.body;
       const convertedData = {
         ...otherData,
         ...(price !== undefined && { price: price.toString() }),
         ...(moq !== undefined && { moq: parseInt(moq) }),
-        ...(stock !== undefined && { stock: parseInt(stock) })
+        ...(stock !== undefined && { stock: parseInt(stock) }),
+        ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? parseFloat(minimumBidPrice) : null })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
@@ -3039,6 +3041,88 @@ Please contact the customer to confirm this order.
       if (quantity < product.moq) {
         return res.status(400).json({ 
           message: `Minimum order quantity is ${product.moq} units` 
+        });
+      }
+      
+      // Check if offered price meets minimum bid requirement
+      const offeredPriceNum = parseFloat(offeredPrice);
+      const minimumBid = product.minimumBidPrice ? parseFloat(product.minimumBidPrice) : null;
+      
+      if (minimumBid && offeredPriceNum < minimumBid) {
+        // Automatically decline the bid and send email notification
+        const negotiationData = {
+          productId: product.id,
+          retailerId: retailerId,
+          originalPrice: originalPrice.toString(),
+          offeredPrice: offeredPrice.toString(),
+          quantity: parseInt(quantity),
+          message: message || '',
+          status: 'declined'
+        };
+        
+        const negotiation = await storage.createNegotiation(negotiationData);
+        
+        // Send email notification to customer about declined bid
+        try {
+          const wholesaler = await storage.getUser(product.wholesalerId);
+          const currency = wholesaler?.preferredCurrency || 'GBP';
+          const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+          
+          // Send email to customer
+          const customerEmail = req.body.customerEmail; // Should be provided in request
+          if (customerEmail) {
+            const emailSubject = `Quote Request Declined - ${product.name}`;
+            const emailBody = `
+Dear Customer,
+
+Thank you for your interest in ${product.name}.
+
+Unfortunately, your quote request has been automatically declined as the offered price (${currencySymbol}${offeredPrice}) is below our minimum acceptable bid price of ${currencySymbol}${minimumBid}.
+
+Product Details:
+- Product: ${product.name}
+- Listed Price: ${currencySymbol}${originalPrice}
+- Your Offer: ${currencySymbol}${offeredPrice}
+- Minimum Bid: ${currencySymbol}${minimumBid}
+- Quantity: ${quantity} units
+
+Please feel free to submit a new quote at or above the minimum bid price.
+
+Best regards,
+${wholesaler?.businessName || wholesaler?.firstName + ' ' + wholesaler?.lastName}
+            `;
+            
+            // Note: Email functionality would need SendGrid integration
+            console.log('Email to send:', { to: customerEmail, subject: emailSubject, body: emailBody });
+          }
+          
+          // Also send WhatsApp notification to wholesaler about declined bid
+          if (wholesaler?.twilioAccountSid && wholesaler?.twilioAuthToken && wholesaler?.twilioPhoneNumber) {
+            const notificationMessage = `🚫 Quote Automatically Declined
+
+Product: ${product.name}
+Customer Offer: ${currencySymbol}${offeredPrice}
+Minimum Bid: ${currencySymbol}${minimumBid}
+Quantity: ${quantity.toLocaleString()} units
+
+The customer's bid was below your minimum acceptable price and has been automatically declined.`;
+
+            await whatsappService.sendMessage(
+              wholesaler.businessPhone || '',
+              notificationMessage,
+              wholesaler.id
+            );
+          }
+        } catch (notificationError) {
+          console.error('Failed to send decline notification:', notificationError);
+        }
+        
+        return res.status(200).json({
+          success: false,
+          declined: true,
+          negotiationId: negotiation.id,
+          message: `Your offer of ${currencySymbol}${offeredPrice} is below the minimum bid price of ${currencySymbol}${minimumBid}. Please submit a higher offer.`,
+          minimumBidPrice: minimumBid
         });
       }
       
