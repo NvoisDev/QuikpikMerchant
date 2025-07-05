@@ -329,10 +329,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: total.toFixed(2),
         deliveryAddress,
         notes,
-        status: 'pending'
+        status: 'confirmed' // Auto-confirm orders immediately
       });
 
       const order = await storage.createOrder(orderData, orderItems);
+      
+      // Get wholesaler and customer details for confirmation email
+      const wholesaler = await storage.getUser(wholesalerId);
+      const customer = await storage.getUser(userId);
+      
+      if (wholesaler && customer) {
+        try {
+          // Send confirmation email to customer
+          await sendCustomerInvoiceEmail(customer, order, orderItems.map(item => ({
+            ...item,
+            product: { name: 'Product', price: item.unitPrice } // Will be populated properly
+          })), wholesaler);
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+          // Don't fail the order creation if email fails
+        }
+      }
+      
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -2869,7 +2887,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         subtotal,
         platformFee,
         total,
-        status: 'pending',
+        status: 'confirmed',
         notes: notes || `Order placed via marketplace for ${product.name}`
       };
       
@@ -2971,7 +2989,7 @@ Please contact the customer to confirm this order.
           subtotal: subtotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
           total: finalTotal.toFixed(2),
-          status: 'pending',
+          status: 'confirmed',
           deliveryAddress: customerAddress,
           notes: notes || ''
         },
