@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -18,7 +19,11 @@ import {
   User,
   Phone,
   MapPin,
-  Calendar
+  Calendar,
+  Eye,
+  DollarSign,
+  ShoppingCart,
+  AlertCircle
 } from "lucide-react";
 
 interface Order {
@@ -131,6 +136,210 @@ export default function Orders() {
     return order.items.reduce((sum, item) => sum + parseFloat(item.total), 0);
   };
 
+  const getTimelineEvents = (order: Order) => {
+    const events = [
+      {
+        status: 'pending',
+        title: 'Order Placed',
+        description: 'Customer placed the order',
+        timestamp: order.createdAt,
+        completed: true
+      },
+      {
+        status: 'confirmed',
+        title: 'Order Confirmed',
+        description: 'Order has been confirmed',
+        timestamp: order.status === 'confirmed' || ['processing', 'shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'confirmed' || ['processing', 'shipped', 'delivered'].includes(order.status)
+      },
+      {
+        status: 'processing',
+        title: 'Processing',
+        description: 'Order is being prepared',
+        timestamp: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status) ? order.updatedAt : null,
+        completed: order.status === 'processing' || ['shipped', 'delivered'].includes(order.status)
+      },
+      {
+        status: 'shipped',
+        title: 'Shipped',
+        description: 'Order has been shipped',
+        timestamp: order.status === 'shipped' || order.status === 'delivered' ? order.updatedAt : null,
+        completed: order.status === 'shipped' || order.status === 'delivered'
+      },
+      {
+        status: 'delivered',
+        title: 'Delivered',
+        description: 'Order has been delivered',
+        timestamp: order.status === 'delivered' ? order.updatedAt : null,
+        completed: order.status === 'delivered'
+      }
+    ];
+
+    if (order.status === 'cancelled') {
+      events.push({
+        status: 'cancelled',
+        title: 'Cancelled',
+        description: 'Order was cancelled',
+        timestamp: order.updatedAt,
+        completed: true
+      });
+    }
+
+    return events;
+  };
+
+  const OrderDetailModal = ({ order }: { order: Order }) => (
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Order #{order.id} Details
+        </DialogTitle>
+      </DialogHeader>
+      
+      <div className="space-y-6">
+        {/* Order Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-2xl font-bold text-primary">#{order.id}</div>
+            <div className="text-sm text-muted-foreground">Order ID</div>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-2xl font-bold">{formatCurrency(parseFloat(order.total), user?.currency || 'USD')}</div>
+            <div className="text-sm text-muted-foreground">Total Amount</div>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-2xl font-bold">{order.items.length}</div>
+            <div className="text-sm text-muted-foreground">Items</div>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            {getStatusBadge(order.status)}
+            <div className="text-sm text-muted-foreground mt-1">Status</div>
+          </div>
+        </div>
+
+        {/* Customer Information */}
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Customer Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="font-medium">
+                {order.retailer?.businessName || `${order.retailer?.firstName} ${order.retailer?.lastName}`}
+              </div>
+              {order.retailer?.phoneNumber && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Phone className="h-3 w-3" />
+                  {order.retailer.phoneNumber}
+                </div>
+              )}
+            </div>
+            {order.deliveryAddress && (
+              <div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  {order.deliveryAddress}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Order Timeline */}
+        <div>
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Order Timeline
+          </h3>
+          <div className="space-y-4">
+            {getTimelineEvents(order).map((event, index) => (
+              <div key={event.status} className="flex items-center gap-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  event.completed ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {event.status === 'pending' && <ShoppingCart className="h-4 w-4" />}
+                  {event.status === 'confirmed' && <CheckCircle className="h-4 w-4" />}
+                  {event.status === 'processing' && <Package className="h-4 w-4" />}
+                  {event.status === 'shipped' && <Truck className="h-4 w-4" />}
+                  {event.status === 'delivered' && <CheckCircle className="h-4 w-4" />}
+                  {event.status === 'cancelled' && <XCircle className="h-4 w-4" />}
+                </div>
+                <div className="flex-1">
+                  <div className={`font-medium ${event.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {event.title}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{event.description}</div>
+                  {event.timestamp && (
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(event.timestamp).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Order Items */}
+        <div>
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Order Items
+          </h3>
+          <div className="space-y-3">
+            {order.items.map((item: any) => (
+              <div key={item.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                    <Package className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <div className="font-medium">{item.product.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Quantity: {item.quantity} × {formatCurrency(parseFloat(item.unitPrice), user?.currency || 'USD')}
+                    </div>
+                  </div>
+                </div>
+                <div className="font-semibold">
+                  {formatCurrency(parseFloat(item.total), user?.currency || 'USD')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Order Actions */}
+        {user?.role === 'wholesaler' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+          <div className="flex gap-2">
+            <Select
+              value={order.status}
+              onValueChange={(newStatus) => {
+                updateOrderStatusMutation.mutate({
+                  orderId: order.id,
+                  status: newStatus
+                });
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+    </DialogContent>
+  );
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -184,139 +393,62 @@ export default function Orders() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {filteredOrders.map((order: any) => (
             <Card key={order.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Package className="h-6 w-6 text-primary" />
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">Order #{order.id}</CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(order.createdAt).toLocaleDateString()}
+                      <div className="font-semibold">Order #{order.id}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {user?.role === 'retailer' 
+                          ? (order.wholesaler?.businessName || `${order.wholesaler?.firstName} ${order.wholesaler?.lastName}`)
+                          : (order.retailer?.businessName || `${order.retailer?.firstName} ${order.retailer?.lastName}`)
+                        }
                       </div>
                     </div>
-                    {getStatusBadge(order.status)}
                   </div>
                   
-                  <div className="text-right">
-                    <div className="text-lg font-semibold">
-                      {formatCurrency(getOrderTotal(order))}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-semibold">
+                        {formatCurrency(parseFloat(order.total), user?.currency || 'USD')}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(order.status)}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <OrderDetailModal order={order} />
+                      </Dialog>
                     </div>
                   </div>
                 </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Customer/Wholesaler Info */}
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">
-                      {user?.role === 'retailer' 
-                        ? (order.wholesaler.businessName || `${order.wholesaler.firstName} ${order.wholesaler.lastName}`)
-                        : (order.retailer.businessName || `${order.retailer.firstName} ${order.retailer.lastName}`)
-                      }
-                    </div>
-                    {user?.role !== 'retailer' && order.retailer.phoneNumber && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        {order.retailer.phoneNumber}
-                      </div>
-                    )}
+                
+                <div className="mt-3 pt-3 border-t flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </div>
+                  {order.deliveryAddress && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span className="truncate max-w-xs">{order.deliveryAddress}</span>
+                    </div>
+                  )}
                 </div>
-
-                {/* Order Items */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Order Items:</h4>
-                  {order.items.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center gap-3">
-                        {item.product.imageUrl && (
-                          <img 
-                            src={item.product.imageUrl} 
-                            alt={item.product.name}
-                            className="h-10 w-10 object-cover rounded"
-                          />
-                        )}
-                        <div>
-                          <div className="font-medium">{item.product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Qty: {item.quantity} × {formatCurrency(parseFloat(item.unitPrice))}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="font-medium">
-                        {formatCurrency(parseFloat(item.total))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Delivery Address */}
-                {order.deliveryAddress && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <div className="font-medium">Delivery Address:</div>
-                      <div className="text-muted-foreground">{order.deliveryAddress}</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {order.notes && (
-                  <div className="text-sm">
-                    <div className="font-medium">Notes:</div>
-                    <div className="text-muted-foreground">{order.notes}</div>
-                  </div>
-                )}
-
-                {/* Actions for wholesalers */}
-                {user?.role === 'wholesaler' && order.status === 'pending' && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'confirmed' })}
-                      disabled={updateOrderStatusMutation.isPending}
-                    >
-                      Confirm Order
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'cancelled' })}
-                      disabled={updateOrderStatusMutation.isPending}
-                    >
-                      Cancel Order
-                    </Button>
-                  </div>
-                )}
-
-                {user?.role === 'wholesaler' && order.status === 'confirmed' && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'processing' })}
-                      disabled={updateOrderStatusMutation.isPending}
-                    >
-                      Start Processing
-                    </Button>
-                  </div>
-                )}
-
-                {user?.role === 'wholesaler' && order.status === 'processing' && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: 'shipped' })}
-                      disabled={updateOrderStatusMutation.isPending}
-                    >
-                      Mark as Shipped
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
