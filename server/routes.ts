@@ -417,29 +417,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create Stripe payment intent with Connect account
+      // Create Stripe payment intent with Connect account and platform fee
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmountWithFee * 100), // Convert to cents
+        amount: Math.round(calculatedTotal * 100), // Original amount without platform fee
         currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
+        application_fee_amount: Math.round(platformFee * 100), // 5% platform fee collected by platform
         transfer_data: {
-          destination: wholesaler.stripeAccountId,
+          destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
         },
-        application_fee_amount: Math.round(platformFee * 100), // 5% platform fee in cents
         metadata: {
           customerName,
           customerEmail,
           customerPhone,
-          totalAmount: totalAmountWithFee.toFixed(2),
+          customerAddress: JSON.stringify(customerAddress),
+          totalAmount: calculatedTotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
-          orderType: 'customer_portal'
+          orderType: 'customer_portal',
+          items: JSON.stringify(validatedItems.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            unitPrice: parseFloat(item.product.price)
+          })))
         }
       });
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        totalAmount: totalAmountWithFee.toFixed(2),
-        platformFee: platformFee.toFixed(2)
+        totalAmount: calculatedTotal.toFixed(2), // Customer pays base amount
+        platformFee: platformFee.toFixed(2),
+        wholesalerReceives: (calculatedTotal - platformFee).toFixed(2) // 95% to wholesaler
       });
 
     } catch (error) {
@@ -476,6 +484,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } = paymentIntent.metadata;
 
         if (orderType === 'customer_portal') {
+          // Extract customer and order data from metadata
+          const {
+            customerAddress,
+            items: itemsJson
+          } = paymentIntent.metadata;
+          
+          const items = JSON.parse(itemsJson);
+
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);
           if (!customer) {
@@ -495,15 +511,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             platformFee,
             total: totalAmount,
             status: 'paid',
-            paymentIntentId: paymentIntent.id
+            paymentIntentId: paymentIntent.id,
+            deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
           };
 
-          // Get items from payment intent (you might need to store this differently)
-          // For now, we'll create a simple order without items
-          const order = await storage.createOrder(orderData, []);
+          // Create order items
+          const orderItems = items.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice.toFixed(2),
+            total: (item.unitPrice * item.quantity).toFixed(2)
+          }));
+
+          const order = await storage.createOrder(orderData, orderItems);
+
+          // Send customer confirmation email
+          const wholesaler = await storage.getUser(wholesalerId);
+          if (wholesaler && customerEmail) {
+            await sendCustomerInvoiceEmail({
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone,
+              address: customerAddress
+            }, order, orderItems, wholesaler);
+          }
 
           // Send notifications
-          const wholesaler = await storage.getUser(wholesalerId);
           if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
             const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${wholesaler.preferredCurrency === 'GBP' ? '£' : '$'}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
             
@@ -2821,21 +2854,34 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         throw new Error('Stripe not configured');
       }
 
-      // For now, create regular payment intent without Connect
-      // This will work for demo purposes and can be enhanced later
+      // Check if wholesaler has Stripe Connect account
+      if (!wholesaler.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler payment setup incomplete. Please contact seller to complete their Stripe Connect setup." 
+        });
+      }
+
+      // Create payment intent with Stripe Connect and 5% platform fee
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalAmount * 100), // Convert to cents
         currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 5% platform fee in cents
+        transfer_data: {
+          destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
+        },
         metadata: {
           orderType: 'customer_portal',
           wholesalerId: wholesalerId,
           customerName: customerData.name,
           customerEmail: customerData.email,
           customerPhone: customerData.phone,
-          customerAddress: customerData.address,
+          customerAddress: JSON.stringify(customerData.address),
           totalAmount: totalAmount.toString(),
           platformFee: platformFee,
-          items: JSON.stringify(items)
+          items: JSON.stringify(items.map(item => ({
+            ...item,
+            productName: item.productName || 'Product' // Ensure product name is included
+          })))
         }
       });
 
@@ -3107,26 +3153,88 @@ Please contact the customer to confirm this order.
 
   // Email invoice function for customers
   async function sendCustomerInvoiceEmail(customer: any, order: any, items: any[], wholesaler: any) {
-    // This would integrate with your email service (e.g., SendGrid, AWS SES)
-    // For now, we'll log the invoice details
-    console.log("Customer Invoice Email:", {
-      to: customer.email,
-      subject: `Invoice for Order #${order.id}`,
-      customerName: customer.firstName,
-      orderId: order.id,
-      items: items,
-      total: order.total,
-      wholesaler: wholesaler?.businessName || 'Wholesaler'
-    });
-    
-    // TODO: Implement actual email sending service
-    // Example with a service like SendGrid:
-    // await emailService.send({
-    //   to: customer.email,
-    //   subject: `Invoice for Order #${order.id}`,
-    //   template: 'customer-invoice',
-    //   data: { customer, order, items, wholesaler }
-    // });
+    try {
+      const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : 
+                           wholesaler.preferredCurrency === 'EUR' ? '€' : '$';
+      
+      // Create HTML email content
+      const itemsHtml = items.map(item => `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.productName || 'Product'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.unitPrice}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.total}</td>
+        </tr>
+      `).join('');
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #22c55e;">Order Confirmation</h2>
+          <p>Dear ${customer.name},</p>
+          <p>Thank you for your order! Here are the details:</p>
+          
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3>Order Details</h3>
+            <p><strong>Order ID:</strong> #${order.id}</p>
+            <p><strong>From:</strong> ${wholesaler.businessName || 'Wholesale Store'}</p>
+            <p><strong>Delivery Address:</strong> ${customer.address}</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="background: #22c55e; color: white;">
+                <th style="padding: 12px; text-align: left;">Item</th>
+                <th style="padding: 12px; text-align: center;">Qty</th>
+                <th style="padding: 12px; text-align: right;">Price</th>
+                <th style="padding: 12px; text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div style="text-align: right; font-size: 18px; font-weight: bold; margin: 20px 0;">
+            <p>Total: ${currencySymbol}${order.total}</p>
+          </div>
+
+          <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4>What's Next?</h4>
+            <p>Your order has been confirmed and payment processed successfully. The wholesaler will prepare your order and contact you with delivery details.</p>
+          </div>
+
+          <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
+            <p>This invoice was generated by Quikpik Merchant Platform</p>
+          </div>
+        </div>
+      `;
+
+      // Import and use SendGrid
+      const sgMail = require('@sendgrid/mail');
+      
+      if (process.env.SENDGRID_API_KEY) {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        
+        const msg = {
+          to: customer.email,
+          from: 'noreply@quikpik.co', // Use verified sender
+          subject: `Order Confirmation #${order.id} - ${wholesaler.businessName || 'Wholesale Store'}`,
+          html: emailHtml,
+        };
+
+        await sgMail.send(msg);
+        console.log(`Confirmation email sent to ${customer.email} for order #${order.id}`);
+      } else {
+        console.log("SendGrid not configured - Email would have been sent:", {
+          to: customer.email,
+          subject: `Order Confirmation #${order.id}`,
+          order: order.id,
+          total: order.total
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send customer confirmation email:', error);
+    }
   }
 
   function generateOrderNotificationMessage(order: any, customer: any, items: any[]): string {
