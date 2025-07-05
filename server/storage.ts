@@ -705,6 +705,10 @@ export class DatabaseStorage implements IStorage {
         id: item.users.id,
         businessName: item.users.businessName || `${item.users.firstName} ${item.users.lastName}`,
         profileImageUrl: item.users.profileImageUrl || undefined,
+        logoType: item.users.logoType || 'initials',
+        logoUrl: item.users.logoUrl || undefined,
+        firstName: item.users.firstName,
+        lastName: item.users.lastName,
         rating: 4.5, // Mock rating for now
       }
     }));

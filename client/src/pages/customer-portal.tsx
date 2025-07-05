@@ -18,6 +18,12 @@ import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
 
+// Utility function to format numbers with commas
+const formatNumber = (num: number | string): string => {
+  const number = typeof num === 'string' ? parseInt(num) : num;
+  return number.toLocaleString();
+};
+
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
 
@@ -107,6 +113,9 @@ export default function CustomerPortal() {
   const { data: allProducts = [] } = useQuery<Product[]>({
     queryKey: ['/api/marketplace/products']
   });
+
+  // Get wholesaler data from featured product or first product
+  const wholesaler = featuredProduct?.wholesaler || allProducts[0]?.wholesaler;
 
   // Filter out featured product from "other products" list
   const otherProducts = allProducts.filter(p => p.id !== featuredProductId);
@@ -500,9 +509,16 @@ export default function CustomerPortal() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Welcome to {featuredProduct?.wholesaler?.businessName || 'Our Store'}
             </h2>
-            <p className="text-gray-600">
-              Quality products at wholesale prices
-            </p>
+            {/* Show logo if available, otherwise leave blank */}
+            {featuredProduct?.wholesaler && (featuredProduct.wholesaler.logoType || featuredProduct.wholesaler.logoUrl) && (
+              <div className="flex justify-center mt-4">
+                <Logo 
+                  user={featuredProduct.wholesaler} 
+                  size="lg" 
+                  variant="icon-only"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -553,11 +569,11 @@ export default function CustomerPortal() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Minimum order:</span>
-                      <span className="font-medium">{featuredProduct.moq} units</span>
+                      <span className="font-medium">{formatNumber(featuredProduct.moq)} units</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Available stock:</span>
-                      <span className="font-medium">{featuredProduct.stock} units</span>
+                      <span className="font-medium">{formatNumber(featuredProduct.stock)} units</span>
                     </div>
                   </div>
 
@@ -850,11 +866,11 @@ export default function CustomerPortal() {
                               </div>
                               <div>
                                 <span className="text-gray-600">MOQ: </span>
-                                <span>{product.moq} units</span>
+                                <span>{formatNumber(product.moq)} units</span>
                               </div>
                               <div>
                                 <span className="text-gray-600">Stock: </span>
-                                <span className={product.stock < 100 ? "text-red-600" : ""}>{product.stock} units</span>
+                                <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} units</span>
                               </div>
                             </div>
                           </div>

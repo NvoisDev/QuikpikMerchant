@@ -21,6 +21,12 @@ import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles } from "l
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 
+// Utility function to format numbers with commas
+const formatNumber = (num: number | string): string => {
+  const number = typeof num === 'string' ? parseInt(num) : num;
+  return number.toLocaleString();
+};
+
 const productCategories = [
   "Groceries & Food",
   "Fresh Produce",
@@ -908,12 +914,12 @@ export default function ProductManagement() {
                           </div>
                           <div>
                             <span className="text-gray-500">MOQ:</span>
-                            <div className="font-semibold">{product.moq} units</div>
+                            <div className="font-semibold">{formatNumber(product.moq)} units</div>
                           </div>
                           <div>
                             <span className="text-gray-500">Stock:</span>
                             <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                              {product.stock} units
+                              {formatNumber(product.stock)} units
                             </div>
                           </div>
                           <div>

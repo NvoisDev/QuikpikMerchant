@@ -2829,6 +2829,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           businessPhone: wholesaler.businessPhone,
           businessAddress: wholesaler.businessAddress,
           profileImageUrl: wholesaler.profileImageUrl,
+          logoType: wholesaler.logoType || 'initials',
+          logoUrl: wholesaler.logoUrl || undefined,
+          firstName: wholesaler.firstName,
+          lastName: wholesaler.lastName,
           defaultCurrency: wholesaler.preferredCurrency
         }
       });

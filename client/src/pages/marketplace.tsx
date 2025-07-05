@@ -8,6 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, Star, Package, Filter, Grid, List, Users, TrendingUp, Award } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+
+// Utility function to format numbers with commas
+const formatNumber = (num: number | string): string => {
+  const number = typeof num === 'string' ? parseInt(num) : num;
+  return number.toLocaleString();
+};
 import type { Product, User } from "@shared/schema";
 
 interface WholesalerWithProducts extends User {
@@ -531,7 +537,7 @@ function ProductsView({
                   <span className="text-lg font-bold text-blue-600">
                     {formatCurrency(parseFloat(product.price))}
                   </span>
-                  <Badge variant="secondary">MOQ: {product.moq}</Badge>
+                  <Badge variant="secondary">MOQ: {formatNumber(product.moq)}</Badge>
                 </div>
                 <div className="flex justify-end mt-2">
                   <Button size="sm">View Details</Button>

@@ -3,6 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currencies";
+
+// Utility function to format numbers with commas
+const formatNumber = (num: number | string): string => {
+  const number = typeof num === 'string' ? parseInt(num) : num;
+  return number.toLocaleString();
+};
 import { useQuery } from "@tanstack/react-query";
 import { 
   MoreHorizontal, 
@@ -313,12 +319,12 @@ export default function ProductCard({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">MOQ:</span>
-            <span className="text-sm text-gray-900">{product.moq} units</span>
+            <span className="text-sm text-gray-900">{formatNumber(product.moq)} units</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Stock:</span>
             <span className={`text-sm font-medium ${stockStatus.color}`}>
-              {product.stock} units
+              {formatNumber(product.stock)} units
             </span>
           </div>
         </div>
