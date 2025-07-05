@@ -838,12 +838,16 @@ export default function CustomerPortal() {
                     type="number"
                     value={editQuantity}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      if (isNaN(value) || value < selectedProduct.moq) {
-                        setEditQuantity(selectedProduct.moq);
-                      } else if (value > selectedProduct.stock) {
-                        setEditQuantity(selectedProduct.stock);
-                      } else {
+                      const inputValue = e.target.value;
+                      // Allow empty input for typing
+                      if (inputValue === '') {
+                        setEditQuantity(0);
+                        return;
+                      }
+                      
+                      const value = parseInt(inputValue);
+                      // Allow typing any number, validation happens on blur
+                      if (!isNaN(value)) {
                         setEditQuantity(value);
                       }
                     }}
