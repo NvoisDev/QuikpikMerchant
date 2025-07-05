@@ -577,6 +577,20 @@ export default function CustomerPortal() {
                     </div>
                   </div>
 
+                  {/* Negotiation Badge for Featured Product */}
+                  {featuredProduct.negotiationEnabled && (
+                    <div className="py-2">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        💬 Price Negotiable - Request Custom Quote Available!
+                      </Badge>
+                      {featuredProduct.minimumBidPrice && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Minimum acceptable price: {currencySymbol}{parseFloat(featuredProduct.minimumBidPrice).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Supplier Info */}
                   <div className="border-t pt-4">
                     <div className="flex items-center space-x-2 mb-2">
@@ -591,24 +605,67 @@ export default function CustomerPortal() {
                     )}
                   </div>
 
-                  <Button 
-                    onClick={() => {
-                      if (isPreviewMode) {
-                        toast({
-                          title: "Preview Mode",
-                          description: "Cart functionality is disabled in preview mode.",
-                          variant: "default"
-                        });
-                        return;
-                      }
-                      openQuantityEditor(featuredProduct);
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    size="lg"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {isPreviewMode ? 'Preview: Add to Cart' : `Add to Cart (${featuredProduct.moq} units minimum)`}
-                  </Button>
+                  {/* Action Buttons for Featured Product */}
+                  {featuredProduct.negotiationEnabled ? (
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => {
+                          if (isPreviewMode) {
+                            toast({
+                              title: "Preview Mode",
+                              description: "Negotiation functionality is disabled in preview mode.",
+                              variant: "default"
+                            });
+                            return;
+                          }
+                          openNegotiation(featuredProduct);
+                        }}
+                        variant="outline"
+                        className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+                        size="lg"
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        {isPreviewMode ? 'Preview: Request Quote' : 'Request Custom Quote'}
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (isPreviewMode) {
+                            toast({
+                              title: "Preview Mode",
+                              description: "Cart functionality is disabled in preview mode.",
+                              variant: "default"
+                            });
+                            return;
+                          }
+                          openQuantityEditor(featuredProduct);
+                        }}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        size="lg"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        {isPreviewMode ? 'Preview: Add to Cart' : `Add to Cart at Listed Price (${featuredProduct.moq} min)`}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      onClick={() => {
+                        if (isPreviewMode) {
+                          toast({
+                            title: "Preview Mode",
+                            description: "Cart functionality is disabled in preview mode.",
+                            variant: "default"
+                          });
+                          return;
+                        }
+                        openQuantityEditor(featuredProduct);
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      size="lg"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {isPreviewMode ? 'Preview: Add to Cart' : `Add to Cart (${featuredProduct.moq} units minimum)`}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
