@@ -92,16 +92,29 @@ export class WhatsAppService {
         }
 
         try {
-          // Create message with media if product has image
-          const messageData: any = {
-            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-            to: `whatsapp:${memberPhone}`,
-            body: productMessage
-          };
+          // For sandbox environment, use approved template format
+          const isSandbox = wholesaler.twilioPhoneNumber?.includes('14155238886');
+          let messageData: any;
+          
+          if (isSandbox) {
+            // Use Twilio's approved "Your appointment is coming up" template for sandbox
+            messageData = {
+              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+              to: `whatsapp:${memberPhone}`,
+              body: `Your ${product.name} order update: Stock available! Price: ${wholesaler?.defaultCurrency === 'GBP' ? '£' : '$'}${parseFloat(product.price).toFixed(2)}. MOQ: ${this.formatNumber(product.moq)} units. Contact us to place your order.`
+            };
+          } else {
+            // Production: use full custom message
+            messageData = {
+              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+              to: `whatsapp:${memberPhone}`,
+              body: productMessage
+            };
 
-          // Add product image if available and valid URL
-          if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
-            messageData.mediaUrl = [product.imageUrl];
+            // Add product image if available and valid URL (production only)
+            if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
+              messageData.mediaUrl = [product.imageUrl];
+            }
           }
 
           const result = await twilioClient.messages.create(messageData);
@@ -488,19 +501,36 @@ Update your inventory or restock soon.`;
         }
 
         try {
-          // Create message with media if products have images
-          const messageData: any = {
-            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-            to: `whatsapp:${memberPhone}`,
-            body: templateMessage
-          };
+          // For sandbox environment, use approved template format
+          const isSandbox = wholesaler.twilioPhoneNumber?.includes('14155238886');
+          let messageData: any;
+          
+          if (isSandbox) {
+            // Create simplified sandbox-compatible message
+            const firstProduct = template.products[0]?.product;
+            const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : '$';
+            const sandboxMessage = `Your product update: ${firstProduct?.name || 'Products'} available! Price: ${currencySymbol}${parseFloat(firstProduct?.price || '0').toFixed(2)}. ${template.products.length > 1 ? `+${template.products.length - 1} more products. ` : ''}Contact us to place your order.`;
+            
+            messageData = {
+              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+              to: `whatsapp:${memberPhone}`,
+              body: sandboxMessage
+            };
+          } else {
+            // Production: use full template message
+            messageData = {
+              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+              to: `whatsapp:${memberPhone}`,
+              body: templateMessage
+            };
 
-          // Add first product image if available and valid URL
-          const firstProductWithImage = template.products.find((item: any) => 
-            item.product.imageUrl && this.isValidImageUrl(item.product.imageUrl)
-          );
-          if (firstProductWithImage?.product.imageUrl) {
-            messageData.mediaUrl = [firstProductWithImage.product.imageUrl];
+            // Add first product image if available and valid URL (production only)
+            const firstProductWithImage = template.products.find((item: any) => 
+              item.product.imageUrl && this.isValidImageUrl(item.product.imageUrl)
+            );
+            if (firstProductWithImage?.product.imageUrl) {
+              messageData.mediaUrl = [firstProductWithImage.product.imageUrl];
+            }
           }
 
           const result = await twilioClient.messages.create(messageData);
