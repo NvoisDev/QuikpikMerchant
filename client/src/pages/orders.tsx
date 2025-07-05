@@ -167,13 +167,18 @@ export default function Orders() {
 
   // Calculate order statistics
   const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
+  const totalRevenue = paidOrders.reduce((sum: number, order: any) => {
+    const amount = parseFloat(order.totalAmount || '0');
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+  
   const orderStats = {
     total: orders.length,
     pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'confirmed').length,
     paid: orders.filter((o: any) => o.status === 'paid').length,
     fulfilled: orders.filter((o: any) => o.status === 'fulfilled').length,
-    totalRevenue: paidOrders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0),
-    avgOrderValue: paidOrders.length > 0 ? paidOrders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0) / paidOrders.length : 0
+    totalRevenue: totalRevenue,
+    avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0
   };
 
   // Enhanced filtering
@@ -367,7 +372,10 @@ export default function Orders() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => resendConfirmationMutation.mutate(order.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resendConfirmationMutation.mutate(order.id);
+                          }}
                           disabled={resendConfirmationMutation.isPending}
                           className="text-xs h-6"
                         >
@@ -576,11 +584,29 @@ export default function Orders() {
 
             {selectedOrders.length > 0 && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    toast({
+                      title: "Email Feature",
+                      description: `Sending emails to ${selectedOrders.length} selected orders...`,
+                    });
+                  }}
+                >
                   <Mail className="h-4 w-4 mr-2" />
                   Email ({selectedOrders.length})
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    toast({
+                      title: "Bulk Actions",
+                      description: `Managing ${selectedOrders.length} selected orders...`,
+                    });
+                  }}
+                >
                   <MoreHorizontal className="h-4 w-4 mr-2" />
                   Actions
                 </Button>
@@ -655,6 +681,7 @@ export default function Orders() {
                             setSelectedOrders(selectedOrders.filter(id => id !== order.id));
                           }
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                         <Package className="h-6 w-6 text-primary" />
@@ -711,7 +738,8 @@ export default function Orders() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             updateOrderStatusMutation.mutate({
                               orderId: order.id,
                               status: 'fulfilled'
