@@ -537,7 +537,7 @@ export class DatabaseStorage implements IStorage {
     // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)
     const [revenueStats] = await db
       .select({
-        totalRevenue: sum(orders.subtotal),
+        totalRevenue: sum(orders.total),
         ordersCount: count(orders.id)
       })
       .from(orders)

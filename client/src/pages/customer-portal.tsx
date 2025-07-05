@@ -389,6 +389,46 @@ export default function CustomerPortal() {
     return { totalItems, totalValue };
   }, [cart]);
 
+  // Handle sharing the store
+  const handleShare = useCallback(async () => {
+    const currentUrl = window.location.href;
+    const storeName = wholesaler?.businessName || "Wholesale Store";
+    const shareText = `Check out ${storeName} - Premium wholesale products available now!`;
+
+    // Check if native sharing is available (mobile devices)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: storeName,
+          text: shareText,
+          url: currentUrl,
+        });
+        toast({
+          title: "Store Shared",
+          description: "Thank you for sharing this store!",
+        });
+      } catch (error) {
+        // User cancelled sharing or sharing failed
+        console.log("Sharing cancelled or failed:", error);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${shareText} ${currentUrl}`);
+        toast({
+          title: "Link Copied",
+          description: "Store link copied to clipboard. Share it with others!",
+        });
+      } catch (error) {
+        // Fallback fallback: Show share options
+        toast({
+          title: "Share Store",
+          description: "Copy this link to share: " + currentUrl,
+        });
+      }
+    }
+  }, [wholesaler?.businessName, toast]);
+
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
     if (isPreviewMode) {
@@ -535,21 +575,31 @@ export default function CustomerPortal() {
               </div>
             </div>
             
-            {!isPreviewMode && (
+            <div className="flex items-center space-x-3">
               <Button
-                onClick={() => setShowCheckout(true)}
-                className="bg-green-600 hover:bg-green-700 relative"
-                disabled={cart.length === 0}
+                onClick={handleShare}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
               >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Cart ({cartStats.totalItems})
-                {cartStats.totalItems > 0 && (
-                  <Badge className="ml-2 bg-green-800">
-                    {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
-                  </Badge>
-                )}
+                <Share2 className="w-4 h-4 mr-2" />
+                Share Store
               </Button>
-            )}
+              {!isPreviewMode && (
+                <Button
+                  onClick={() => setShowCheckout(true)}
+                  className="bg-green-600 hover:bg-green-700 relative"
+                  disabled={cart.length === 0}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Cart ({cartStats.totalItems})
+                  {cartStats.totalItems > 0 && (
+                    <Badge className="ml-2 bg-green-800">
+                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

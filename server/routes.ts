@@ -3375,8 +3375,7 @@ Please contact the customer to confirm this order.
       `;
 
       // Import and use SendGrid
-      const { MailService } = await import('@sendgrid/mail');
-      const sgMail = new MailService();
+      const sgMail = (await import('@sendgrid/mail')).default;
       
       if (process.env.SENDGRID_API_KEY) {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
