@@ -256,6 +256,14 @@ export default function Campaigns() {
         message += `🔥 Special Campaign Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
       }
       
+      // Add negotiation information if enabled
+      if (campaign.product.negotiationEnabled) {
+        message += `💬 Price Negotiable - Request Custom Quote Available!\n`;
+        if (campaign.product.minimumBidPrice) {
+          message += `💡 Minimum acceptable price: ${formatCurrency(parseFloat(campaign.product.minimumBidPrice))}\n`;
+        }
+      }
+      
       message += `📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
       message += `📦 In Stock: ${formatNumber(campaign.product.stock)} packs available`;
       
@@ -268,6 +276,15 @@ export default function Campaigns() {
         const price = item.specialPrice || item.product.price;
         message += `\n${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
+        
+        // Add negotiation information if enabled
+        if (item.product.negotiationEnabled) {
+          message += `   💬 Price Negotiable - Request Custom Quote Available!\n`;
+          if (item.product.minimumBidPrice) {
+            message += `   💡 Minimum acceptable price: ${formatCurrency(parseFloat(item.product.minimumBidPrice))}\n`;
+          }
+        }
+        
         message += `   📦 MOQ: ${formatNumber(item.product.moq)} units\n`;
         message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available`;
       });

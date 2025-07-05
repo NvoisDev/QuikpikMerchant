@@ -258,13 +258,17 @@ export class WhatsAppService {
     const hasImage = product.imageUrl && product.imageUrl.length > 0;
     const imageNote = hasImage ? "📸 Product images available online" : "";
     
+    // Add negotiation information if enabled
+    const negotiationInfo = product.negotiationEnabled ? 
+      `\n💬 Price Negotiable - Request Custom Quote Available!${product.minimumBidPrice ? `\n💡 Minimum acceptable price: ${currencySymbol}${parseFloat(product.minimumBidPrice).toFixed(2)}` : ''}` : '';
+    
     return `🛍️ ${product.name} Promotion
 
 📦 Featured Product:
 ${product.name}
 ${imageNote}
 
-💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}
+💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}${negotiationInfo}
 📦 MOQ: ${this.formatNumber(product.moq)} units
 📦 In Stock: ${this.formatNumber(product.stock)} packs available
 
@@ -555,6 +559,15 @@ Update your inventory or restock soon.`;
       
       message += `${index + 1}. ${item.product.name}${imageNote}\n`;
       message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
+      
+      // Add negotiation information if enabled
+      if (item.product.negotiationEnabled) {
+        message += `   💬 Price Negotiable - Request Custom Quote Available!\n`;
+        if (item.product.minimumBidPrice) {
+          message += `   💡 Minimum acceptable price: ${currencySymbol}${parseFloat(item.product.minimumBidPrice).toFixed(2)}\n`;
+        }
+      }
+      
       message += `   📦 MOQ: ${this.formatNumber(item.product.moq)} units\n`;
       message += `   📦 In Stock: ${this.formatNumber(item.product.stock)} packs available\n`;
       

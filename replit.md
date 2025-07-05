@@ -341,6 +341,15 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Simplified Order Workflow**: Streamlined to 4 core statuses: Order Placed, Order Confirmed, Payment Received (all auto-populated), and Fulfilled (manual action only)
   - **Auto-populated Indicators**: Clear visual indicators showing which statuses are automatic vs require manual wholesaler action
   - **Manual Action Control**: Only "Fulfilled" status requires wholesaler intervention, all other statuses update automatically based on customer actions and payment processing
+- July 05, 2025. Enhanced WhatsApp Broadcasting with Price Negotiation Integration:
+  - **Negotiation-Enabled Product Messaging**: WhatsApp broadcasts now highlight products with negotiation capabilities using "💬 Price Negotiable - Request Custom Quote Available!" badges
+  - **Minimum Bid Price Display**: Messages show minimum acceptable pricing when configured by wholesalers (e.g., "💡 Minimum acceptable price: £0.30")
+  - **Single Product Broadcasts**: Enhanced single product campaigns to include negotiation information with clear call-to-action for custom quotes
+  - **Multi-Product Campaign Integration**: Template campaigns now highlight negotiation-enabled products individually with pricing details
+  - **Consistent Preview System**: Campaign preview interface matches actual WhatsApp message format for negotiation products
+  - **Backend Message Generation**: Updated WhatsApp service to automatically include negotiation details in both single and multi-product campaigns
+  - **Customer Portal Integration**: Negotiation information in broadcasts seamlessly connects to existing customer portal quote request system
+  - **Currency-Aware Messaging**: Negotiation pricing displays respect wholesaler's default currency settings (GBP £, EUR €, USD $)
 
   
 **Status Systems:**
