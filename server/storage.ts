@@ -486,7 +486,7 @@ export class DatabaseStorage implements IStorage {
     activeProducts: number;
     lowStockCount: number;
   }> {
-    // Get total revenue and order count
+    // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)
     const [revenueStats] = await db
       .select({
         totalRevenue: sum(orders.subtotal),
@@ -495,7 +495,7 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        eq(orders.status, 'completed')
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
       ));
 
     // Get product stats
@@ -539,7 +539,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(orderItems, eq(products.id, orderItems.productId))
       .leftJoin(orders, and(
         eq(orderItems.orderId, orders.id),
-        eq(orders.status, 'completed')
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
       ))
       .where(eq(products.wholesalerId, wholesalerId))
       .groupBy(products.id)

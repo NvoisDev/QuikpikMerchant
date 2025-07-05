@@ -289,9 +289,11 @@ export default function WholesalerDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Orders</CardTitle>
-              <Button variant="ghost" size="sm">
-                View All
-              </Button>
+              <Link href="/orders">
+                <Button variant="ghost" size="sm">
+                  View All
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent>
               {ordersLoading ? (
@@ -336,7 +338,7 @@ export default function WholesalerDashboard() {
                             #ORD-{order.id}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {order.retailer?.businessName || order.retailer?.firstName + " " + order.retailer?.lastName}
+                            {order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || 'Unknown Customer'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {formatCurrency(parseFloat(order.total))}
