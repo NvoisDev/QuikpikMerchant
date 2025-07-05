@@ -167,6 +167,7 @@ export const broadcasts = pgTable("broadcasts", {
   customerGroupId: integer("customer_group_id").notNull().references(() => customerGroups.id, { onDelete: "cascade" }),
   message: text("message").notNull(),
   customMessage: text("custom_message"),
+  specialPrice: decimal("special_price", { precision: 10, scale: 2 }),
   status: varchar("status").notNull().default("pending"), // pending, sent, failed
   recipientCount: integer("recipient_count").notNull().default(0),
   sentAt: timestamp("sent_at"),

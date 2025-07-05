@@ -2066,6 +2066,7 @@ Write a professional, sales-focused description that highlights the key benefits
         id: `broadcast_${broadcast.id}`,
         title: `${broadcast.product.name} Promotion`,
         customMessage: broadcast.message,
+        specialPrice: broadcast.specialPrice,
         includeContact: true,
         includePurchaseLink: true,
         campaignType: 'single' as const,
@@ -2123,7 +2124,7 @@ Write a professional, sales-focused description that highlights the key benefits
   app.post('/api/campaigns', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { campaignType, productId, products, ...campaignData } = req.body;
+      const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
         // Create a broadcast for single product
@@ -2132,6 +2133,7 @@ Write a professional, sales-focused description that highlights the key benefits
           productId: productId,
           customerGroupId: 1, // Will be set when sending
           message: campaignData.customMessage || '',
+          specialPrice: specialPrice || null,
           status: 'draft',
           recipientCount: 0
         };

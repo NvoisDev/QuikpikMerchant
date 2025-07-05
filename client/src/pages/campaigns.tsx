@@ -48,6 +48,7 @@ const campaignFormSchema = z.object({
   campaignType: z.enum(['single', 'multi']),
   // For single product campaigns
   productId: z.number().optional(),
+  specialPrice: z.string().optional(),
   // For multi-product campaigns
   products: z.array(z.object({
     productId: z.number(),
@@ -67,6 +68,7 @@ interface Campaign {
   campaignType: 'single' | 'multi';
   status: string;
   createdAt: string;
+  specialPrice?: string;
   product?: Product;
   products?: Array<{
     id: number;
@@ -244,7 +246,16 @@ export default function Campaigns() {
 
     if (campaign.campaignType === 'single' && campaign.product) {
       message += `\n\n📦 Featured Product:\n${campaign.product.name}\n\n`;
-      message += `💰 Unit Price: ${formatCurrency(parseFloat(campaign.product.price))}\n`;
+      
+      // Use special price if provided, otherwise use regular price
+      const price = campaign.specialPrice || campaign.product.price;
+      message += `💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
+      
+      // Show special pricing indicator if special price is being used
+      if (campaign.specialPrice && campaign.specialPrice !== campaign.product.price) {
+        message += `🔥 Special Campaign Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
+      }
+      
       message += `📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
       message += `📦 In Stock: ${formatNumber(campaign.product.stock)} packs available`;
       
@@ -478,6 +489,29 @@ export default function Campaigns() {
                               </SelectContent>
                             </Select>
                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="specialPrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Special Price (Optional)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="e.g., 2.50 for promotional pricing"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                            <p className="text-sm text-muted-foreground">
+                              Leave empty to use regular product price. Special price will be displayed in the campaign message.
+                            </p>
                           </FormItem>
                         )}
                       />
