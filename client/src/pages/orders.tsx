@@ -707,7 +707,7 @@ export default function Orders() {
                       <div className="text-sm text-muted-foreground">
                         {user?.role === 'retailer' 
                           ? (order.wholesaler?.businessName || [order.wholesaler?.firstName, order.wholesaler?.lastName].filter(Boolean).join(' '))
-                          : (order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' '))
+                          : ([order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || order.retailer?.businessName || 'Unknown Customer')
                         }
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
