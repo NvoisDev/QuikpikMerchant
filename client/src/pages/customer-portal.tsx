@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck } from "lucide-react";
-import Logo from "@/components/ui/logo";
+
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
 
@@ -443,47 +443,46 @@ export default function CustomerPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Preview Mode Banner */}
       {isPreviewMode && (
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 text-center text-sm font-medium">
+        <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
           🔍 Store Preview Mode - This is how your customers see your store. Changes you make will be reflected here.
         </div>
       )}
       
       {/* Customer Portal Header */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-green-100 sticky top-0 z-50 shadow-lg">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
-                <Logo size="sm" variant="full" />
-              </div>
-              <div className="h-8 w-px bg-gradient-to-b from-green-200 to-green-400"></div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-                  Welcome to {featuredProduct?.wholesaler?.businessName || 'Our Store'}
-                </h1>
-                <p className="text-sm text-gray-600 font-medium">🛍️ Premium quality products at wholesale prices</p>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {featuredProduct?.wholesaler?.businessName || 'Our Store'}
+              </h1>
+              <p className="text-sm text-gray-600">Quality products at wholesale prices</p>
             </div>
             
             {/* Cart Summary */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-3 rounded-xl border border-green-200 shadow-sm">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <ShoppingCart className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-green-700">Your Cart</p>
-                  <p className="text-lg font-bold text-green-800">
-                    {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'} • {currencySymbol}{getTotalAmount().toFixed(2)}
-                  </p>
-                </div>
+              <div className="flex items-center space-x-2 text-gray-600">
+                <ShoppingCart className="w-5 h-5" />
+                <span className="text-sm">
+                  {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'} • {currencySymbol}{getTotalAmount().toFixed(2)}
+                </span>
               </div>
               {cart.length > 0 && (
                 <Button 
-                  onClick={() => setShowCheckout(true)}
+                  onClick={() => {
+                    if (isPreviewMode) {
+                      toast({
+                        title: "Preview Mode",
+                        description: "Checkout is disabled in preview mode.",
+                        variant: "default"
+                      });
+                      return;
+                    }
+                    setShowCheckout(true);
+                  }}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Checkout
@@ -496,46 +495,28 @@ export default function CustomerPortal() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Welcome Banner */}
-        <div className="mb-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl shadow-xl overflow-hidden">
-          <div className="px-8 py-12 text-white">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-4xl font-bold mb-4">
-                ✨ Welcome to {featuredProduct?.wholesaler?.businessName || 'Premium Shopping'}
-              </h2>
-              <p className="text-xl opacity-90 mb-6">
-                Discover high-quality products at wholesale prices. Fast delivery, excellent service guaranteed!
-              </p>
-              <div className="flex items-center justify-center space-x-6 text-white/90">
-                <div className="flex items-center space-x-2">
-                  <Package className="w-5 h-5" />
-                  <span className="font-medium">Quality Guaranteed</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Store className="w-5 h-5" />
-                  <span className="font-medium">Fast Shipping</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Star className="w-5 h-5" />
-                  <span className="font-medium">Top Rated</span>
-                </div>
-              </div>
-            </div>
+        <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="px-6 py-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome to {featuredProduct?.wholesaler?.businessName || 'Our Store'}
+            </h2>
+            <p className="text-gray-600">
+              Quality products at wholesale prices
+            </p>
           </div>
         </div>
 
         {/* Featured Product Section */}
         {featuredProduct && (
-          <Card className="mb-8 shadow-xl border-0 bg-gradient-to-br from-white to-green-50">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 border-b border-green-100">
-              <CardTitle className="flex items-center space-x-3 text-2xl">
-                <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl shadow-lg">
-                  <Star className="w-6 h-6 text-white" />
+          <Card className="mb-8 border border-gray-200 shadow-sm">
+            <CardHeader className="bg-gray-50 border-b border-gray-200">
+              <CardTitle className="flex items-center space-x-3 text-xl">
+                <div className="p-2 bg-green-600 rounded-lg">
+                  <Star className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                    🌟 Today's Special Offer
-                  </span>
-                  <p className="text-sm text-gray-600 font-normal mt-1">Handpicked just for you</p>
+                  <span className="text-gray-900">Featured Product</span>
+                  <p className="text-sm text-gray-600 font-normal mt-1">Our top recommendation for you</p>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -1399,8 +1380,7 @@ export default function CustomerPortal() {
       <div className="mt-16 bg-white border-t">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center">
           <div className="flex items-center justify-center space-x-2 text-gray-600">
-            <span>Powered by</span>
-            <Logo size="sm" variant="full" />
+            <span>Powered by <strong>Quikpik</strong></span>
           </div>
         </div>
       </div>

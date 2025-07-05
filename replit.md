@@ -325,6 +325,8 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Product Management Integration**: Added "Preview Store" button to product management page that opens in new tab
   - **Real-time Updates**: Changes to products, settings, and branding immediately visible in preview mode
   - **Wholesaler Business Name Integration**: Customer portal header and welcome banner now display actual wholesaler business name
+  - **Simplified Customer Portal Design**: Removed complex gradients and logo elements for cleaner, more straightforward customer experience
+  - **Clean Visual Design**: Replaced gradient backgrounds with simple white/gray color scheme for better readability and performance
 
   
 **Status Systems:**
