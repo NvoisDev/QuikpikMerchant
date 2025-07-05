@@ -209,6 +209,69 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   }
 
   return (
+    <Elements 
+      stripe={stripePromise} 
+      options={{ clientSecret }}
+    >
+      <PaymentFormContent onSuccess={onSuccess} totalAmount={totalAmount} wholesaler={wholesaler} />
+    </Elements>
+  );
+};
+
+// Separate component for the actual form content
+const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: { 
+  onSuccess: () => void;
+  totalAmount: number;
+  wholesaler: any;
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment-success`,
+        },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        toast({
+          title: "Payment Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Payment Successful!",
+          description: "Your order has been placed successfully.",
+        });
+        onSuccess();
+      }
+    } catch (error) {
+      toast({
+        title: "Payment Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="p-4 border rounded-lg">
         <PaymentElement />
@@ -1174,22 +1237,20 @@ export default function CustomerPortal() {
                 </h3>
                 
                 {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address ? (
-                  <Elements stripe={stripePromise}>
-                    <StripeCheckoutForm 
-                      cart={cart}
-                      customerData={customerData}
-                      wholesaler={wholesaler}
-                      totalAmount={cartStats.totalValue}
-                      onSuccess={() => {
-                        setCart([]);
-                        setShowCheckout(false);
-                        toast({
-                          title: "Order Placed Successfully!",
-                          description: "You will receive an email confirmation shortly.",
-                        });
-                      }}
-                    />
-                  </Elements>
+                  <StripeCheckoutForm 
+                    cart={cart}
+                    customerData={customerData}
+                    wholesaler={wholesaler}
+                    totalAmount={cartStats.totalValue}
+                    onSuccess={() => {
+                      setCart([]);
+                      setShowCheckout(false);
+                      toast({
+                        title: "Order Placed Successfully!",
+                        description: "You will receive an email confirmation shortly.",
+                      });
+                    }}
+                  />
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
