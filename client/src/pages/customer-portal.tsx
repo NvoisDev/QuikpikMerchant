@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck } from "lucide-react";
-
+import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
 
@@ -1380,7 +1380,8 @@ export default function CustomerPortal() {
       <div className="mt-16 bg-white border-t">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center">
           <div className="flex items-center justify-center space-x-2 text-gray-600">
-            <span>Powered by <strong>Quikpik</strong></span>
+            <span>Powered by</span>
+            <Logo size="sm" variant="full" />
           </div>
         </div>
       </div>
