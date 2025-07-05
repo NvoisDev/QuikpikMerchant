@@ -74,26 +74,28 @@ export default function WholesalerDashboard() {
                   </Button>
                 </Link>
               </div>
+              <div className="mt-3 flex items-center space-x-3">
+                <Link href="/products">
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Product
+                  </Button>
+                </Link>
+                <Link href="/campaigns">
+                  <Button variant="outline" size="sm">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Create Campaign
+                  </Button>
+                </Link>
+                <Link href="/customer-groups">
+                  <Button variant="outline" size="sm">
+                    <Users className="mr-2 h-4 w-4" />
+                    Add Customers
+                  </Button>
+                </Link>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Link href="/products">
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Product
-                </Button>
-              </Link>
-              <Link href="/campaigns">
-                <Button variant="outline" size="sm">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Create Campaign
-                </Button>
-              </Link>
-              <Link href="/customer-groups">
-                <Button variant="outline" size="sm">
-                  <Users className="mr-2 h-4 w-4" />
-                  Add Customers
-                </Button>
-              </Link>
               <div className="relative">
                 <Button variant="ghost" size="icon">
                   <Bell className="h-5 w-5" />
