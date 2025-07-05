@@ -1122,7 +1122,9 @@ export default function CustomerPortal() {
                     <div key={item.product.id} className="flex justify-between items-center">
                       <div className="flex-1">
                         <span className="font-medium">{item.product.name}</span>
-                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                        <div className="text-sm text-gray-500">
+                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} × {formatNumber(item.quantity)} units
+                        </div>
                       </div>
                       <div className="text-right">
                         <span className="font-semibold">
