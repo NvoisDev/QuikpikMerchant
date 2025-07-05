@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,7 +25,15 @@ import {
   Eye,
   DollarSign,
   ShoppingCart,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Filter,
+  Download,
+  Mail,
+  TrendingUp,
+  TrendingDown,
+  MoreHorizontal,
+  RefreshCw
 } from "lucide-react";
 
 interface Order {
@@ -69,6 +79,8 @@ export default function Orders() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Fetch orders based on user role
@@ -153,9 +165,28 @@ export default function Orders() {
     );
   };
 
-  const filteredOrders = orders.filter((order: any) => 
-    statusFilter === "all" || order.status === statusFilter
-  );
+  // Calculate order statistics
+  const orderStats = {
+    total: orders.length,
+    pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'confirmed').length,
+    paid: orders.filter((o: any) => o.status === 'paid').length,
+    fulfilled: orders.filter((o: any) => o.status === 'fulfilled').length,
+    totalRevenue: orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0),
+    avgOrderValue: orders.length > 0 ? orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0) / orders.length : 0
+  };
+
+  // Enhanced filtering
+  const filteredOrders = orders.filter((order: any) => {
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const matchesSearch = !searchTerm || 
+      order.id.toString().includes(searchTerm) ||
+      (order.retailer?.firstName + ' ' + order.retailer?.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.retailer?.businessName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.wholesaler?.firstName + ' ' + order.wholesaler?.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.wholesaler?.businessName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesSearch;
+  });
 
   const getOrderTotal = (order: Order) => {
     return order.items.reduce((sum, item) => sum + parseFloat(item.total), 0);
@@ -422,6 +453,7 @@ export default function Orders() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">
@@ -435,21 +467,159 @@ export default function Orders() {
           </p>
         </div>
         
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="pending">Order Placed</SelectItem>
-            <SelectItem value="confirmed">Order Confirmed</SelectItem>
-            <SelectItem value="paid">Payment Received</SelectItem>
-            <SelectItem value="fulfilled">Fulfilled</SelectItem>
-            <SelectItem value="archived">Archived</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
+
+      {/* Order Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <ShoppingCart className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{orderStats.total}</p>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Clock className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{orderStats.pending}</p>
+                <p className="text-sm text-muted-foreground">Pending Orders</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(orderStats.totalRevenue, user?.preferredCurrency || 'USD')}
+                </p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(orderStats.avgOrderValue, user?.preferredCurrency || 'USD')}
+                </p>
+                <p className="text-sm text-muted-foreground">Avg Order Value</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enhanced Filters and Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search orders by ID, customer name, or business..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Orders ({orderStats.total})</SelectItem>
+                <SelectItem value="pending">Order Placed ({orderStats.pending})</SelectItem>
+                <SelectItem value="confirmed">Order Confirmed</SelectItem>
+                <SelectItem value="paid">Payment Received ({orderStats.paid})</SelectItem>
+                <SelectItem value="fulfilled">Fulfilled ({orderStats.fulfilled})</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {selectedOrders.length > 0 && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email ({selectedOrders.length})
+                </Button>
+                <Button variant="outline" size="sm">
+                  <MoreHorizontal className="h-4 w-4 mr-2" />
+                  Actions
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Quick Filter Pills */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button 
+              variant={statusFilter === "pending" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setStatusFilter("pending")}
+            >
+              Pending ({orderStats.pending})
+            </Button>
+            <Button 
+              variant={statusFilter === "paid" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setStatusFilter("paid")}
+            >
+              Paid ({orderStats.paid})
+            </Button>
+            <Button 
+              variant={statusFilter === "fulfilled" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setStatusFilter("fulfilled")}
+            >
+              Fulfilled ({orderStats.fulfilled})
+            </Button>
+            <Button 
+              variant={statusFilter === "all" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+            >
+              View All
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {filteredOrders.length === 0 ? (
         <Card>
@@ -467,45 +637,129 @@ export default function Orders() {
       ) : (
         <div className="grid gap-4">
           {filteredOrders.map((order: any) => (
-            <Card key={order.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={order.id} 
+              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border hover:border-primary/20"
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Package className="h-6 w-6 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedOrders.includes(order.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedOrders([...selectedOrders, order.id]);
+                          } else {
+                            setSelectedOrders(selectedOrders.filter(id => id !== order.id));
+                          }
+                        }}
+                      />
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <Package className="h-6 w-6 text-primary" />
+                      </div>
                     </div>
                     <div>
-                      <div className="font-semibold">Order #{order.id}</div>
+                      <div className="font-semibold flex items-center gap-2">
+                        Order #{order.id}
+                        {order.status === 'paid' && (
+                          <Badge variant="secondary" className="text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Action Needed
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {user?.role === 'retailer' 
                           ? (order.wholesaler?.businessName || [order.wholesaler?.firstName, order.wholesaler?.lastName].filter(Boolean).join(' '))
                           : (order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' '))
                         }
                       </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {order.retailer?.phoneNumber && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {order.retailer.phoneNumber}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
+                    {/* Order Summary */}
                     <div className="text-right">
-                      <div className="font-semibold">
-                        {formatCurrency(parseFloat(order.total), user?.currency || 'USD')}
+                      <div className="font-semibold group-hover:text-primary transition-colors">
+                        {formatCurrency(parseFloat(order.totalAmount), user?.preferredCurrency || 'USD')}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                       </div>
+                      <div className="text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3 mr-1 inline" />
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </div>
                     </div>
                     
+                    {/* Actions */}
                     <div className="flex items-center gap-2">
                       {getStatusBadge(order.status)}
+                      
+                      {/* Quick Actions for Wholesalers */}
+                      {user?.role === 'wholesaler' && order.status === 'paid' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            updateOrderStatusMutation.mutate({
+                              orderId: order.id,
+                              status: 'fulfilled'
+                            });
+                          }}
+                          disabled={updateOrderStatusMutation.isPending}
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Mark Fulfilled
+                        </Button>
+                      )}
+                      
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="group-hover:border-primary/50">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
                         <OrderDetailModal order={order} />
                       </Dialog>
                     </div>
+                  </div>
+                </div>
+                
+                {/* Order Progress Indicator */}
+                <div className="mt-4 pt-3 border-t">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                      <span className={order.status === 'pending' || order.status === 'confirmed' || order.status === 'paid' || order.status === 'fulfilled' ? 'text-green-600' : ''}>
+                        ✓ Order Placed
+                      </span>
+                      <span className={order.status === 'confirmed' || order.status === 'paid' || order.status === 'fulfilled' ? 'text-green-600' : ''}>
+                        ✓ Confirmed
+                      </span>
+                      <span className={order.status === 'paid' || order.status === 'fulfilled' ? 'text-green-600' : ''}>
+                        ✓ Payment Received
+                      </span>
+                      <span className={order.status === 'fulfilled' ? 'text-green-600' : 'text-muted-foreground'}>
+                        {order.status === 'fulfilled' ? '✓' : '○'} Fulfilled
+                      </span>
+                    </div>
+                    
+                    {order.deliveryAddress && (
+                      <div className="flex items-center gap-1 max-w-xs">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{order.deliveryAddress}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
