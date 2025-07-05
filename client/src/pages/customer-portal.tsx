@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
@@ -65,6 +66,10 @@ export default function CustomerPortal() {
   const [editQuantity, setEditQuantity] = useState<number>(1);
   const [showPayment, setShowPayment] = useState(false);
   const [clientSecret, setClientSecret] = useState<string>("");
+  const [showAllProducts, setShowAllProducts] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
     email: '',
@@ -89,6 +94,21 @@ export default function CustomerPortal() {
 
   // Filter out featured product from "other products" list
   const otherProducts = allProducts.filter(p => p.id !== featuredProductId);
+
+  // Get unique categories for filtering
+  const categories = ["All Categories", ...Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)))];
+
+  // Filter products based on search and category
+  const filteredProducts = allProducts.filter(product => {
+    const matchesSearch = !searchTerm || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.wholesaler.businessName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = selectedCategory === "All Categories" || product.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   const openQuantityEditor = (product: Product) => {
     setSelectedProduct(product);
@@ -449,56 +469,260 @@ export default function CustomerPortal() {
           </Card>
         )}
 
-        {/* All Products Section */}
+        {/* Products Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Package className="w-5 h-5" />
-              <span>{featuredProduct ? 'More Products Available' : 'All Products'}</span>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center space-x-2">
+                <Package className="w-5 h-5" />
+                <span>{featuredProduct ? 'More Products Available' : 'All Products'}</span>
+              </CardTitle>
+              {featuredProduct && !showAllProducts && (
+                <Button 
+                  onClick={() => setShowAllProducts(true)}
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  See All Products
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(featuredProduct ? otherProducts : allProducts).map((product) => (
-                <Card key={product.id} className="border">
-                  <CardContent className="p-4">
-                    {/* Product Image */}
-                    <div className="mb-3">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-32 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center">
-                          <Package className="w-8 h-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+            {/* Search and Filter Controls */}
+            {(showAllProducts || !featuredProduct) && (
+              <div className="mb-6 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Search Input */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search products, descriptions, or suppliers..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  {/* Category Filter */}
+                  <div className="sm:w-48">
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* View Mode Toggle */}
+                  <div className="flex border rounded-lg">
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                      className="rounded-r-none"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === "list" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("list")}
+                      className="rounded-l-none"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Results Summary */}
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>
+                    {showAllProducts || !featuredProduct 
+                      ? `${filteredProducts.length} products found`
+                      : `Showing ${Math.min(otherProducts.length, 6)} of ${otherProducts.length} products`
+                    }
+                  </span>
+                  {showAllProducts && featuredProduct && (
+                    <Button 
+                      onClick={() => setShowAllProducts(false)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      Show Less
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">{product.name}</h3>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div>Price: {currencySymbol}{parseFloat(product.price).toFixed(2)}</div>
-                        <div>MOQ: {product.moq} units</div>
-                        <div>Stock: {product.stock} units</div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        by {product.wholesaler.businessName}
-                      </div>
-                      <Button 
-                        onClick={() => openQuantityEditor(product)}
-                        size="sm"
-                        className="w-full bg-green-600 hover:bg-green-700"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            {/* Products Grid/List */}
+            <div className={`${viewMode === "grid" 
+              ? "grid md:grid-cols-2 lg:grid-cols-3 gap-4" 
+              : "space-y-4"
+            }`}>
+              {(() => {
+                let productsToShow;
+                if (showAllProducts || !featuredProduct) {
+                  productsToShow = filteredProducts;
+                } else {
+                  productsToShow = otherProducts.slice(0, 6);
+                }
+                
+                return productsToShow.map((product) => (
+                  viewMode === "grid" ? (
+                    // Grid View
+                    <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        {/* Product Image */}
+                        <div className="mb-3">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-full h-32 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center">
+                              <Package className="w-8 h-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-sm">{product.name}</h3>
+                          {product.description && (
+                            <p className="text-xs text-gray-600 line-clamp-2">{product.description}</p>
+                          )}
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div className="flex justify-between">
+                              <span>Price:</span>
+                              <span className="font-medium">{currencySymbol}{parseFloat(product.price).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>MOQ:</span>
+                              <span>{product.moq} units</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Stock:</span>
+                              <span className={product.stock < 100 ? "text-red-600" : ""}>{product.stock} units</span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <Store className="w-3 h-3 mr-1" />
+                            {product.wholesaler.businessName}
+                          </div>
+                          <div className="flex space-x-2 pt-2">
+                            <Button 
+                              onClick={() => openQuantityEditor(product)}
+                              size="sm"
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add to Cart
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              className="px-2"
+                              title="Request Quote"
+                            >
+                              <Mail className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    // List View
+                    <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          <div className="w-24 h-24 flex-shrink-0">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
+                                <Package className="w-6 h-6 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Product Details */}
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <h3 className="font-semibold">{product.name}</h3>
+                              {product.description && (
+                                <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <div className="flex items-center space-x-1">
+                                <Store className="w-4 h-4" />
+                                <span>{product.wholesaler.businessName}</span>
+                              </div>
+                              {product.category && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {product.category}
+                                </Badge>
+                              )}
+                            </div>
+
+                            <div className="flex items-center space-x-6 text-sm">
+                              <div>
+                                <span className="text-gray-600">Price: </span>
+                                <span className="font-semibold">{currencySymbol}{parseFloat(product.price).toFixed(2)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">MOQ: </span>
+                                <span>{product.moq} units</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Stock: </span>
+                                <span className={product.stock < 100 ? "text-red-600" : ""}>{product.stock} units</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col space-y-2">
+                            <Button 
+                              onClick={() => openQuantityEditor(product)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add to Cart
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              title="Request Quote"
+                            >
+                              <Mail className="w-4 h-4 mr-1" />
+                              Quote
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                ));
+              })()}
             </div>
           </CardContent>
         </Card>
