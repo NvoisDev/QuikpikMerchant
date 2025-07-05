@@ -892,6 +892,13 @@ export default function CustomerPortal() {
                 </div>
               )}
               
+              {/* MOQ warning when below minimum */}
+              {editQuantity > 0 && editQuantity < selectedProduct.moq && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                  ❌ Quantity must be at least {formatNumber(selectedProduct.moq)} units (minimum order quantity)
+                </div>
+              )}
+              
               {/* MOQ reminder */}
               {editQuantity === selectedProduct.moq && selectedProduct.moq > 1 && (
                 <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
@@ -907,7 +914,11 @@ export default function CustomerPortal() {
                 <Button variant="outline" onClick={() => setShowQuantityEditor(false)} className="flex-1">
                   Cancel
                 </Button>
-                <Button onClick={handleAddToCart} className="flex-1 bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={handleAddToCart} 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={editQuantity < selectedProduct.moq || editQuantity > selectedProduct.stock}
+                >
                   Add to Cart
                 </Button>
               </div>
