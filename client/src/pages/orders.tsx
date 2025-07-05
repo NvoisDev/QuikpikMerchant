@@ -166,13 +166,14 @@ export default function Orders() {
   };
 
   // Calculate order statistics
+  const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
   const orderStats = {
     total: orders.length,
     pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'confirmed').length,
     paid: orders.filter((o: any) => o.status === 'paid').length,
     fulfilled: orders.filter((o: any) => o.status === 'fulfilled').length,
-    totalRevenue: orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0),
-    avgOrderValue: orders.length > 0 ? orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0) / orders.length : 0
+    totalRevenue: paidOrders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0),
+    avgOrderValue: paidOrders.length > 0 ? paidOrders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0) / paidOrders.length : 0
   };
 
   // Enhanced filtering
@@ -519,7 +520,7 @@ export default function Orders() {
                 <p className="text-2xl font-bold">
                   {formatCurrency(orderStats.totalRevenue, user?.preferredCurrency || 'USD')}
                 </p>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-sm text-muted-foreground">Paid Revenue</p>
               </div>
             </div>
           </CardContent>
@@ -690,7 +691,7 @@ export default function Orders() {
                     {/* Order Summary */}
                     <div className="text-right">
                       <div className="font-semibold group-hover:text-primary transition-colors">
-                        {formatCurrency(parseFloat(order.totalAmount), user?.preferredCurrency || 'USD')}
+                        {formatCurrency(parseFloat(order.totalAmount || order.total || 0), user?.preferredCurrency || 'USD')}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {order.items.length} item{order.items.length !== 1 ? 's' : ''}
@@ -768,12 +769,9 @@ export default function Orders() {
                     <Calendar className="h-4 w-4" />
                     {new Date(order.createdAt).toLocaleDateString()}
                   </div>
-                  {order.deliveryAddress && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate max-w-xs">{order.deliveryAddress}</span>
-                    </div>
-                  )}
+                  <div className="text-xs">
+                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
               </CardContent>
             </Card>
