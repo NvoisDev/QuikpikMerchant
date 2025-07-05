@@ -326,7 +326,7 @@ export default function Orders() {
                   )}
                   
                   {/* Show email notification for confirmed orders */}
-                  {event.emailSent && event.completed && (
+                  {event.status === 'confirmed' && event.completed && (
                     <div className="mt-2 flex items-center gap-2">
                       <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
                         ✓ Confirmation email sent automatically
