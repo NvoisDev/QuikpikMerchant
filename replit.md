@@ -312,6 +312,10 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Customer Portal Clarity**: Added helpful currency format hints in negotiation form (e.g., "0.30 for 30p")
   - **Email Integration**: SendGrid configured for automated decline notifications to customers
   - **Database Schema**: Updated products table with minimumBidPrice decimal field for precise pricing
+  - **Enhanced Quantity Editor**: Fully editable quantity field with + and - buttons, allowing users to clear field and type any number
+  - **Smart Validation**: Automatic validation ensures minimum order quantities when users finish editing
+  - **Fixed Negotiation Errors**: Resolved foreign key constraint violations by implementing automatic guest customer creation
+  - **Default List View**: Customer portal now defaults to list view for better product browsing experience
 
   
 **Status Systems:**

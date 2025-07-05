@@ -3069,6 +3069,11 @@ Please contact the customer to confirm this order.
       const minimumBid = product.minimumBidPrice ? parseFloat(product.minimumBidPrice) : null;
       
       if (minimumBid && offeredPriceNum < minimumBid) {
+        // Get wholesaler and currency info first
+        const wholesaler = await storage.getUser(product.wholesalerId);
+        const currency = wholesaler?.preferredCurrency || 'GBP';
+        const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
+        
         // Automatically decline the bid and send email notification
         const negotiationData = {
           productId: product.id,
@@ -3084,9 +3089,6 @@ Please contact the customer to confirm this order.
         
         // Send email notification to customer about declined bid
         try {
-          const wholesaler = await storage.getUser(product.wholesalerId);
-          const currency = wholesaler?.preferredCurrency || 'GBP';
-          const currencySymbol = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$';
           
           // Send email to customer
           const customerEmail = req.body.customerEmail; // Should be provided in request

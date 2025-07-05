@@ -71,7 +71,7 @@ export default function CustomerPortal() {
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [negotiationProduct, setNegotiationProduct] = useState<Product | null>(null);
   const [negotiationData, setNegotiationData] = useState<{
