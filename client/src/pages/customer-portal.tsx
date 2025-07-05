@@ -276,7 +276,10 @@ export default function CustomerPortal() {
         originalPrice: parseFloat(negotiationProduct.price),
         offeredPrice: parseFloat(negotiationData.offeredPrice),
         quantity: negotiationData.quantity,
-        message: negotiationData.message
+        message: negotiationData.message,
+        customerEmail: `guest${Date.now()}@guest.com`,
+        customerName: 'Guest Customer',
+        customerPhone: `+44${Date.now().toString().slice(-10)}`
       });
       return response.json();
     },

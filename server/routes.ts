@@ -3020,9 +3020,9 @@ Please contact the customer to confirm this order.
   // Marketplace negotiations endpoint (public - no auth required)
   app.post('/api/marketplace/negotiations', async (req, res) => {
     try {
-      const { productId, retailerId, originalPrice, offeredPrice, quantity, message } = req.body;
+      const { productId, retailerId, originalPrice, offeredPrice, quantity, message, customerEmail, customerName, customerPhone } = req.body;
       
-      if (!productId || !retailerId || !originalPrice || !offeredPrice || !quantity) {
+      if (!productId || !originalPrice || !offeredPrice || !quantity) {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
@@ -3030,6 +3030,26 @@ Please contact the customer to confirm this order.
       const product = await storage.getProduct(parseInt(productId));
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
+      }
+
+      // For marketplace negotiations, we'll create a temporary customer user if needed
+      let customerId = retailerId;
+      if (!customerId || customerId.startsWith('customer_')) {
+        // Create a guest customer for the negotiation
+        try {
+          const tempCustomer = await storage.createCustomer({
+            phoneNumber: customerPhone || `+44${Date.now()}`,
+            firstName: customerName || 'Guest Customer',
+            role: 'retailer',
+            email: customerEmail,
+          });
+          customerId = tempCustomer.id;
+        } catch (error) {
+          // If customer creation fails, use a fallback approach
+          return res.status(400).json({ 
+            message: "Unable to process negotiation request. Please try again or contact support." 
+          });
+        }
       }
       
       // Check if product allows negotiation
@@ -3052,7 +3072,7 @@ Please contact the customer to confirm this order.
         // Automatically decline the bid and send email notification
         const negotiationData = {
           productId: product.id,
-          retailerId: retailerId,
+          retailerId: customerId,
           originalPrice: originalPrice.toString(),
           offeredPrice: offeredPrice.toString(),
           quantity: parseInt(quantity),
@@ -3129,7 +3149,7 @@ The customer's bid was below your minimum acceptable price and has been automati
       // Create negotiation record
       const negotiationData = {
         productId: product.id,
-        retailerId: retailerId,
+        retailerId: customerId,
         originalPrice: originalPrice.toString(),
         offeredPrice: offeredPrice.toString(),
         quantity: parseInt(quantity),
