@@ -213,69 +213,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
-      // Check for stock changes before updating
-      const newStock = stock !== undefined ? parseInt(stock) : existingProduct.stock;
-      const newPrice = price !== undefined ? price.toString() : existingProduct.price;
-      
-      const stockChangeCheck = await storage.checkForStockChanges(id, newStock || 0, newPrice);
-      
       // Increment edit count and update the product
       const productDataWithEditCount = {
         ...productData,
         editCount: currentEditCount + 1
       };
       const product = await storage.updateProduct(id, productDataWithEditCount);
-      
-      // If stock changes warrant notification, create notification and send messages
-      if (stockChangeCheck.shouldNotify) {
-        const campaignRecipients = await storage.getCampaignRecipients(id);
-        
-        // Create stock update notification record
-        const notification = await storage.createStockUpdateNotification({
-          productId: id,
-          wholesalerId: userId,
-          notificationType: stockChangeCheck.notificationType,
-          previousStock: existingProduct.stock,
-          newStock: newStock,
-          previousPrice: existingProduct.price,
-          newPrice: newPrice,
-          status: 'pending'
-        });
-
-        // Send notifications to campaign recipients (async, don't block response)
-        setImmediate(async () => {
-          try {
-            let totalMessagesSent = 0;
-            
-            for (const groupId of campaignRecipients.customerGroupIds) {
-              const members = await storage.getGroupMembers(groupId);
-              const message = generateStockUpdateMessage(product, stockChangeCheck.notificationType, req.user);
-              
-              for (const member of members) {
-                if (member.phoneNumber) {
-                  try {
-                    const success = await whatsappService.sendMessage(member.phoneNumber, message, userId);
-                    if (success) totalMessagesSent++;
-                  } catch (error) {
-                    console.error(`Failed to send stock update to ${member.phoneNumber}:`, error);
-                  }
-                }
-              }
-            }
-            
-            // Update notification status
-            await storage.updateStockNotificationStatus(
-              notification.id, 
-              'sent', 
-              new Date(), 
-              totalMessagesSent
-            );
-          } catch (error) {
-            console.error('Error sending stock update notifications:', error);
-            await storage.updateStockNotificationStatus(notification.id, 'failed');
-          }
-        });
-      }
       
       res.json(product);
     } catch (error) {
