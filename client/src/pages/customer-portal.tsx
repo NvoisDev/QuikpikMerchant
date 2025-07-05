@@ -254,8 +254,8 @@ export default function CustomerPortal() {
     createPaymentMutation.mutate(orderData);
   };
 
-  const currencySymbol = featuredProduct?.wholesaler?.preferredCurrency === 'GBP' ? '£' : 
-                        featuredProduct?.wholesaler?.preferredCurrency === 'EUR' ? '€' : '$';
+  const currencySymbol = featuredProduct?.wholesaler?.defaultCurrency === 'GBP' ? '£' : 
+                        featuredProduct?.wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
 
   // Payment form component
   const PaymentForm = () => {

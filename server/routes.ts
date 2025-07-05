@@ -457,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe payment intent with Connect account
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalAmountWithFee * 100), // Convert to cents
-        currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
+        currency: (wholesaler.defaultCurrency?.toLowerCase() || 'usd') as string,
         transfer_data: {
           destination: wholesaler.stripeAccountId,
         },
