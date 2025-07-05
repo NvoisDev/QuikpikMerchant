@@ -218,6 +218,20 @@ export class DatabaseStorage implements IStorage {
     await db.delete(products).where(eq(products.id, id));
   }
 
+  async getLowStockProducts(wholesalerId: string, threshold: number = 10): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.wholesalerId, wholesalerId),
+          sql`${products.stock} <= ${threshold}`,
+          eq(products.status, 'active')
+        )
+      )
+      .orderBy(products.stock);
+  }
+
   // Order operations
   async getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
     let orderList;
@@ -302,10 +316,38 @@ export class DatabaseStorage implements IStorage {
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
     const [newOrder] = await db.insert(orders).values(order).returning();
     
-    // Insert order items
-    await db.insert(orderItems).values(
-      items.map(item => ({ ...item, orderId: newOrder.id }))
-    );
+    // Insert order items and reduce stock
+    for (const item of items) {
+      // Insert order item
+      await db.insert(orderItems).values({ ...item, orderId: newOrder.id });
+      
+      // Get current product info before stock reduction
+      const [currentProduct] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, item.productId));
+      
+      if (currentProduct) {
+        // Reduce product stock
+        await db
+          .update(products)
+          .set({ 
+            stock: sql`${products.stock} - ${item.quantity}`,
+            updatedAt: new Date()
+          })
+          .where(eq(products.id, item.productId));
+        
+        const newStockLevel = currentProduct.stock - item.quantity;
+        console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+        
+        // Check for low stock and log warnings
+        if (newStockLevel <= 10 && currentProduct.stock > 10) {
+          console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
+        } else if (newStockLevel <= 0) {
+          console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+        }
+      }
+    }
     
     return newOrder;
   }
