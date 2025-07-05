@@ -143,11 +143,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           });
           const data = await response.json();
           setClientSecret(data.clientSecret);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error creating payment intent:", error);
           toast({
             title: "Payment Error",
-            description: "Unable to initialize payment. Please try again.",
+            description: error.message || "Unable to initialize payment. Please try again.",
             variant: "destructive",
           });
         }
