@@ -146,14 +146,15 @@ export default function CustomerPortal() {
   const featuredProductId = urlParams.get('featured');
 
   // Fetch wholesaler data
-  const { data: wholesaler } = useQuery({
+  const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
     queryKey: ['/api/marketplace/wholesaler', wholesalerId],
     queryFn: async () => {
       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
       if (!response.ok) throw new Error("Failed to fetch wholesaler");
       return response.json();
     },
-    enabled: !!wholesalerId
+    enabled: !!wholesalerId,
+    retry: 1
   });
 
   // Fetch featured product if specified
@@ -344,7 +345,16 @@ export default function CustomerPortal() {
               <Logo variant="icon-only" size="sm" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  {wholesaler?.businessName || "Loading..."}
+                  {wholesalerLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading...</span>
+                    </div>
+                  ) : wholesalerError ? (
+                    "Store Unavailable"
+                  ) : (
+                    wholesaler?.businessName || "Wholesale Store"
+                  )}
                 </h1>
                 <p className="text-sm text-gray-600">Premium wholesale products</p>
               </div>
