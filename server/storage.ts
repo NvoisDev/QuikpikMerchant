@@ -57,6 +57,7 @@ export interface IStorage {
   getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
+  createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   
   // Customer group operations
@@ -350,6 +351,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     return newOrder;
+  }
+
+  async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
+    const [newOrderItem] = await db.insert(orderItems).values(orderItem).returning();
+    return newOrderItem;
   }
 
   async updateOrderStatus(id: number, status: string): Promise<Order> {

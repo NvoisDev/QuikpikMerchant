@@ -517,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
         };
 
-        // Create order items
+        // Create order items with orderId for storage
         const orderItems = items.map((item: any) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -526,6 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
 
         const order = await storage.createOrder(orderData, orderItems);
+        
         console.log(`✅ Order #${order.id} created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
         // Send customer confirmation email
@@ -550,14 +551,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
           
           try {
-            const { sendWhatsAppMessage } = await import('./whatsapp');
-            await sendWhatsAppMessage(
-              wholesaler.twilioAccountSid!,
-              wholesaler.twilioAuthToken,
-              wholesaler.twilioPhoneNumber,
-              customerPhone,
-              message
-            );
+            const { whatsappService } = await import('./whatsapp');
+            await whatsappService.sendMessage(customerPhone, message, wholesaler.id);
           } catch (error) {
             console.error('Failed to send WhatsApp notification:', error);
           }
@@ -663,14 +658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${wholesaler.preferredCurrency === 'GBP' ? '£' : '$'}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
             
             try {
-              const { sendTwilioMessage } = await import('./whatsapp');
-              await sendTwilioMessage(
-                wholesaler.twilioAccountSid!,
-                wholesaler.twilioAuthToken,
-                wholesaler.twilioPhoneNumber,
-                customerPhone,
-                message
-              );
+              const { whatsappService } = await import('./whatsapp');
+              await whatsappService.sendMessage(customerPhone, message, wholesaler.id);
             } catch (error) {
               console.error('Failed to send WhatsApp notification:', error);
             }
@@ -3386,7 +3375,8 @@ Please contact the customer to confirm this order.
       `;
 
       // Import and use SendGrid
-      const sgMail = require('@sendgrid/mail');
+      const { MailService } = await import('@sendgrid/mail');
+      const sgMail = new MailService();
       
       if (process.env.SENDGRID_API_KEY) {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
