@@ -1,0 +1,60 @@
+UPDATED WHATSAPP MESSAGES WITH CUSTOMER PURCHASE LINKS:
+
+1. SINGLE PRODUCT BROADCASTS:
+🛍️ Indomie Instant Noodles Promotion
+
+📦 Featured Product:
+Indomie Instant Noodles
+📸 Product images available online
+
+💰 Unit Price: £0.75
+📦 MOQ: 48 units
+📦 In Stock: 1,000 packs available
+
+🛒 Place Your Order Now:
+https://36968463-8f91-452e-bda0-e9a38544c6b8-00-p1kaa4ro8p7u.janeway.replit.dev/marketplace/product/5
+
+📞 Questions or Bulk Orders?
+Lanre Foods
+📱 +447940213394
+
+✨ This update was powered by Quikpik Merchant
+
+---
+
+2. MULTI-PRODUCT TEMPLATE CAMPAIGNS:
+🛍️ Special Bulk Offer
+
+📦 Featured Products:
+1. Indomie Instant Noodles 📸
+   💰 Unit Price: £0.75
+   📦 MOQ: 48 units
+   📦 In Stock: 1,000 packs available
+
+2. Rice Bags 📸
+   💰 Unit Price: £25.00
+   📦 MOQ: 10 units
+   📦 In Stock: 500 packs available
+
+🛒 Order Now: https://36968463-8f91-452e-bda0-e9a38544c6b8-00-p1kaa4ro8p7u.janeway.replit.dev/marketplace
+
+📸 Product images available online
+
+📞 Questions? Contact us:
+Lanre Foods
+📱 +447940213394
+
+✨ Powered by Quikpik Merchant
+
+---
+
+KEY CHANGES MADE:
+✅ Single product links now go to: /marketplace/product/{id} for direct purchasing
+✅ Multi-product template links go to: /marketplace for browsing all products
+✅ Created ProductOrderPage component for customer order placement
+✅ Added API endpoints for public product viewing and order creation
+✅ Automatic WhatsApp notifications sent to wholesalers when orders are placed
+✅ Order validation (MOQ, stock levels) and customer creation
+✅ 5% platform fee calculation for Quikpik revenue
+
+The "🛒 Place Your Order Now" sections now contain real purchase links that customers can click to place orders directly!

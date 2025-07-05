@@ -1815,8 +1815,11 @@ Write a professional, sales-focused description that highlights the key benefits
       // Get customer group members
       const members = await storage.getGroupMembers(customerGroupId);
       
-      // Generate unique campaign URL (in production, this would be a proper campaign tracking URL)
-      const campaignUrl = `https://quikpik.co/campaign/${Date.now()}${templateId}`;
+      // Generate marketplace URL for multi-product purchasing
+      const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
+      const domain = replitDomains.split(',')[0].trim();
+      const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      const campaignUrl = `${baseUrl}/marketplace`;
 
       // Create campaign record
       const campaign = await storage.createTemplateCampaign({
@@ -2045,10 +2048,11 @@ Write a professional, sales-focused description that highlights the key benefits
         }
 
         const members = await storage.getGroupMembers(customerGroupId);
-        // Generate proper campaign URL using Replit domain or request host
-        const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0]?.trim();
-        const baseUrl = replitDomain ? `https://${replitDomain}` : `${req.protocol}://${req.get('host')}`;
-        const campaignUrl = `${baseUrl}/marketplace?campaign=${Date.now()}${numericId}`;
+        // Generate marketplace URL for multi-product purchasing
+        const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
+        const domain = replitDomains.split(',')[0].trim();
+        const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+        const campaignUrl = `${baseUrl}/marketplace`;
 
         // Create campaign record
         await storage.createTemplateCampaign({
@@ -2607,6 +2611,154 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     } catch (error) {
       console.error("Error generating AI insights:", error);
       res.status(500).json({ message: "Failed to generate AI insights" });
+    }
+  });
+
+  // Marketplace product detail endpoint (public - no auth required)
+  app.get('/api/marketplace/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const productId = parseInt(id);
+      
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const product = await storage.getProduct(productId);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Get wholesaler details
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      
+      // Return product with wholesaler information
+      res.json({
+        ...product,
+        wholesaler: {
+          id: wholesaler.id,
+          businessName: wholesaler.businessName || 'Business',
+          businessPhone: wholesaler.businessPhone,
+          businessAddress: wholesaler.businessAddress,
+          profileImageUrl: wholesaler.profileImageUrl,
+          defaultCurrency: wholesaler.defaultCurrency
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  // Marketplace order placement endpoint (public - no auth required)
+  app.post('/api/marketplace/orders', async (req, res) => {
+    try {
+      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes } = req.body;
+      
+      if (!productId || !customerName || !customerPhone || !quantity || !totalAmount) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get product to validate and get wholesaler
+      const product = await storage.getProduct(parseInt(productId));
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Validate quantity against MOQ and stock
+      if (quantity < product.moq) {
+        return res.status(400).json({ 
+          message: `Minimum order quantity is ${product.moq} units` 
+        });
+      }
+      
+      if (quantity > product.stock) {
+        return res.status(400).json({ 
+          message: `Only ${product.stock} units available in stock` 
+        });
+      }
+      
+      // Get or create customer
+      let customer = await storage.getUserByPhone(customerPhone);
+      if (!customer) {
+        customer = await storage.createCustomer({
+          phoneNumber: customerPhone,
+          firstName: customerName,
+          email: customerEmail,
+          role: 'retailer'
+        });
+      }
+      
+      // Calculate platform fee (5% of total)
+      const subtotal = totalAmount.toString();
+      const platformFee = (parseFloat(totalAmount) * 0.05).toFixed(2);
+      const total = totalAmount.toString();
+      
+      // Create order
+      const orderData = {
+        wholesalerId: product.wholesalerId,
+        retailerId: customer.id,
+        subtotal,
+        platformFee,
+        total,
+        status: 'pending',
+        notes: notes || `Order placed via marketplace for ${product.name}`
+      };
+      
+      const orderItems = [{
+        productId: product.id,
+        quantity: parseInt(quantity),
+        unitPrice: product.price,
+        total: totalAmount.toString(),
+        orderId: 0 // Will be set after order creation
+      }];
+      
+      const order = await storage.createOrder(orderData, orderItems);
+      
+      // Send WhatsApp notification to wholesaler if configured
+      try {
+        const wholesaler = await storage.getUser(product.wholesalerId);
+        if (wholesaler?.twilioAccountSid && wholesaler?.twilioAuthToken && wholesaler?.twilioPhoneNumber) {
+          const message = `🔔 New Order Alert!
+
+Customer: ${customerName}
+Phone: ${customerPhone}
+Product: ${product.name}
+Quantity: ${quantity.toLocaleString()} units
+Total: ${wholesaler.defaultCurrency === 'GBP' ? '£' : '$'}${totalAmount}
+
+Order ID: ${order.id}
+Status: Pending Confirmation
+
+Please contact the customer to confirm this order.
+
+✨ Powered by Quikpik Merchant`;
+
+          await whatsappService.sendMessage(
+            wholesaler.businessPhone || wholesaler.phoneNumber || '',
+            message,
+            wholesaler.id
+          );
+        }
+      } catch (notificationError) {
+        console.warn("Failed to send order notification:", notificationError);
+        // Don't fail the order creation if notification fails
+      }
+      
+      res.json({
+        success: true,
+        orderId: order.id,
+        message: "Order placed successfully! The wholesaler will contact you shortly."
+      });
+      
+    } catch (error) {
+      console.error("Error creating marketplace order:", error);
+      res.status(500).json({ message: "Failed to place order" });
     }
   });
 

@@ -24,6 +24,7 @@ import BusinessPerformance from "@/pages/business-performance";
 import Financials from "@/pages/financials";
 import FinancialHealth from "@/pages/financial-health";
 import CampaignPreview from "@/pages/campaign-preview";
+import ProductOrderPage from "@/pages/product-order-page";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
     <Switch>
       {/* Public routes - accessible without authentication */}
       <Route path="/campaign/:id" component={CampaignPreview} />
+      <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
