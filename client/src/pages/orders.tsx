@@ -267,7 +267,7 @@ export default function Orders() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="font-medium">
-                {order.retailer?.businessName || `${order.retailer?.firstName} ${order.retailer?.lastName}`}
+                {order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ')}
               </div>
               {order.retailer?.phoneNumber && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -488,8 +488,8 @@ export default function Orders() {
                       <div className="font-semibold">Order #{order.id}</div>
                       <div className="text-sm text-muted-foreground">
                         {user?.role === 'retailer' 
-                          ? (order.wholesaler?.businessName || `${order.wholesaler?.firstName} ${order.wholesaler?.lastName}`)
-                          : (order.retailer?.businessName || `${order.retailer?.firstName} ${order.retailer?.lastName}`)
+                          ? (order.wholesaler?.businessName || [order.wholesaler?.firstName, order.wholesaler?.lastName].filter(Boolean).join(' '))
+                          : (order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' '))
                         }
                       </div>
                     </div>
