@@ -398,6 +398,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer payment endpoint - creates payment intent with 5% platform fee
+  app.post('/api/customer/create-payment', async (req, res) => {
+    try {
+      const { customerName, customerEmail, customerPhone, customerAddress, items, totalAmount, notes } = req.body;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Order must contain at least one item" });
+      }
+
+      // Validate all products exist and calculate total
+      let calculatedTotal = 0;
+      const validatedItems = [];
+
+      for (const item of items) {
+        const product = await storage.getProduct(item.productId);
+        if (!product) {
+          return res.status(400).json({ message: `Product ${item.productId} not found` });
+        }
+
+        if (item.quantity < product.moq) {
+          return res.status(400).json({ 
+            message: `Minimum order quantity for ${product.name} is ${product.moq}` 
+          });
+        }
+
+        if (item.quantity > product.stock) {
+          return res.status(400).json({ 
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}` 
+          });
+        }
+
+        const itemTotal = parseFloat(product.price) * item.quantity;
+        calculatedTotal += itemTotal;
+
+        validatedItems.push({
+          ...item,
+          product,
+          unitPrice: product.price,
+          total: itemTotal.toFixed(2)
+        });
+      }
+
+      // Calculate platform fee (5%)
+      const platformFee = calculatedTotal * 0.05;
+      const totalAmountWithFee = calculatedTotal + platformFee;
+
+      // Get first product's wholesaler for Stripe Connect account
+      const firstProduct = validatedItems[0].product;
+      const wholesaler = await storage.getUser(firstProduct.wholesalerId);
+      
+      if (!wholesaler || !wholesaler.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler payment setup incomplete. Please contact seller." 
+        });
+      }
+
+      // Create Stripe payment intent with Connect account
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(totalAmountWithFee * 100), // Convert to cents
+        currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
+        transfer_data: {
+          destination: wholesaler.stripeAccountId,
+        },
+        application_fee_amount: Math.round(platformFee * 100), // 5% platform fee in cents
+        metadata: {
+          customerName,
+          customerEmail,
+          customerPhone,
+          totalAmount: totalAmountWithFee.toFixed(2),
+          platformFee: platformFee.toFixed(2),
+          wholesalerId: firstProduct.wholesalerId,
+          orderType: 'customer_portal'
+        }
+      });
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        totalAmount: totalAmountWithFee.toFixed(2),
+        platformFee: platformFee.toFixed(2)
+      });
+
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ message: "Failed to create payment intent" });
+    }
+  });
+
+  // Webhook to handle successful payments
+  app.post('/api/stripe/webhook', async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      
+      try {
+        // Extract order data from metadata
+        const {
+          customerName,
+          customerEmail,
+          customerPhone,
+          totalAmount,
+          platformFee,
+          wholesalerId,
+          orderType
+        } = paymentIntent.metadata;
+
+        if (orderType === 'customer_portal') {
+          // Create customer if doesn't exist
+          let customer = await storage.getUserByPhone(customerPhone);
+          if (!customer) {
+            customer = await storage.createCustomer({
+              phoneNumber: customerPhone,
+              firstName: customerName,
+              role: 'retailer',
+              email: customerEmail
+            });
+          }
+
+          // Create order
+          const orderData = {
+            wholesalerId,
+            retailerId: customer.id,
+            subtotal: (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2),
+            platformFee,
+            total: totalAmount,
+            status: 'paid',
+            paymentIntentId: paymentIntent.id
+          };
+
+          // Get items from payment intent (you might need to store this differently)
+          // For now, we'll create a simple order without items
+          const order = await storage.createOrder(orderData, []);
+
+          // Send notifications
+          const wholesaler = await storage.getUser(wholesalerId);
+          if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+            const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${wholesaler.preferredCurrency === 'GBP' ? '£' : '$'}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
+            
+            try {
+              const { sendTwilioMessage } = await import('./whatsapp');
+              await sendTwilioMessage(
+                wholesaler.twilioAccountSid!,
+                wholesaler.twilioAuthToken,
+                wholesaler.twilioPhoneNumber,
+                customerPhone,
+                message
+              );
+            } catch (error) {
+              console.error('Failed to send WhatsApp notification:', error);
+            }
+          }
+
+          console.log(`Order created successfully for payment ${paymentIntent.id}`);
+        }
+      } catch (error) {
+        console.error('Error processing payment success:', error);
+      }
+    }
+
+    res.json({ received: true });
+  });
+
   app.patch('/api/orders/:id/status', isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);

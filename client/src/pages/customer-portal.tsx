@@ -1,6 +1,8 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,11 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
 
 interface Product {
   id: number;
@@ -54,6 +60,11 @@ export default function CustomerPortal() {
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showQuantityEditor, setShowQuantityEditor] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [showPayment, setShowPayment] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string>("");
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
     email: '',
@@ -79,7 +90,13 @@ export default function CustomerPortal() {
   // Filter out featured product from "other products" list
   const otherProducts = allProducts.filter(p => p.id !== featuredProductId);
 
-  const addToCart = (product: Product, quantity: number = product.moq) => {
+  const openQuantityEditor = (product: Product) => {
+    setSelectedProduct(product);
+    setEditQuantity(product.moq);
+    setShowQuantityEditor(true);
+  };
+
+  const addToCart = (product: Product, quantity: number) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.product.id === product.id);
       if (existingItem) {
@@ -96,6 +113,31 @@ export default function CustomerPortal() {
       title: "Added to Cart",
       description: `${product.name} (${quantity} units) added to your cart`,
     });
+  };
+
+  const handleAddToCart = () => {
+    if (selectedProduct && editQuantity >= selectedProduct.moq) {
+      addToCart(selectedProduct, editQuantity);
+      setShowQuantityEditor(false);
+      setSelectedProduct(null);
+    }
+  };
+
+  const incrementQuantity = () => {
+    setEditQuantity(prev => prev + 1);
+  };
+
+  const decrementQuantity = () => {
+    if (selectedProduct) {
+      setEditQuantity(prev => Math.max(selectedProduct.moq, prev - 1));
+    }
+  };
+
+  const handleQuantityInput = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    if (selectedProduct) {
+      setEditQuantity(Math.max(selectedProduct.moq, numValue));
+    }
   };
 
   const updateCartQuantity = (productId: number, newQuantity: number) => {
@@ -164,6 +206,26 @@ export default function CustomerPortal() {
     }
   });
 
+  // Create payment intent mutation
+  const createPaymentMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const response = await apiRequest("POST", "/api/customer/create-payment", orderData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setClientSecret(data.clientSecret);
+      setShowPayment(true);
+      setShowCheckout(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Payment Setup Failed",
+        description: error.message || "Failed to setup payment. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCheckout = () => {
     if (cart.length === 0) {
       toast({
@@ -189,11 +251,89 @@ export default function CustomerPortal() {
       notes: customerData.notes
     };
 
-    orderMutation.mutate(orderData);
+    createPaymentMutation.mutate(orderData);
   };
 
-  const currencySymbol = featuredProduct?.wholesaler?.defaultCurrency === 'GBP' ? '£' : 
-                        featuredProduct?.wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
+  const currencySymbol = featuredProduct?.wholesaler?.preferredCurrency === 'GBP' ? '£' : 
+                        featuredProduct?.wholesaler?.preferredCurrency === 'EUR' ? '€' : '$';
+
+  // Payment form component
+  const PaymentForm = () => {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handlePaymentSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (!stripe || !elements) {
+        return;
+      }
+
+      setIsProcessing(true);
+
+      try {
+        const { error } = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: `${window.location.origin}/customer/payment-success`,
+          },
+        });
+
+        if (error) {
+          toast({
+            title: "Payment Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Payment Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    return (
+      <form onSubmit={handlePaymentSubmit} className="space-y-4">
+        <PaymentElement />
+        <div className="flex space-x-3">
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={() => {
+              setShowPayment(false);
+              setShowCheckout(true);
+            }}
+            className="flex-1"
+          >
+            Back to Checkout
+          </Button>
+          <Button 
+            type="submit"
+            disabled={!stripe || !elements || isProcessing}
+            className="flex-1 bg-green-600 hover:bg-green-700"
+          >
+            {isProcessing ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4 mr-2" />
+                Pay {currencySymbol}{getTotalAmount().toFixed(2)}
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -294,7 +434,7 @@ export default function CustomerPortal() {
                   </div>
 
                   <Button 
-                    onClick={() => addToCart(featuredProduct)}
+                    onClick={() => openQuantityEditor(featuredProduct)}
                     className="w-full bg-green-600 hover:bg-green-700"
                     size="lg"
                   >
@@ -346,7 +486,7 @@ export default function CustomerPortal() {
                         by {product.wholesaler.businessName}
                       </div>
                       <Button 
-                        onClick={() => addToCart(product)}
+                        onClick={() => openQuantityEditor(product)}
                         size="sm"
                         className="w-full bg-green-600 hover:bg-green-700"
                       >
@@ -488,18 +628,18 @@ export default function CustomerPortal() {
                 </Button>
                 <Button 
                   onClick={handleCheckout}
-                  disabled={orderMutation.isPending || !customerData.name || !customerData.email || !customerData.phone || !customerData.address}
+                  disabled={createPaymentMutation.isPending || !customerData.name || !customerData.email || !customerData.phone || !customerData.address}
                   className="flex-1 bg-green-600 hover:bg-green-700"
                 >
-                  {orderMutation.isPending ? (
+                  {createPaymentMutation.isPending ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                      Processing...
+                      Setting up payment...
                     </>
                   ) : (
                     <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Place Order & Send Invoice
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Proceed to Payment
                     </>
                   )}
                 </Button>
@@ -508,6 +648,145 @@ export default function CustomerPortal() {
           </Card>
         </div>
       )}
+
+      {/* Quantity Editor Dialog */}
+      <Dialog open={showQuantityEditor} onOpenChange={setShowQuantityEditor}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Quantity</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              {/* Product Info */}
+              <div className="border-b pb-3">
+                <h3 className="font-semibold">{selectedProduct.name}</h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>Price: {currencySymbol}{parseFloat(selectedProduct.price).toFixed(2)} per unit</div>
+                  <div>Minimum order: {selectedProduct.moq} units</div>
+                  <div>Available stock: {selectedProduct.stock} units</div>
+                </div>
+              </div>
+
+              {/* Quantity Controls */}
+              <div className="space-y-3">
+                <Label htmlFor="quantity">Quantity</Label>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={decrementQuantity}
+                    disabled={editQuantity <= selectedProduct.moq}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={editQuantity}
+                    onChange={(e) => handleQuantityInput(e.target.value)}
+                    className="w-24 text-center"
+                    min={selectedProduct.moq}
+                    max={selectedProduct.stock}
+                  />
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={incrementQuantity}
+                    disabled={editQuantity >= selectedProduct.stock}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {editQuantity < selectedProduct.moq && (
+                  <p className="text-sm text-red-500">
+                    Minimum order quantity is {selectedProduct.moq} units
+                  </p>
+                )}
+              </div>
+
+              {/* Total Calculation */}
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex justify-between items-center font-semibold">
+                  <span>Total:</span>
+                  <span>{currencySymbol}{(parseFloat(selectedProduct.price) * editQuantity).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowQuantityEditor(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddToCart}
+                  disabled={editQuantity < selectedProduct.moq || editQuantity > selectedProduct.stock}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Add to Cart
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Modal */}
+      <Dialog open={showPayment} onOpenChange={setShowPayment}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Order Summary */}
+            <div className="bg-gray-50 p-4 rounded">
+              <h3 className="font-semibold mb-2">Order Summary</h3>
+              <div className="space-y-2 text-sm">
+                {cart.map((item, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>{item.product.name} × {item.quantity}</span>
+                    <span>{currencySymbol}{(parseFloat(item.product.price) * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+                <Separator />
+                <div className="flex justify-between font-semibold text-base">
+                  <span>Total:</span>
+                  <span>{currencySymbol}{getTotalAmount().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Platform fee (5%):</span>
+                  <span>{currencySymbol}{(getTotalAmount() * 0.05).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stripe Payment Form */}
+            {clientSecret && (
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#059669',
+                    }
+                  }
+                }}
+              >
+                <PaymentForm />
+              </Elements>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <div className="mt-16 bg-white border-t">

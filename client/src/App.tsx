@@ -26,6 +26,7 @@ import FinancialHealth from "@/pages/financial-health";
 import CampaignPreview from "@/pages/campaign-preview";
 import ProductOrderPage from "@/pages/product-order-page";
 import CustomerPortal from "@/pages/customer-portal";
+import PaymentSuccess from "@/pages/payment-success";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/campaign/:id" component={CampaignPreview} />
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       <Route path="/customer/:id?" component={CustomerPortal} />
+      <Route path="/customer/payment-success" component={PaymentSuccess} />
       
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
