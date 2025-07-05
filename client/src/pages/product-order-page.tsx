@@ -166,7 +166,7 @@ export default function ProductOrderPage() {
               onClick={() => window.location.href = '/marketplace'}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Marketplace
+              Back to All Products
             </Button>
           </div>
         </div>
@@ -411,6 +411,27 @@ export default function ProductOrderPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Browse More Products Section */}
+        <Card className="mt-8">
+          <CardContent className="text-center py-8">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Looking for more products?</h3>
+                <p className="text-gray-600">Browse our complete catalog of products from verified wholesalers</p>
+              </div>
+              <Button 
+                onClick={() => window.location.href = '/marketplace'}
+                variant="outline"
+                size="lg"
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+              >
+                <Package className="w-4 h-4 mr-2" />
+                View All Products
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Footer */}
