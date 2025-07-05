@@ -339,7 +339,7 @@ export default function Orders() {
                           disabled={resendConfirmationMutation.isPending}
                           className="text-xs h-6"
                         >
-                          Resend Email
+                          {resendConfirmationMutation.isPending ? 'Sending...' : 'Resend Email'}
                         </Button>
                       )}
                     </div>
