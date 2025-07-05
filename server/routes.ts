@@ -456,6 +456,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct order creation endpoint (called after successful payment)
+  app.post('/api/marketplace/create-order', async (req, res) => {
+    try {
+      const { paymentIntentId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: 'Payment intent ID required' });
+      }
+
+      // Retrieve payment intent from Stripe to get metadata
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ message: 'Payment not successful' });
+      }
+
+      const {
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        totalAmount,
+        platformFee,
+        wholesalerId,
+        orderType,
+        items: itemsJson,
+        connectAccountUsed
+      } = paymentIntent.metadata;
+
+      if (orderType === 'customer_portal') {
+        const items = JSON.parse(itemsJson);
+
+        // Create customer if doesn't exist
+        let customer = await storage.getUserByPhone(customerPhone);
+        if (!customer) {
+          customer = await storage.createCustomer({
+            phoneNumber: customerPhone,
+            firstName: customerName,
+            role: 'retailer',
+            email: customerEmail
+          });
+        }
+
+        // Calculate actual platform fee based on Connect usage
+        const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
+        const wholesalerAmount = connectAccountUsed === 'true' 
+          ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
+          : totalAmount;
+
+        // Create order
+        const orderData = {
+          wholesalerId,
+          retailerId: customer.id,
+          subtotal: wholesalerAmount,
+          platformFee: actualPlatformFee,
+          total: totalAmount,
+          status: 'paid',
+          paymentIntentId: paymentIntent.id,
+          deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+        };
+
+        // Create order items
+        const orderItems = items.map((item: any) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toFixed(2),
+          total: (item.unitPrice * item.quantity).toFixed(2)
+        }));
+
+        const order = await storage.createOrder(orderData, orderItems);
+        console.log(`✅ Order #${order.id} created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
+
+        // Send customer confirmation email
+        const wholesaler = await storage.getUser(wholesalerId);
+        if (wholesaler && customerEmail) {
+          try {
+            await sendCustomerInvoiceEmail({
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone,
+              address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+            }, order, items, wholesaler);
+            console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
+          } catch (emailError) {
+            console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);
+          }
+        }
+
+        // Send WhatsApp notification to wholesaler
+        if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+          const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
+          const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
+          
+          try {
+            const { sendWhatsAppMessage } = await import('./whatsapp');
+            await sendWhatsAppMessage(
+              wholesaler.twilioAccountSid!,
+              wholesaler.twilioAuthToken,
+              wholesaler.twilioPhoneNumber,
+              customerPhone,
+              message
+            );
+          } catch (error) {
+            console.error('Failed to send WhatsApp notification:', error);
+          }
+        }
+
+        res.json({ 
+          success: true, 
+          orderId: order.id, 
+          platformFeeCollected: connectAccountUsed === 'true',
+          message: 'Order created successfully'
+        });
+      } else {
+        res.status(400).json({ message: 'Invalid order type' });
+      }
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      res.status(500).json({ message: 'Failed to create order: ' + error.message });
+    }
+  });
+
   // Webhook to handle successful payments
   app.post('/api/stripe/webhook', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
@@ -1117,10 +1239,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Connect account if it doesn't exist
       if (!accountId) {
+        // Determine country based on currency preference
+        const country = user.preferredCurrency === 'USD' ? 'US' : 
+                       user.preferredCurrency === 'EUR' ? 'DE' : 'GB';
+        
         const account = await stripe.accounts.create({
           type: 'express',
-          country: 'US',
+          country: country,
           email: user.email!,
+          capabilities: {
+            transfers: { requested: true },
+            card_payments: { requested: true }
+          },
           business_profile: {
             name: user.businessName || `${user.firstName} ${user.lastName}`,
             support_email: user.email!,
@@ -1128,6 +1258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: {
             userId: userId,
             businessName: user.businessName || '',
+            currency: user.preferredCurrency || 'GBP'
           }
         });
         accountId = account.id;

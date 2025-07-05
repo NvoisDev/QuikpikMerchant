@@ -195,7 +195,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     setIsProcessing(true);
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/payment-success`,
@@ -209,12 +209,27 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           description: error.message,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Payment Successful!",
-          description: "Your order has been placed successfully.",
-        });
-        onSuccess();
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Payment succeeded, now create the order
+        try {
+          const response = await apiRequest("POST", "/api/marketplace/create-order", {
+            paymentIntentId: paymentIntent.id
+          });
+          const orderResult = await response.json();
+          
+          toast({
+            title: "Payment Successful!",
+            description: `Order #${orderResult.orderId} created successfully. ${orderResult.platformFeeCollected ? '5% platform fee collected.' : 'Order processed via direct payment.'}`,
+          });
+          onSuccess();
+        } catch (orderError: any) {
+          console.error('Error creating order:', orderError);
+          toast({
+            title: "Payment Successful",
+            description: "Payment completed but order creation failed. Please contact support.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       toast({
