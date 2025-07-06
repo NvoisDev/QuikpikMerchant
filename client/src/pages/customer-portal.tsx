@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
-import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Initialize Stripe
@@ -110,6 +109,10 @@ interface CustomerData {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
   notes: string;
 }
 
@@ -312,6 +315,10 @@ export default function CustomerPortal() {
     email: '',
     phone: '',
     address: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
     notes: ''
   });
 
@@ -1309,18 +1316,58 @@ export default function CustomerPortal() {
                       required
                     />
                   </div>
-                  <div>
-                    <GooglePlacesAutocomplete
-                      label="Delivery Address"
-                      placeholder="Enter your delivery address"
-                      required={true}
+                  <div className="md:col-span-2">
+                    <Label htmlFor="customerAddress">Street Address *</Label>
+                    <Input
+                      id="customerAddress"
                       value={customerData.address}
-                      onAddressSelect={(place) => {
-                        setCustomerData({
-                          ...customerData, 
-                          address: place.formatted_address
-                        });
-                      }}
+                      onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
+                      placeholder="123 Main Street"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="customerCity">City *</Label>
+                    <Input
+                      id="customerCity"
+                      value={customerData.city}
+                      onChange={(e) => setCustomerData({...customerData, city: e.target.value})}
+                      placeholder="London"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerState">State/County *</Label>
+                    <Input
+                      id="customerState"
+                      value={customerData.state}
+                      onChange={(e) => setCustomerData({...customerData, state: e.target.value})}
+                      placeholder="Greater London"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerPostalCode">Postal Code *</Label>
+                    <Input
+                      id="customerPostalCode"
+                      value={customerData.postalCode}
+                      onChange={(e) => setCustomerData({...customerData, postalCode: e.target.value})}
+                      placeholder="SW1A 1AA"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="customerCountry">Country *</Label>
+                    <Input
+                      id="customerCountry"
+                      value={customerData.country}
+                      onChange={(e) => setCustomerData({...customerData, country: e.target.value})}
+                      placeholder="United Kingdom"
+                      required
                     />
                   </div>
                 </div>
@@ -1343,7 +1390,7 @@ export default function CustomerPortal() {
                   <span>Payment Information</span>
                 </h3>
                 
-                {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address ? (
+                {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
                   <StripeCheckoutForm 
                     cart={cart}
                     customerData={customerData}

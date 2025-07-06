@@ -2993,7 +2993,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerName: customerData.name,
               customerEmail: customerData.email,
               customerPhone: customerData.phone,
-              customerAddress: JSON.stringify(customerData.address),
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
               totalAmount: totalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'true',
@@ -3016,7 +3022,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerName: customerData.name,
               customerEmail: customerData.email,
               customerPhone: customerData.phone,
-              customerAddress: JSON.stringify(customerData.address),
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
               totalAmount: totalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'false',
