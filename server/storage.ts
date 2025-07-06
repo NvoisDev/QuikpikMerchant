@@ -43,6 +43,7 @@ import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User>;
   
@@ -157,6 +158,11 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
@@ -464,10 +470,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByPhone(phoneNumber: string): Promise<User | undefined> {
+    // Normalize phone number to handle different formats
+    const normalizedPhone = phoneNumber.replace(/^\+44/, '0');
+    const internationalPhone = phoneNumber.startsWith('+') ? phoneNumber : `+44${phoneNumber.substring(1)}`;
+    
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.phoneNumber, phoneNumber));
+      .where(
+        or(
+          eq(users.businessPhone, phoneNumber),
+          eq(users.businessPhone, normalizedPhone),
+          eq(users.businessPhone, internationalPhone)
+        )
+      );
     return user;
   }
 

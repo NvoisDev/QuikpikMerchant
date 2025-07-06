@@ -3133,8 +3133,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         });
       }
       
-      // Get or create customer
+      // Get or create customer (check by phone first, then by email)
       let customer = await storage.getUserByPhone(customerPhone);
+      if (!customer) {
+        customer = await storage.getUserByEmail(customerEmail);
+      }
       if (!customer) {
         customer = await storage.createCustomer({
           phoneNumber: customerPhone,
@@ -3174,7 +3177,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const wholesaler = await storage.getUser(product.wholesalerId);
       if (wholesaler && customerEmail) {
         try {
-          await sendCustomerInvoiceEmail(customer, order, orderItems.map(item => ({
+          // Use the provided customer email instead of stored email
+          const customerForEmail = {
+            ...customer,
+            email: customerEmail
+          };
+          await sendCustomerInvoiceEmail(customerForEmail, order, orderItems.map(item => ({
             ...item,
             product: { name: product.name, price: item.unitPrice }
           })), wholesaler);
@@ -3322,10 +3330,16 @@ Please contact the customer to confirm this order.
       const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : 
                            wholesaler.preferredCurrency === 'EUR' ? '€' : '$';
       
-      // Create HTML email content
+      // Get customer name with proper fallback
+      const customerName = customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Valued Customer';
+      
+      // Get delivery address with proper fallback
+      const deliveryAddress = order.deliveryAddress || customer.address || customer.streetAddress || 'Address to be confirmed';
+      
+      // Create HTML email content with proper product names
       const itemsHtml = items.map(item => `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.productName || 'Product'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product?.name || item.productName || 'Product'}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.unitPrice}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.total}</td>
@@ -3335,14 +3349,14 @@ Please contact the customer to confirm this order.
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #22c55e;">Order Confirmation</h2>
-          <p>Dear ${customer.name},</p>
+          <p>Dear ${customerName},</p>
           <p>Thank you for your order! Here are the details:</p>
           
           <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
             <h3>Order Details</h3>
             <p><strong>Order ID:</strong> #${order.id}</p>
             <p><strong>From:</strong> ${wholesaler.businessName || 'Wholesale Store'}</p>
-            <p><strong>Delivery Address:</strong> ${customer.address}</p>
+            <p><strong>Delivery Address:</strong> ${deliveryAddress}</p>
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -3366,6 +3380,14 @@ Please contact the customer to confirm this order.
           <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h4>What's Next?</h4>
             <p>Your order has been confirmed and payment processed successfully. The wholesaler will prepare your order and contact you with delivery details.</p>
+          </div>
+
+          <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4>Store Contact Information</h4>
+            <p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>
+            ${wholesaler.businessPhone ? `<p>📞 Phone: ${wholesaler.businessPhone}</p>` : ''}
+            ${wholesaler.email ? `<p>📧 Email: ${wholesaler.email}</p>` : ''}
+            ${wholesaler.businessAddress ? `<p>📍 Address: ${wholesaler.businessAddress}</p>` : ''}
           </div>
 
           <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
