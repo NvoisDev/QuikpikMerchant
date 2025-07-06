@@ -170,6 +170,54 @@ export default function Orders() {
     },
   });
 
+  // Cancel order mutation
+  const cancelOrderMutation = useMutation({
+    mutationFn: async ({ orderId, reason }: { orderId: number; reason?: string }) => {
+      const response = await apiRequest("POST", `/api/orders/${orderId}/cancel`, { reason });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order Cancelled",
+        description: "Order has been cancelled successfully and stock has been restored.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setSelectedOrder(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cancel Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Refund order mutation
+  const refundOrderMutation = useMutation({
+    mutationFn: async ({ orderId, amount, reason }: { orderId: number; amount?: string; reason?: string }) => {
+      const response = await apiRequest("POST", `/api/orders/${orderId}/refund`, { amount, reason });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Refund Processed",
+        description: data.refund ? 
+          `Refund of ${data.refund.amount} has been processed successfully.` :
+          "Refund has been processed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setSelectedOrder(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Refund Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { variant: "secondary" as const, icon: Clock, label: "Pending" },
@@ -506,26 +554,70 @@ export default function Orders() {
         </div>
 
         {/* Order Actions */}
-        {user?.role === 'wholesaler' && order.status === 'paid' && (
-          <div className="flex gap-2">
-            <Select
-              value={order.status}
-              onValueChange={(newStatus) => {
-                updateOrderStatusMutation.mutate({
-                  orderId: order.id,
-                  status: newStatus
-                });
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="paid">Payment Received</SelectItem>
-                <SelectItem value="fulfilled">Mark as Fulfilled</SelectItem>
-                <SelectItem value="cancelled">Cancel Order</SelectItem>
-              </SelectContent>
-            </Select>
+        {user?.role === 'wholesaler' && (order.status === 'paid' || order.status === 'fulfilled') && (
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <div className="w-full mb-2">
+              <h4 className="font-medium text-sm text-muted-foreground">Order Actions</h4>
+            </div>
+            
+            {order.status === 'paid' && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  updateOrderStatusMutation.mutate({
+                    orderId: order.id,
+                    status: 'fulfilled'
+                  });
+                }}
+                disabled={updateOrderStatusMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark as Fulfilled'}
+              </Button>
+            )}
+            
+            {(order.status === 'paid' || order.status === 'fulfilled') && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to cancel this order? Stock will be restored.')) {
+                      cancelOrderMutation.mutate({
+                        orderId: order.id,
+                        reason: 'Cancelled by wholesaler'
+                      });
+                    }
+                  }}
+                  disabled={cancelOrderMutation.isPending}
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  {cancelOrderMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const reason = prompt('Reason for refund (optional):');
+                    if (reason !== null) { // User didn't cancel the prompt
+                      refundOrderMutation.mutate({
+                        orderId: order.id,
+                        reason: reason || 'Full refund requested'
+                      });
+                    }
+                  }}
+                  disabled={refundOrderMutation.isPending}
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {refundOrderMutation.isPending ? 'Processing...' : 'Process Refund'}
+                </Button>
+              </>
+            )}
           </div>
         )}
         
