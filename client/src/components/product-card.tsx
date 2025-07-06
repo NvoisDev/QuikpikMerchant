@@ -17,7 +17,8 @@ import {
   Trash2, 
   Eye, 
   ShoppingCart,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +27,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import StockTracker from "@/components/stock-tracker";
+import { useState } from "react";
 
 interface Product {
   id: number;
@@ -59,6 +63,7 @@ export default function ProductCard({
   onDuplicate,
   onStatusChange
 }: ProductCardProps) {
+  const [showStockTracker, setShowStockTracker] = useState(false);
 
   // Fetch subscription status
   const { data: subscription } = useQuery({
@@ -178,7 +183,8 @@ export default function ProductCard({
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+    <>
+      <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
       <div className="relative">
         <img 
           src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200"} 
@@ -278,6 +284,10 @@ export default function ProductCard({
               <DropdownMenuItem onClick={handleDuplicate}>
                 <Copy className="mr-2 h-4 w-4" />
                 Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowStockTracker(true)}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Stock Tracker
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
@@ -388,6 +398,17 @@ export default function ProductCard({
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+      
+      {/* Stock Tracker Dialog */}
+      <Dialog open={showStockTracker} onOpenChange={setShowStockTracker}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Stock Tracker - {product.name}</DialogTitle>
+          </DialogHeader>
+          <StockTracker product={product} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

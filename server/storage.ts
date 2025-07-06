@@ -12,6 +12,7 @@ import {
   templateCampaigns,
   campaignOrders,
   stockUpdateNotifications,
+  stockMovements,
   type User,
   type UpsertUser,
   type Product,
@@ -36,6 +37,8 @@ import {
   type InsertCampaignOrder,
   type StockUpdateNotification,
   type InsertStockUpdateNotification,
+  type StockMovement,
+  type InsertStockMovement,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -152,6 +155,18 @@ export interface IStorage {
   updateStockNotificationStatus(id: number, status: string, sentAt?: Date, messagesSent?: number): Promise<StockUpdateNotification>;
   checkForStockChanges(productId: number, newStock: number, newPrice?: string): Promise<{ shouldNotify: boolean; notificationType: string }>;
   getCampaignRecipients(productId: number): Promise<{ campaignIds: number[]; templateCampaignIds: number[]; customerGroupIds: number[] }>;
+  
+  // Stock Movement operations
+  createStockMovement(movement: InsertStockMovement): Promise<StockMovement>;
+  getStockMovements(productId: number): Promise<StockMovement[]>;
+  getStockMovementsByWholesaler(wholesalerId: string, limit?: number): Promise<(StockMovement & { product: Product })[]>;
+  getStockSummary(productId: number): Promise<{
+    openingStock: number;
+    totalPurchases: number;
+    totalIncreases: number;
+    totalDecreases: number;
+    currentStock: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -346,6 +361,19 @@ export class DatabaseStorage implements IStorage {
         
         const newStockLevel = currentProduct.stock - item.quantity;
         console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+        
+        // Create stock movement record for the purchase
+        await this.createStockMovement({
+          productId: item.productId,
+          wholesalerId: currentProduct.wholesalerId,
+          movementType: 'purchase',
+          quantity: -item.quantity, // negative for stock reduction
+          stockBefore: currentProduct.stock,
+          stockAfter: newStockLevel,
+          reason: 'Customer purchase',
+          orderId: newOrder.id,
+          customerName: order.retailerId, // This will be improved when we have customer details
+        });
         
         // Check for low stock and log warnings
         if (newStockLevel <= 10 && currentProduct.stock > 10) {
@@ -1220,6 +1248,94 @@ export class DatabaseStorage implements IStorage {
     const customerGroupIds = Array.from(new Set(allGroupIds));
 
     return { campaignIds, templateCampaignIds, customerGroupIds };
+  }
+
+  // Stock Movement operations
+  async createStockMovement(movement: InsertStockMovement): Promise<StockMovement> {
+    const [stockMovement] = await db
+      .insert(stockMovements)
+      .values(movement)
+      .returning();
+    return stockMovement;
+  }
+
+  async getStockMovements(productId: number): Promise<StockMovement[]> {
+    return await db
+      .select()
+      .from(stockMovements)
+      .where(eq(stockMovements.productId, productId))
+      .orderBy(desc(stockMovements.createdAt));
+  }
+
+  async getStockMovementsByWholesaler(wholesalerId: string, limit = 50): Promise<(StockMovement & { product: Product })[]> {
+    return await db
+      .select({
+        id: stockMovements.id,
+        productId: stockMovements.productId,
+        wholesalerId: stockMovements.wholesalerId,
+        movementType: stockMovements.movementType,
+        quantity: stockMovements.quantity,
+        stockBefore: stockMovements.stockBefore,
+        stockAfter: stockMovements.stockAfter,
+        reason: stockMovements.reason,
+        orderId: stockMovements.orderId,
+        customerName: stockMovements.customerName,
+        createdAt: stockMovements.createdAt,
+        product: products,
+      })
+      .from(stockMovements)
+      .leftJoin(products, eq(stockMovements.productId, products.id))
+      .where(eq(stockMovements.wholesalerId, wholesalerId))
+      .orderBy(desc(stockMovements.createdAt))
+      .limit(limit);
+  }
+
+  async getStockSummary(productId: number): Promise<{
+    openingStock: number;
+    totalPurchases: number;
+    totalIncreases: number;
+    totalDecreases: number;
+    currentStock: number;
+  }> {
+    const movements = await this.getStockMovements(productId);
+    
+    let openingStock = 0;
+    let totalPurchases = 0;
+    let totalIncreases = 0;
+    let totalDecreases = 0;
+
+    // Find the initial stock movement (if any)
+    const initialMovement = movements.find(m => m.movementType === 'initial');
+    if (initialMovement) {
+      openingStock = initialMovement.stockAfter;
+    }
+
+    // Calculate totals from movements
+    movements.forEach(movement => {
+      switch (movement.movementType) {
+        case 'purchase':
+          totalPurchases += Math.abs(movement.quantity); // purchases are negative
+          break;
+        case 'manual_increase':
+          totalIncreases += movement.quantity;
+          break;
+        case 'manual_decrease':
+          totalDecreases += Math.abs(movement.quantity); // track as positive for display
+          break;
+      }
+    });
+
+    // Get current stock from product
+    const product = await this.getProduct(productId);
+    const currentStock = product?.stock || 0;
+
+    return {
+      openingStock,
+      totalPurchases,
+      totalIncreases,
+      totalDecreases,
+      currentStock,
+    };
   }
 }
 

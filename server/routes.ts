@@ -747,6 +747,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock Movement routes
+  app.get('/api/products/:id/stock-movements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const productId = parseInt(req.params.id);
+      
+      // Verify the user owns this product
+      const product = await storage.getProduct(productId);
+      if (!product || product.wholesalerId !== userId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const movements = await storage.getStockMovements(productId);
+      res.json(movements);
+    } catch (error) {
+      console.error("Error fetching stock movements:", error);
+      res.status(500).json({ message: "Failed to fetch stock movements" });
+    }
+  });
+
+  app.get('/api/products/:id/stock-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const productId = parseInt(req.params.id);
+      
+      // Verify the user owns this product
+      const product = await storage.getProduct(productId);
+      if (!product || product.wholesalerId !== userId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const summary = await storage.getStockSummary(productId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching stock summary:", error);
+      res.status(500).json({ message: "Failed to fetch stock summary" });
+    }
+  });
+
+  app.post('/api/products/:id/stock-adjustment', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const productId = parseInt(req.params.id);
+      const { adjustmentType, quantity, reason } = req.body;
+      
+      if (!adjustmentType || !quantity || !reason) {
+        return res.status(400).json({ message: "Adjustment type, quantity, and reason are required" });
+      }
+      
+      // Verify the user owns this product
+      const product = await storage.getProduct(productId);
+      if (!product || product.wholesalerId !== userId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const stockBefore = product.stock;
+      let stockAfter: number;
+      let movementQuantity: number;
+      let movementType: string;
+      
+      if (adjustmentType === 'increase') {
+        stockAfter = stockBefore + parseInt(quantity);
+        movementQuantity = parseInt(quantity);
+        movementType = 'manual_increase';
+      } else if (adjustmentType === 'decrease') {
+        stockAfter = Math.max(0, stockBefore - parseInt(quantity));
+        movementQuantity = -(parseInt(quantity));
+        movementType = 'manual_decrease';
+      } else {
+        return res.status(400).json({ message: "Invalid adjustment type" });
+      }
+      
+      // Update product stock
+      await storage.updateProduct(productId, { stock: stockAfter });
+      
+      // Create stock movement record
+      await storage.createStockMovement({
+        productId,
+        wholesalerId: userId,
+        movementType,
+        quantity: movementQuantity,
+        stockBefore,
+        stockAfter,
+        reason,
+        orderId: null,
+        customerName: null,
+      });
+      
+      res.json({ 
+        success: true, 
+        stockBefore, 
+        stockAfter, 
+        message: `Stock ${adjustmentType}d by ${quantity} units` 
+      });
+    } catch (error) {
+      console.error("Error adjusting stock:", error);
+      res.status(500).json({ message: "Failed to adjust stock" });
+    }
+  });
+
+  app.get('/api/stock-movements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const movements = await storage.getStockMovementsByWholesaler(userId, limit);
+      res.json(movements);
+    } catch (error) {
+      console.error("Error fetching stock movements:", error);
+      res.status(500).json({ message: "Failed to fetch stock movements" });
+    }
+  });
+
   // Customer group routes
   app.get('/api/customer-groups', isAuthenticated, async (req: any, res) => {
     try {

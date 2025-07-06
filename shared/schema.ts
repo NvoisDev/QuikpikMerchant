@@ -122,6 +122,21 @@ export const customerGroupMembers = pgTable("customer_group_members", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Stock movements table for tracking inventory changes
+export const stockMovements = pgTable("stock_movements", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  movementType: varchar("movement_type").notNull(), // 'purchase', 'manual_increase', 'manual_decrease', 'initial'
+  quantity: integer("quantity").notNull(), // positive for increases, negative for decreases
+  stockBefore: integer("stock_before").notNull(),
+  stockAfter: integer("stock_after").notNull(),
+  reason: varchar("reason"), // description of the movement
+  orderId: integer("order_id"), // reference to order if movement is from purchase
+  customerName: varchar("customer_name"), // customer name if movement is from purchase
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
@@ -266,6 +281,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   orderItems: many(orderItems),
   negotiations: many(negotiations),
+  stockMovements: many(stockMovements),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -309,6 +325,21 @@ export const customerGroupMembersRelations = relations(customerGroupMembers, ({ 
   customer: one(users, {
     fields: [customerGroupMembers.customerId],
     references: [users.id],
+  }),
+}));
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  product: one(products, {
+    fields: [stockMovements.productId],
+    references: [products.id],
+  }),
+  wholesaler: one(users, {
+    fields: [stockMovements.wholesalerId],
+    references: [users.id],
+  }),
+  order: one(orders, {
+    fields: [stockMovements.orderId],
+    references: [orders.id],
   }),
 }));
 
@@ -473,3 +504,10 @@ export const insertStockUpdateNotificationSchema = createInsertSchema(stockUpdat
 });
 export type InsertStockUpdateNotification = z.infer<typeof insertStockUpdateNotificationSchema>;
 export type StockUpdateNotification = typeof stockUpdateNotifications.$inferSelect;
+
+export const insertStockMovementSchema = createInsertSchema(stockMovements).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
+export type StockMovement = typeof stockMovements.$inferSelect;
