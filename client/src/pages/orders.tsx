@@ -13,6 +13,32 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderCardSkeleton, TableRowSkeleton } from "@/components/ui/loading-skeletons";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
+
+// Helper function to format address from JSON string or regular string
+const formatAddress = (addressData?: string): string => {
+  if (!addressData) return 'Address not provided';
+  
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(addressData);
+    if (parsed.street || parsed.address) {
+      // Handle different address formats
+      const street = parsed.street || parsed.address || '';
+      const city = parsed.city || '';
+      const state = parsed.state || '';
+      const postalCode = parsed.postalCode || '';
+      const country = parsed.country || '';
+      
+      // Build formatted address
+      const parts = [street, city, state, postalCode, country].filter(part => part && part.trim());
+      return parts.join(', ');
+    }
+    return addressData;
+  } catch {
+    // If parsing fails, return as regular string
+    return addressData;
+  }
+};
 import { 
   Package, 
   Clock, 
@@ -383,7 +409,7 @@ export default function Orders() {
                   <label className="text-sm font-medium text-muted-foreground">Delivery Address</label>
                   <div className="flex items-start gap-2 mt-1">
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <span className="text-base text-foreground">{order.deliveryAddress}</span>
+                    <span className="text-base text-foreground">{formatAddress(order.deliveryAddress)}</span>
                   </div>
                 </div>
               )}
@@ -835,7 +861,7 @@ export default function Orders() {
                     {order.deliveryAddress && (
                       <div className="flex items-center gap-1 max-w-xs">
                         <MapPin className="h-3 w-3" />
-                        <span className="truncate">{order.deliveryAddress}</span>
+                        <span className="truncate">{formatAddress(order.deliveryAddress)}</span>
                       </div>
                     )}
                   </div>
