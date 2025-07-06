@@ -3306,7 +3306,17 @@ Please contact the customer to confirm this order.
 
       // Send email invoice to customer
       try {
-        await sendCustomerInvoiceEmail(customer, order, items, wholesaler);
+        // Enrich items with product details for email
+        const enrichedItems = await Promise.all(items.map(async (item: any) => {
+          const product = await storage.getProduct(item.productId);
+          return {
+            ...item,
+            productName: product?.name || 'Product',
+            product: product ? { name: product.name, price: item.unitPrice } : null
+          };
+        }));
+        
+        await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
       } catch (error) {
         console.error("Failed to send customer invoice email:", error);
         // Don't fail the order creation if email fails
@@ -3347,18 +3357,59 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Get delivery address with proper fallback
-      const deliveryAddress = order.deliveryAddress || customer.address || customer.streetAddress || 'Address to be confirmed';
+      // Format delivery address properly
+      let deliveryAddress = 'Address to be confirmed';
+      try {
+        if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
+          // Try to parse JSON address
+          const parsedAddress = JSON.parse(order.deliveryAddress);
+          if (parsedAddress.street) {
+            deliveryAddress = `${parsedAddress.street}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.postalCode}, ${parsedAddress.country}`;
+          } else {
+            deliveryAddress = order.deliveryAddress;
+          }
+        } else if (customer.address) {
+          deliveryAddress = customer.address;
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, use as plain text
+        deliveryAddress = order.deliveryAddress || customer.address || 'Address to be confirmed';
+      }
       
-      // Create HTML email content with proper product names
-      const itemsHtml = items.map(item => `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product?.name || item.productName || 'Product'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.unitPrice}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${item.total}</td>
-        </tr>
-      `).join('');
+      // Create HTML email content with proper product names - fetch actual product details
+      const itemsHtml = await Promise.all(items.map(async (item) => {
+        let productName = 'Product';
+        let unitPrice = item.unitPrice || '0.00';
+        let total = item.total || '0.00';
+        
+        // Try to get product name from various sources
+        if (item.product && item.product.name) {
+          productName = item.product.name;
+        } else if (item.productName) {
+          productName = item.productName;
+        } else if (item.productId) {
+          // Fetch product details if we have the ID
+          try {
+            const product = await storage.getProduct(item.productId);
+            if (product) {
+              productName = product.name;
+            }
+          } catch (fetchError) {
+            console.log('Could not fetch product details for email:', fetchError);
+          }
+        }
+        
+        return `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${productName}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${parseFloat(unitPrice).toFixed(2)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${parseFloat(total).toFixed(2)}</td>
+          </tr>
+        `;
+      }));
+      
+      const itemsHtmlString = (await Promise.all(itemsHtml)).join('');
 
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -3383,7 +3434,7 @@ Please contact the customer to confirm this order.
               </tr>
             </thead>
             <tbody>
-              ${itemsHtml}
+              ${itemsHtmlString}
             </tbody>
           </table>
 
