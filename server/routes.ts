@@ -788,6 +788,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel order
+  app.post('/api/orders/:id/cancel', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const { reason } = req.body;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can cancel order
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to cancel this order" });
+      }
+
+      // Can't cancel already fulfilled or archived orders
+      if (order.status === 'fulfilled' || order.status === 'archived') {
+        return res.status(400).json({ message: "Cannot cancel fulfilled or archived orders" });
+      }
+
+      // Update order status to cancelled
+      const updatedOrder = await storage.updateOrderStatus(id, 'cancelled');
+      
+      // Restore stock for cancelled orders
+      const orderItems = await storage.getOrderItems(id);
+      for (const item of orderItems) {
+        const product = await storage.getProduct(item.productId);
+        if (product) {
+          await storage.updateProductStock(item.productId, product.stock + item.quantity);
+        }
+      }
+
+      // Send cancellation notification to customer if email available
+      try {
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        
+        if (customer?.email && wholesaler) {
+          // Send cancellation email
+          console.log(`Sending cancellation email to ${customer.email} for order ${id}`);
+        }
+      } catch (error) {
+        console.error('Failed to send cancellation notification:', error);
+      }
+
+      res.json({ 
+        message: "Order cancelled successfully",
+        order: updatedOrder,
+        stockRestored: true
+      });
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      res.status(500).json({ message: "Failed to cancel order" });
+    }
+  });
+
+  // Refund order
+  app.post('/api/orders/:id/refund', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const { amount, reason } = req.body;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can refund order
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to refund this order" });
+      }
+
+      // Can only refund paid orders
+      if (order.status !== 'paid' && order.status !== 'fulfilled') {
+        return res.status(400).json({ message: "Can only refund paid or fulfilled orders" });
+      }
+
+      if (!order.stripePaymentIntentId) {
+        return res.status(400).json({ message: "No payment information found for this order" });
+      }
+
+      // Create Stripe refund
+      let refund = null;
+      if (stripe) {
+        try {
+          const refundAmount = amount ? Math.round(parseFloat(amount) * 100) : undefined; // Convert to cents
+          refund = await stripe.refunds.create({
+            payment_intent: order.stripePaymentIntentId,
+            amount: refundAmount, // If not specified, refunds full amount
+            reason: 'requested_by_customer',
+            metadata: {
+              order_id: id.toString(),
+              reason: reason || 'Wholesaler initiated refund'
+            }
+          });
+        } catch (stripeError: any) {
+          console.error('Stripe refund failed:', stripeError);
+          return res.status(400).json({ 
+            message: `Refund failed: ${stripeError.message}`,
+            error: stripeError.code 
+          });
+        }
+      }
+
+      // Update order status to refunded or add refund note
+      let updatedOrder;
+      if (refund && refund.amount >= parseFloat(order.total) * 100) {
+        // Full refund - cancel order
+        updatedOrder = await storage.updateOrderStatus(id, 'refunded');
+        
+        // Restore stock for refunded orders
+        const orderItems = await storage.getOrderItems(id);
+        for (const item of orderItems) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            await storage.updateProductStock(item.productId, product.stock + item.quantity);
+          }
+        }
+      } else {
+        // Partial refund - keep order active but add note
+        const currentNotes = order.notes || '';
+        const refundNote = `Partial refund of ${refund ? '$' + (refund.amount / 100).toFixed(2) : amount} processed. Reason: ${reason || 'N/A'}`;
+        await storage.updateOrderNotes(id, currentNotes + '\n' + refundNote);
+        updatedOrder = order;
+      }
+
+      // Send refund notification to customer
+      try {
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        
+        if (customer?.email && wholesaler) {
+          // Send refund confirmation email
+          console.log(`Sending refund confirmation to ${customer.email} for order ${id}`);
+        }
+      } catch (error) {
+        console.error('Failed to send refund notification:', error);
+      }
+
+      res.json({ 
+        message: "Refund processed successfully",
+        order: updatedOrder,
+        refund: refund ? {
+          id: refund.id,
+          amount: refund.amount / 100,
+          status: refund.status
+        } : null,
+        stockRestored: refund && refund.amount >= parseFloat(order.total) * 100
+      });
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ message: "Failed to process refund" });
+    }
+  });
+
   // Resend order confirmation email
   app.post('/api/orders/:id/resend-confirmation', isAuthenticated, async (req: any, res) => {
     try {

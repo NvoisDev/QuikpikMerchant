@@ -67,7 +67,8 @@ interface Order {
   id: number;
   retailerId: string;
   wholesalerId: string;
-  totalAmount: string;
+  total: string;
+  totalAmount?: string; // Keep for backward compatibility
   status: string;
   paymentStatus: string;
   createdAt: string;
@@ -80,12 +81,14 @@ interface Order {
     lastName: string;
     phoneNumber: string;
     businessName?: string;
+    email?: string;
   };
   wholesaler: {
     id: string;
     firstName: string;
     lastName: string;
     businessName?: string;
+    preferredCurrency?: string;
   };
   items: Array<{
     id: number;
@@ -195,7 +198,7 @@ export default function Orders() {
   // Calculate order statistics
   const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
   const totalRevenue = paidOrders.reduce((sum: number, order: any) => {
-    const amount = parseFloat(order.totalAmount || '0');
+    const amount = parseFloat(order.total || '0');
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
   

@@ -78,6 +78,11 @@ export interface IStorage {
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   
+  // Order item operations
+  getOrderItems(orderId: number): Promise<any[]>;
+  updateProductStock(productId: number, newStock: number): Promise<void>;
+  updateOrderNotes(orderId: number, notes: string): Promise<void>;
+  
   // Analytics operations
   getWholesalerStats(wholesalerId: string): Promise<{
     totalRevenue: number;
@@ -587,6 +592,37 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedUser;
+  }
+
+  // Order item operations
+  async getOrderItems(orderId: number): Promise<any[]> {
+    const items = await db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+    return items;
+  }
+
+  // Product stock operations  
+  async updateProductStock(productId: number, newStock: number): Promise<void> {
+    await db
+      .update(products)
+      .set({ 
+        stock: newStock,
+        updatedAt: new Date()
+      })
+      .where(eq(products.id, productId));
+  }
+
+  // Order notes operations
+  async updateOrderNotes(orderId: number, notes: string): Promise<void> {
+    await db
+      .update(orders)
+      .set({ 
+        notes,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, orderId));
   }
 
   // Analytics operations
