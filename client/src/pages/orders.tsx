@@ -213,7 +213,16 @@ export default function Orders() {
 
   // Enhanced filtering
   const filteredOrders = orders.filter((order: any) => {
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    let matchesStatus = statusFilter === "all";
+    
+    if (statusFilter === "pending") {
+      // Match both "pending" and "confirmed" orders for pending filter
+      matchesStatus = order.status === "pending" || order.status === "confirmed";
+    } else if (statusFilter !== "all") {
+      // Exact match for other statuses
+      matchesStatus = order.status === statusFilter;
+    }
+    
     const matchesSearch = !searchTerm || 
       order.id.toString().includes(searchTerm) ||
       (order.retailer?.firstName + ' ' + order.retailer?.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -590,7 +599,7 @@ export default function Orders() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{orderStats.pending}</p>
-                <p className="text-sm text-muted-foreground">Pending Orders</p>
+                <p className="text-sm text-muted-foreground">Unfulfilled Orders</p>
               </div>
             </div>
           </CardContent>
@@ -651,7 +660,7 @@ export default function Orders() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Orders ({orderStats.total})</SelectItem>
-                <SelectItem value="pending">Order Placed ({orderStats.pending})</SelectItem>
+                <SelectItem value="pending">Unfulfilled ({orderStats.pending})</SelectItem>
                 <SelectItem value="confirmed">Order Confirmed</SelectItem>
                 <SelectItem value="paid">Payment Received ({orderStats.paid})</SelectItem>
                 <SelectItem value="fulfilled">Fulfilled ({orderStats.fulfilled})</SelectItem>
@@ -699,7 +708,7 @@ export default function Orders() {
               size="sm"
               onClick={() => setStatusFilter("pending")}
             >
-              Pending ({orderStats.pending})
+              Unfulfilled ({orderStats.pending})
             </Button>
             <Button 
               variant={statusFilter === "paid" ? "default" : "outline"} 
