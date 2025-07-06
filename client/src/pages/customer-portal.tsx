@@ -298,6 +298,9 @@ export default function CustomerPortal() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAllProducts, setShowAllProducts] = useState(false);
   
+  // Auto-refresh state - enable polling after orders
+  const [enableAutoRefresh, setEnableAutoRefresh] = useState(false);
+  
   // Modal states
   const [showQuantityEditor, setShowQuantityEditor] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -340,19 +343,21 @@ export default function CustomerPortal() {
     retry: 1
   });
 
-  // Fetch featured product if specified
-  const { data: featuredProduct, isLoading: featuredLoading } = useQuery({
+  // Fetch featured product if specified with auto-refresh
+  const { data: featuredProduct, isLoading: featuredLoading, refetch: refetchFeaturedProduct } = useQuery({
     queryKey: ['/api/marketplace/products', featuredProductId],
     queryFn: async () => {
       const response = await fetch(`/api/marketplace/products/${featuredProductId}`);
       if (!response.ok) throw new Error("Failed to fetch featured product");
       return response.json();
     },
-    enabled: !!featuredProductId
+    enabled: !!featuredProductId,
+    refetchInterval: enableAutoRefresh ? 30000 : false,
+    refetchIntervalInBackground: true
   });
 
-  // Fetch all products for the wholesaler
-  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
+  // Fetch all products for the wholesaler with auto-refresh
+  const { data: products = [], isLoading: productsLoading, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['/api/marketplace/products', { wholesalerId }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -361,7 +366,9 @@ export default function CustomerPortal() {
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
-    enabled: !!wholesalerId
+    enabled: !!wholesalerId,
+    refetchInterval: enableAutoRefresh ? 30000 : false, // Refresh every 30 seconds when enabled
+    refetchIntervalInBackground: true
   });
 
   // Memoized calculations
