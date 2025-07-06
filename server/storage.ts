@@ -72,7 +72,7 @@ export interface IStorage {
   getGroupMembers(groupId: number): Promise<User[]>;
   searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
-  createCustomer(customer: { phoneNumber: string; firstName: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
+  createCustomer(customer: { phoneNumber: string; firstName: string; lastName?: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
@@ -518,6 +518,7 @@ export class DatabaseStorage implements IStorage {
   async createCustomer(customer: { 
     phoneNumber: string; 
     firstName: string; 
+    lastName?: string;
     role: string; 
     email?: string; 
     streetAddress?: string; 
@@ -526,18 +527,13 @@ export class DatabaseStorage implements IStorage {
     postalCode?: string; 
     country?: string;
   }): Promise<User> {
-    // Properly split the full name into first and last name
-    const nameParts = customer.firstName.trim().split(' ');
-    const firstName = nameParts[0];
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
     const [user] = await db
       .insert(users)
       .values({
         id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         phoneNumber: customer.phoneNumber,
-        firstName: firstName,
-        lastName: lastName || null,
+        firstName: customer.firstName,
+        lastName: customer.lastName || null,
         role: customer.role,
         email: customer.email,
         streetAddress: customer.streetAddress,

@@ -29,6 +29,26 @@ function formatNumber(value: number | string): string {
   return num.toLocaleString('en-US');
 }
 
+// Helper function to parse full name into first and last name
+function parseCustomerName(fullName: string): { firstName: string; lastName: string } {
+  if (!fullName || typeof fullName !== 'string') {
+    return { firstName: 'Unknown', lastName: 'Customer' };
+  }
+  
+  const nameParts = fullName.trim().split(' ');
+  if (nameParts.length === 1) {
+    return { firstName: nameParts[0], lastName: '' };
+  } else if (nameParts.length === 2) {
+    return { firstName: nameParts[0], lastName: nameParts[1] };
+  } else {
+    // For names with more than 2 parts, first word is firstName, rest is lastName
+    return { 
+      firstName: nameParts[0], 
+      lastName: nameParts.slice(1).join(' ') 
+    };
+  }
+}
+
 // Helper function to generate stock update messages
 function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {
   const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
@@ -491,9 +511,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create customer if doesn't exist
         let customer = await storage.getUserByPhone(customerPhone);
         if (!customer) {
+          const { firstName, lastName } = parseCustomerName(customerName);
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
-            firstName: customerName,
+            firstName,
+            lastName,
             role: 'retailer',
             email: customerEmail
           });
@@ -612,9 +634,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);
           if (!customer) {
+            const { firstName, lastName } = parseCustomerName(customerName);
             customer = await storage.createCustomer({
               phoneNumber: customerPhone,
-              firstName: customerName,
+              firstName,
+              lastName,
               role: 'retailer',
               email: customerEmail
             });
@@ -1012,9 +1036,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!customer) {
         // Create a new customer/retailer account
+        const { firstName, lastName } = parseCustomerName(name);
         customer = await storage.createCustomer({
           phoneNumber,
-          firstName: name,
+          firstName,
+          lastName,
           role: "retailer",
         });
         isNewCustomer = true;
@@ -3264,9 +3290,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         customer = await storage.getUserByEmail(customerEmail);
       }
       if (!customer) {
+        const { firstName, lastName } = parseCustomerName(customerName);
         customer = await storage.createCustomer({
           phoneNumber: customerPhone,
-          firstName: customerName,
+          firstName,
+          lastName,
           email: customerEmail,
           role: 'retailer'
         });
@@ -3378,9 +3406,11 @@ Please contact the customer to confirm this order.
       try {
         customer = await storage.getUserByPhone(customerPhone);
         if (!customer) {
+          const { firstName, lastName } = parseCustomerName(customerName);
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
-            firstName: customerName, // Keep full name, storage will handle splitting
+            firstName,
+            lastName,
             role: 'retailer',
             email: customerEmail,
             streetAddress: customerAddress,
@@ -3690,9 +3720,11 @@ Please contact the customer to confirm this order.
       if (!customerId || customerId.startsWith('customer_')) {
         // Create a guest customer for the negotiation
         try {
+          const { firstName, lastName } = parseCustomerName(customerName || 'Guest Customer');
           const tempCustomer = await storage.createCustomer({
             phoneNumber: customerPhone || `+44${Date.now()}`,
-            firstName: customerName || 'Guest Customer',
+            firstName,
+            lastName,
             role: 'retailer',
             email: customerEmail,
           });
