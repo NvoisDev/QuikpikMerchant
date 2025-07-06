@@ -531,20 +531,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
         } else {
-          // Update existing customer with new information if name, phone, or email has changed
+          // Check if email belongs to different customer before updating
+          let emailConflict = false;
+          if (customerEmail && customer.email !== customerEmail) {
+            const existingEmailUser = await storage.getUserByEmail(customerEmail);
+            if (existingEmailUser && existingEmailUser.id !== customer.id) {
+              console.log(`⚠️ Email ${customerEmail} belongs to different customer ${existingEmailUser.id}, keeping existing email for ${customer.id}`);
+              emailConflict = true;
+            }
+          }
+          
+          // Update existing customer with new information if name or phone changed
           const needsUpdate = 
             customer.firstName !== firstName || 
             customer.lastName !== lastName || 
-            (customerEmail && customer.email !== customerEmail) ||
-            (customerPhone && customer.phoneNumber !== customerPhone);
+            (customerPhone && customer.phoneNumber !== customerPhone) ||
+            (customerEmail && customer.email !== customerEmail && !emailConflict);
             
           if (needsUpdate) {
-            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName} (${customerEmail}) (${customerPhone})`);
-            customer = await storage.updateCustomer(customer.id, {
+            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName} (${customerPhone})`);
+            
+            // Only update email if there's no conflict
+            const updateData = {
               firstName,
               lastName,
-              email: customerEmail || customer.email || undefined
-            });
+              email: emailConflict ? customer.email : (customerEmail || customer.email || undefined)
+            };
+            
+            customer = await storage.updateCustomer(customer.id, updateData);
             
             // Update phone number separately if needed
             if (customerPhone && customer.phoneNumber !== customerPhone) {
