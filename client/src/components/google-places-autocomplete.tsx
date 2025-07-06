@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,40 +66,19 @@ export default function GooglePlacesAutocomplete({
       await loader.load();
 
       if (inputRef.current && !autocompleteRef.current) {
+        // Create autocomplete with basic settings
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           types: ['address'],
-          componentRestrictions: { country: ['gb', 'us', 'ca', 'au'] }, // Common countries
           fields: ['formatted_address', 'address_components', 'geometry']
         });
 
+        // Handle place selection
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           
           if (place.formatted_address) {
             setInputValue(place.formatted_address);
-            
-            // Extract detailed address components
-            const addressComponents = place.address_components || [];
-            const extractComponent = (types: string[]) => {
-              const component = addressComponents.find(comp => 
-                types.some(type => comp.types.includes(type))
-              );
-              return component?.long_name || '';
-            };
-
-            const detailedAddress = {
-              formatted_address: place.formatted_address,
-              street_number: extractComponent(['street_number']),
-              route: extractComponent(['route']),
-              locality: extractComponent(['locality', 'postal_town']),
-              administrative_area_level_1: extractComponent(['administrative_area_level_1']),
-              postal_code: extractComponent(['postal_code']),
-              country: extractComponent(['country']),
-              address_components: place.address_components,
-              geometry: place.geometry
-            };
-
-            onAddressSelect(detailedAddress as PlaceResult);
+            onAddressSelect(place as PlaceResult);
           }
         });
 
