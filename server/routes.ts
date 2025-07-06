@@ -3255,7 +3255,7 @@ Please contact the customer to confirm this order.
         if (!customer) {
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
-            firstName: customerName.split(' ')[0],
+            firstName: customerName, // Keep full name, storage will handle splitting
             role: 'retailer',
             email: customerEmail,
             streetAddress: customerAddress,
@@ -3330,8 +3330,10 @@ Please contact the customer to confirm this order.
       const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : 
                            wholesaler.preferredCurrency === 'EUR' ? '€' : '$';
       
-      // Get customer name with proper fallback
-      const customerName = customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Valued Customer';
+      // Get customer name with proper fallback - handle both single name and split names
+      const customerName = customer.name || 
+                           (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
+                           'Valued Customer';
       
       // Get delivery address with proper fallback
       const deliveryAddress = order.deliveryAddress || customer.address || customer.streetAddress || 'Address to be confirmed';

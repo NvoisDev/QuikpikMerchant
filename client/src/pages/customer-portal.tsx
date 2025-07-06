@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import GooglePlacesAutocomplete from "@/components/google-places-autocomplete";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Initialize Stripe
@@ -1309,13 +1310,17 @@ export default function CustomerPortal() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customerAddress">Delivery Address *</Label>
-                    <Input
-                      id="customerAddress"
+                    <GooglePlacesAutocomplete
+                      label="Delivery Address"
+                      placeholder="Enter your delivery address"
+                      required={true}
                       value={customerData.address}
-                      onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
-                      placeholder="Street, City, Postal Code"
-                      required
+                      onAddressSelect={(place) => {
+                        setCustomerData({
+                          ...customerData, 
+                          address: place.formatted_address
+                        });
+                      }}
                     />
                   </div>
                 </div>
