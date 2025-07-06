@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,7 +72,7 @@ export default function GooglePlacesAutocomplete({
           fields: ['formatted_address', 'address_components', 'geometry']
         });
 
-        // Handle place selection
+        // Handle place selection - this is the only event we need
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           
@@ -81,56 +81,6 @@ export default function GooglePlacesAutocomplete({
             onAddressSelect(place as PlaceResult);
           }
         });
-
-        // Monitor for dropdown creation and prevent modal closure
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-              const pacContainers = document.querySelectorAll('.pac-container');
-              pacContainers.forEach(container => {
-                const elem = container as HTMLElement;
-                elem.style.zIndex = '10001';
-                elem.style.pointerEvents = 'auto';
-                elem.style.visibility = 'visible';
-                
-                // Prevent clicks from bubbling up to modal overlay
-                elem.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                });
-                
-                // Prevent mousedown from bubbling up
-                elem.addEventListener('mousedown', (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                });
-                
-                // Prevent modal close on touch events
-                elem.addEventListener('touchstart', (e) => {
-                  e.stopPropagation();
-                });
-                
-                // Add event listeners to each pac-item
-                const pacItems = elem.querySelectorAll('.pac-item');
-                pacItems.forEach(item => {
-                  item.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  });
-                  item.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  });
-                  item.addEventListener('touchstart', (e) => {
-                    e.stopPropagation();
-                  });
-                });
-              });
-            }
-          });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
 
         autocompleteRef.current = autocomplete;
         setIsLoaded(true);
