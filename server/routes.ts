@@ -514,6 +514,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
         
+        // If phone lookup fails, try email lookup
+        if (!customer && customerEmail) {
+          customer = await storage.getUserByEmail(customerEmail);
+          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        }
+        
         if (!customer) {
           console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
           customer = await storage.createCustomer({
@@ -525,20 +531,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
         } else {
-          // Update existing customer with new information if name or email has changed
+          // Update existing customer with new information if name, phone, or email has changed
           const needsUpdate = 
             customer.firstName !== firstName || 
             customer.lastName !== lastName || 
-            (customerEmail && customer.email !== customerEmail);
+            (customerEmail && customer.email !== customerEmail) ||
+            (customerPhone && customer.phoneNumber !== customerPhone);
             
           if (needsUpdate) {
-            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName} (${customerEmail})`);
+            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName} (${customerEmail}) (${customerPhone})`);
             customer = await storage.updateCustomer(customer.id, {
               firstName,
               lastName,
               email: customerEmail || customer.email || undefined
             });
-            console.log(`✅ Customer updated: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+            
+            // Update phone number separately if needed
+            if (customerPhone && customer.phoneNumber !== customerPhone) {
+              console.log(`📱 Updating phone number for customer: ${customer.id} to ${customerPhone}`);
+              await storage.updateCustomerPhone(customer.id, customerPhone);
+              customer.phoneNumber = customerPhone; // Update local copy
+            }
+            
+            console.log(`✅ Customer updated: ${customer.id} (${customer.firstName} ${customer.lastName}) (${customer.phoneNumber})`);
           }
         }
         
