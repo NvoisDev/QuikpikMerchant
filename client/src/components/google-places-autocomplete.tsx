@@ -82,6 +82,38 @@ export default function GooglePlacesAutocomplete({
           }
         });
 
+        // Add event listener for when dropdown appears
+        inputRef.current.addEventListener('focus', () => {
+          setTimeout(() => {
+            const pacContainers = document.querySelectorAll('.pac-container');
+            pacContainers.forEach(container => {
+              const elem = container as HTMLElement;
+              elem.style.zIndex = '10001';
+              elem.style.position = 'absolute';
+              elem.style.pointerEvents = 'auto';
+              elem.style.visibility = 'visible';
+              elem.style.display = 'block';
+            });
+          }, 50);
+        });
+
+        // Monitor for dropdown creation
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+              const pacContainers = document.querySelectorAll('.pac-container');
+              pacContainers.forEach(container => {
+                const elem = container as HTMLElement;
+                elem.style.zIndex = '10001';
+                elem.style.pointerEvents = 'auto';
+                elem.style.visibility = 'visible';
+              });
+            }
+          });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
         autocompleteRef.current = autocomplete;
         setIsLoaded(true);
       }
