@@ -154,3 +154,13 @@
 .pac-container {
   z-index: 10001 !important;
 }
+
+/* Prevent Google Places dropdown from interfering with modal */
+.pac-container, .pac-item {
+  pointer-events: auto !important;
+  user-select: none !important;
+}
+
+.pac-item * {
+  pointer-events: none !important;
+}

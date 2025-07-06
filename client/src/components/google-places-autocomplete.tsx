@@ -82,22 +82,7 @@ export default function GooglePlacesAutocomplete({
           }
         });
 
-        // Add event listener for when dropdown appears
-        inputRef.current.addEventListener('focus', () => {
-          setTimeout(() => {
-            const pacContainers = document.querySelectorAll('.pac-container');
-            pacContainers.forEach(container => {
-              const elem = container as HTMLElement;
-              elem.style.zIndex = '10001';
-              elem.style.position = 'absolute';
-              elem.style.pointerEvents = 'auto';
-              elem.style.visibility = 'visible';
-              elem.style.display = 'block';
-            });
-          }, 50);
-        });
-
-        // Monitor for dropdown creation
+        // Monitor for dropdown creation and prevent modal closure
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             if (mutation.type === 'childList') {
@@ -107,6 +92,27 @@ export default function GooglePlacesAutocomplete({
                 elem.style.zIndex = '10001';
                 elem.style.pointerEvents = 'auto';
                 elem.style.visibility = 'visible';
+                
+                // Prevent clicks from bubbling up to modal overlay
+                elem.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                });
+                
+                // Prevent mousedown from bubbling up
+                elem.addEventListener('mousedown', (e) => {
+                  e.stopPropagation();
+                });
+                
+                // Add event listeners to each pac-item
+                const pacItems = elem.querySelectorAll('.pac-item');
+                pacItems.forEach(item => {
+                  item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                  });
+                  item.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                  });
+                });
               });
             }
           });
