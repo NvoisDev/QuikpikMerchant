@@ -3407,10 +3407,53 @@ Please contact the customer to confirm this order.
           from: 'hello@quikpik.co', // Use verified sender
           subject: `Order Confirmation #${order.id} - ${wholesaler.businessName || 'Wholesale Store'}`,
           html: emailHtml,
+          // Add tracking and delivery settings
+          tracking_settings: {
+            click_tracking: {
+              enable: true,
+              enable_text: false
+            },
+            open_tracking: {
+              enable: true
+            },
+            subscription_tracking: {
+              enable: false
+            }
+          },
+          // Add email headers for better delivery
+          headers: {
+            'X-Priority': '1',
+            'X-MSMail-Priority': 'High',
+            'Importance': 'High'
+          }
         };
 
-        await sgMail.send(msg);
-        console.log(`Confirmation email sent to ${customer.email} for order #${order.id}`);
+        try {
+          const response = await sgMail.send(msg);
+          console.log(`✅ Confirmation email sent to ${customer.email} for order #${order.id}`);
+          console.log(`📧 Email delivery status: ${response[0].statusCode}`);
+          console.log(`📧 Message ID: ${response[0].headers['x-message-id']}`);
+          
+          // Additional logging for debugging
+          if (response[0].statusCode === 202) {
+            console.log(`📧 Email accepted by SendGrid for delivery`);
+          } else {
+            console.log(`⚠️ Unexpected status code: ${response[0].statusCode}`);
+          }
+        } catch (sendGridError: any) {
+          console.error('❌ SendGrid error details:', {
+            message: sendGridError.message,
+            code: sendGridError.code,
+            response: sendGridError.response?.body
+          });
+          
+          // Log specific error details
+          if (sendGridError.response?.body?.errors) {
+            console.error('SendGrid validation errors:', sendGridError.response.body.errors);
+          }
+          
+          throw sendGridError;
+        }
       } else {
         console.log("SendGrid not configured - Email would have been sent:", {
           to: customer.email,
@@ -3679,6 +3722,86 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Error sending test email:", error);
       res.status(500).json({ message: "Failed to send test email", error: error.message });
+    }
+  });
+
+  // Enhanced email diagnostics endpoint
+  app.post("/api/orders/diagnose-email", async (req, res) => {
+    try {
+      const { testEmail } = req.body;
+      
+      if (!testEmail) {
+        return res.status(400).json({ message: "Test email is required" });
+      }
+
+      const sgMail = (await import('@sendgrid/mail')).default;
+      
+      if (!process.env.SENDGRID_API_KEY) {
+        return res.status(500).json({ message: "SendGrid API key not configured" });
+      }
+
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+      // Send a simple test email with detailed tracking
+      const msg = {
+        to: testEmail,
+        from: 'hello@quikpik.co',
+        subject: 'Email Delivery Test - Quikpik Merchant',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #22c55e;">Email Delivery Test</h2>
+            <p>This is a test email to verify email delivery is working correctly.</p>
+            <p><strong>Test Time:</strong> ${new Date().toISOString()}</p>
+            <p><strong>From:</strong> Quikpik Merchant Platform</p>
+            <p><strong>To:</strong> ${testEmail}</p>
+            <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h4>Troubleshooting Tips:</h4>
+              <ul>
+                <li>Check your spam/junk folder</li>
+                <li>Add hello@quikpik.co to your contacts</li>
+                <li>Check email filters that might be blocking emails</li>
+              </ul>
+            </div>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+              If you received this email, delivery is working correctly.
+            </p>
+          </div>
+        `,
+        tracking_settings: {
+          click_tracking: {
+            enable: true,
+            enable_text: false
+          },
+          open_tracking: {
+            enable: true
+          },
+          subscription_tracking: {
+            enable: false
+          }
+        }
+      };
+
+      const response = await sgMail.send(msg);
+      
+      res.json({
+        message: "Diagnostic email sent successfully",
+        sentTo: testEmail,
+        statusCode: response[0].statusCode,
+        messageId: response[0].headers['x-message-id'],
+        deliveryStatus: response[0].statusCode === 202 ? 'accepted' : 'unknown',
+        troubleshooting: {
+          checkSpamFolder: true,
+          addToContacts: 'hello@quikpik.co',
+          checkFilters: true
+        }
+      });
+    } catch (error: any) {
+      console.error("Email diagnostic error:", error);
+      res.status(500).json({ 
+        message: "Error sending diagnostic email",
+        error: error.message,
+        details: error.response?.body
+      });
     }
   });
 
