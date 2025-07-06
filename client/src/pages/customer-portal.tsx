@@ -1155,7 +1155,17 @@ export default function CustomerPortal() {
 
       {/* Checkout Modal with Stripe Integration */}
       {showCheckout && (
-        <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+        <Dialog 
+          open={showCheckout} 
+          onOpenChange={(open) => {
+            // Prevent closing when Google Places is active
+            const pacContainer = document.querySelector('.pac-container');
+            if (!open && pacContainer && pacContainer.children.length > 0) {
+              return; // Don't close if Google Places dropdown is showing
+            }
+            setShowCheckout(open);
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center space-x-2">

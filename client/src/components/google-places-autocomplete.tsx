@@ -96,10 +96,17 @@ export default function GooglePlacesAutocomplete({
                 // Prevent clicks from bubbling up to modal overlay
                 elem.addEventListener('click', (e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                 });
                 
                 // Prevent mousedown from bubbling up
                 elem.addEventListener('mousedown', (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                });
+                
+                // Prevent modal close on touch events
+                elem.addEventListener('touchstart', (e) => {
                   e.stopPropagation();
                 });
                 
@@ -108,8 +115,13 @@ export default function GooglePlacesAutocomplete({
                 pacItems.forEach(item => {
                   item.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                   });
                   item.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  });
+                  item.addEventListener('touchstart', (e) => {
                     e.stopPropagation();
                   });
                 });
