@@ -510,8 +510,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create customer if doesn't exist
         let customer = await storage.getUserByPhone(customerPhone);
+        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        
         if (!customer) {
           const { firstName, lastName } = parseCustomerName(customerName);
+          console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
           customer = await storage.createCustomer({
             phoneNumber: customerPhone,
             firstName,
@@ -519,7 +522,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: 'retailer',
             email: customerEmail
           });
+          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
         }
+        
+        console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
         // Calculate actual platform fee based on Connect usage
         const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
