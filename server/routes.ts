@@ -1032,16 +1032,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let refund = null;
       if (stripe) {
         try {
-          const refundAmount = amount ? Math.round(parseFloat(amount) * 100) : undefined; // Convert to cents
-          refund = await stripe.refunds.create({
+          // Prepare refund parameters
+          const refundParams: any = {
             payment_intent: paymentIntentId,
-            amount: refundAmount, // If not specified, refunds full amount
             reason: 'requested_by_customer',
             metadata: {
               order_id: id.toString(),
               reason: reason || 'Wholesaler initiated refund'
             }
-          });
+          };
+
+          // Only include amount if specified (for partial refunds)
+          if (amount && amount !== '') {
+            const refundAmount = Math.round(parseFloat(amount) * 100); // Convert to cents
+            if (!isNaN(refundAmount) && refundAmount > 0) {
+              refundParams.amount = refundAmount;
+            }
+          }
+          // For full refunds, omit the amount parameter entirely
+
+          refund = await stripe.refunds.create(refundParams);
         } catch (stripeError: any) {
           console.error('Stripe refund failed:', stripeError);
           return res.status(400).json({ 

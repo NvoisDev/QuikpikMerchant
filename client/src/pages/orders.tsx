@@ -230,6 +230,7 @@ export default function Orders() {
       fulfilled: { variant: "default" as const, icon: CheckCircle, label: "Fulfilled" },
       archived: { variant: "secondary" as const, icon: Package, label: "Archived" },
       cancelled: { variant: "destructive" as const, icon: XCircle, label: "Cancelled" },
+      refunded: { variant: "destructive" as const, icon: RefreshCw, label: "Refunded" },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
