@@ -4927,18 +4927,46 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
-      
-      // Get real customer info - prefer stored customer data over retailer
-      const customerName = order.customerName || 
-        (order.retailer?.firstName ? `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() : `Customer ${order.id}`);
-      
-      const customerEmail = order.customerEmail || order.retailer?.email;
-      
-      if (!customerEmail) {
+
+      // Get customer data from Stripe payment intent
+      if (!order.stripePaymentIntentId) {
+        return res.status(400).json({ message: "No payment information found for this order" });
+      }
+
+      let customerInfo;
+      try {
+        // Retrieve payment intent from Stripe to get customer data
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        
+        if (paymentIntent.metadata) {
+          customerInfo = {
+            email: paymentIntent.metadata.customerEmail,
+            name: paymentIntent.metadata.customerName,
+            phone: paymentIntent.metadata.customerPhone
+          };
+        } else {
+          // Fallback to stored data if no metadata
+          customerInfo = {
+            email: order.customerEmail || order.retailer?.email,
+            name: order.customerName || `Customer ${order.id}`,
+            phone: order.customerPhone || order.retailer?.phoneNumber
+          };
+        }
+      } catch (stripeError) {
+        console.error("Error retrieving Stripe data:", stripeError);
+        // Fallback to stored data
+        customerInfo = {
+          email: order.customerEmail || order.retailer?.email,
+          name: order.customerName || `Customer ${order.id}`,
+          phone: order.customerPhone || order.retailer?.phoneNumber
+        };
+      }
+
+      if (!customerInfo.email) {
         return res.status(400).json({ message: "No customer email found for this order" });
       }
 
-      console.log(`📧 Sending receipt to: ${customerEmail} for customer: ${customerName}`);
+      console.log(`📧 Sending receipt to: ${customerInfo.email} for customer: ${customerInfo.name}`);
 
       // Get order items with product details
       const orderItems = await storage.getOrderItems(order.id);
@@ -4951,16 +4979,12 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         };
       }));
 
-      // Send receipt email using real customer data
-      await sendCustomerInvoiceEmail({
-        email: customerEmail,
-        name: customerName,
-        phone: order.customerPhone || order.retailer?.phoneNumber
-      }, order, enrichedItems, wholesaler);
+      // Send receipt email using Stripe customer data
+      await sendCustomerInvoiceEmail(customerInfo, order, enrichedItems, wholesaler);
 
       res.json({ 
         success: true, 
-        message: `Receipt sent successfully to ${customerEmail}`
+        message: `Receipt sent successfully to ${customerInfo.email}`
       });
 
     } catch (error) {
