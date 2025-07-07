@@ -18,9 +18,11 @@ import { useAuth } from "@/hooks/useAuth";
 
 import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -86,6 +88,10 @@ export default function ProductManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+  const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -435,6 +441,189 @@ export default function ProductManagement() {
     updateProductStatusMutation.mutate({ id, status });
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const fileType = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileType === 'csv') {
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          processUploadedData(results.data);
+        },
+        error: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to parse CSV file: " + error.message,
+            variant: "destructive",
+          });
+        }
+      });
+    } else if (fileType === 'xlsx' || fileType === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          processUploadedData(jsonData);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to parse Excel file",
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please upload a CSV or Excel file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const processUploadedData = (data: any[]) => {
+    const errors: string[] = [];
+    const validProducts: any[] = [];
+
+    data.forEach((row, index) => {
+      const rowNumber = index + 1;
+      
+      // Required fields validation
+      if (!row.name || !row.price || !row.moq || !row.stock) {
+        errors.push(`Row ${rowNumber}: Missing required fields (name, price, moq, stock)`);
+        return;
+      }
+
+      // Validate numeric fields
+      if (isNaN(Number(row.price)) || isNaN(Number(row.moq)) || isNaN(Number(row.stock))) {
+        errors.push(`Row ${rowNumber}: Price, MOQ, and Stock must be numeric`);
+        return;
+      }
+
+      // Validate unit type
+      if (row.unitType && !['units', 'pallets'].includes(row.unitType)) {
+        errors.push(`Row ${rowNumber}: Unit type must be 'units' or 'pallets'`);
+        return;
+      }
+
+      // Validate status
+      if (row.status && !['active', 'inactive', 'out_of_stock'].includes(row.status)) {
+        errors.push(`Row ${rowNumber}: Status must be 'active', 'inactive', or 'out_of_stock'`);
+        return;
+      }
+
+      // Build product object
+      const product = {
+        name: row.name,
+        description: row.description || "",
+        price: row.price,
+        currency: row.currency || user?.preferredCurrency || "GBP",
+        moq: row.moq,
+        stock: row.stock,
+        category: row.category || "",
+        imageUrl: row.imageUrl || "",
+        priceVisible: row.priceVisible !== 'false',
+        negotiationEnabled: row.negotiationEnabled === 'true',
+        minimumBidPrice: row.minimumBidPrice || "",
+        status: row.status || "active",
+        unitType: row.unitType || "units",
+        unitsPerPallet: row.unitsPerPallet || "",
+        supportsPickup: row.supportsPickup !== 'false',
+        supportsDelivery: row.supportsDelivery !== 'false',
+      };
+
+      validProducts.push(product);
+    });
+
+    setUploadErrors(errors);
+    setUploadedProducts(validProducts);
+    setIsBulkUploadDialogOpen(true);
+  };
+
+  const bulkCreateProductsMutation = useMutation({
+    mutationFn: async (products: any[]) => {
+      const results = [];
+      for (const product of products) {
+        try {
+          const productData = {
+            ...product,
+            price: parseFloat(product.price),
+            moq: parseInt(product.moq),
+            stock: parseInt(product.stock),
+            unitsPerPallet: product.unitsPerPallet ? parseInt(product.unitsPerPallet) : null,
+          };
+          const result = await apiRequest("POST", "/api/products", productData);
+          results.push({ success: true, product: result });
+        } catch (error) {
+          results.push({ success: false, error: error.message, product: product.name });
+        }
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      toast({
+        title: "Bulk Upload Complete",
+        description: `${successCount} products created successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
+        variant: successCount > 0 ? "default" : "destructive",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      setIsBulkUploadDialogOpen(false);
+      setUploadedProducts([]);
+      setUploadErrors([]);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create products: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const downloadTemplate = () => {
+    const template = [
+      {
+        name: "Example Product",
+        description: "Product description",
+        price: "10.99",
+        currency: "GBP",
+        moq: "1",
+        stock: "100",
+        category: "Electronics",
+        imageUrl: "",
+        priceVisible: "true",
+        negotiationEnabled: "false",
+        minimumBidPrice: "",
+        status: "active",
+        unitType: "units",
+        unitsPerPallet: "",
+        supportsPickup: "true",
+        supportsDelivery: "true"
+      }
+    ];
+    
+    const csv = Papa.unparse(template);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const filteredProducts = products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -463,10 +652,136 @@ export default function ProductManagement() {
                 <Package className="mr-2 h-4 w-4" />
                 Preview Store
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={downloadTemplate}>
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                Download Template
               </Button>
+              
+              <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Bulk Upload
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Bulk Upload Products</DialogTitle>
+                  </DialogHeader>
+                  
+                  {uploadedProducts.length === 0 ? (
+                    <div className="space-y-6">
+                      <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-semibold text-gray-900">Upload Product File</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Upload a CSV or Excel file with your product data
+                        </p>
+                        <div className="mt-6">
+                          <input
+                            type="file"
+                            accept=".csv,.xlsx,.xls"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            id="bulk-upload-file"
+                          />
+                          <label htmlFor="bulk-upload-file">
+                            <Button variant="outline" className="cursor-pointer" asChild>
+                              <span>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Choose File
+                              </span>
+                            </Button>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <h4 className="font-semibold">File Format Requirements:</h4>
+                        <div className="text-sm text-gray-600 space-y-2">
+                          <p><strong>Required columns:</strong> name, price, moq, stock</p>
+                          <p><strong>Optional columns:</strong> description, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unitType, unitsPerPallet, supportsPickup, supportsDelivery</p>
+                          <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
+                        </div>
+                        <Button variant="link" onClick={downloadTemplate} className="p-0">
+                          Download template file to get started
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {uploadErrors.length > 0 && (
+                        <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+                          <div className="flex">
+                            <AlertCircle className="h-5 w-5 text-red-400" />
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-red-800">Upload Errors</h3>
+                              <div className="mt-2 text-sm text-red-700">
+                                <ul className="list-disc list-inside space-y-1">
+                                  {uploadErrors.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="border border-green-200 bg-green-50 rounded-lg p-4">
+                        <div className="flex">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <div className="ml-3">
+                            <h3 className="text-sm font-medium text-green-800">
+                              {uploadedProducts.length} Products Ready to Upload
+                            </h3>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="max-h-64 overflow-y-auto border rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">MOQ</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Type</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {uploadedProducts.map((product, index) => (
+                              <tr key={index}>
+                                <td className="px-4 py-2 text-sm text-gray-900">{product.name}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(parseFloat(product.price), product.currency)}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900">{product.unitType}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-3">
+                        <Button variant="outline" onClick={() => {
+                          setUploadedProducts([]);
+                          setUploadErrors([]);
+                        }}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={() => bulkCreateProductsMutation.mutate(uploadedProducts)}
+                          disabled={bulkCreateProductsMutation.isPending || uploadedProducts.length === 0}
+                        >
+                          {bulkCreateProductsMutation.isPending ? "Creating..." : `Create ${uploadedProducts.length} Products`}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => {
