@@ -23,6 +23,119 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 }) : null;
 
 // Helper function to format numbers with commas
+// Function to create and send Stripe invoice to customer
+async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: any, customer: any) {
+  if (!stripe) {
+    console.log("⚠️ Stripe not configured, skipping invoice creation");
+    return;
+  }
+
+  try {
+    // Create or retrieve Stripe customer
+    let stripeCustomer;
+    try {
+      const customers = await stripe.customers.search({
+        query: `email:'${customer.email}'`,
+      });
+      
+      if (customers.data.length > 0) {
+        stripeCustomer = customers.data[0];
+      } else {
+        stripeCustomer = await stripe.customers.create({
+          email: customer.email,
+          name: customer.name,
+          phone: customer.phone,
+          metadata: {
+            orderType: 'customer_portal',
+            wholesalerId: wholesaler.id
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error creating/finding Stripe customer:", error);
+      return;
+    }
+
+    // Helper function to get currency symbol
+    const getCurrencySymbol = (currency?: string) => {
+      switch (currency?.toUpperCase()) {
+        case 'USD': return '$';
+        case 'EUR': return '€';
+        case 'GBP': return '£';
+        default: return '£';
+      }
+    };
+
+    // Create invoice
+    const invoice = await stripe.invoices.create({
+      customer: stripeCustomer.id,
+      currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+      description: `Order #${order.id} from ${wholesaler.businessName || wholesaler.username}`,
+      metadata: {
+        orderId: order.id.toString(),
+        wholesalerId: wholesaler.id,
+        orderType: 'customer_portal'
+      },
+      custom_fields: [
+        {
+          name: 'Order ID',
+          value: order.id.toString()
+        },
+        {
+          name: 'Supplier',
+          value: wholesaler.businessName || wholesaler.username
+        }
+      ]
+    });
+
+    // Add line items to invoice
+    for (const item of items) {
+      await stripe.invoiceItems.create({
+        customer: stripeCustomer.id,
+        invoice: invoice.id,
+        amount: Math.round(parseFloat(item.total) * 100), // Convert to cents
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: `${item.productName} (${item.quantity} units @ ${getCurrencySymbol(wholesaler.preferredCurrency)}${parseFloat(item.unitPrice).toFixed(2)} each)`,
+        metadata: {
+          productId: item.productId.toString(),
+          quantity: item.quantity.toString(),
+          unitPrice: item.unitPrice
+        }
+      });
+    }
+
+    // Add platform fee as separate line item
+    if (parseFloat(order.platformFee) > 0) {
+      await stripe.invoiceItems.create({
+        customer: stripeCustomer.id,
+        invoice: invoice.id,
+        amount: Math.round(parseFloat(order.platformFee) * 100),
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: `Platform Service Fee (5%)`,
+        metadata: {
+          feeType: 'platform_fee'
+        }
+      });
+    }
+
+    // Finalize and send invoice
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+    
+    // Mark as paid since payment was already processed
+    await stripe.invoices.pay(finalizedInvoice.id, {
+      paid_out_of_band: true
+    });
+
+    // Send invoice email to customer
+    await stripe.invoices.sendInvoice(finalizedInvoice.id);
+
+    console.log(`📄 Stripe invoice created and sent to ${customer.email} for order #${order.id}`);
+    
+  } catch (error) {
+    console.error(`❌ Failed to create Stripe invoice for order #${order.id}:`, error);
+  }
+}
+
 function formatNumber(value: number | string): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '0';
@@ -603,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`✅ Order #${order.id} created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
-        // Send customer confirmation email
+        // Send customer confirmation email and Stripe invoice
         const wholesaler = await storage.getUser(wholesalerId);
         if (wholesaler && customerEmail) {
           try {
@@ -624,6 +737,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
             }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
+
+            // Create and send Stripe invoice to customer
+            await createAndSendStripeInvoice(order, enrichedItems, wholesaler, {
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone
+            });
+            
           } catch (emailError) {
             console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);
           }
@@ -878,7 +999,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Can only refund paid or fulfilled orders" });
       }
 
-      if (!order.stripePaymentIntentId) {
+      // Check for payment intent ID in either field name
+      const paymentIntentId = order.stripePaymentIntentId || order.paymentIntentId;
+      if (!paymentIntentId) {
         return res.status(400).json({ message: "No payment information found for this order" });
       }
 
@@ -888,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const refundAmount = amount ? Math.round(parseFloat(amount) * 100) : undefined; // Convert to cents
           refund = await stripe.refunds.create({
-            payment_intent: order.stripePaymentIntentId,
+            payment_intent: paymentIntentId,
             amount: refundAmount, // If not specified, refunds full amount
             reason: 'requested_by_customer',
             metadata: {

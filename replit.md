@@ -361,6 +361,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Fallback Payment Processing**: Graceful handling of wholesalers without Stripe Connect accounts using regular payment intents
   - **Comprehensive Error Handling**: Detailed error messages and loading states throughout the payment process
   - **Security Disclosure**: Clear platform fee disclosure and secure payment processing messaging for customer transparency
+- July 07, 2025. Enhanced Order Processing with Stripe Invoicing and Refund Fixes:
+  - **Stripe Invoice Generation**: Automatic Stripe invoice creation and email delivery to customers after successful order completion
+  - **Professional Invoice Format**: Invoices include line items, platform fees, supplier information, and order details with proper currency formatting
+  - **Duplicate Payment Prevention**: Fixed multiple payment intent creation issue by adding loading state protection during customer form entry
+  - **Email Product Names**: Fixed email confirmation templates to display actual product names instead of generic "Product" placeholder
+  - **Refund Functionality Fix**: Resolved "No payment information found" error by handling both paymentIntentId and stripePaymentIntentId field variations
+  - **Customer Invoice Management**: Stripe customers automatically created/retrieved for proper invoice delivery and payment tracking
+  - **Paid Invoice Marking**: Invoices automatically marked as paid since payment was processed before invoice creation
 
   
 **Status Systems:**
