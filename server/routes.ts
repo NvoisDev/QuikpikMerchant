@@ -607,12 +607,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const wholesaler = await storage.getUser(wholesalerId);
         if (wholesaler && customerEmail) {
           try {
+            // Enrich items with product details for email
+            const enrichedItems = await Promise.all(items.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              return {
+                ...item,
+                productName: product?.name || `Product #${item.productId}`,
+                product: product ? { name: product.name } : null
+              };
+            }));
+            
             await sendCustomerInvoiceEmail({
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
               address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
-            }, order, items, wholesaler);
+            }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
           } catch (emailError) {
             console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);

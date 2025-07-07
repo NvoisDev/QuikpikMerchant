@@ -127,12 +127,14 @@ interface StripeCheckoutFormProps {
 
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
   const [clientSecret, setClientSecret] = useState("");
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const { toast } = useToast();
 
-  // Create payment intent when customer data is complete
+  // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
     const createPaymentIntent = async () => {
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone) {
+      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && !clientSecret && !isCreatingIntent) {
+        setIsCreatingIntent(true);
         try {
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
             items: cart.map(item => ({
@@ -153,12 +155,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             description: error.message || "Unable to initialize payment. Please try again.",
             variant: "destructive",
           });
+        } finally {
+          setIsCreatingIntent(false);
         }
       }
     };
 
     createPaymentIntent();
-  }, [cart, customerData, wholesaler, totalAmount]);
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, totalAmount, clientSecret, isCreatingIntent]);
 
   if (!clientSecret) {
     return (
