@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { formatNumber } from "@/lib/utils";
+import OnboardingWelcome from "@/components/OnboardingWelcome";
 
 import StatsCard from "@/components/stats-card";
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
@@ -21,6 +23,7 @@ import { Link } from "wouter";
 
 export default function WholesalerDashboard() {
   const { user } = useAuth();
+  const { onboardingState } = useOnboarding();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/analytics/stats"],
@@ -51,7 +54,7 @@ export default function WholesalerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" data-onboarding="dashboard">
       <div className="flex-1">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
@@ -65,7 +68,7 @@ export default function WholesalerDashboard() {
               </p>
               <div className="mt-3 flex items-center space-x-3">
                 <Link href="/products">
-                  <Button size="sm">
+                  <Button size="sm" data-onboarding="add-product">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Product
                   </Button>
@@ -87,6 +90,7 @@ export default function WholesalerDashboard() {
                     variant="outline" 
                     size="sm"
                     className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
+                    data-onboarding="preview-store"
                   >
                     <Package className="mr-2 h-4 w-4" />
                     Preview Store
@@ -109,6 +113,13 @@ export default function WholesalerDashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8">
+          {/* Onboarding Welcome for New Users */}
+          {!onboardingState.completed && !onboardingState.skipped && (
+            <div className="mb-8">
+              <OnboardingWelcome />
+            </div>
+          )}
+          
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {statsLoading ? (

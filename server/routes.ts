@@ -234,6 +234,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding routes
+  app.patch('/api/auth/user/onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { step, completed, skipped } = req.body;
+      
+      const updateData: any = {};
+      if (typeof step === 'number') updateData.onboardingStep = step;
+      if (typeof completed === 'boolean') updateData.onboardingCompleted = completed;
+      if (typeof skipped === 'boolean') updateData.onboardingSkipped = skipped;
+      
+      const updatedUser = await storage.updateUserOnboarding(userId, updateData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating onboarding:", error);
+      res.status(500).json({ message: "Failed to update onboarding" });
+    }
+  });
+
   // Settings route
   app.patch('/api/settings', isAuthenticated, async (req: any, res) => {
     try {

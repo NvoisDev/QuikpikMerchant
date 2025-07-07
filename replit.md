@@ -126,6 +126,15 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 
 ## Changelog
 - July 02, 2025. Initial setup
+- July 07, 2025. Implemented comprehensive onboarding system with interactive tooltips and guided user experience:
+  - **Database Schema Enhancement**: Added onboarding_completed, onboarding_step, and onboarding_skipped fields to users table
+  - **Onboarding Context System**: Created OnboardingProvider and useOnboarding hook for state management
+  - **Interactive Tooltip Components**: Built OnboardingTooltip component with positioning, arrow indicators, and step progression
+  - **Backend API Integration**: Added onboarding status management endpoints for tracking user progress
+  - **UI Element Tagging**: Added data-onboarding attributes to key dashboard elements, sidebar navigation, and action buttons
+  - **Onboarding Restart Feature**: Created OnboardingRestartButton component for users to retake the guided tour
+  - **Navigation Integration**: Added onboarding identifiers to sidebar navigation items for step-by-step guidance
+  - **Help Hub Integration**: Integrated onboarding restart button in help page for easy access to guided tours
 - July 02, 2025. Added subscription system with tiered pricing (Free: 3 products, Standard: 10 products @ $10.99/month, Premium: unlimited @ $19.99/month)
 - July 02, 2025. Implemented WhatsApp broadcasting functionality with product notifications to customer groups
 - July 03, 2025. Created complete customer order flow with bi-directional communication between customers and wholesalers including:

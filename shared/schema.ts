@@ -82,6 +82,11 @@ export const users = pgTable("users", {
     marketingEmails: false
   }),
   
+  // Onboarding fields
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingStep: integer("onboarding_step").default(0),
+  onboardingSkipped: boolean("onboarding_skipped").default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

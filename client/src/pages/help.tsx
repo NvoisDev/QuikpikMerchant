@@ -20,8 +20,10 @@ import {
   Book,
   Video,
   FileText,
-  Mail
+  Mail,
+  Play
 } from "lucide-react";
+import OnboardingRestartButton from "@/components/OnboardingRestartButton";
 
 const helpSections = [
   {
@@ -1031,6 +1033,11 @@ export default function Help() {
               <CardTitle className="text-sm">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <OnboardingRestartButton 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+              />
               <Button variant="outline" size="sm" className="w-full justify-start">
                 <Mail className="mr-2 h-4 w-4" />
                 Contact Support

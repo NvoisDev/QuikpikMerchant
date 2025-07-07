@@ -23,11 +23,11 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "Customer Groups", href: "/customer-groups", icon: Users },
-  { name: "Orders", href: "/orders", icon: ShoppingCart },
-  { name: "Broadcast", href: "/campaigns", icon: MessageSquare },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard" },
+  { name: "Products", href: "/products", icon: Package, onboardingId: "products-list" },
+  { name: "Customer Groups", href: "/customer-groups", icon: Users, onboardingId: "customer-groups" },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders" },
+  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3 },
   { name: "Marketplace (coming soon)", href: "/marketplace", icon: Store },
@@ -104,6 +104,7 @@ export default function Sidebar() {
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
                   onClick={() => setIsCollapsed(true)} // Close mobile menu on click
+                  data-onboarding={item.onboardingId}
                 >
                   <IconComponent 
                     className={cn(
@@ -137,7 +138,7 @@ export default function Sidebar() {
           </div>
           <div className="space-y-2">
             <Link href="/settings">
-              <Button variant="ghost" size="sm" className="w-full justify-start">
+              <Button variant="ghost" size="sm" className="w-full justify-start" data-onboarding="settings">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </Button>

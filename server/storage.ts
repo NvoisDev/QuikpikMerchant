@@ -49,6 +49,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User>;
+  updateUserOnboarding(id: string, onboardingData: { onboardingStep?: number; onboardingCompleted?: boolean; onboardingSkipped?: boolean }): Promise<User>;
   
   // Product operations
   getProducts(wholesalerId?: string): Promise<Product[]>;
@@ -207,6 +208,18 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({
         ...settings,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserOnboarding(id: string, onboardingData: { onboardingStep?: number; onboardingCompleted?: boolean; onboardingSkipped?: boolean }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...onboardingData,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
