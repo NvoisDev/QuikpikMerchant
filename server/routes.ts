@@ -42,9 +42,9 @@ async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: 
         stripeCustomer = customers.data[0];
       } else {
         // Extract customer info from order retailer data or customer object
-        const customerEmail = customer.email || order.customerEmail || `customer${order.id}@example.com`;
+        const customerEmail = customer.email || order.retailer?.email || `customer${order.id}@quikpik.co`;
         const customerName = customer.name || `${order.retailer?.firstName || 'Customer'} ${order.retailer?.lastName || ''}`.trim();
-        const customerPhone = customer.phone || order.retailer?.phoneNumber || order.customerPhone;
+        const customerPhone = customer.phone || order.retailer?.phoneNumber || order.retailer?.phone_number;
         
         stripeCustomer = await stripe.customers.create({
           email: customerEmail,
@@ -4864,8 +4864,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 </html>`;
 
       // Generate PDF using Puppeteer
-      const puppeteer = require('puppeteer');
-      const browser = await puppeteer.launch({
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
         headless: 'new',
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
@@ -4920,14 +4920,24 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // If customer user doesn't exist, create customer info from order data
-      let customerInfo = customer;
-      if (!customer) {
+      // Handle customer info for both registered users and guest checkouts
+      let customerInfo;
+      if (customer && customer.email) {
+        // Registered user with email
+        customerInfo = customer;
+      } else {
+        // Guest checkout or user without email - extract from order or create fallback
+        const customerName = order.retailer?.firstName ? 
+          `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() :
+          `Guest Customer ${order.id}`;
+        
         customerInfo = {
-          email: order.customerEmail || `customer${order.id}@example.com`,
-          name: order.customerName || `${order.retailer?.firstName || 'Customer'} ${order.retailer?.lastName || ''}`.trim(),
-          phone: order.customerPhone || order.retailer?.phoneNumber
+          email: order.retailer?.email || `customer${order.id}@quikpik.co`,
+          name: customerName,
+          phone: order.retailer?.phoneNumber || order.retailer?.phone_number
         };
+        
+        console.log(`Creating guest customer info for order ${order.id}:`, customerInfo);
       }
 
       // Get order items with product details

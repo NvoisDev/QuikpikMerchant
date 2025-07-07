@@ -388,6 +388,9 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Manual Stripe Invoice Creation**: Added "Send Stripe Invoice" button in orders interface for creating professional Stripe invoices on demand
   - **Webhook Integration**: Payment success automatically triggers Stripe invoice creation for seamless customer receipt delivery
   - **Professional Business Documentation**: Stripe-generated invoices and credit notes provide official business records for accounting and tax purposes
+  - **PDF Invoice Generation**: Download Invoice button now generates professional PDF format using Puppeteer with A4 formatting and proper business styling
+  - **Guest Customer Email Handling**: Fixed Stripe invoice creation for guest checkout customers by implementing fallback email generation system
+  - **ES Module Compatibility**: Updated Puppeteer import to work with ES modules for reliable PDF generation in production environment
 
   
 **Status Systems:**
