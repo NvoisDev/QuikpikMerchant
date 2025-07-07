@@ -4897,8 +4897,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
-  // Test endpoint to create Stripe invoice for existing order
-  app.post('/api/orders/:id/create-stripe-invoice', isAuthenticated, async (req: any, res) => {
+  // Send simple receipt email for existing order
+  app.post('/api/orders/:id/send-receipt', isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.claims.sub;
@@ -4908,9 +4908,9 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // Only wholesaler can create invoices for their orders
+      // Only wholesaler can send receipts for their orders
       if (order.wholesalerId !== userId) {
-        return res.status(403).json({ message: "Not authorized to create invoice for this order" });
+        return res.status(403).json({ message: "Not authorized to send receipt for this order" });
       }
 
       const wholesaler = await storage.getUser(userId);
@@ -4920,25 +4920,12 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // Handle customer info for both registered users and guest checkouts
-      let customerInfo;
-      if (customer && customer.email) {
-        // Registered user with email
-        customerInfo = customer;
-      } else {
-        // Guest checkout or user without email - extract from order or create fallback
-        const customerName = order.retailer?.firstName ? 
-          `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() :
-          `Guest Customer ${order.id}`;
-        
-        customerInfo = {
-          email: order.retailer?.email || `customer${order.id}@quikpik.co`,
-          name: customerName,
-          phone: order.retailer?.phoneNumber || order.retailer?.phone_number
-        };
-        
-        console.log(`Creating guest customer info for order ${order.id}:`, customerInfo);
-      }
+      // Get customer info for receipt
+      const customerName = order.retailer?.firstName ? 
+        `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() :
+        `Customer ${order.id}`;
+      
+      const customerEmail = order.retailer?.email || `customer${order.id}@quikpik.co`;
 
       // Get order items with product details
       const orderItems = await storage.getOrderItems(order.id);
@@ -4951,23 +4938,20 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         };
       }));
 
-      // Create Stripe invoice
-      const stripeInvoice = await createStripeInvoiceForOrder(order, enrichedItems, wholesaler, customerInfo);
+      // Send simple receipt email
+      await sendCustomerInvoiceEmail({
+        email: customerEmail,
+        name: customerName
+      }, order, enrichedItems, wholesaler);
 
-      if (stripeInvoice) {
-        res.json({ 
-          success: true, 
-          message: "Stripe invoice created and sent to customer",
-          invoiceId: stripeInvoice.id,
-          invoiceUrl: stripeInvoice.hosted_invoice_url
-        });
-      } else {
-        res.status(500).json({ message: "Failed to create Stripe invoice" });
-      }
+      res.json({ 
+        success: true, 
+        message: "Receipt sent successfully to customer"
+      });
 
     } catch (error) {
-      console.error("Error creating Stripe invoice:", error);
-      res.status(500).json({ message: "Failed to create Stripe invoice" });
+      console.error("Error sending receipt:", error);
+      res.status(500).json({ message: "Failed to send receipt: " + error.message });
     }
   });
 

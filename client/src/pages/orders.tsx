@@ -634,14 +634,14 @@ export default function Orders() {
               Download Invoice
             </Button>
 
-            {/* Create Stripe Invoice Button - Only for wholesaler */}
+            {/* Send Receipt Button - Only for wholesaler */}
             {user?.role === 'wholesaler' && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/api/orders/${order.id}/create-stripe-invoice`, {
+                    const response = await fetch(`/api/orders/${order.id}/send-receipt`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json'
@@ -653,28 +653,28 @@ export default function Orders() {
                     
                     if (response.ok) {
                       toast({
-                        title: "Stripe Invoice Created",
-                        description: "Professional Stripe invoice has been sent to the customer via email",
+                        title: "Receipt Sent",
+                        description: "Receipt has been sent to the customer via email",
                       });
                     } else {
                       toast({
                         title: "Error",
-                        description: result.message || "Failed to create Stripe invoice",
+                        description: result.message || "Failed to send receipt",
                         variant: "destructive",
                       });
                     }
                   } catch (error) {
                     toast({
                       title: "Error",
-                      description: "Failed to create Stripe invoice",
+                      description: "Failed to send receipt",
                       variant: "destructive",
                     });
                   }
                 }}
                 className="border-green-200 text-green-600 hover:bg-green-50"
               >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Send Stripe Invoice
+                <Mail className="h-4 w-4 mr-2" />
+                Send Receipt
               </Button>
             )}
           </div>
