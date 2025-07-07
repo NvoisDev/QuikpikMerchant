@@ -369,6 +369,7 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Refund Functionality Fix**: Resolved "No payment information found" error by handling both paymentIntentId and stripePaymentIntentId field variations
   - **Customer Invoice Management**: Stripe customers automatically created/retrieved for proper invoice delivery and payment tracking
   - **Paid Invoice Marking**: Invoices automatically marked as paid since payment was processed before invoice creation
+  - **Help Hub Update**: Comprehensive documentation update with new sections on Customer Portal & Orders, Payment Processing & Invoicing, Refunds & Cancellations, plus updated FAQ covering latest fixes and features
 
   
 **Status Systems:**

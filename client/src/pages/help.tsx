@@ -36,26 +36,42 @@ const helpSections = [
 ### What is Quikpik Merchant?
 
 Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholesalers to:
-- Manage inventory and products
-- Connect with retail customers
-- Process orders and payments
-- Send WhatsApp broadcasts
-- Track business analytics
+- Manage inventory and products with AI-powered descriptions
+- Connect with retail customers through customer portal
+- Process orders and payments with automatic invoicing
+- Send WhatsApp broadcasts to customer groups
+- Track business analytics and financial health
+- Accept online payments with automatic platform fee collection
+- Generate professional Stripe invoices for customers
+- Handle refunds and order management efficiently
 
 ### Getting Started Checklist
 
-1. **Complete Your Profile** - Add business information in Settings → Account
-2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments
-3. **Add Your Products** - Create your product catalog in Product Management
-4. **Create Customer Groups** - Organize your customers in Customer Groups
-5. **Configure WhatsApp** - Set up broadcasting in Settings → WhatsApp Integration
-6. **Start Selling** - Your products will appear in the marketplace for customers to discover
+1. **Complete Your Profile** - Add business information in Settings → Business Settings
+2. **Set Up Payment Processing** - Configure Stripe Connect in Settings → Payments for direct customer payments
+3. **Add Your Products** - Create your product catalog with images and AI descriptions in Product Management
+4. **Create Customer Groups** - Organize your customers for targeted WhatsApp broadcasts
+5. **Configure WhatsApp** - Set up Twilio integration for customer notifications in Settings → WhatsApp
+6. **Preview Your Store** - Use "Preview Store" to see how customers view your products
+7. **Start Selling** - Share customer portal links and begin receiving orders with automatic invoicing
+
+### Key Features
+
+- **Customer Portal**: Customers can browse products, place orders, and make payments without registration
+- **Automatic Invoicing**: Stripe invoices automatically generated and emailed to customers
+- **WhatsApp Integration**: Broadcast product updates and receive order notifications
+- **Order Management**: Complete order lifecycle with status tracking and refund processing
+- **Product Negotiation**: Enable custom pricing requests with minimum bid price controls
+- **Real-time Analytics**: Track sales, revenue, and business performance
+- **Mobile Responsive**: Works perfectly on all devices for you and your customers
 
 ### Subscription Plans
 
-- **Free Plan**: Up to 3 products
-- **Standard Plan**: Up to 10 products ($10.99/month)
-- **Premium Plan**: Unlimited products ($19.99/month)
+- **Free Plan**: Up to 3 products, limited editing (3 edits per product)
+- **Standard Plan**: Up to 10 products, unlimited editing ($10.99/month)
+- **Premium Plan**: Unlimited products, unlimited editing ($19.99/month)
+
+All plans include 5% platform fee on successful orders with automatic revenue collection.
         `
       },
       {
@@ -641,6 +657,144 @@ Regardless of subscription plan:
     ]
   },
   {
+    id: "customer-portal",
+    title: "Customer Portal & Orders",
+    icon: ShoppingCart,
+    description: "Managing customer orders, payments, and the shopping experience",
+    articles: [
+      {
+        title: "Customer Portal Overview",
+        content: `
+### Understanding the Customer Portal
+
+The Customer Portal is a dedicated shopping interface where your customers can browse products, place orders, and make payments without needing to register or create accounts.
+
+#### Key Features
+- **No Registration Required**: Customers can shop immediately without signup
+- **Mobile Responsive**: Perfect experience on phones, tablets, and desktop
+- **Secure Payments**: Stripe-powered checkout with card processing
+- **Automatic Invoicing**: Professional invoices emailed after purchase
+- **Real-time Stock**: Live inventory updates prevent overselling
+- **Negotiation System**: Customers can request custom pricing on eligible products
+
+#### How Customers Access Your Portal
+1. **Direct Links**: Share your customer portal URL (found in "Preview Store")
+2. **WhatsApp Broadcasts**: Product links automatically include portal access
+3. **Email Campaigns**: Include portal links in email marketing
+
+#### Portal Features for Customers
+- Browse all your active products
+- View detailed product information and images
+- Add multiple items to shopping cart
+- Adjust quantities within stock limits
+- Request custom pricing for negotiable products
+- Complete secure checkout with Stripe
+- Receive automatic confirmation emails and invoices
+        `
+      },
+      {
+        title: "Order Management",
+        content: `
+### Managing Customer Orders
+
+#### Order Lifecycle
+1. **Order Placed**: Customer completes payment through portal
+2. **Order Confirmed**: Automatic confirmation email sent to customer
+3. **Payment Received**: Funds processed through Stripe Connect
+4. **Fulfilled**: You manually mark orders as fulfilled when shipped
+5. **Archived**: Orders automatically archive 24 hours after fulfillment
+
+#### Order Status Management
+- **Active Orders**: Show in main order list for processing
+- **Status Updates**: Click dropdown to change order status
+- **Manual Actions**: Only "Fulfilled" requires your action - everything else is automatic
+- **Email Confirmations**: Resend confirmation emails anytime
+
+#### Order Details
+Each order includes:
+- Customer contact information and delivery address
+- Product details with quantities and pricing
+- Payment information and Stripe transaction ID
+- Platform fee calculation (5% automatically collected)
+- Order timeline with status changes and emails sent
+
+#### Processing Orders
+1. Review order details in the Orders page
+2. Prepare products for shipment
+3. Update order status to "Fulfilled" when shipped
+4. Customer receives automatic notification
+5. Order archives automatically after 24 hours
+        `
+      },
+      {
+        title: "Payment Processing & Invoicing",
+        content: `
+### Stripe Integration & Automatic Invoicing
+
+#### Payment Flow
+1. **Customer Checkout**: Secure payment through Stripe Elements
+2. **Platform Fee**: 5% automatically deducted for Quikpik
+3. **Wholesaler Payment**: 95% of order value transferred to your Stripe account
+4. **Invoice Generation**: Professional Stripe invoice automatically created and emailed
+
+#### Invoice Features
+- **Detailed Line Items**: Shows each product, quantity, and unit price
+- **Platform Fee Disclosure**: Transparent fee breakdown
+- **Professional Format**: Branded with your business information
+- **Email Delivery**: Automatically sent to customer's email
+- **Payment Status**: Marked as paid since payment was already processed
+
+#### Setting Up Payments
+1. **Stripe Connect**: Complete onboarding in Settings → Payments
+2. **Account Verification**: Ensure Stripe account can accept payments
+3. **Business Information**: Keep business details current for proper invoicing
+4. **Currency Settings**: Set preferred currency in Business Settings
+
+#### Payment Troubleshooting
+- **Payment Failures**: Usually due to incomplete Stripe Connect setup
+- **Missing Invoices**: Check customer email addresses and spam folders
+- **Currency Issues**: Verify currency settings match your Stripe account
+- **Platform Fees**: Automatically calculated and collected - no manual action needed
+        `
+      },
+      {
+        title: "Refunds & Cancellations",
+        content: `
+### Processing Refunds
+
+#### When to Issue Refunds
+- Customer requests cancellation
+- Product unavailable after order placed
+- Quality issues or customer dissatisfaction
+- Duplicate orders or payment errors
+
+#### How to Process Refunds
+1. **Go to Orders**: Find the order to refund
+2. **Click Order Details**: Open the order detail modal
+3. **Click "Refund"**: Red refund button at bottom
+4. **Choose Refund Type**:
+   - **Full Refund**: Cancels entire order, restores stock
+   - **Partial Refund**: Specify amount, keeps order active
+5. **Add Reason**: Explain why refund was issued
+6. **Confirm**: Refund processes through Stripe immediately
+
+#### Refund Processing
+- **Stripe Integration**: Refunds processed automatically through Stripe
+- **Stock Restoration**: Full refunds automatically restore product stock
+- **Customer Notification**: Customers receive refund confirmation emails
+- **Order Status**: Full refunds change order status to "Refunded"
+- **Platform Fees**: Platform fees are also refunded for full refunds
+
+#### Refund Timeline
+- **Processing**: Refunds process immediately through Stripe
+- **Customer Receipt**: Funds typically appear in 5-10 business days
+- **Notification**: Customer receives immediate refund confirmation
+- **Records**: All refunds tracked in order history and Stripe dashboard
+        `
+      }
+    ]
+  },
+  {
     id: "troubleshooting",
     title: "Troubleshooting",
     icon: Settings,
@@ -678,6 +832,12 @@ A: Complete Stripe Connect onboarding in Settings → Payments. Ensure your acco
 **Q: Customer payments failing**
 A: Check that your Stripe account can accept payments. Contact Stripe support if account verification is needed.
 
+**Q: Customers not receiving invoices**
+A: Stripe invoices are automatically sent after successful payments. Check customer email addresses are correct and check their spam folder.
+
+**Q: Platform fee not being collected**
+A: Platform fees are automatically calculated (5%) and collected when using Stripe Connect accounts. Verify your Stripe Connect setup is complete.
+
 #### Order Management Issues
 
 **Q: Orders not updating**
@@ -685,6 +845,18 @@ A: Refresh the page or check your internet connection. Order status changes are 
 
 **Q: Customer contact information missing**
 A: Ensure customers provide complete information during checkout. You can request updates directly.
+
+**Q: Refund showing "No payment information found"**
+A: This was a previous issue that has been fixed. Ensure you're using the latest version. If the problem persists, contact support.
+
+**Q: Customer not receiving Stripe invoices**
+A: Stripe invoices are automatically sent after successful payments. Check the customer's email address is correct and ask them to check spam folders.
+
+**Q: Multiple payment attempts creating duplicate orders**
+A: This issue has been resolved with loading state protection. Customers should only be able to create one payment intent per checkout session.
+
+**Q: Email confirmations showing "Product" instead of actual names**
+A: This display issue has been fixed. All email confirmations now show actual product names and proper pricing information.
         `
       },
       {
