@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -344,6 +344,127 @@ export default function Orders() {
     return events;
   };
 
+  // Customer display components that fetch data from Stripe
+  const CustomerNameDisplay = ({ order }: { order: Order }) => {
+    const [customerName, setCustomerName] = useState<string>('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchCustomerData = async () => {
+        if (order.stripePaymentIntentId) {
+          try {
+            const response = await fetch(`/api/orders/${order.id}/stripe-customer-data`, {
+              credentials: 'include'
+            });
+            if (response.ok) {
+              const data = await response.json();
+              setCustomerName(data.customerName || '');
+            }
+          } catch (error) {
+            console.error('Error fetching customer data:', error);
+          }
+        }
+        setLoading(false);
+      };
+      fetchCustomerData();
+    }, [order.id, order.stripePaymentIntentId]);
+
+    const displayName = customerName || 
+      [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || 
+      order.retailer?.businessName || 'Unknown Customer';
+
+    return (
+      <div>
+        <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
+        <div className="text-base font-medium text-foreground mt-1">
+          {loading ? 'Loading...' : displayName}
+        </div>
+      </div>
+    );
+  };
+
+  const CustomerEmailDisplay = ({ order }: { order: Order }) => {
+    const [customerEmail, setCustomerEmail] = useState<string>('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchCustomerData = async () => {
+        if (order.stripePaymentIntentId) {
+          try {
+            const response = await fetch(`/api/orders/${order.id}/stripe-customer-data`, {
+              credentials: 'include'
+            });
+            if (response.ok) {
+              const data = await response.json();
+              setCustomerEmail(data.customerEmail || '');
+            }
+          } catch (error) {
+            console.error('Error fetching customer data:', error);
+          }
+        }
+        setLoading(false);
+      };
+      fetchCustomerData();
+    }, [order.id, order.stripePaymentIntentId]);
+
+    const displayEmail = customerEmail || order.retailer?.email;
+
+    if (!displayEmail && !loading) return null;
+
+    return (
+      <div>
+        <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+        <div className="flex items-center gap-2 mt-1">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <span className="text-base text-foreground">
+            {loading ? 'Loading...' : displayEmail}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const CustomerPhoneDisplay = ({ order }: { order: Order }) => {
+    const [customerPhone, setCustomerPhone] = useState<string>('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchCustomerData = async () => {
+        if (order.stripePaymentIntentId) {
+          try {
+            const response = await fetch(`/api/orders/${order.id}/stripe-customer-data`, {
+              credentials: 'include'
+            });
+            if (response.ok) {
+              const data = await response.json();
+              setCustomerPhone(data.customerPhone || '');
+            }
+          } catch (error) {
+            console.error('Error fetching customer data:', error);
+          }
+        }
+        setLoading(false);
+      };
+      fetchCustomerData();
+    }, [order.id, order.stripePaymentIntentId]);
+
+    const displayPhone = customerPhone || order.retailer?.phoneNumber;
+
+    if (!displayPhone && !loading) return null;
+
+    return (
+      <div>
+        <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
+        <div className="flex items-center gap-2 mt-1">
+          <Phone className="h-4 w-4 text-muted-foreground" />
+          <span className="text-base text-foreground">
+            {loading ? 'Loading...' : displayPhone}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   const OrderDetailModal = ({ order }: { order: Order }) => (
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
@@ -438,32 +559,11 @@ export default function Orders() {
           <div className="border border-border/40 rounded-lg p-6 bg-background/50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
-                  <div className="text-base font-medium text-foreground mt-1">
-                    {[order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || order.retailer?.businessName || 'Unknown Customer'}
-                  </div>
-                </div>
+                <CustomerNameDisplay order={order} />
                 
-                {order.retailer?.phoneNumber && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-base text-foreground">{order.retailer.phoneNumber}</span>
-                    </div>
-                  </div>
-                )}
+                <CustomerPhoneDisplay order={order} />
                 
-                {order.retailer?.email && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Email Address</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-base text-foreground">{order.retailer.email}</span>
-                    </div>
-                  </div>
-                )}
+                <CustomerEmailDisplay order={order} />
               </div>
               
               {order.deliveryAddress && (

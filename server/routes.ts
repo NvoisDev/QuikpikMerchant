@@ -4993,6 +4993,57 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Get customer data from Stripe for order display
+  app.get('/api/orders/:id/stripe-customer-data', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can view customer data for their orders
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to view customer data for this order" });
+      }
+
+      if (!order.stripePaymentIntentId) {
+        return res.json({
+          customerName: order.customerName || null,
+          customerEmail: order.customerEmail || null,
+          customerPhone: order.customerPhone || null
+        });
+      }
+
+      try {
+        // Retrieve payment intent from Stripe to get customer data
+        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        
+        const customerData = {
+          customerName: paymentIntent.metadata?.customerName || order.customerName || null,
+          customerEmail: paymentIntent.metadata?.customerEmail || order.customerEmail || null,
+          customerPhone: paymentIntent.metadata?.customerPhone || order.customerPhone || null
+        };
+
+        res.json(customerData);
+      } catch (stripeError) {
+        console.error("Error retrieving Stripe customer data:", stripeError);
+        // Return stored data as fallback
+        res.json({
+          customerName: order.customerName || null,
+          customerEmail: order.customerEmail || null,
+          customerPhone: order.customerPhone || null
+        });
+      }
+
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      res.status(500).json({ message: "Failed to fetch customer data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
