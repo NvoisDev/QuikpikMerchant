@@ -425,3 +425,4 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Target Market: Nigerian retail businesses who buy in bulk and sell to Nigerian retailers.

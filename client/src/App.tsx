@@ -8,6 +8,7 @@ import { OnboardingProvider } from "@/components/OnboardingProvider";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/Login";
+import LandingPage from "@/pages/LandingPage";
 import WholesalerDashboard from "@/pages/wholesaler-dashboard";
 import ProductManagement from "@/pages/product-management";
 import RetailerInterface from "@/pages/retailer-interface";
@@ -57,7 +58,7 @@ function Router() {
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       
       {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <Route path="/" component={LandingPage} />
       ) : (
         <AppLayout>
           <Route path="/marketplace" component={Marketplace} />
