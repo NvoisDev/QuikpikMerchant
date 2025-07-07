@@ -288,10 +288,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
+      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
       const productData = insertProductSchema.parse({
         ...otherData,
         price: price.toString(),
+        promoPrice: promoPrice ? promoPrice.toString() : null,
         moq: parseInt(moq),
         stock: parseInt(stock),
         minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null,
@@ -348,10 +349,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
+      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
       const convertedData = {
         ...otherData,
         ...(price !== undefined && { price: price.toString() }),
+        ...(promoPrice !== undefined && { promoPrice: promoPrice ? promoPrice.toString() : null }),
         ...(moq !== undefined && { moq: parseInt(moq) }),
         ...(stock !== undefined && { stock: parseInt(stock) }),
         ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null }),

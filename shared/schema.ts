@@ -92,6 +92,8 @@ export const products = pgTable("products", {
   name: varchar("name").notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  promoPrice: decimal("promo_price", { precision: 10, scale: 2 }), // Optional promotional price
+  promoActive: boolean("promo_active").default(false), // Whether the promo is currently active
   currency: varchar("currency").default("GBP"), // ISO currency code
   moq: integer("moq").notNull().default(1), // minimum order quantity
   stock: integer("stock").notNull().default(0),

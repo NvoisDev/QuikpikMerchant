@@ -57,6 +57,8 @@ const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
   price: z.string().min(1, "Price is required"),
+  promoPrice: z.string().optional(),
+  promoActive: z.boolean(),
   currency: z.string().min(1, "Currency is required"),
   moq: z.string().min(1, "MOQ is required"),
   stock: z.string().min(1, "Stock is required"),
@@ -99,6 +101,8 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
+      promoPrice: "",
+      promoActive: false,
       currency: user?.preferredCurrency || "GBP",
       moq: "1",
       stock: "0",
@@ -267,6 +271,7 @@ export default function ProductManagement() {
       const productData = {
         ...data,
         price: parseFloat(data.price),
+        promoPrice: data.promoPrice ? parseFloat(data.promoPrice) : null,
         moq: parseInt(data.moq),
         stock: parseInt(data.stock),
         unitsPerPallet: data.unitsPerPallet ? parseInt(data.unitsPerPallet) : null,
@@ -297,6 +302,7 @@ export default function ProductManagement() {
       const updatedData = {
         ...productData,
         price: parseFloat(productData.price),
+        promoPrice: productData.promoPrice ? parseFloat(productData.promoPrice) : null,
         moq: parseInt(productData.moq),
         stock: parseInt(productData.stock),
         unitsPerPallet: productData.unitsPerPallet ? parseInt(productData.unitsPerPallet) : null,
@@ -385,6 +391,8 @@ export default function ProductManagement() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
+      promoPrice: product.promoPrice?.toString() || "",
+      promoActive: product.promoActive || false,
       currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
@@ -417,6 +425,8 @@ export default function ProductManagement() {
       name: `${product.name} (Copy)`,
       description: product.description || "",
       price: product.price.toString(),
+      promoPrice: product.promoPrice?.toString() || "",
+      promoActive: product.promoActive || false,
       currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
@@ -525,6 +535,8 @@ export default function ProductManagement() {
         name: row.name,
         description: row.description || "",
         price: row.price,
+        promoPrice: row.promoPrice || "",
+        promoActive: row.promoActive === 'true',
         currency: row.currency || user?.preferredCurrency || "GBP",
         moq: row.moq,
         stock: row.stock,
@@ -556,8 +568,10 @@ export default function ProductManagement() {
           const productData = {
             ...product,
             price: parseFloat(product.price),
+            promoPrice: product.promoPrice ? parseFloat(product.promoPrice) : null,
             moq: parseInt(product.moq),
             stock: parseInt(product.stock),
+            minimumBidPrice: product.minimumBidPrice ? parseFloat(product.minimumBidPrice) : null,
             unitsPerPallet: product.unitsPerPallet ? parseInt(product.unitsPerPallet) : null,
           };
           const result = await apiRequest("POST", "/api/products", productData);
@@ -598,6 +612,8 @@ export default function ProductManagement() {
         name: "Example Product",
         description: "Product description",
         price: "10.99",
+        promoPrice: "8.99",
+        promoActive: "true",
         currency: "GBP",
         moq: "1",
         stock: "100",
@@ -700,7 +716,7 @@ export default function ProductManagement() {
                         <h4 className="font-semibold">File Format Requirements:</h4>
                         <div className="text-sm text-gray-600 space-y-2">
                           <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                          <p><strong>Optional columns:</strong> description, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unitType, unitsPerPallet, supportsPickup, supportsDelivery</p>
+                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unitType, unitsPerPallet, supportsPickup, supportsDelivery</p>
                           <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
                         </div>
                         <Button variant="link" onClick={downloadTemplate} className="p-0">
@@ -790,6 +806,8 @@ export default function ProductManagement() {
                       name: "",
                       description: "",
                       price: "",
+                      promoPrice: "",
+                      promoActive: false,
                       currency: user?.preferredCurrency || "GBP",
                       moq: "1",
                       stock: "0",
@@ -892,7 +910,7 @@ export default function ProductManagement() {
                           name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Price</FormLabel>
+                              <FormLabel>Regular Price</FormLabel>
                               <FormControl>
                                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
                               </FormControl>
@@ -900,6 +918,24 @@ export default function ProductManagement() {
                             </FormItem>
                           )}
                         />
+                        
+                        <FormField
+                          control={form.control}
+                          name="promoPrice"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Promo Price</FormLabel>
+                              <FormControl>
+                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <div className="text-xs text-muted-foreground">
+                                Optional promotional price
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        
                         <FormField
                           control={form.control}
                           name="currency"
@@ -1174,6 +1210,27 @@ export default function ProductManagement() {
                               </FormItem>
                             )}
                           />
+                          
+                          <FormField
+                            control={form.control}
+                            name="promoActive"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Promotional Pricing Active</FormLabel>
+                                  <div className="text-sm text-muted-foreground">
+                                    Use promotional price instead of regular price
+                                  </div>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                           {form.watch("negotiationEnabled") && (
                             <FormField
                               control={form.control}
@@ -1336,7 +1393,25 @@ export default function ProductManagement() {
                           <div>
                             <span className="text-gray-500">Price:</span>
                             <div className="font-semibold">
-                              {product.priceVisible ? formatCurrency(parseFloat(product.price), product.currency || "GBP") : "Hidden"}
+                              {product.priceVisible ? (
+                                <div className="flex items-center gap-2">
+                                  {product.promoActive && product.promoPrice ? (
+                                    <>
+                                      <span className="text-green-600">
+                                        {formatCurrency(parseFloat(product.promoPrice), product.currency || "GBP")}
+                                      </span>
+                                      <span className="text-gray-500 line-through text-sm">
+                                        {formatCurrency(parseFloat(product.price), product.currency || "GBP")}
+                                      </span>
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                        PROMO
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    formatCurrency(parseFloat(product.price), product.currency || "GBP")
+                                  )}
+                                </div>
+                              ) : "Hidden"}
                             </div>
                           </div>
                           <div>
@@ -1379,6 +1454,8 @@ export default function ProductManagement() {
                       name: "",
                       description: "",
                       price: "",
+                      promoPrice: "",
+                      promoActive: false,
                       currency: user?.preferredCurrency || "GBP",
                       moq: "1",
                       stock: "0",

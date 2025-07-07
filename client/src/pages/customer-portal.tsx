@@ -140,7 +140,9 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             items: cart.map(item => ({
               productId: item.product.id,
               quantity: item.quantity,
-              unitPrice: parseFloat(item.product.price)
+              unitPrice: item.product.promoActive && item.product.promoPrice 
+                ? parseFloat(item.product.promoPrice)
+                : parseFloat(item.product.price)
             })),
             customerData,
             wholesalerId: wholesaler.id,
@@ -402,7 +404,9 @@ export default function CustomerPortal() {
   const cartStats = useMemo(() => {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = cart.reduce((sum, item) => {
-      const price = parseFloat(item.product.price);
+      const price = item.product.promoActive && item.product.promoPrice 
+        ? parseFloat(item.product.promoPrice)
+        : parseFloat(item.product.price);
       return sum + (price * item.quantity);
     }, 0);
     return { totalItems, totalValue };
@@ -660,8 +664,24 @@ export default function CustomerPortal() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Price:</span>
-                      <div className="font-semibold text-lg text-green-600">
-                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
+                      <div className="font-semibold text-lg">
+                        {featuredProduct.promoActive && featuredProduct.promoPrice ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.promoPrice).toFixed(2)}
+                            </span>
+                            <span className="text-gray-500 line-through text-sm">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
+                            </span>
+                            <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
+                              SALE
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-green-600">
+                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -883,7 +903,22 @@ export default function CustomerPortal() {
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Price:</span>
-                            <span className="font-semibold">{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}</span>
+                            <div className="font-semibold">
+                              {product.promoActive && product.promoPrice ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-green-600">
+                                    {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.promoPrice).toFixed(2)}
+                                  </span>
+                                  <span className="text-gray-500 line-through text-xs">
+                                    {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span>
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Min order:</span>
