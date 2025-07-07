@@ -141,6 +141,9 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   retailerId: varchar("retailer_id").notNull().references(() => users.id),
+  customerName: varchar("customer_name"), // Store customer name for guest checkouts
+  customerEmail: varchar("customer_email"), // Store customer email for guest checkouts
+  customerPhone: varchar("customer_phone"), // Store customer phone for guest checkouts
   status: varchar("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),

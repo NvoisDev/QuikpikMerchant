@@ -701,10 +701,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
           : totalAmount;
 
-        // Create order
+        // Create order with customer details
         const orderData = {
           wholesalerId,
           retailerId: customer.id,
+          customerName, // Store customer name
+          customerEmail, // Store customer email
+          customerPhone, // Store customer phone
           subtotal: wholesalerAmount,
           platformFee: actualPlatformFee,
           total: totalAmount,
@@ -3740,10 +3743,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const platformFee = (parseFloat(totalAmount) * 0.05).toFixed(2);
       const total = totalAmount.toString();
       
-      // Create order
+      // Create order with customer details  
       const orderData = {
         wholesalerId: product.wholesalerId,
         retailerId: customer.id,
+        customerName, // Store customer name
+        customerEmail, // Store customer email
+        customerPhone, // Store customer phone
         subtotal,
         platformFee,
         total,
@@ -3861,11 +3867,14 @@ Please contact the customer to confirm this order.
       const platformFee = subtotal * 0.05;
       const finalTotal = subtotal;
 
-      // Create the order
+      // Create the order with customer details
       const order = await storage.createOrder(
         {
           retailerId: customer.id,
           wholesalerId: firstProduct.wholesalerId,
+          customerName, // Store customer name
+          customerEmail, // Store customer email 
+          customerPhone, // Store customer phone
           subtotal: subtotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
           total: finalTotal.toFixed(2),
@@ -4812,8 +4821,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         <div>
           <h3>Bill To:</h3>
           <p>${customerName}<br/>
-          ${order.retailer.email || order.customerEmail || ''}<br/>
-          ${order.retailer.phoneNumber || ''}</p>
+          ${order.customerEmail || order.retailer?.email || ''}<br/>
+          ${order.customerPhone || order.retailer?.phoneNumber || ''}</p>
         </div>
         <div>
           <h3>Invoice Details:</h3>
@@ -4914,18 +4923,22 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }
 
       const wholesaler = await storage.getUser(userId);
-      const customer = await storage.getUser(order.retailerId);
       
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // Get customer info for receipt
-      const customerName = order.retailer?.firstName ? 
-        `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() :
-        `Customer ${order.id}`;
+      // Get real customer info - prefer stored customer data over retailer
+      const customerName = order.customerName || 
+        (order.retailer?.firstName ? `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim() : `Customer ${order.id}`);
       
-      const customerEmail = order.retailer?.email || `customer${order.id}@quikpik.co`;
+      const customerEmail = order.customerEmail || order.retailer?.email;
+      
+      if (!customerEmail) {
+        return res.status(400).json({ message: "No customer email found for this order" });
+      }
+
+      console.log(`📧 Sending receipt to: ${customerEmail} for customer: ${customerName}`);
 
       // Get order items with product details
       const orderItems = await storage.getOrderItems(order.id);
@@ -4938,15 +4951,16 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         };
       }));
 
-      // Send simple receipt email
+      // Send receipt email using real customer data
       await sendCustomerInvoiceEmail({
         email: customerEmail,
-        name: customerName
+        name: customerName,
+        phone: order.customerPhone || order.retailer?.phoneNumber
       }, order, enrichedItems, wholesaler);
 
       res.json({ 
         success: true, 
-        message: "Receipt sent successfully to customer"
+        message: `Receipt sent successfully to ${customerEmail}`
       });
 
     } catch (error) {
