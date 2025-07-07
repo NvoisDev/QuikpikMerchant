@@ -79,7 +79,7 @@ export interface IStorage {
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   
   // Order item operations
-  getOrderItems(orderId: number): Promise<any[]>;
+  getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateProductStock(productId: number, newStock: number): Promise<void>;
   updateOrderNotes(orderId: number, notes: string): Promise<void>;
   
@@ -396,6 +396,19 @@ export class DatabaseStorage implements IStorage {
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
     const [newOrderItem] = await db.insert(orderItems).values(orderItem).returning();
     return newOrderItem;
+  }
+
+  async getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]> {
+    const items = await db
+      .select()
+      .from(orderItems)
+      .leftJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.orderId, orderId));
+    
+    return items.map(item => ({
+      ...item.order_items,
+      product: item.products!
+    }));
   }
 
   async updateOrderStatus(id: number, status: string): Promise<Order> {

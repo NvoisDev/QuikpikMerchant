@@ -2729,27 +2729,60 @@ Write a professional, sales-focused description that highlights the key benefits
         storage.getMessageTemplates(userId)
       ]);
 
-      // Convert broadcasts to unified campaign format
-      const broadcastCampaigns = broadcasts.map(broadcast => ({
-        id: `broadcast_${broadcast.id}`,
-        title: `${broadcast.product.name} Promotion`,
-        customMessage: broadcast.message,
-        specialPrice: broadcast.specialPrice,
-        includeContact: true,
-        includePurchaseLink: true,
-        campaignType: 'single' as const,
-        status: broadcast.sentAt ? 'sent' : 'draft',
-        createdAt: broadcast.createdAt,
-        product: broadcast.product,
-        sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
-          id: broadcast.id,
-          sentAt: broadcast.sentAt,
-          recipientCount: broadcast.recipientCount || 0,
-          clickCount: Math.floor(Math.random() * (broadcast.recipientCount || 0) * 0.3),
-          orderCount: Math.floor(Math.random() * (broadcast.recipientCount || 0) * 0.1),
-          totalRevenue: ((Math.random() * 500) + 100).toFixed(2),
-          customerGroup: broadcast.customerGroup
-        }] : []
+      // Get all orders for real order count calculation
+      const allOrders = await storage.getOrders(userId);
+
+      // Convert broadcasts to unified campaign format with real order data
+      const broadcastCampaigns = await Promise.all(broadcasts.map(async broadcast => {
+        let realOrderCount = 0;
+        let realRevenue = '0.00';
+        
+        if (broadcast.sentAt && broadcast.product) {
+          // Count orders for this specific product after broadcast was sent
+          const ordersForProduct = allOrders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            const broadcastDate = new Date(broadcast.sentAt);
+            return orderDate >= broadcastDate && order.status === 'paid';
+          });
+
+          // Get order items for this specific product
+          const productOrders = await Promise.all(
+            ordersForProduct.map(async order => {
+              const orderItems = await storage.getOrderItems(order.id);
+              return orderItems.filter(item => item.productId === broadcast.product.id);
+            })
+          );
+
+          // Count total quantity ordered for this product
+          realOrderCount = productOrders.flat().reduce((sum, item) => sum + item.quantity, 0);
+          
+          // Calculate total revenue for this product
+          realRevenue = productOrders.flat().reduce((sum, item) => {
+            return sum + (parseFloat(item.unitPrice) * item.quantity);
+          }, 0).toFixed(2);
+        }
+
+        return {
+          id: `broadcast_${broadcast.id}`,
+          title: `${broadcast.product.name} Promotion`,
+          customMessage: broadcast.message,
+          specialPrice: broadcast.specialPrice,
+          includeContact: true,
+          includePurchaseLink: true,
+          campaignType: 'single' as const,
+          status: broadcast.sentAt ? 'sent' : 'draft',
+          createdAt: broadcast.createdAt,
+          product: broadcast.product,
+          sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
+            id: broadcast.id,
+            sentAt: broadcast.sentAt,
+            recipientCount: broadcast.recipientCount || 0,
+            clickCount: Math.floor((realOrderCount / Math.max(broadcast.recipientCount || 1, 1)) * (broadcast.recipientCount || 0)), // Estimated based on conversion
+            orderCount: realOrderCount, // Real order count from database
+            totalRevenue: realRevenue, // Real revenue from database
+            customerGroup: broadcast.customerGroup
+          }] : []
+        };
       }));
 
       // Convert message templates to unified campaign format
