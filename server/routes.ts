@@ -700,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformFee: actualPlatformFee,
           total: totalAmount,
           status: 'paid',
-          paymentIntentId: paymentIntent.id,
+          stripePaymentIntentId: paymentIntent.id,
           deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
         };
 
@@ -835,7 +835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             platformFee,
             total: totalAmount,
             status: 'paid',
-            paymentIntentId: paymentIntent.id,
+            stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
           };
 
@@ -849,15 +849,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const order = await storage.createOrder(orderData, orderItems);
 
-          // Send customer confirmation email
+          // Send customer confirmation email and Stripe invoice
           const wholesaler = await storage.getUser(wholesalerId);
           if (wholesaler && customerEmail) {
+            // Enrich items with product details for email
+            const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              return {
+                ...item,
+                productName: product?.name || `Product #${item.productId}`,
+                product: product ? { name: product.name } : null
+              };
+            }));
+            
             await sendCustomerInvoiceEmail({
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
               address: customerAddress
-            }, order, orderItems, wholesaler);
+            }, order, enrichedItems, wholesaler);
+
+            // Create and send Stripe invoice to customer
+            await createAndSendStripeInvoice(order, enrichedItems, wholesaler, {
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone
+            });
           }
 
           // Send notifications
@@ -999,9 +1016,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Can only refund paid or fulfilled orders" });
       }
 
-      // Check for payment intent ID in either field name
-      const paymentIntentId = order.stripePaymentIntentId || order.paymentIntentId;
+      // Check for payment intent ID 
+      const paymentIntentId = order.stripePaymentIntentId;
       if (!paymentIntentId) {
+        console.log('Order payment details:', {
+          orderId: id,
+          stripePaymentIntentId: order.stripePaymentIntentId,
+          status: order.status,
+          total: order.total
+        });
         return res.status(400).json({ message: "No payment information found for this order" });
       }
 
