@@ -41,13 +41,19 @@ async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: 
       if (customers.data.length > 0) {
         stripeCustomer = customers.data[0];
       } else {
+        // Extract customer info from order retailer data or customer object
+        const customerEmail = customer.email || order.customerEmail || `customer${order.id}@example.com`;
+        const customerName = customer.name || `${order.retailer?.firstName || 'Customer'} ${order.retailer?.lastName || ''}`.trim();
+        const customerPhone = customer.phone || order.retailer?.phoneNumber || order.customerPhone;
+        
         stripeCustomer = await stripe.customers.create({
-          email: customer.email,
-          name: customer.name,
-          phone: customer.phone,
+          email: customerEmail,
+          name: customerName || 'Customer',
+          phone: customerPhone,
           metadata: {
             orderType: 'customer_portal',
-            wholesalerId: wholesaler.id
+            wholesalerId: wholesaler.id,
+            orderId: order.id.toString()
           }
         });
       }
@@ -129,10 +135,13 @@ async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: 
     // Send invoice email to customer
     await stripe.invoices.sendInvoice(finalizedInvoice.id);
 
-    console.log(`📄 Stripe invoice created and sent to ${customer.email} for order #${order.id}`);
+    console.log(`📄 Stripe invoice created and sent to ${customer.email || customer.name} for order #${order.id}`);
+    return finalizedInvoice;
     
   } catch (error) {
     console.error(`❌ Failed to create Stripe invoice for order #${order.id}:`, error);
+    console.error(`Customer email: ${customer.email}, Customer name: ${customer.name}`);
+    return null;
   }
 }
 
@@ -4803,7 +4812,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         <div>
           <h3>Bill To:</h3>
           <p>${customerName}<br/>
-          ${order.retailer.email}<br/>
+          ${order.retailer.email || order.customerEmail || ''}<br/>
           ${order.retailer.phoneNumber || ''}</p>
         </div>
         <div>
@@ -4854,10 +4863,33 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 </body>
 </html>`;
 
+      // Generate PDF using Puppeteer
+      const puppeteer = require('puppeteer');
+      const browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20mm',
+          right: '20mm',
+          bottom: '20mm',
+          left: '20mm'
+        }
+      });
+      
+      await browser.close();
+
       // Set headers for PDF download
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.html"`);
-      res.send(invoiceHtml);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.pdf"`);
+      res.send(pdfBuffer);
 
     } catch (error) {
       console.error("Error generating invoice:", error);
@@ -4884,8 +4916,18 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       const wholesaler = await storage.getUser(userId);
       const customer = await storage.getUser(order.retailerId);
       
-      if (!wholesaler || !customer) {
-        return res.status(404).json({ message: "User data not found" });
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      
+      // If customer user doesn't exist, create customer info from order data
+      let customerInfo = customer;
+      if (!customer) {
+        customerInfo = {
+          email: order.customerEmail || `customer${order.id}@example.com`,
+          name: order.customerName || `${order.retailer?.firstName || 'Customer'} ${order.retailer?.lastName || ''}`.trim(),
+          phone: order.customerPhone || order.retailer?.phoneNumber
+        };
       }
 
       // Get order items with product details
@@ -4900,7 +4942,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }));
 
       // Create Stripe invoice
-      const stripeInvoice = await createStripeInvoiceForOrder(order, enrichedItems, wholesaler, customer);
+      const stripeInvoice = await createStripeInvoiceForOrder(order, enrichedItems, wholesaler, customerInfo);
 
       if (stripeInvoice) {
         res.json({ 
