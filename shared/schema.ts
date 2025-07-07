@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  googleId: varchar("google_id").unique(),
   role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer'
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),

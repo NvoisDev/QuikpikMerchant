@@ -154,6 +154,11 @@ export function OnboardingTooltip() {
         });
 
         // Highlight the target element
+        if (highlightedElement && highlightedElement !== element) {
+          highlightedElement.style.boxShadow = "";
+          highlightedElement.style.zIndex = "";
+        }
+        
         setHighlightedElement(element);
         element.style.position = "relative";
         element.style.zIndex = "9999";
@@ -170,14 +175,8 @@ export function OnboardingTooltip() {
     return () => {
       window.removeEventListener('scroll', updatePosition);
       window.removeEventListener('resize', updatePosition);
-      
-      // Clean up highlighted element
-      if (highlightedElement) {
-        highlightedElement.style.boxShadow = "";
-        highlightedElement.style.zIndex = "";
-      }
     };
-  }, [isActive, currentStep, getCurrentStep, highlightedElement]);
+  }, [isActive, currentStep, getCurrentStep]);
 
   // Clean up highlighted element when tooltip becomes inactive
   useEffect(() => {

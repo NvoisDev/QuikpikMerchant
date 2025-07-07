@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
@@ -222,36 +223,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes - Temporary bypass for development
-  app.get('/api/auth/user', async (req: any, res) => {
+  // Google Auth routes
+  app.get('/api/auth/google', (req, res) => {
     try {
-      // Temporary test user for development
-      const testUserId = 'test-user-123';
+      const authUrl = getGoogleAuthUrl();
+      res.json({ authUrl });
+    } catch (error) {
+      console.error('Error generating Google auth URL:', error);
+      res.status(500).json({ error: 'Failed to generate authentication URL' });
+    }
+  });
+
+  app.get('/api/auth/google/callback', async (req, res) => {
+    try {
+      const { code } = req.query;
       
-      let user = await storage.getUser(testUserId);
-      if (!user) {
-        // Create test user if doesn't exist
-        await storage.upsertUser({
-          id: testUserId,
-          email: 'test@example.com',
-          name: 'Test User',
-          role: 'wholesaler',
-          businessName: 'Test Business'
-        });
-        user = await storage.getUser(testUserId);
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ error: 'Authorization code is required' });
       }
+
+      // Verify Google token and get user info
+      const googleUser = await verifyGoogleToken(code);
       
-      res.json(user);
+      // Create or update user in database
+      const user = await createOrUpdateUser(googleUser);
+      
+      // Set user session
+      req.session.userId = user.id;
+      
+      // Redirect to home page
+      res.redirect('/');
+    } catch (error) {
+      console.error('Google auth callback error:', error);
+      res.redirect('/login?error=auth_failed');
+    }
+  });
+
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+    try {
+      res.json(req.user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ error: 'Failed to logout' });
+      }
+      res.json({ success: true });
+    });
+  });
+
   // Onboarding routes
-  app.patch('/api/auth/user/onboarding', async (req: any, res) => {
+  app.patch('/api/auth/user/onboarding', requireAuth, async (req: any, res) => {
     try {
-      const userId = 'test-user-123'; // Temporary test user
+      const userId = req.user.id;
       const { step, completed, skipped } = req.body;
       
       const updateData: any = {};

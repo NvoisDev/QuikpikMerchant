@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/pages/Login";
 import WholesalerDashboard from "@/pages/wholesaler-dashboard";
 import ProductManagement from "@/pages/product-management";
 import RetailerInterface from "@/pages/retailer-interface";
@@ -42,11 +43,9 @@ function Router() {
     );
   }
 
-  // Redirect to login if not authenticated and not on a public route
-  if (!isAuthenticated && !['/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route))) {
-    // Use replace to avoid redirect loops
-    window.location.replace("/api/auth/login");
-    return null;
+  // Show login page if not authenticated and not on a public route
+  if (!isAuthenticated && !['/login', '/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route))) {
+    return <Login />;
   }
 
   return (
