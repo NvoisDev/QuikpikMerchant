@@ -721,62 +721,7 @@ export default function Orders() {
               </>
             )}
 
-            {/* Download Invoice Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                window.open(`/api/orders/${order.id}/invoice`, '_blank');
-              }}
-              className="border-blue-200 text-blue-600 hover:bg-blue-50"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download Invoice
-            </Button>
-
-            {/* Send Receipt Button - Only for wholesaler */}
-            {user?.role === 'wholesaler' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/api/orders/${order.id}/send-receipt`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      credentials: 'include'
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (response.ok) {
-                      toast({
-                        title: "Receipt Sent",
-                        description: "Receipt has been sent to the customer via email",
-                      });
-                    } else {
-                      toast({
-                        title: "Error",
-                        description: result.message || "Failed to send receipt",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (error) {
-                    toast({
-                      title: "Error",
-                      description: "Failed to send receipt",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                className="border-green-200 text-green-600 hover:bg-green-50"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Send Receipt
-              </Button>
-            )}
+            {/* Invoice and receipt buttons removed due to technical issues */}
           </div>
         )}
         

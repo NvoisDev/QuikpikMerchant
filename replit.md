@@ -362,6 +362,7 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Comprehensive Error Handling**: Detailed error messages and loading states throughout the payment process
   - **Security Disclosure**: Clear platform fee disclosure and secure payment processing messaging for customer transparency
 - July 07, 2025. Enhanced Order Processing with Stripe Invoicing and Refund Fixes:
+- July 07, 2025. Removed Non-Functional Features:
   - **Stripe Invoice Generation**: Automatic Stripe invoice creation and email delivery to customers after successful order completion
   - **Professional Invoice Format**: Invoices include line items, platform fees, supplier information, and order details with proper currency formatting
   - **Duplicate Payment Prevention**: Fixed multiple payment intent creation issue by adding loading state protection during customer form entry
@@ -388,11 +389,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Manual Stripe Invoice Creation**: Added "Send Stripe Invoice" button in orders interface for creating professional Stripe invoices on demand
   - **Webhook Integration**: Payment success automatically triggers Stripe invoice creation for seamless customer receipt delivery
   - **Professional Business Documentation**: Stripe-generated invoices and credit notes provide official business records for accounting and tax purposes
-  - **PDF Invoice Generation**: Download Invoice button now generates professional PDF format using Puppeteer with A4 formatting and proper business styling
+  - **PDF Invoice Generation**: Removed due to technical issues with Puppeteer in Replit environment
   - **Stripe-Powered Receipt System**: Implemented intelligent receipt system that retrieves customer data directly from Stripe payment intents
   - **Real Customer Data**: Send Receipt now uses actual customer information from Stripe metadata (email, name, phone) ensuring accurate delivery
   - **Automatic Fallback**: System gracefully handles cases where Stripe data is unavailable by using stored order information
   - **Simplified Architecture**: Eliminated need for complex customer data storage by leveraging Stripe's existing payment metadata
+  - **Removed Download Invoice and Send Receipt Buttons**: Removed due to technical issues with PDF generation (Puppeteer) and email delivery systems not working reliably in Replit environment
+  - **Cleaned Up Order Interface**: Simplified orders page to focus on core functionality - order status tracking and management without problematic features
 
   
 **Status Systems:**
