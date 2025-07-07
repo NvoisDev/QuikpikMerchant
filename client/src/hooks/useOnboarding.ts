@@ -88,10 +88,7 @@ export function useOnboarding() {
 
   const updateOnboardingMutation = useMutation({
     mutationFn: async (data: { step?: number; completed?: boolean; skipped?: boolean }) => {
-      return apiRequest(`/api/auth/user/onboarding`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("PATCH", `/api/auth/user/onboarding`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -143,6 +140,12 @@ export function useOnboarding() {
     updateOnboardingMutation.mutate({ step: 0, completed: false, skipped: false });
   };
 
+  const startOnboarding = () => {
+    setCurrentStep(0);
+    setIsActive(true);
+    updateOnboardingMutation.mutate({ step: 0 });
+  };
+
   const updateTooltipPosition = (targetSelector: string) => {
     const element = document.querySelector(targetSelector);
     if (element) {
@@ -166,9 +169,11 @@ export function useOnboarding() {
     prevStep,
     skipOnboarding,
     completeOnboarding,
+    startOnboarding,
     restartOnboarding,
     updateTooltipPosition,
     tooltipPosition,
     isLoading: updateOnboardingMutation.isPending,
+    user,
   };
 }
