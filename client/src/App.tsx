@@ -44,8 +44,10 @@ function Router() {
     );
   }
 
-  // Show login page if not authenticated and not on a public route
-  if (!isAuthenticated && !['/login', '/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route))) {
+  // Show login page only for /login route when not authenticated
+  const isPublicRoute = ['/login', '/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route));
+  
+  if (!isAuthenticated && location === '/login') {
     return <Login />;
   }
 

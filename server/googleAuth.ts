@@ -68,15 +68,16 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
     let user = await storage.getUserByEmail(googleUser.email);
     
     if (user) {
-      // Update existing user with Google info
+      // Update existing user with Google info and mark as not first login
       user = await storage.updateUser(user.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
         profileImageUrl: googleUser.picture,
-        googleId: googleUser.id
+        googleId: googleUser.id,
+        isFirstLogin: false
       });
     } else {
-      // Create new user
+      // Create new user with first login flag
       user = await storage.createUser({
         id: googleUser.id,
         email: googleUser.email,
@@ -85,7 +86,9 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         profileImageUrl: googleUser.picture,
         googleId: googleUser.id,
         role: 'wholesaler', // Default role
-        businessName: `${googleUser.name}'s Business`
+        businessName: `${googleUser.name}'s Business`,
+        defaultCurrency: 'GBP',
+        isFirstLogin: true
       });
     }
 

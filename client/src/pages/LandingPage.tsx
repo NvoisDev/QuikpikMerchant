@@ -21,7 +21,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
 
   const handleGetStarted = () => {
-    window.location.href = "/api/auth/google";
+    window.location.href = "/login";
   };
 
   const handleWaitlist = (e: React.FormEvent) => {
@@ -42,10 +42,19 @@ export default function LandingPage() {
               </div>
               <span className="text-2xl font-bold text-gray-900">Quikpik</span>
             </div>
-            <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90">
-              Get Started Free
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={handleGetStarted}
+                className="text-gray-700 hover:text-primary"
+              >
+                Log In
+              </Button>
+              <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90">
+                Sign Up Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
@@ -83,9 +92,10 @@ export default function LandingPage() {
                 <Button 
                   variant="outline" 
                   size="lg"
+                  onClick={handleGetStarted}
                   className="text-lg px-8 py-4 border-2"
                 >
-                  Watch Demo
+                  Already have an account? Log In
                 </Button>
               </div>
               

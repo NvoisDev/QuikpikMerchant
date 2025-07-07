@@ -28,12 +28,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (user) {
-      // Check if user can start onboarding
-      const shouldStartOnboarding = !user.onboardingCompleted && !user.onboardingSkipped;
+      // Check if user can start onboarding - only for first-time users
+      const shouldStartOnboarding = user.isFirstLogin && !user.onboardingCompleted && !user.onboardingSkipped;
       setCanStartOnboarding(true);
       
       if (shouldStartOnboarding) {
-        // Start onboarding automatically for new users
+        // Start onboarding automatically for first-time users only
         setIsOnboardingActive(true);
       }
     }
