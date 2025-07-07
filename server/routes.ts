@@ -1083,17 +1083,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedOrder = order;
       }
 
-      // Send refund notification to customer
+      // Send refund notification and receipt to customer
       try {
         const customer = await storage.getUser(order.retailerId);
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer?.email && wholesaler) {
-          // Send refund confirmation email
-          console.log(`Sending refund confirmation to ${customer.email} for order ${id}`);
+          // Generate and send refund receipt
+          await sendRefundReceipt(customer, order, refund, wholesaler, reason);
+          console.log(`Refund receipt sent to ${customer.email} for order ${id}`);
         }
       } catch (error) {
-        console.error('Failed to send refund notification:', error);
+        console.error('Failed to send refund receipt:', error);
       }
 
       res.json({ 
@@ -4106,6 +4107,117 @@ Please contact the customer to confirm this order.
     }
   }
 
+  async function sendRefundReceipt(customer: any, order: any, refund: any, wholesaler: any, reason: string) {
+    if (!sendGrid) {
+      console.log('SendGrid not configured, skipping refund receipt email');
+      return;
+    }
+
+    try {
+      const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
+      const businessName = wholesaler.businessName || 'Quikpik Merchant';
+      const currency = wholesaler.preferredCurrency || 'GBP';
+      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+      
+      const refundAmount = refund ? (refund.amount / 100) : parseFloat(order.total);
+      const isFullRefund = refund ? (refund.amount >= parseFloat(order.total) * 100) : true;
+
+      const emailContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Refund Receipt - ${businessName}</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px;">
+      <h1 style="margin: 0; font-size: 28px; font-weight: bold;">${businessName}</h1>
+      <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Refund Receipt</p>
+    </div>
+
+    <!-- Refund Info -->
+    <div style="padding: 30px;">
+      <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin-bottom: 30px;">
+        <h2 style="margin: 0 0 10px 0; color: #dc2626; font-size: 20px;">Refund Processed</h2>
+        <p style="margin: 0; color: #7f1d1d;">
+          ${isFullRefund ? 'Full refund' : 'Partial refund'} of ${currencySymbol}${refundAmount.toFixed(2)} has been processed for Order #${order.id}
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+        <div>
+          <h3 style="margin: 0 0 10px 0; color: #374151;">Customer:</h3>
+          <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+            ${customerName}<br/>
+            ${customer.email}<br/>
+            ${customer.phoneNumber || ''}
+          </p>
+        </div>
+        <div style="text-align: right;">
+          <h3 style="margin: 0 0 10px 0; color: #374151;">Refund Details:</h3>
+          <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+            Date: ${new Date().toLocaleDateString()}<br/>
+            Original Order: #${order.id}<br/>
+            ${refund ? `Refund ID: ${refund.id}` : 'Manual Refund'}
+          </p>
+        </div>
+      </div>
+
+      <!-- Refund Summary -->
+      <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 15px 0; color: #374151;">Refund Summary</h3>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <span style="color: #6b7280;">Original Order Total:</span>
+          <span style="font-weight: 600;">${currencySymbol}${parseFloat(order.total).toFixed(2)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <span style="color: #6b7280;">Refund Amount:</span>
+          <span style="font-weight: 600; color: #dc2626;">${currencySymbol}${refundAmount.toFixed(2)}</span>
+        </div>
+        ${reason ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+          <span style="color: #6b7280;">Reason:</span>
+          <p style="margin: 5px 0 0 0; color: #374151;">${reason}</p>
+        </div>` : ''}
+      </div>
+
+      <!-- Processing Info -->
+      <div style="background-color: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px; padding: 20px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 10px 0; color: #0369a1;">Processing Information</h3>
+        <p style="margin: 0; color: #0369a1; line-height: 1.5;">
+          Your refund has been processed and will appear on your original payment method within 5-10 business days.
+          ${isFullRefund ? ' Your order has been cancelled and any items will be restocked.' : ''}
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+        <p style="color: #6b7280; margin: 0 0 10px 0;">We apologize for any inconvenience.</p>
+        <p style="color: #9ca3af; font-size: 14px; margin: 0;">
+          This refund receipt was generated automatically by Quikpik Merchant Platform
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      await sendGrid.send({
+        to: customer.email,
+        from: 'invoices@quikpik.co',
+        subject: `Refund Receipt for Order #${order.id} - ${businessName}`,
+        html: emailContent
+      });
+
+      console.log(`✅ Refund receipt sent to ${customer.email} for order ${order.id}`);
+    } catch (error) {
+      console.error('❌ Failed to send refund receipt:', error);
+      throw error;
+    }
+  }
+
   function generateOrderNotificationMessage(order: any, customer: any, items: any[]): string {
     let message = `🛒 New Order Received!\n\n`;
     message += `Order #${order.id}\n`;
@@ -4453,6 +4565,140 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         error: error.message,
         details: error.response?.body
       });
+    }
+  });
+
+  // Generate and download invoice PDF
+  app.get('/api/orders/:id/invoice', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can generate invoices for their orders
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to generate invoice for this order" });
+      }
+
+      const wholesaler = await storage.getUser(userId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // Generate invoice HTML (reuse the email template but optimized for PDF)
+      const customerName = `${order.retailer.firstName} ${order.retailer.lastName || ''}`.trim();
+      const businessName = wholesaler.businessName || 'Quikpik Merchant';
+      const currency = wholesaler.preferredCurrency || 'GBP';
+      const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '£';
+      
+      const itemsList = order.items.map(item => 
+        `<tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 12px 8px; border-right: 1px solid #eee;">${item.product.name}</td>
+          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px 8px; border-right: 1px solid #eee; text-align: right;">${currencySymbol}${parseFloat(item.unitPrice).toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; font-weight: bold;">${currencySymbol}${(parseFloat(item.unitPrice) * item.quantity).toFixed(2)}</td>
+        </tr>`
+      ).join('');
+
+      const subtotal = order.items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+      const platformFee = subtotal * 0.05;
+      const total = subtotal + platformFee;
+
+      const invoiceHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Invoice #${order.id} - ${businessName}</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { background: #22c55e; color: white; padding: 30px; text-align: center; }
+    .content { padding: 30px; }
+    .flex { display: flex; justify-content: space-between; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    th, td { padding: 12px 8px; border: 1px solid #e5e7eb; }
+    th { background-color: #f9fafb; font-weight: 600; }
+    .totals { border-top: 2px solid #e5e7eb; padding-top: 20px; }
+    .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .final-total { font-size: 18px; font-weight: bold; color: #22c55e; padding: 15px 0; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${businessName}</h1>
+      <h2>INVOICE #${order.id}</h2>
+    </div>
+    
+    <div class="content">
+      <div class="flex">
+        <div>
+          <h3>Bill To:</h3>
+          <p>${customerName}<br/>
+          ${order.retailer.email}<br/>
+          ${order.retailer.phoneNumber || ''}</p>
+        </div>
+        <div>
+          <h3>Invoice Details:</h3>
+          <p>Date: ${new Date(order.createdAt).toLocaleDateString()}<br/>
+          Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}<br/>
+          Order #${order.id}</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsList}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span>${currencySymbol}${subtotal.toFixed(2)}</span>
+        </div>
+        <div class="total-row">
+          <span>Platform Fee (5%):</span>
+          <span>${currencySymbol}${platformFee.toFixed(2)}</span>
+        </div>
+        <div class="final-total">
+          <div class="total-row">
+            <span>Total:</span>
+            <span>${currencySymbol}${total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <p>Thank you for your business!</p>
+        <small>Generated by Quikpik Merchant Platform on ${new Date().toLocaleDateString()}</small>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.id}.html"`);
+      res.send(invoiceHtml);
+
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      res.status(500).json({ message: "Failed to generate invoice" });
     }
   });
 

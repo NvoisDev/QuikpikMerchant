@@ -619,6 +619,19 @@ export default function Orders() {
                 </Button>
               </>
             )}
+
+            {/* Download Invoice Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.open(`/api/orders/${order.id}/invoice`, '_blank');
+              }}
+              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Invoice
+            </Button>
           </div>
         )}
         
