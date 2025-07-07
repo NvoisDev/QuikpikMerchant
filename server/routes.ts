@@ -3533,6 +3533,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     try {
       const { items, customerData, wholesalerId, totalAmount } = req.body;
       
+      console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
+      
+      // Validate totalAmount is a valid number
+      if (!totalAmount || isNaN(parseFloat(totalAmount))) {
+        console.error(`❌ Invalid totalAmount: ${totalAmount}`);
+        return res.status(400).json({ message: 'Invalid total amount provided' });
+      }
+      
       if (!items || !customerData || !wholesalerId) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
