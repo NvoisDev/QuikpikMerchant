@@ -23,7 +23,7 @@ import { Link } from "wouter";
 
 export default function WholesalerDashboard() {
   const { user } = useAuth();
-  const { onboardingState } = useOnboarding();
+  const { isActive } = useOnboarding();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/analytics/stats"],
@@ -114,7 +114,7 @@ export default function WholesalerDashboard() {
         {/* Dashboard Content */}
         <div className="p-8">
           {/* Onboarding Welcome for New Users */}
-          {!onboardingState.completed && !onboardingState.skipped && (
+          {user && !user.onboardingCompleted && !user.onboardingSkipped && (
             <div className="mb-8">
               <OnboardingWelcome />
             </div>
