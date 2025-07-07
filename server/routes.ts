@@ -2738,41 +2738,31 @@ Write a professional, sales-focused description that highlights the key benefits
         let realRevenue = '0.00';
         
         if (broadcast.sentAt && broadcast.product) {
-          console.log(`📊 Calculating orders for broadcast ${broadcast.id}, product ${broadcast.product.id}`);
-          console.log(`📅 Broadcast sent at: ${broadcast.sentAt}`);
-          console.log(`📦 Total orders found: ${allOrders.length}`);
-          
           // Count orders for this specific product after broadcast was sent
           // Include all completed order statuses, not just 'paid'
           const ordersForProduct = allOrders.filter(order => {
             const orderDate = new Date(order.createdAt);
             const broadcastDate = new Date(broadcast.sentAt);
             const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
-            console.log(`🔍 Order ${order.id}: date=${order.createdAt}, status=${order.status}, valid=${validStatuses.includes(order.status)}, after_broadcast=${orderDate >= broadcastDate}`);
             return orderDate >= broadcastDate && validStatuses.includes(order.status);
           });
-
-          console.log(`🎯 Orders after broadcast: ${ordersForProduct.length}`);
 
           // Get order items for this specific product
           const productOrders = await Promise.all(
             ordersForProduct.map(async order => {
               const orderItems = await storage.getOrderItems(order.id);
-              const productItems = orderItems.filter(item => item.productId === broadcast.product.id);
-              console.log(`📋 Order ${order.id}: ${orderItems.length} items total, ${productItems.length} for product ${broadcast.product.id}`);
-              return productItems;
+              return orderItems.filter(item => item.productId === broadcast.product.id);
             })
           );
 
-          // Count total quantity ordered for this product
-          realOrderCount = productOrders.flat().reduce((sum, item) => sum + item.quantity, 0);
+          // Count actual number of orders (not quantities) for this product
+          const ordersWithProduct = productOrders.filter(orderItems => orderItems.length > 0);
+          realOrderCount = ordersWithProduct.length;
           
           // Calculate total revenue for this product
           realRevenue = productOrders.flat().reduce((sum, item) => {
             return sum + (parseFloat(item.unitPrice) * item.quantity);
           }, 0).toFixed(2);
-          
-          console.log(`📈 Final counts: orders=${realOrderCount}, revenue=${realRevenue}`);
         }
 
         return {
