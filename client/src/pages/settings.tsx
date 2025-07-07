@@ -14,6 +14,40 @@ import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Gl
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+// Utility function to convert any image format to PNG
+const convertImageToPNG = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Clean up object URL
+      URL.revokeObjectURL(img.src);
+      
+      // Set canvas dimensions to image dimensions
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw image on canvas
+      ctx?.drawImage(img, 0, 0);
+      
+      // Convert to PNG format (data URL)
+      const pngDataUrl = canvas.toDataURL('image/png', 0.9);
+      resolve(pngDataUrl);
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image'));
+    };
+    
+    // Create object URL for the uploaded file and set as image source
+    const objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+  });
+};
+
 const settingsFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -535,14 +569,20 @@ function Settings() {
                                     <Input
                                       type="file"
                                       accept="image/*"
-                                      onChange={(e) => {
+                                      onChange={async (e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            field.onChange(reader.result as string);
-                                          };
-                                          reader.readAsDataURL(file);
+                                          try {
+                                            const convertedDataUrl = await convertImageToPNG(file);
+                                            field.onChange(convertedDataUrl);
+                                          } catch (error) {
+                                            console.error('Error converting image:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to process image. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
                                         }
                                       }}
                                       className="cursor-pointer"
@@ -572,14 +612,28 @@ function Settings() {
                           />
                         )}
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-blue-600 mt-1" />
-                            <div>
-                              <p className="text-sm text-blue-800 font-medium">Logo Hierarchy</p>
-                              <p className="text-sm text-blue-700 mt-1">
-                                Custom logo → Business name initials → Your name initials (MO). The logo will appear in the header replacing "MO".
-                              </p>
+                        <div className="space-y-3">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start gap-2">
+                              <User className="h-4 w-4 text-blue-600 mt-1" />
+                              <div>
+                                <p className="text-sm text-blue-800 font-medium">Logo Hierarchy</p>
+                                <p className="text-sm text-blue-700 mt-1">
+                                  Custom logo → Business name initials → Your name initials (MO). The logo will appear in the header replacing "MO".
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-green-600 mt-1" />
+                              <div>
+                                <p className="text-sm text-green-800 font-medium">Image Format Support</p>
+                                <p className="text-sm text-green-700 mt-1">
+                                  All image formats (including WebP, JPEG, PNG) are automatically converted to PNG for optimal compatibility and display quality.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
