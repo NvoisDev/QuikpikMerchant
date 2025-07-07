@@ -902,6 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           console.log(`Order created successfully for payment ${paymentIntent.id}`);
+          console.log(`✅ Stripe invoice automatically sent to customer: ${customerEmail}`);
         }
       } catch (error) {
         console.error('Error processing payment success:', error);
