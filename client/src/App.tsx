@@ -31,12 +31,26 @@ import PaymentSuccess from "@/pages/payment-success";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
+  const [location] = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated and not on a public route
+  if (!isAuthenticated && !['/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route))) {
+    window.location.href = "/api/auth/login";
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
       </div>
     );
   }
