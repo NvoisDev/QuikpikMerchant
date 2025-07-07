@@ -64,6 +64,14 @@ const productFormSchema = z.object({
   negotiationEnabled: z.boolean(),
   minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
+  
+  // New fields for unit types and delivery options
+  unitType: z.enum(["units", "pallets"]),
+  unitsPerPallet: z.string().optional(),
+  deliveryOptions: z.object({
+    pickup: z.boolean(),
+    delivery: z.boolean(),
+  }),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -94,6 +102,12 @@ export default function ProductManagement() {
       negotiationEnabled: false,
       minimumBidPrice: "",
       status: "active",
+      unitType: "units",
+      unitsPerPallet: "",
+      deliveryOptions: {
+        pickup: true,
+        delivery: true,
+      },
     },
   });
 
@@ -249,6 +263,7 @@ export default function ProductManagement() {
         price: parseFloat(data.price),
         moq: parseInt(data.moq),
         stock: parseInt(data.stock),
+        unitsPerPallet: data.unitsPerPallet ? parseInt(data.unitsPerPallet) : null,
       };
       return await apiRequest("POST", "/api/products", productData);
     },
@@ -278,6 +293,7 @@ export default function ProductManagement() {
         price: parseFloat(productData.price),
         moq: parseInt(productData.moq),
         stock: parseInt(productData.stock),
+        unitsPerPallet: productData.unitsPerPallet ? parseInt(productData.unitsPerPallet) : null,
       };
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
@@ -372,6 +388,12 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
+      unitType: product.unitType || "units",
+      unitsPerPallet: product.unitsPerPallet?.toString() || "",
+      deliveryOptions: {
+        pickup: product.supportsPickup !== false,
+        delivery: product.supportsDelivery !== false,
+      },
     });
     setIsDialogOpen(true);
   };
@@ -398,6 +420,12 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
+      unitType: product.unitType || "units",
+      unitsPerPallet: product.unitsPerPallet?.toString() || "",
+      deliveryOptions: {
+        pickup: product.supportsPickup !== false,
+        delivery: product.supportsDelivery !== false,
+      },
     });
     setIsDialogOpen(true);
   };
@@ -456,6 +484,12 @@ export default function ProductManagement() {
                       negotiationEnabled: false,
                       minimumBidPrice: "",
                       status: "active",
+                      unitType: "units",
+                      unitsPerPallet: "",
+                      deliveryOptions: {
+                        pickup: true,
+                        delivery: true,
+                      },
                     });
                   }}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -687,6 +721,100 @@ export default function ProductManagement() {
                             </FormItem>
                           )}
                         />
+                        
+                        <FormField
+                          control={form.control}
+                          name="unitType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unit Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select unit type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="units">Individual Units</SelectItem>
+                                  <SelectItem value="pallets">Pallets</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {form.watch("unitType") === "pallets" && (
+                        <FormField
+                          control={form.control}
+                          name="unitsPerPallet"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Units per Pallet</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="e.g., 48" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <div className="text-sm text-muted-foreground">
+                                How many individual units are included in one pallet
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      <div className="space-y-4">
+                        <div>
+                          <FormLabel className="text-base">Fulfillment Options</FormLabel>
+                          <div className="text-sm text-muted-foreground mb-3">
+                            Choose which delivery options customers can select
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="deliveryOptions.pickup"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Customer Pickup</FormLabel>
+                                  <div className="text-sm text-muted-foreground">
+                                    Customers can collect orders from your location
+                                  </div>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="deliveryOptions.delivery"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Delivery Available</FormLabel>
+                                  <div className="text-sm text-muted-foreground">
+                                    Offer delivery through courier services
+                                  </div>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -945,6 +1073,12 @@ export default function ProductManagement() {
                       negotiationEnabled: false,
                       minimumBidPrice: "",
                       status: "active",
+                      unitType: "units",
+                      unitsPerPallet: "",
+                      deliveryOptions: {
+                        pickup: true,
+                        delivery: true,
+                      },
                     });
                     setIsDialogOpen(true);
                   }}>

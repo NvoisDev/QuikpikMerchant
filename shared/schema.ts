@@ -102,6 +102,15 @@ export const products = pgTable("products", {
   negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
+  
+  // New unit type and delivery options
+  unitType: varchar("unit_type").notNull().default("units"), // 'units' | 'pallets'
+  unitsPerPallet: integer("units_per_pallet"), // How many units make up one pallet (only relevant for pallet-based products)
+  deliveryOptions: jsonb("delivery_options").default({
+    pickup: true,
+    delivery: true
+  }), // Which fulfillment options are available
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -151,6 +160,16 @@ export const orders = pgTable("orders", {
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
   deliveryAddress: text("delivery_address"),
   notes: text("notes"),
+  
+  // New delivery and fulfillment options
+  fulfillmentType: varchar("fulfillment_type").notNull().default("delivery"), // 'pickup' | 'delivery'
+  deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("0.00"), // Cost of delivery service
+  deliveryCarrier: varchar("delivery_carrier"), // Selected delivery company (from Parcel2Go)
+  deliveryServiceId: varchar("delivery_service_id"), // Parcel2Go service ID
+  deliveryQuoteId: varchar("delivery_quote_id"), // Parcel2Go quote reference
+  deliveryTrackingNumber: varchar("delivery_tracking_number"), // Tracking number from carrier
+  estimatedDeliveryDate: timestamp("estimated_delivery_date"), // Expected delivery date
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
