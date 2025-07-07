@@ -969,7 +969,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send confirmation email to customer
       try {
-        await sendCustomerInvoiceEmail(order.retailer, order, order.items, wholesaler);
+        // Enrich items with product details for email
+        const enrichedItems = await Promise.all(order.items.map(async (item: any) => {
+          const product = await storage.getProduct(item.productId);
+          return {
+            ...item,
+            productName: product?.name || `Product #${item.productId}`,
+            product: product ? { name: product.name } : null
+          };
+        }));
+        
+        await sendCustomerInvoiceEmail(order.retailer, order, enrichedItems, wholesaler);
         res.json({ message: "Confirmation email sent successfully" });
       } catch (emailError) {
         console.error("Email sending failed:", emailError);
@@ -3729,40 +3739,49 @@ Please contact the customer to confirm this order.
         deliveryAddress = order.deliveryAddress || customer.address || 'Address to be confirmed';
       }
       
-      // Create HTML email content with proper product names - fetch actual product details
-      const itemsHtml = await Promise.all(items.map(async (item) => {
+      // Create HTML email content with proper product names and pricing
+      const itemsHtml = items.map((item) => {
         let productName = 'Product';
-        let unitPrice = item.unitPrice || '0.00';
-        let total = item.total || '0.00';
+        let unitPrice = '0.00';
+        let total = '0.00';
         
-        // Try to get product name from various sources
-        if (item.product && item.product.name) {
-          productName = item.product.name;
-        } else if (item.productName) {
+        // Get product name from enriched data
+        if (item.productName) {
           productName = item.productName;
-        } else if (item.productId) {
-          // Fetch product details if we have the ID
-          try {
-            const product = await storage.getProduct(item.productId);
-            if (product) {
-              productName = product.name;
-            }
-          } catch (fetchError) {
-            console.log('Could not fetch product details for email:', fetchError);
-          }
+        } else if (item.product && item.product.name) {
+          productName = item.product.name;
         }
+        
+        // Calculate pricing properly
+        if (item.unitPrice) {
+          unitPrice = typeof item.unitPrice === 'string' ? 
+            parseFloat(item.unitPrice).toFixed(2) : 
+            item.unitPrice.toFixed(2);
+        }
+        
+        if (item.total) {
+          total = typeof item.total === 'string' ? 
+            parseFloat(item.total).toFixed(2) : 
+            item.total.toFixed(2);
+        } else if (item.unitPrice && item.quantity) {
+          // Calculate total if not provided
+          const calculatedTotal = parseFloat(item.unitPrice) * parseInt(item.quantity);
+          total = calculatedTotal.toFixed(2);
+        }
+        
+        console.log(`Email item debug: ${productName}, qty: ${item.quantity}, price: ${unitPrice}, total: ${total}`);
         
         return `
           <tr>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">${productName}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${parseFloat(unitPrice).toFixed(2)}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${parseFloat(total).toFixed(2)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${unitPrice}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${currencySymbol}${total}</td>
           </tr>
         `;
-      }));
+      });
       
-      const itemsHtmlString = (await Promise.all(itemsHtml)).join('');
+      const itemsHtmlString = itemsHtml.join('');
 
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -4131,8 +4150,18 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         address: order.deliveryAddress || 'Test Address'
       };
 
+      // Enrich items with product details for email
+      const enrichedItems = await Promise.all(order.items.map(async (item: any) => {
+        const product = await storage.getProduct(item.productId);
+        return {
+          ...item,
+          productName: product?.name || `Product #${item.productId}`,
+          product: product ? { name: product.name } : null
+        };
+      }));
+
       // Send test email
-      await sendCustomerInvoiceEmail(testCustomer, order, order.items, wholesaler);
+      await sendCustomerInvoiceEmail(testCustomer, order, enrichedItems, wholesaler);
       
       res.json({ 
         message: "Test email sent successfully",
