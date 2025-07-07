@@ -374,6 +374,15 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Webhook Invoice Fix**: Fixed Stripe webhook to properly call `createAndSendStripeInvoice` function so customers automatically receive professional invoices after payment
   - **Refund Field Mapping Fix**: Corrected order field mapping from `paymentIntentId` to `stripePaymentIntentId` to resolve "No payment information found" refund errors
   - **Enhanced Refund Logging**: Added detailed error logging to refund route for better debugging of payment processing issues
+- July 07, 2025. Comprehensive Promotional Pricing System Implementation:
+  - **Database Schema Enhancement**: Added promo_price, promo_active, and promo_end_date fields to products table with proper decimal precision
+  - **Product Management Integration**: Enhanced product creation/edit forms with promotional price field, active toggle, and form validation
+  - **Visual Strike-Through Pricing**: Product cards display promotional prices in green with strike-through original prices and "PROMO" badges
+  - **Customer Portal Enhancement**: Featured products and product listings show promotional pricing with "SALE" badges and strike-through effects
+  - **Cart Calculation Updates**: Shopping cart automatically uses promotional prices when active for accurate total calculations
+  - **Bulk Upload Support**: CSV template and processing includes promoPrice and promoActive fields for bulk promotional pricing management
+  - **Comprehensive UI Integration**: Promotional pricing displays consistently across all interfaces (management, customer portal, cart, checkout)
+  - **Database Migration**: Successfully pushed schema changes with new promotional pricing fields to production database
 - July 07, 2025. Comprehensive Invoice and Receipt System Implementation:
   - **Professional Invoice Generation**: Created dedicated invoice generation system with downloadable HTML invoices for all orders
   - **Refund Receipt System**: Automated refund receipt emails sent to customers with detailed refund information and processing timeline
