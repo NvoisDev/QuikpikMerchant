@@ -383,6 +383,11 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Real Order Count Analytics**: Fixed broadcast campaign analytics to count actual orders placed (not quantities) for accurate business metrics
   - **Multi-Currency Invoice Support**: Invoice generation respects wholesaler's preferred currency settings (GBP £, EUR €, USD $)
   - **Complete Audit Trail**: All refunds and invoices tracked with proper customer notifications and business record keeping
+  - **Stripe Payment Receipt Integration**: Professional Stripe invoice creation with automatic customer email delivery through Stripe Connect accounts
+  - **Stripe Credit Note System**: Automatic Stripe credit note generation for refunds with proper documentation and customer notification
+  - **Manual Stripe Invoice Creation**: Added "Send Stripe Invoice" button in orders interface for creating professional Stripe invoices on demand
+  - **Webhook Integration**: Payment success automatically triggers Stripe invoice creation for seamless customer receipt delivery
+  - **Professional Business Documentation**: Stripe-generated invoices and credit notes provide official business records for accounting and tax purposes
 
   
 **Status Systems:**

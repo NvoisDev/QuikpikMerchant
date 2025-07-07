@@ -1089,7 +1089,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer?.email && wholesaler) {
-          // Generate and send refund receipt
+          // Create Stripe credit note for professional refund receipt
+          await createStripeRefundReceipt(order, refund, wholesaler, customer, reason);
+          
+          // Also send custom refund receipt email
           await sendRefundReceipt(customer, order, refund, wholesaler, reason);
           console.log(`Refund receipt sent to ${customer.email} for order ${id}`);
         }
@@ -4107,6 +4110,166 @@ Please contact the customer to confirm this order.
     }
   }
 
+  async function createStripeInvoiceForOrder(order: any, items: any[], wholesaler: any, customer: any) {
+    if (!stripe || !wholesaler.stripeAccountId) {
+      console.log('Stripe not configured or no Connect account, skipping Stripe invoice');
+      return;
+    }
+
+    try {
+      // Create or retrieve Stripe customer
+      let stripeCustomer;
+      try {
+        // Try to find existing customer by email
+        const existingCustomers = await stripe.customers.list({
+          email: customer.email,
+          limit: 1
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+
+        if (existingCustomers.data.length > 0) {
+          stripeCustomer = existingCustomers.data[0];
+        } else {
+          // Create new customer
+          stripeCustomer = await stripe.customers.create({
+            email: customer.email,
+            name: `${customer.firstName} ${customer.lastName || ''}`.trim(),
+            phone: customer.phoneNumber,
+            metadata: {
+              order_id: order.id.toString(),
+              customer_type: 'marketplace_customer'
+            }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId
+          });
+        }
+      } catch (customerError) {
+        console.error('Error creating/retrieving Stripe customer:', customerError);
+        return;
+      }
+
+      // Create Stripe invoice
+      const invoice = await stripe.invoices.create({
+        customer: stripeCustomer.id,
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: `Order #${order.id} - ${wholesaler.businessName || 'Quikpik Merchant'}`,
+        metadata: {
+          order_id: order.id.toString(),
+          platform: 'quikpik_merchant'
+        },
+        auto_advance: false, // Don't auto-finalize
+        collection_method: 'send_invoice',
+        days_until_due: 30
+      }, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Add line items to invoice
+      for (const item of items) {
+        await stripe.invoiceItems.create({
+          customer: stripeCustomer.id,
+          invoice: invoice.id,
+          amount: Math.round(parseFloat(item.unitPrice) * item.quantity * 100), // Convert to cents
+          currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+          description: `${item.productName || item.product?.name || 'Product'} (Qty: ${item.quantity})`,
+          metadata: {
+            product_id: item.productId?.toString() || '',
+            quantity: item.quantity.toString(),
+            unit_price: item.unitPrice
+          }
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+      }
+
+      // Add platform fee as separate line item
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+      const platformFee = subtotal * 0.05;
+      
+      await stripe.invoiceItems.create({
+        customer: stripeCustomer.id,
+        invoice: invoice.id,
+        amount: Math.round(platformFee * 100), // Convert to cents
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: 'Quikpik Platform Fee (5%)',
+        metadata: {
+          type: 'platform_fee',
+          percentage: '5'
+        }
+      }, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Finalize and send the invoice
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Mark as paid since payment was already processed
+      await stripe.invoices.pay(finalizedInvoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Send the invoice to customer
+      await stripe.invoices.sendInvoice(finalizedInvoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      console.log(`✅ Stripe invoice created and sent to ${customer.email} for order ${order.id}`);
+      return finalizedInvoice;
+
+    } catch (error) {
+      console.error('❌ Failed to create Stripe invoice:', error);
+    }
+  }
+
+  async function createStripeRefundReceipt(order: any, refund: any, wholesaler: any, customer: any, reason: string) {
+    if (!stripe || !wholesaler.stripeAccountId) {
+      console.log('Stripe not configured or no Connect account, skipping Stripe refund receipt');
+      return;
+    }
+
+    try {
+      // Create a credit note for the refund
+      if (refund && refund.id) {
+        // Find the original invoice to create a credit note
+        const invoices = await stripe.invoices.list({
+          customer: customer.email,
+          limit: 10
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+
+        const originalInvoice = invoices.data.find(inv => 
+          inv.metadata?.order_id === order.id.toString()
+        );
+
+        if (originalInvoice) {
+          // Create credit note for the refund
+          const creditNote = await stripe.creditNotes.create({
+            invoice: originalInvoice.id,
+            amount: refund.amount, // Amount in cents
+            reason: 'requested_by_customer',
+            memo: reason || 'Refund processed for order',
+            metadata: {
+              order_id: order.id.toString(),
+              refund_id: refund.id,
+              refund_reason: reason || 'Customer requested refund'
+            }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId
+          });
+
+          console.log(`✅ Stripe credit note created for refund ${refund.id}`);
+          return creditNote;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to create Stripe refund receipt:', error);
+    }
+  }
+
   async function sendRefundReceipt(customer: any, order: any, refund: any, wholesaler: any, reason: string) {
     if (!sendGrid) {
       console.log('SendGrid not configured, skipping refund receipt email');
@@ -4699,6 +4862,60 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Error generating invoice:", error);
       res.status(500).json({ message: "Failed to generate invoice" });
+    }
+  });
+
+  // Test endpoint to create Stripe invoice for existing order
+  app.post('/api/orders/:id/create-stripe-invoice', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      const order = await storage.getOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only wholesaler can create invoices for their orders
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to create invoice for this order" });
+      }
+
+      const wholesaler = await storage.getUser(userId);
+      const customer = await storage.getUser(order.retailerId);
+      
+      if (!wholesaler || !customer) {
+        return res.status(404).json({ message: "User data not found" });
+      }
+
+      // Get order items with product details
+      const orderItems = await storage.getOrderItems(order.id);
+      const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+        const product = await storage.getProduct(item.productId);
+        return {
+          ...item,
+          productName: product?.name || `Product #${item.productId}`,
+          product: product ? { name: product.name } : null
+        };
+      }));
+
+      // Create Stripe invoice
+      const stripeInvoice = await createStripeInvoiceForOrder(order, enrichedItems, wholesaler, customer);
+
+      if (stripeInvoice) {
+        res.json({ 
+          success: true, 
+          message: "Stripe invoice created and sent to customer",
+          invoiceId: stripeInvoice.id,
+          invoiceUrl: stripeInvoice.hosted_invoice_url
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create Stripe invoice" });
+      }
+
+    } catch (error) {
+      console.error("Error creating Stripe invoice:", error);
+      res.status(500).json({ message: "Failed to create Stripe invoice" });
     }
   });
 

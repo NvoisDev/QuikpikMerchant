@@ -58,6 +58,7 @@ import {
   Download,
   Mail,
   TrendingUp,
+  CreditCard,
   TrendingDown,
   MoreHorizontal,
   RefreshCw
@@ -632,6 +633,50 @@ export default function Orders() {
               <Download className="h-4 w-4 mr-2" />
               Download Invoice
             </Button>
+
+            {/* Create Stripe Invoice Button - Only for wholesaler */}
+            {user?.role === 'wholesaler' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/orders/${order.id}/create-stripe-invoice`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      credentials: 'include'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                      toast({
+                        title: "Stripe Invoice Created",
+                        description: "Professional Stripe invoice has been sent to the customer via email",
+                      });
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: result.message || "Failed to create Stripe invoice",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to create Stripe invoice",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="border-green-200 text-green-600 hover:bg-green-50"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Send Stripe Invoice
+              </Button>
+            )}
           </div>
         )}
         
