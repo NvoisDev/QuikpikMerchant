@@ -6,12 +6,17 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
 }
 
+// Always use the Replit domain for OAuth redirect in Replit environment
+const redirectUri = process.env.REPLIT_DOMAINS 
+  ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/auth/google/callback`
+  : 'http://localhost:5000/api/auth/google/callback';
+
+console.log('Google OAuth redirect URI:', redirectUri);
+
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:5000/api/auth/google/callback'
-    : `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/google/callback`
+  redirectUri
 );
 
 export interface GoogleUser {
