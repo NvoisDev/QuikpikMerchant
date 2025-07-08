@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
@@ -298,9 +298,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings route
-  app.patch('/api/settings', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const updatedUser = await storage.updateUserSettings(userId, req.body);
       res.json(updatedUser);
     } catch (error) {
@@ -335,9 +335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products', isAuthenticated, async (req: any, res) => {
+  app.post('/api/products', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Check product limit before creating
       const limitCheck = await storage.checkProductLimit(userId);
@@ -373,10 +373,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/products/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/products/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Verify product belongs to user
       const existingProduct = await storage.getProduct(id);
@@ -441,10 +441,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/products/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Verify product belongs to user
       const existingProduct = await storage.getProduct(id);
@@ -461,9 +461,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Order routes
-  app.get('/api/orders', isAuthenticated, async (req: any, res) => {
+  app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const role = req.query.role; // 'customer' or 'wholesaler'
       
@@ -487,9 +487,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/orders', isAuthenticated, async (req: any, res) => {
+  app.post('/api/orders', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { items, deliveryAddress, notes } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
@@ -979,11 +979,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ received: true });
   });
 
-  app.patch('/api/orders/:id/status', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/orders/:id/status', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -1017,10 +1017,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel order
-  app.post('/api/orders/:id/cancel', isAuthenticated, async (req: any, res) => {
+  app.post('/api/orders/:id/cancel', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { reason } = req.body;
 
       const order = await storage.getOrder(id);
@@ -1075,10 +1075,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Refund order
-  app.post('/api/orders/:id/refund', isAuthenticated, async (req: any, res) => {
+  app.post('/api/orders/:id/refund', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { amount, reason } = req.body;
 
       const order = await storage.getOrder(id);
@@ -1197,10 +1197,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resend order confirmation email
-  app.post('/api/orders/:id/resend-confirmation', isAuthenticated, async (req: any, res) => {
+  app.post('/api/orders/:id/resend-confirmation', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -1242,9 +1242,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stock Movement routes
-  app.get('/api/products/:id/stock-movements', isAuthenticated, async (req: any, res) => {
+  app.get('/api/products/:id/stock-movements', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const productId = parseInt(req.params.id);
       
       // Verify the user owns this product
@@ -1261,9 +1261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/products/:id/stock-summary', isAuthenticated, async (req: any, res) => {
+  app.get('/api/products/:id/stock-summary', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const productId = parseInt(req.params.id);
       
       // Verify the user owns this product
@@ -1280,9 +1280,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products/:id/stock-adjustment', isAuthenticated, async (req: any, res) => {
+  app.post('/api/products/:id/stock-adjustment', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const productId = parseInt(req.params.id);
       const { adjustmentType, quantity, reason } = req.body;
       
@@ -1341,9 +1341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/stock-movements', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stock-movements', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 50;
       
       const movements = await storage.getStockMovementsByWholesaler(userId, limit);
@@ -1355,9 +1355,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer group routes
-  app.get('/api/customer-groups', isAuthenticated, async (req: any, res) => {
+  app.get('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groups = await storage.getCustomerGroups(userId);
       res.json(groups);
     } catch (error) {
@@ -1366,9 +1366,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/customer-groups', isAuthenticated, async (req: any, res) => {
+  app.post('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupData = insertCustomerGroupSchema.parse({
         ...req.body,
         wholesalerId: userId
@@ -1384,9 +1384,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/customer-groups/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.id);
       const { name, description } = req.body;
 
@@ -1414,9 +1414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete customer group
-  app.delete('/api/customer-groups/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.id);
 
       // Verify the user owns this customer group
@@ -1441,9 +1441,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp group creation
-  app.post('/api/customer-groups/:groupId/whatsapp-group', isAuthenticated, async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/whatsapp-group', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.groupId);
       
       // Get the customer group
@@ -1482,9 +1482,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add member to customer group
-  app.post('/api/customer-groups/:groupId/members', isAuthenticated, async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.groupId);
       const { phoneNumber, name } = req.body;
       
@@ -1564,9 +1564,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get group members
-  app.get('/api/customer-groups/:groupId/members', isAuthenticated, async (req: any, res) => {
+  app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.groupId);
       const search = req.query.search as string;
 
@@ -1593,9 +1593,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove member from customer group
-  app.delete('/api/customer-groups/:groupId/members/:customerId', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
 
@@ -1621,9 +1621,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update customer phone number in group
-  app.patch('/api/customer-groups/:groupId/members/:customerId', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
       const { phoneNumber } = req.body;
@@ -1690,9 +1690,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advanced analytics routes
-  app.get('/api/analytics/dashboard', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { timeRange = '30d' } = req.query;
       
       const stats = await storage.getWholesalerStats(userId);
@@ -1745,9 +1745,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/revenue', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analytics/revenue', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { timeRange = '30d' } = req.query;
       
       // Generate sample revenue trend data
@@ -1770,9 +1770,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/customers', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { timeRange = '30d' } = req.query;
       
       // Generate sample customer growth data
@@ -1796,9 +1796,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/products', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analytics/products', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const topProducts = await storage.getTopProducts(userId, 10);
       
       // Format for chart display
@@ -1816,13 +1816,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe Connect onboarding for wholesalers
-  app.post("/api/stripe/connect-onboarding", isAuthenticated, async (req: any, res) => {
+  app.post("/api/stripe/connect-onboarding", requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -1881,13 +1881,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check Stripe Connect account status
-  app.get("/api/stripe/connect-status", isAuthenticated, async (req: any, res) => {
+  app.get("/api/stripe/connect-status", requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user?.stripeAccountId) {
@@ -1915,14 +1915,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe payment routes with Connect integration
-  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
+  app.post("/api/create-payment-intent", requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
     try {
       const { orderId } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(orderId);
       if (!order) {
@@ -2028,10 +2028,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp Broadcast endpoints
-  app.post('/api/broadcasts', isAuthenticated, async (req: any, res) => {
+  app.post('/api/broadcasts', requireAuth, async (req: any, res) => {
     try {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
 
       // Validate the request data
       const validatedData = insertBroadcastSchema.parse({
@@ -2092,9 +2092,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/broadcasts', isAuthenticated, async (req: any, res) => {
+  app.get('/api/broadcasts', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
       const broadcasts = await storage.getBroadcasts(wholesalerId);
       res.json(broadcasts);
     } catch (error) {
@@ -2103,9 +2103,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/broadcasts/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/broadcasts/stats', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
       const stats = await storage.getBroadcastStats(wholesalerId);
       res.json(stats);
     } catch (error) {
@@ -2115,7 +2115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI description generation
-  app.post('/api/ai/generate-description', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/generate-description', requireAuth, async (req: any, res) => {
     try {
       const { productName, category, features } = req.body;
       
@@ -2150,9 +2150,9 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Subscription endpoints
-  app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -2175,14 +2175,14 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/subscription/create', isAuthenticated, async (req: any, res) => {
+  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
     try {
       const { tier } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
 
       if (!user) {
@@ -2461,10 +2461,10 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // WhatsApp API Routes (Shared Service)
 
-  app.post('/api/whatsapp/test', isAuthenticated, async (req: any, res) => {
+  app.post('/api/whatsapp/test', requireAuth, async (req: any, res) => {
     try {
       const { testPhoneNumber } = req.body;
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
 
       if (!testPhoneNumber) {
         return res.status(400).json({ 
@@ -2498,10 +2498,10 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Twilio WhatsApp configuration routes
-  app.post('/api/whatsapp/configure', isAuthenticated, async (req: any, res) => {
+  app.post('/api/whatsapp/configure', requireAuth, async (req: any, res) => {
     try {
       const { accountSid, authToken, phoneNumber } = req.body;
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
 
       if (!accountSid || !authToken || !phoneNumber) {
         return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
@@ -2525,7 +2525,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/whatsapp/verify', isAuthenticated, async (req: any, res) => {
+  app.post('/api/whatsapp/verify', requireAuth, async (req: any, res) => {
     try {
       const { accountSid, authToken, phoneNumber } = req.body;
 
@@ -2556,9 +2556,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/whatsapp/status', isAuthenticated, async (req: any, res) => {
+  app.get('/api/whatsapp/status', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
       const user = await storage.getUser(wholesalerId);
 
       if (!user) {
@@ -2579,9 +2579,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/whatsapp/enable', isAuthenticated, async (req: any, res) => {
+  app.post('/api/whatsapp/enable', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.claims.sub;
+      const wholesalerId = req.user.id;
       
       // Enable WhatsApp for this user
       await storage.updateUserSettings(wholesalerId, { whatsappEnabled: true });
@@ -2597,7 +2597,7 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // AI-powered product generation endpoints
-  app.post('/api/ai/generate-description', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/generate-description', requireAuth, async (req: any, res) => {
     try {
       const { productName, category } = req.body;
       
@@ -2625,7 +2625,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/ai/generate-image', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/generate-image', requireAuth, async (req: any, res) => {
     try {
       const { productName, category, description } = req.body;
       
@@ -2665,9 +2665,9 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Message Template routes
-  app.get('/api/message-templates', isAuthenticated, async (req: any, res) => {
+  app.get('/api/message-templates', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const templates = await storage.getMessageTemplates(userId);
       res.json(templates);
     } catch (error) {
@@ -2676,7 +2676,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/message-templates/:id', requireAuth, async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const template = await storage.getMessageTemplate(templateId);
@@ -2692,9 +2692,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/message-templates', isAuthenticated, async (req: any, res) => {
+  app.post('/api/message-templates', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { products, ...templateData } = req.body;
 
       // Validate the template data
@@ -2720,7 +2720,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.patch('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/message-templates/:id', requireAuth, async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const updates = req.body;
@@ -2733,7 +2733,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.delete('/api/message-templates/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/message-templates/:id', requireAuth, async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       await storage.deleteMessageTemplate(templateId);
@@ -2744,9 +2744,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/message-templates/send-campaign', isAuthenticated, async (req: any, res) => {
+  app.post('/api/message-templates/send-campaign', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { templateId, customerGroupId } = req.body;
 
       // Get the template with products
@@ -2801,9 +2801,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/template-campaigns', isAuthenticated, async (req: any, res) => {
+  app.get('/api/template-campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const campaigns = await storage.getTemplateCampaigns(userId);
       res.json(campaigns);
     } catch (error) {
@@ -2813,9 +2813,9 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Unified Campaigns API (merges broadcasts and message templates)
-  app.get('/api/campaigns', isAuthenticated, async (req: any, res) => {
+  app.get('/api/campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Get both broadcasts and message templates, then unify them
       const [broadcasts, templates] = await Promise.all([
@@ -2919,9 +2919,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/campaigns', isAuthenticated, async (req: any, res) => {
+  app.post('/api/campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
@@ -2977,9 +2977,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/campaigns/send', isAuthenticated, async (req: any, res) => {
+  app.post('/api/campaigns/send', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { campaignId, customerGroupId, customMessage } = req.body;
       console.log(`Campaign send request: userId=${userId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
 
@@ -3134,10 +3134,10 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Stock update refresh endpoint - resend campaign with current stock information
-  app.post('/api/campaigns/:id/refresh-stock', isAuthenticated, async (req: any, res) => {
+  app.post('/api/campaigns/:id/refresh-stock', requireAuth, async (req: any, res) => {
     try {
       const campaignId = req.params.id;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       // No customer group needed for stock refresh - just update the data
 
       // Determine campaign type and get details
@@ -3204,13 +3204,13 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Stripe Invoice API endpoints for financials
-  app.get('/api/stripe/invoices', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stripe/invoices', requireAuth, async (req: any, res) => {
     try {
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { search, status, date_range } = req.query;
 
       // Get user's Stripe Connect account ID
@@ -3298,13 +3298,13 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/stripe/financial-summary', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stripe/financial-summary', requireAuth, async (req: any, res) => {
     try {
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user?.stripeAccountId) {
@@ -3383,13 +3383,13 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.get('/api/stripe/invoices/:invoiceId/download', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stripe/invoices/:invoiceId/download', requireAuth, async (req: any, res) => {
     try {
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { invoiceId } = req.params;
 
       const user = await storage.getUser(userId);
@@ -3428,9 +3428,9 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // Financial Health Analysis API endpoints
-  app.get('/api/financial-health', isAuthenticated, async (req: any, res) => {
+  app.get('/api/financial-health', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const period = req.query.period || '3months';
       
       // Get comprehensive financial data
@@ -3531,9 +3531,9 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  app.post('/api/financial-health/insights', isAuthenticated, async (req: any, res) => {
+  app.post('/api/financial-health/insights', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { analysis_type, period } = req.body;
       
       // Get financial data for AI analysis
@@ -4693,7 +4693,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   });
 
   // Test email endpoint for order confirmation
-  app.post('/api/test-order-email', isAuthenticated, async (req: any, res) => {
+  app.post('/api/test-order-email', requireAuth, async (req: any, res) => {
     try {
       const { orderId, testEmail } = req.body;
       
@@ -4826,10 +4826,10 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   });
 
   // Generate and download invoice PDF
-  app.get('/api/orders/:id/invoice', isAuthenticated, async (req: any, res) => {
+  app.get('/api/orders/:id/invoice', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -4983,10 +4983,10 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   });
 
   // Send simple receipt email for existing order
-  app.post('/api/orders/:id/send-receipt', isAuthenticated, async (req: any, res) => {
+  app.post('/api/orders/:id/send-receipt', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -5070,10 +5070,10 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   });
 
   // Get customer data from Stripe for order display
-  app.get('/api/orders/:id/stripe-customer-data', isAuthenticated, async (req: any, res) => {
+  app.get('/api/orders/:id/stripe-customer-data', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       const order = await storage.getOrder(id);
       if (!order) {
@@ -5121,9 +5121,9 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   });
 
   // User onboarding endpoints
-  app.post("/api/user/onboarding", isAuthenticated, async (req: any, res) => {
+  app.patch('/api/user/onboarding', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { completed, skipped, step } = req.body;
 
       const updateData: any = {};
