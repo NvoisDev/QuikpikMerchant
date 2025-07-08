@@ -77,13 +77,17 @@ export const themeConfigs: Record<DashboardTheme, ThemeConfig> = {
 };
 
 export function useTheme() {
-  const [currentTheme, setCurrentTheme] = useState<DashboardTheme>('gradient');
+  const [currentTheme, setCurrentTheme] = useState<DashboardTheme>('minimal');
 
-  // Load theme from localStorage on mount
+  // Load theme from localStorage on mount, default to minimal
   useEffect(() => {
     const savedTheme = localStorage.getItem('dashboard-theme') as DashboardTheme;
     if (savedTheme && themeConfigs[savedTheme]) {
       setCurrentTheme(savedTheme);
+    } else {
+      // Set minimal as default if no saved theme
+      setCurrentTheme('minimal');
+      localStorage.setItem('dashboard-theme', 'minimal');
     }
   }, []);
 

@@ -82,7 +82,7 @@ export default function WholesalerDashboard() {
     );
   }
 
-  const dashboardBgClass = themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50";
+  const dashboardBgClass = themeConfig.gradient || "bg-white";
 
   const headerBgClass = currentTheme === 'dark' 
     ? 'bg-gray-800/90 border-gray-700/50'
