@@ -378,8 +378,24 @@ export default function ProductCard({
 
         {/* Features */}
         <div className="flex flex-wrap gap-2 mb-4">
+          {/* Selling Format Badge */}
+          <Badge 
+            variant="outline" 
+            className={`text-xs ${
+              product.sellingFormat === 'pallets' 
+                ? 'border-purple-300 text-purple-700 bg-purple-50' 
+                : product.sellingFormat === 'both'
+                  ? 'border-blue-300 text-blue-700 bg-blue-50'
+                  : 'border-gray-300 text-gray-700 bg-gray-50'
+            }`}
+          >
+            {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
+             product.sellingFormat === 'both' ? 'Units & Pallets' : 
+             'Units Only'}
+          </Badge>
+          
           {product.negotiationEnabled && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
               Negotiable
             </Badge>
           )}
