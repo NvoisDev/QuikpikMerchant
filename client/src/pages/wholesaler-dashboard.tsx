@@ -123,13 +123,13 @@ export default function WholesalerDashboard() {
               </Button>
             </Link>
             <Link href="/campaigns">
-              <Button variant="outline" className="border-2 border-blue-200 hover:bg-blue-50">
+              <Button variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Create Campaign
               </Button>
             </Link>
             <Link href="/customer-groups">
-              <Button variant="outline" className="border-2 border-purple-200 hover:bg-purple-50">
+              <Button variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700">
                 <Users className="h-4 w-4 mr-2" />
                 Add Customers
               </Button>
@@ -137,7 +137,7 @@ export default function WholesalerDashboard() {
             <Link href="/preview-store">
               <Button 
                 variant="outline" 
-                className="border-2 border-green-200 hover:bg-green-50"
+                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
                 data-onboarding="preview-store"
               >
                 <Package className="h-4 w-4 mr-2" />
