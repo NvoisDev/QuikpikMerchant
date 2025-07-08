@@ -43,8 +43,15 @@ Return the response as a JSON object with an array of taglines:
       temperature: 0.8,
     });
 
+    console.log("OpenAI Response:", response.choices[0].message.content);
+    
     const result = JSON.parse(response.choices[0].message.content || '{"taglines": []}');
-    return result.taglines || [];
+    console.log("Parsed result:", result);
+    
+    const taglines = result.taglines || [];
+    console.log("Returning taglines:", taglines);
+    
+    return taglines;
   } catch (error) {
     console.error("Error generating taglines:", error);
     throw new Error("Failed to generate taglines");
