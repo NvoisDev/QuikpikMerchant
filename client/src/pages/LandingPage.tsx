@@ -46,7 +46,7 @@ export default function LandingPage() {
               <Button 
                 variant="ghost" 
                 onClick={handleGetStarted}
-                className="text-gray-700 hover:text-primary"
+                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               >
                 Log In
               </Button>
@@ -65,19 +65,19 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm px-4 py-2">
-                🇳🇬 Built for Nigerian Businesses
+                🚀 Built for Modern Businesses
               </Badge>
               
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                Connect Nigerian
+                Connect
                 <span className="block text-primary">Wholesalers</span>
                 with Retailers
               </h1>
               
               <p className="text-xl text-gray-600 leading-relaxed">
-                The first B2B marketplace designed specifically for Nigerian retail businesses. 
-                Streamline your wholesale operations, reach more retailers, and grow your business 
-                with WhatsApp integration and instant payments.
+                The modern B2B marketplace designed for wholesale businesses. 
+                Streamline your operations, reach more retailers, and grow your business 
+                with automated communication and instant payments.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
@@ -119,13 +119,13 @@ export default function LandingPage() {
               <div className="bg-white rounded-2xl shadow-2xl p-8 border">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Lagos Wholesale Hub</h3>
+                    <h3 className="font-semibold text-gray-900">Metro Wholesale Hub</h3>
                     <Badge className="bg-green-100 text-green-800">Online</Badge>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-900">₦2.4M</div>
+                      <div className="text-2xl font-bold text-gray-900">$24K</div>
                       <div className="text-sm text-gray-600">This month</div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -145,7 +145,7 @@ export default function LandingPage() {
                     <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <TrendingUp className="h-5 w-5 text-green-600" />
-                        <span className="text-sm">Order from Kano received</span>
+                        <span className="text-sm">New order received</span>
                       </div>
                       <span className="text-xs text-gray-500">5m ago</span>
                     </div>
@@ -171,10 +171,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Challenges Every Nigerian Wholesaler Faces
+              Challenges Every Wholesaler Faces
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Running a wholesale business in Nigeria shouldn't be this complicated
+              Running a wholesale business shouldn't be this complicated
             </p>
           </div>
           
@@ -185,7 +185,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-semibold mb-4">Manual Communication</h3>
               <p className="text-gray-600">
-                Sending product updates to hundreds of retailers one by one through WhatsApp 
+                Sending product updates to hundreds of retailers one by one through messaging apps 
                 takes hours and leads to missed opportunities.
               </p>
             </Card>
@@ -234,10 +234,10 @@ export default function LandingPage() {
                   <Smartphone className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">WhatsApp Automation</h3>
+                  <h3 className="text-xl font-semibold mb-2">Automated Messaging</h3>
                   <p className="text-gray-600">
                     Send stock updates, price changes, and new product alerts to all your 
-                    retailers instantly through WhatsApp Business API.
+                    retailers instantly through automated messaging.
                   </p>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function LandingPage() {
                   <h3 className="text-xl font-semibold mb-2">Secure Payments</h3>
                   <p className="text-gray-600">
                     Get paid instantly with integrated payment processing. 
-                    Support for cards, bank transfers, and mobile money.
+                    Support for cards, bank transfers, and digital wallets.
                   </p>
                 </div>
               </div>
@@ -282,25 +282,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Nigerian Market Section */}
+      {/* Global Market Section */}
       <section className="py-20 bg-gradient-to-br from-green-900 to-green-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <Badge className="bg-white/20 text-white mb-6">
-                🌍 Designed for Nigeria
+                🌍 Global Platform
               </Badge>
               <h2 className="text-4xl font-bold mb-6">
-                Built for the Nigerian Market
+                Built for Modern Markets
               </h2>
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
                   <Globe className="h-6 w-6 text-green-300 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold mb-2">Multi-State Coverage</h3>
+                    <h3 className="font-semibold mb-2">Global Reach</h3>
                     <p className="text-green-100">
-                      Connect with retailers across Lagos, Kano, Abuja, Port Harcourt, 
-                      and every major Nigerian city.
+                      Connect with retailers across multiple cities and regions 
+                      to expand your wholesale business network.
                     </p>
                   </div>
                 </div>
@@ -308,10 +308,10 @@ export default function LandingPage() {
                 <div className="flex items-start space-x-4">
                   <Zap className="h-6 w-6 text-green-300 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold mb-2">Local Payment Methods</h3>
+                    <h3 className="font-semibold mb-2">Flexible Payment Options</h3>
                     <p className="text-green-100">
-                      Support for Nigerian banks, mobile money, and payment methods 
-                      your customers already use and trust.
+                      Support for multiple payment methods including bank transfers, 
+                      cards, and digital wallets for seamless transactions.
                     </p>
                   </div>
                 </div>
@@ -319,10 +319,10 @@ export default function LandingPage() {
                 <div className="flex items-start space-x-4">
                   <MessageSquare className="h-6 w-6 text-green-300 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold mb-2">WhatsApp Integration</h3>
+                    <h3 className="font-semibold mb-2">Messaging Integration</h3>
                     <p className="text-green-100">
-                      Leverage the communication platform every Nigerian business 
-                      owner already uses daily.
+                      Leverage popular messaging platforms to communicate 
+                      effectively with your retail customers.
                     </p>
                   </div>
                 </div>
@@ -330,16 +330,16 @@ export default function LandingPage() {
             </div>
             
             <div className="bg-white/10 backdrop-blur rounded-2xl p-8">
-              <h3 className="text-2xl font-bold mb-6">Nigerian Success Stories</h3>
+              <h3 className="text-2xl font-bold mb-6">Success Stories</h3>
               <div className="space-y-6">
                 <div className="bg-white/10 rounded-lg p-4">
                   <div className="flex items-center mb-3">
                     <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                      <span className="font-bold">AO</span>
+                      <span className="font-bold">AJ</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold">Adebayo Olumide</h4>
-                      <p className="text-sm text-green-200">Lagos Wholesale</p>
+                      <h4 className="font-semibold">Alex Johnson</h4>
+                      <p className="text-sm text-green-200">Metro Wholesale</p>
                     </div>
                   </div>
                   <p className="text-green-100 italic">
@@ -350,15 +350,15 @@ export default function LandingPage() {
                 <div className="bg-white/10 rounded-lg p-4">
                   <div className="flex items-center mb-3">
                     <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                      <span className="font-bold">FN</span>
+                      <span className="font-bold">MS</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold">Fatima Nasir</h4>
-                      <p className="text-sm text-green-200">Kano Trading Co.</p>
+                      <h4 className="font-semibold">Maria Santos</h4>
+                      <p className="text-sm text-green-200">City Trading Co.</p>
                     </div>
                   </div>
                   <p className="text-green-100 italic">
-                    "Now I can reach retailers in 12 states instead of just Kano. My business has never been better!"
+                    "Now I can reach retailers in multiple regions instead of just locally. My business has never been better!"
                   </p>
                 </div>
               </div>
@@ -424,7 +424,7 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <MessageSquare className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Bulk WhatsApp</h3>
+                <h3 className="text-lg font-semibold mb-2">Bulk Messaging</h3>
                 <p className="text-gray-600">
                   Send product updates, promotions, and stock alerts to hundreds 
                   of retailers instantly.
@@ -468,7 +468,7 @@ export default function LandingPage() {
             Ready to Transform Your Wholesale Business?
           </h2>
           <p className="text-xl text-gray-600 mb-8">
-            Join hundreds of Nigerian wholesalers who are already growing their business with Quikpik
+            Join hundreds of wholesalers who are already growing their business with Quikpik
           </p>
           
           <form onSubmit={handleWaitlist} className="max-w-md mx-auto mb-8">
@@ -516,10 +516,10 @@ export default function LandingPage() {
           
           <div className="text-center text-gray-400">
             <p className="mb-4">
-              Empowering Nigerian wholesale businesses to reach more customers and grow faster.
+              Empowering wholesale businesses to reach more customers and grow faster.
             </p>
             <p>
-              © 2025 Quikpik. Built with ❤️ for Nigerian entrepreneurs.
+              © 2025 Quikpik. Built with ❤️ for entrepreneurs worldwide.
             </p>
           </div>
         </div>
