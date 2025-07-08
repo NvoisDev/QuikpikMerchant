@@ -1,310 +1,399 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Plus, Users, Mail, Shield, Clock, CheckCircle, XCircle, Crown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { 
+  UserPlus, 
+  Users, 
+  Mail, 
+  Shield, 
+  ShieldCheck, 
+  Trash2, 
+  Lock,
+  AlertCircle,
+  CheckCircle,
+  Clock
+} from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
+const teamMemberSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional(),
+  role: z.enum(["admin", "member"]),
+  permissions: z.array(z.string()).default(["products", "orders", "customers"]),
+});
+
+type TeamMemberFormData = z.infer<typeof teamMemberSchema>;
+
+function getSubscriptionLimit(tier: string): number {
+  switch (tier) {
+    case 'free': return 0;
+    case 'standard': return 1;
+    case 'premium': return 5;
+    default: return 0;
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'active':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case 'pending':
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    case 'suspended':
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    default:
+      return <Clock className="h-4 w-4 text-gray-500" />;
+  }
+}
+
+function getStatusBadgeVariant(status: string) {
+  switch (status) {
+    case 'active':
+      return 'default';
+    case 'pending':
+      return 'secondary';
+    case 'suspended':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+}
+
 export default function TeamManagement() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { subscription } = useSubscription();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    role: "member"
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const form = useForm<TeamMemberFormData>({
+    resolver: zodResolver(teamMemberSchema),
+    defaultValues: {
+      email: "",
+      firstName: "",
+      lastName: "",
+      role: "member",
+      permissions: ["products", "orders", "customers"],
+    },
   });
 
   const { data: teamMembers, isLoading } = useQuery({
     queryKey: ["/api/team-members"],
   });
 
-  const { data: subscriptionStatus } = useQuery({
-    queryKey: ["/api/subscription/status"],
-  });
-
-  const inviteMutation = useMutation({
-    mutationFn: async (data: typeof inviteForm) => {
-      return await apiRequest("POST", "/api/team-members/invite", data);
+  const inviteMemberMutation = useMutation({
+    mutationFn: async (data: TeamMemberFormData) => {
+      const response = await apiRequest("POST", "/api/team-members", data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Invitation sent",
-        description: "Team member invitation has been sent successfully.",
+        title: "Team member invited",
+        description: "Invitation sent successfully!",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       setIsInviteDialogOpen(false);
-      setInviteForm({ email: "", firstName: "", lastName: "", role: "member" });
-      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      form.reset();
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to send invitation",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.message.includes("subscription limit")) {
+        setShowUpgradeModal(true);
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to invite team member",
+          variant: "destructive",
+        });
+      }
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return await apiRequest("PUT", `/api/team-members/${id}/status`, { status });
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      await apiRequest("DELETE", `/api/team-members/${memberId}`);
     },
     onSuccess: () => {
+      toast({
+        title: "Team member removed",
+        description: "Team member has been removed successfully.",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
-        title: "Failed to update status",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to remove team member",
         variant: "destructive",
       });
     },
   });
 
-  const getTeamLimit = () => {
-    if (!subscriptionStatus) return 0;
-    const tier = subscriptionStatus.tier;
-    if (tier === "free") return 0;
-    if (tier === "standard") return 1;
-    if (tier === "premium") return 5;
-    return 0;
-  };
+  const currentTier = subscription?.subscriptionTier || 'free';
+  const teamLimit = getSubscriptionLimit(currentTier);
+  const currentTeamCount = teamMembers?.length || 0;
+  const canAddMembers = currentTeamCount < teamLimit;
 
-  const canInviteMore = () => {
-    const limit = getTeamLimit();
-    const currentCount = teamMembers?.length || 0;
-    return currentCount < limit;
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case "suspended":
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+  const handleInviteMember = (data: TeamMemberFormData) => {
+    if (!canAddMembers) {
+      setShowUpgradeModal(true);
+      return;
     }
+    inviteMemberMutation.mutate(data);
   };
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "owner":
-        return <Crown className="h-4 w-4 text-yellow-500" />;
-      case "admin":
-        return <Shield className="h-4 w-4 text-blue-500" />;
-      case "member":
-        return <Users className="h-4 w-4 text-gray-500" />;
-      default:
-        return <Users className="h-4 w-4 text-gray-500" />;
+  const handleDeleteMember = (memberId: number) => {
+    if (window.confirm("Are you sure you want to remove this team member?")) {
+      deleteMemberMutation.mutate(memberId);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-300 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-300 rounded"></div>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
-          <p className="text-gray-600 mt-1">
-            Manage your team members and their permissions
+          <p className="text-gray-600 mt-2">
+            Manage team access and permissions for your wholesale platform
           </p>
         </div>
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogTrigger asChild>
             <Button 
-              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
-              disabled={!canInviteMore()}
+              onClick={() => !canAddMembers && setShowUpgradeModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={!canAddMembers && currentTier !== 'premium'}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <UserPlus className="h-4 w-4 mr-2" />
               Invite Team Member
+              {!canAddMembers && <Lock className="h-4 w-4 ml-2" />}
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={inviteForm.firstName}
-                    onChange={(e) => setInviteForm(prev => ({ ...prev, firstName: e.target.value }))}
-                    placeholder="John"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={inviteForm.lastName}
-                    onChange={(e) => setInviteForm(prev => ({ ...prev, lastName: e.target.value }))}
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="john@example.com"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleInviteMember)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="team.member@company.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Select value={inviteForm.role} onValueChange={(value) => setInviteForm(prev => ({ ...prev, role: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => inviteMutation.mutate(inviteForm)}
-                  disabled={inviteMutation.isPending}
-                >
-                  {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
-                </Button>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-3 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsInviteDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={inviteMemberMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {inviteMemberMutation.isPending ? "Sending..." : "Send Invitation"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Subscription Limits Info */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
+      {/* Subscription Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Limits
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-lg">Team Limits</h3>
               <p className="text-sm text-gray-600">
-                Current plan: <Badge variant="outline">{subscriptionStatus?.tier || "Free"}</Badge>
+                Current Plan: <span className="font-semibold capitalize">{currentTier}</span>
+              </p>
+              <p className="text-sm text-gray-600">
+                Team Members: {currentTeamCount} / {teamLimit === 0 ? "0" : teamLimit === 5 ? "5" : "1"}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900">
-                {teamMembers?.length || 0} / {getTeamLimit()}
-              </p>
-              <p className="text-sm text-gray-600">Team members</p>
-            </div>
+            {currentTier === 'free' && (
+              <Button 
+                onClick={() => setShowUpgradeModal(true)}
+                variant="outline"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                Upgrade to Add Team Members
+              </Button>
+            )}
           </div>
-          {!canInviteMore() && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800">
-                You've reached your team member limit. 
-                <Button variant="link" className="p-0 h-auto text-amber-800 underline ml-1">
-                  Upgrade your plan
-                </Button> to add more team members.
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* Team Members List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team Members
-          </CardTitle>
+          <CardTitle>Team Members</CardTitle>
         </CardHeader>
         <CardContent>
-          {!teamMembers || teamMembers.length === 0 ? (
-            <div className="text-center py-8">
+          {teamMembers?.length === 0 ? (
+            <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No team members yet</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
               <p className="text-gray-600 mb-4">
-                Invite team members to collaborate on your wholesale business.
+                {currentTier === 'free' 
+                  ? "Upgrade your plan to invite team members and collaborate on your wholesale platform."
+                  : "Invite team members to help manage your wholesale platform."
+                }
               </p>
-              {canInviteMore() && (
-                <Button onClick={() => setIsInviteDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+              {currentTier !== 'free' && (
+                <Button 
+                  onClick={() => setIsInviteDialogOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
                   Invite Your First Team Member
                 </Button>
               )}
             </div>
           ) : (
             <div className="space-y-4">
-              {teamMembers.map((member: TeamMember) => (
-                <div key={member.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              {teamMembers?.map((member: TeamMember) => (
+                <div 
+                  key={member.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-700">
-                        {member.firstName?.[0]}{member.lastName?.[0]}
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <span className="text-emerald-700 font-semibold">
+                        {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                       </span>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-gray-900">
-                          {member.firstName} {member.lastName}
-                        </h3>
-                        {getRoleIcon(member.role)}
-                        <Badge variant="outline" className="text-xs">
-                          {member.role}
-                        </Badge>
-                      </div>
+                      <h3 className="font-semibold text-gray-900">
+                        {member.firstName} {member.lastName}
+                      </h3>
                       <p className="text-sm text-gray-600 flex items-center gap-2">
                         <Mail className="h-3 w-3" />
                         {member.email}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-2">
                       {getStatusIcon(member.status)}
-                      <span className="text-sm capitalize">{member.status}</span>
+                      <Badge variant={getStatusBadgeVariant(member.status)}>
+                        {member.status}
+                      </Badge>
                     </div>
-                    {member.status === "pending" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStatusMutation.mutate({ id: member.id, status: "active" })}
-                      >
-                        Activate
-                      </Button>
-                    )}
-                    {member.status === "active" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStatusMutation.mutate({ id: member.id, status: "suspended" })}
-                      >
-                        Suspend
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {member.role === 'admin' ? (
+                        <ShieldCheck className="h-4 w-4 text-blue-500" />
+                      ) : (
+                        <Shield className="h-4 w-4 text-gray-400" />
+                      )}
+                      <Badge variant="outline">
+                        {member.role}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteMember(member.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -312,6 +401,15 @@ export default function TeamManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Upgrade Modal */}
+      <SubscriptionUpgradeModal 
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="team management"
+        currentUsage={currentTeamCount}
+        limit={teamLimit}
+      />
     </div>
   );
 }

@@ -30,6 +30,7 @@ interface StockMovement {
   wholesalerId: string;
   movementType: 'purchase' | 'manual_increase' | 'manual_decrease' | 'initial';
   quantity: number;
+  unitType: string;
   stockBefore: number;
   stockAfter: number;
   reason: string | null;
@@ -148,11 +149,12 @@ export default function StockTracker({ product }: StockTrackerProps) {
     }
   };
 
-  const formatQuantity = (quantity: number, type: string) => {
+  const formatQuantity = (quantity: number, type: string, unitType: string = 'units') => {
+    const unit = unitType || 'units';
     if (type === 'purchase' || type === 'manual_decrease') {
-      return `${Math.abs(quantity)}`;
+      return `${Math.abs(quantity)} ${unit}`;
     }
-    return `+${quantity}`;
+    return `+${quantity} ${unit}`;
   };
 
   const formatNumber = (value: number) => {
@@ -329,7 +331,7 @@ export default function StockTracker({ product }: StockTrackerProps) {
                       variant={movement.quantity > 0 ? 'default' : 'destructive'}
                       className="mb-1"
                     >
-                      {formatQuantity(movement.quantity, movement.movementType)}
+                      {formatQuantity(movement.quantity, movement.movementType, movement.unitType)}
                     </Badge>
                     <div className="text-sm text-gray-600">
                       {formatNumber(movement.stockBefore)} → {formatNumber(movement.stockAfter)}

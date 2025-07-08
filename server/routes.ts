@@ -5772,5 +5772,67 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Team Management API Routes
+  app.get('/api/team-members', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const teamMembers = await storage.getTeamMembers(userId);
+      res.json(teamMembers);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  app.post('/api/team-members', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { email, firstName, lastName, role, permissions } = req.body;
+      
+      // Check subscription limits
+      const currentCount = await storage.getTeamMembersCount(userId);
+      const userSubscription = await storage.getUser(userId);
+      const tier = userSubscription?.subscriptionTier || 'free';
+      
+      let limit = 0;
+      switch (tier) {
+        case 'standard': limit = 1; break;
+        case 'premium': limit = 5; break;
+      }
+      
+      if (currentCount >= limit) {
+        return res.status(403).json({ 
+          message: `Your ${tier} plan allows up to ${limit} team members. Please upgrade to add more team members.`
+        });
+      }
+
+      const teamMember = await storage.createTeamMember({
+        wholesalerId: userId,
+        email,
+        firstName,
+        lastName,
+        role: role || 'member',
+        permissions: permissions || ['products', 'orders', 'customers'],
+      });
+
+      res.json(teamMember);
+    } catch (error) {
+      console.error("Error creating team member:", error);
+      res.status(500).json({ message: "Failed to create team member" });
+    }
+  });
+
+  app.delete('/api/team-members/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      await storage.deleteTeamMember(parseInt(id));
+      res.json({ message: "Team member removed successfully" });
+    } catch (error) {
+      console.error("Error deleting team member:", error);
+      res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
   return httpServer;
 }

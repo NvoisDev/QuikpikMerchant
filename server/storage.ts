@@ -157,6 +157,13 @@ export interface IStorage {
   updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void>;
   updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void>;
   checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void>;
+  
+  // Team Management operations
+  getTeamMembers(wholesalerId: string): Promise<TeamMember[]>;
+  createTeamMember(teamMember: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
+  deleteTeamMember(id: number): Promise<void>;
+  getTeamMembersCount(wholesalerId: string): Promise<number>;
 
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
@@ -738,7 +745,7 @@ export class DatabaseStorage implements IStorage {
         eq(products.status, 'active')
       ));
 
-    // Get low stock count (stock < 10)
+    // Get low stock count using configurable thresholds
     const [lowStockStats] = await db
       .select({
         lowStockCount: count(products.id)
@@ -746,7 +753,8 @@ export class DatabaseStorage implements IStorage {
       .from(products)
       .where(and(
         eq(products.wholesalerId, wholesalerId),
-        sql`${products.stock} < 10`
+        eq(products.status, 'active'),
+        sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
       ));
 
     return {
@@ -1415,6 +1423,7 @@ export class DatabaseStorage implements IStorage {
         wholesalerId: stockMovements.wholesalerId,
         movementType: stockMovements.movementType,
         quantity: stockMovements.quantity,
+        unitType: stockMovements.unitType,
         stockBefore: stockMovements.stockBefore,
         stockAfter: stockMovements.stockAfter,
         reason: stockMovements.reason,
@@ -1476,6 +1485,53 @@ export class DatabaseStorage implements IStorage {
       totalDecreases,
       currentStock,
     };
+  }
+
+  // Team Management operations
+  async getTeamMembers(wholesalerId: string): Promise<TeamMember[]> {
+    return await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.wholesalerId, wholesalerId))
+      .orderBy(desc(teamMembers.createdAt));
+  }
+
+  async createTeamMember(teamMember: InsertTeamMember): Promise<TeamMember> {
+    const [newMember] = await db
+      .insert(teamMembers)
+      .values({
+        ...teamMember,
+        inviteToken: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      })
+      .returning();
+    return newMember;
+  }
+
+  async updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember> {
+    const [updated] = await db
+      .update(teamMembers)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(teamMembers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTeamMember(id: number): Promise<void> {
+    await db
+      .delete(teamMembers)
+      .where(eq(teamMembers.id, id));
+  }
+
+  async getTeamMembersCount(wholesalerId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count(teamMembers.id) })
+      .from(teamMembers)
+      .where(eq(teamMembers.wholesalerId, wholesalerId));
+    
+    return result.count || 0;
   }
 
   // Stock Alert operations

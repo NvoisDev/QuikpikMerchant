@@ -182,6 +182,7 @@ export const stockMovements = pgTable("stock_movements", {
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   movementType: varchar("movement_type").notNull(), // 'purchase', 'manual_increase', 'manual_decrease', 'initial'
   quantity: integer("quantity").notNull(), // positive for increases, negative for decreases
+  unitType: varchar("unit_type").notNull().default("units"), // 'units', 'pallets', 'boxes', 'kg', 'tonnes'
   stockBefore: integer("stock_before").notNull(),
   stockAfter: integer("stock_after").notNull(),
   reason: varchar("reason"), // description of the movement
@@ -344,6 +345,8 @@ export const stockAlerts = pgTable("stock_alerts", {
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });
+
+
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -609,11 +612,16 @@ export const insertStockMovementSchema = createInsertSchema(stockMovements).omit
 export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
 export type StockMovement = typeof stockMovements.$inferSelect;
 
-// Team Members Schema
+// Team Management Schema Types
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   id: true,
+  inviteToken: true,
+  invitedAt: true,
+  joinedAt: true,
   createdAt: true,
   updatedAt: true,
 });
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type TeamMember = typeof teamMembers.$inferSelect;
+
+
