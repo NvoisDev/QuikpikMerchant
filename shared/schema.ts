@@ -83,6 +83,8 @@ export const users = pgTable("users", {
     marketingEmails: false
   }),
   
+  storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
+  
   // Onboarding fields
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingStep: integer("onboarding_step").default(0),

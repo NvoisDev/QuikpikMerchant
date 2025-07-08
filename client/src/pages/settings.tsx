@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TaglineGenerator } from "@/components/TaglineGenerator";
 
 // Utility function to convert any image format to PNG
 const convertImageToPNG = (file: File): Promise<string> => {
@@ -77,6 +78,7 @@ const businessFormSchema = z.object({
   country: z.string().optional(),
   logoType: z.enum(["initials", "business", "custom"]).optional(),
   logoUrl: z.string().optional(),
+  storeTagline: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsFormSchema>;
@@ -428,6 +430,14 @@ function Settings() {
                             <FormMessage />
                           </FormItem>
                         )}
+                      />
+
+                      {/* Store Tagline with AI Generator */}
+                      <TaglineGenerator
+                        currentTagline={businessForm.watch("storeTagline") || "Premium wholesale products"}
+                        onTaglineSelect={(tagline) => businessForm.setValue("storeTagline", tagline)}
+                        businessName={businessForm.watch("businessName")}
+                        businessDescription={businessForm.watch("businessAddress")}
                       />
 
                       {/* Contact Information */}

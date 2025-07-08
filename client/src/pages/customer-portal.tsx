@@ -416,7 +416,7 @@ export default function CustomerPortal() {
   const handleShare = useCallback(async () => {
     const currentUrl = window.location.href;
     const storeName = wholesaler?.businessName || "Wholesale Store";
-    const shareText = `Check out ${storeName} - Premium wholesale products available now!`;
+    const shareText = `Check out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`;
 
     // Check if native sharing is available (mobile devices)
     if (navigator.share) {
@@ -594,7 +594,9 @@ export default function CustomerPortal() {
                     wholesaler?.businessName || "Wholesale Store"
                   )}
                 </h1>
-                <p className="text-sm text-gray-600">Premium wholesale products</p>
+                <p className="text-sm text-gray-600">
+                  {wholesaler?.storeTagline || "Premium wholesale products"}
+                </p>
               </div>
             </div>
             

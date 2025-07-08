@@ -7,6 +7,7 @@ import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } 
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
+import { generateTaglines } from "./ai-taglines";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -2661,6 +2662,29 @@ Write a professional, sales-focused description that highlights the key benefits
           fallback: true
         });
       }
+    }
+  });
+
+  // AI Tagline Generation
+  app.post('/api/ai/generate-taglines', requireAuth, async (req: any, res) => {
+    try {
+      const { businessName, businessDescription, category, targetAudience, style } = req.body;
+      
+      const taglines = await generateTaglines({
+        businessName,
+        businessDescription, 
+        category,
+        targetAudience,
+        style
+      });
+      
+      res.json({ taglines });
+    } catch (error) {
+      console.error("Error generating taglines:", error);
+      res.status(500).json({ 
+        message: "Failed to generate taglines",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
