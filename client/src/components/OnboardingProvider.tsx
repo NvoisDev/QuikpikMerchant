@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { OnboardingTooltip } from "./OnboardingTooltip";
+import { OnboardingWrapper } from "./OnboardingWrapper";
 
 interface OnboardingContextType {
   isOnboardingActive: boolean;
@@ -54,7 +54,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       }}
     >
       {children}
-      <OnboardingTooltip />
+      <OnboardingWrapper />
     </OnboardingContext.Provider>
   );
 }

@@ -68,7 +68,7 @@ export default function WholesalerDashboard() {
               </p>
               <div className="mt-3 flex items-center space-x-3">
                 <Link href="/products">
-                  <Button size="sm" data-onboarding="add-product">
+                  <Button size="sm" data-onboarding="add-product-button">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Product
                   </Button>

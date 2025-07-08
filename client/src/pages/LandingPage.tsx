@@ -37,10 +37,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xl">Q</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">Quikpik</span>
+              <span className="text-2xl font-bold text-gray-900">Quikpik Merchant</span>
             </div>
             <div className="flex items-center space-x-4">
               <Button 
@@ -80,6 +80,21 @@ export default function LandingPage() {
                 with automated communication and instant payments.
               </p>
               
+              <div className="flex items-center space-x-6 text-sm text-gray-600">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  14-day free trial
+                </span>
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  Starting at $10.99/month
+                </span>
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  Cancel anytime
+                </span>
+              </div>
+              
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   onClick={handleGetStarted}
@@ -102,7 +117,7 @@ export default function LandingPage() {
               <div className="flex items-center space-x-8 text-sm text-gray-600">
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  Free to start
+                  Easy setup
                 </div>
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
@@ -508,10 +523,10 @@ export default function LandingPage() {
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center space-x-3 mb-8">
-            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
+            <div className="h-12 w-12 bg-primary rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-xl">Q</span>
             </div>
-            <span className="text-2xl font-bold">Quikpik</span>
+            <span className="text-2xl font-bold">Quikpik Merchant</span>
           </div>
           
           <div className="text-center text-gray-400">
@@ -519,7 +534,7 @@ export default function LandingPage() {
               Empowering wholesale businesses to reach more customers and grow faster.
             </p>
             <p>
-              © 2025 Quikpik. Built with ❤️ for entrepreneurs worldwide.
+              © 2025 Quikpik Merchant. Built with ❤️ for entrepreneurs worldwide.
             </p>
           </div>
         </div>

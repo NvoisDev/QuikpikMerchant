@@ -1,85 +1,128 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 export interface OnboardingStep {
   id: string;
   title: string;
   description: string;
-  targetSelector: string;
-  position: "top" | "bottom" | "left" | "right";
-  action?: () => void;
-  skipable?: boolean;
+  target: string;
+  action?: 'click' | 'focus' | 'navigate' | 'type';
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
+  animation?: 'pulse' | 'bounce' | 'shake' | 'glow' | 'highlight';
+  interactive?: boolean;
+  customIcon?: React.ReactNode;
+  order: number;
 }
 
-export const ONBOARDING_STEPS: OnboardingStep[] = [
+const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Quikpik!",
-    description: "Let's take a quick tour to get you started with managing your wholesale business.",
-    targetSelector: "[data-onboarding='dashboard']",
+    title: "Welcome to Quikpik Merchant!",
+    description: "Let's take a quick tour to help you get started with managing your wholesale business. This will only take a few minutes.",
+    target: "dashboard-header",
+    position: "center",
+    animation: "glow",
+    order: 1
+  },
+  {
+    id: "dashboard-overview",
+    title: "Your Business Dashboard",
+    description: "This is your main dashboard where you can see your business performance, recent orders, and quick stats at a glance.",
+    target: "dashboard-stats",
     position: "bottom",
-    skipable: true,
+    animation: "pulse",
+    action: "focus",
+    order: 2
   },
   {
     id: "add-product",
     title: "Add Your First Product",
-    description: "Start by adding products to your inventory. Click here to create your first product.",
-    targetSelector: "[data-onboarding='add-product']",
+    description: "Start by adding your wholesale products. Click this button to create your first product listing with pricing, stock levels, and descriptions.",
+    target: "add-product-button",
     position: "bottom",
-    action: () => {
-      const addProductBtn = document.querySelector("[data-onboarding='add-product']") as HTMLElement;
-      addProductBtn?.click();
-    },
+    animation: "bounce",
+    action: "click",
+    interactive: true,
+    order: 3
   },
   {
-    id: "products-page",
+    id: "products-navigation",
     title: "Manage Your Products",
-    description: "Here you can view, edit, and manage all your products. You can also upload products in bulk using CSV files.",
-    targetSelector: "[data-onboarding='products-list']",
-    position: "top",
+    description: "Access your product inventory here. You can edit, update stock levels, set pricing, and manage your entire product catalog.",
+    target: "nav-products",
+    position: "right",
+    animation: "highlight",
+    action: "click",
+    order: 4
   },
   {
     id: "customer-groups",
-    title: "Organize Your Customers",
-    description: "Create customer groups to organize your contacts and send targeted product broadcasts.",
-    targetSelector: "[data-onboarding='customer-groups']",
+    title: "Customer Groups",
+    description: "Organize your retail customers into groups for targeted marketing. You can create groups by location, order size, or business type.",
+    target: "nav-customers",
     position: "right",
+    animation: "pulse",
+    action: "navigate",
+    order: 5
   },
   {
-    id: "campaigns",
-    title: "Send Product Campaigns",
-    description: "Use campaigns to broadcast your products to customer groups via WhatsApp and other channels.",
-    targetSelector: "[data-onboarding='campaigns']",
+    id: "broadcast-system",
+    title: "Send Product Updates",
+    description: "Use our messaging system to send product updates, promotions, and stock alerts to your customer groups instantly.",
+    target: "nav-campaigns",
     position: "right",
+    animation: "glow",
+    action: "navigate",
+    order: 6
   },
   {
-    id: "orders",
+    id: "orders-management",
     title: "Track Your Orders",
-    description: "Monitor incoming orders, process payments, and track order fulfillment all in one place.",
-    targetSelector: "[data-onboarding='orders']",
+    description: "Monitor incoming orders, process payments, and track order status from pending to delivered. All your sales activity in one place.",
+    target: "nav-orders",
     position: "right",
+    animation: "bounce",
+    action: "navigate",
+    order: 7
   },
   {
-    id: "settings",
-    title: "Configure Your Business",
-    description: "Set up your business information, payment settings, and WhatsApp integration in Settings.",
-    targetSelector: "[data-onboarding='settings']",
+    id: "business-performance",
+    title: "Business Analytics",
+    description: "View detailed analytics about your sales performance, customer trends, and business growth metrics to make informed decisions.",
+    target: "nav-analytics",
     position: "right",
+    animation: "pulse",
+    action: "navigate",
+    order: 8
   },
   {
-    id: "preview-store",
-    title: "Preview Your Store",
-    description: "See how your products look to customers by previewing your store anytime.",
-    targetSelector: "[data-onboarding='preview-store']",
-    position: "left",
+    id: "settings-setup",
+    title: "Business Settings",
+    description: "Configure your business profile, payment methods, messaging settings, and subscription plan in the settings section.",
+    target: "nav-settings",
+    position: "right",
+    animation: "highlight",
+    action: "navigate",
+    order: 9
   },
+  {
+    id: "completion",
+    title: "You're All Set!",
+    description: "Congratulations! You've completed the tour. Start by adding your products and building your customer base. Need help? Check our help section anytime.",
+    target: "dashboard-header",
+    position: "center",
+    animation: "glow",
+    order: 10
+  }
 ];
 
 export function useOnboarding() {
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -87,93 +130,90 @@ export function useOnboarding() {
   });
 
   const updateOnboardingMutation = useMutation({
-    mutationFn: async (data: { step?: number; completed?: boolean; skipped?: boolean }) => {
-      return apiRequest("PATCH", `/api/auth/user/onboarding`, data);
+    mutationFn: async (data: { completed?: boolean; skipped?: boolean; step?: number }) => {
+      return apiRequest("/api/user/onboarding", {
+        method: "POST",
+        body: data,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
+  // Auto-start onboarding for first-time users
   useEffect(() => {
-    if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
+    if (user && user.isFirstLogin && !user.onboardingCompleted && !user.onboardingSkipped) {
       setIsActive(true);
-      setCurrentStep(user.onboardingStep || 0);
     }
   }, [user]);
 
-  const getCurrentStep = () => {
-    return ONBOARDING_STEPS[currentStep];
-  };
-
   const nextStep = () => {
-    if (currentStep < ONBOARDING_STEPS.length - 1) {
-      const nextStepIndex = currentStep + 1;
-      setCurrentStep(nextStepIndex);
-      updateOnboardingMutation.mutate({ step: nextStepIndex });
+    if (currentStepIndex < ONBOARDING_STEPS.length - 1) {
+      const newIndex = currentStepIndex + 1;
+      setCurrentStepIndex(newIndex);
+      setCompletedSteps(prev => [...prev, ONBOARDING_STEPS[currentStepIndex].id]);
+      
+      // Update backend with current step
+      updateOnboardingMutation.mutate({ step: newIndex });
     } else {
       completeOnboarding();
     }
   };
 
   const prevStep = () => {
-    if (currentStep > 0) {
-      const prevStepIndex = currentStep - 1;
-      setCurrentStep(prevStepIndex);
-      updateOnboardingMutation.mutate({ step: prevStepIndex });
+    if (currentStepIndex > 0) {
+      const newIndex = currentStepIndex - 1;
+      setCurrentStepIndex(newIndex);
+      
+      // Update backend with current step
+      updateOnboardingMutation.mutate({ step: newIndex });
     }
   };
 
   const skipOnboarding = () => {
-    setIsActive(false);
     updateOnboardingMutation.mutate({ skipped: true });
+    setIsActive(false);
   };
 
   const completeOnboarding = () => {
-    setIsActive(false);
     updateOnboardingMutation.mutate({ completed: true });
+    setIsActive(false);
   };
 
   const restartOnboarding = () => {
-    setCurrentStep(0);
+    setCurrentStepIndex(0);
+    setCompletedSteps([]);
     setIsActive(true);
-    updateOnboardingMutation.mutate({ step: 0, completed: false, skipped: false });
+    setIsPlaying(true);
   };
 
-  const startOnboarding = () => {
-    setCurrentStep(0);
-    setIsActive(true);
-    updateOnboardingMutation.mutate({ step: 0 });
+  const pauseResume = () => {
+    setIsPlaying(!isPlaying);
   };
 
-  const updateTooltipPosition = (targetSelector: string) => {
-    const element = document.querySelector(targetSelector);
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-      
-      setTooltipPosition({
-        top: rect.top + scrollTop,
-        left: rect.left + scrollLeft,
-      });
+  const goToStep = (stepIndex: number) => {
+    if (stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) {
+      setCurrentStepIndex(stepIndex);
+      updateOnboardingMutation.mutate({ step: stepIndex });
     }
   };
 
   return {
-    isActive,
-    currentStep,
+    steps: ONBOARDING_STEPS,
+    currentStep: ONBOARDING_STEPS[currentStepIndex],
+    currentStepIndex,
     totalSteps: ONBOARDING_STEPS.length,
-    getCurrentStep,
+    isActive,
+    isPlaying,
+    completedSteps,
     nextStep,
     prevStep,
     skipOnboarding,
     completeOnboarding,
-    startOnboarding,
     restartOnboarding,
-    updateTooltipPosition,
-    tooltipPosition,
-    isLoading: updateOnboardingMutation.isPending,
-    user,
+    pauseResume,
+    goToStep,
+    setIsActive,
   };
 }

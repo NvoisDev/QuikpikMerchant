@@ -5120,6 +5120,37 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // User onboarding endpoints
+  app.post("/api/user/onboarding", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { completed, skipped, step } = req.body;
+
+      const updateData: any = {};
+      
+      if (completed !== undefined) {
+        updateData.onboardingCompleted = completed;
+        updateData.isFirstLogin = false;
+      }
+      
+      if (skipped !== undefined) {
+        updateData.onboardingSkipped = skipped;
+        updateData.isFirstLogin = false;
+      }
+      
+      if (step !== undefined) {
+        updateData.onboardingStep = step;
+      }
+
+      await storage.updateUserOnboarding(userId, updateData);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating onboarding:", error);
+      res.status(500).json({ message: "Failed to update onboarding status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
