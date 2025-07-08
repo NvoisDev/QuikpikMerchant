@@ -164,9 +164,6 @@ export default function Sidebar() {
             </div>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between mb-2">
-              <ThemeToggle />
-            </div>
             <Link href="/settings">
               <Button variant="ghost" size="sm" className="w-full justify-start" data-onboarding="settings">
                 <Settings className="mr-2 h-4 w-4" />
