@@ -146,6 +146,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 08, 2025. Critical payment and messaging fixes with customer email enhancements:
+  - **Stripe Payment NaN Error Fix**: Resolved critical "Invalid integer: NaN" Stripe errors by implementing comprehensive totalAmount validation and recalculation logic
+  - **WhatsApp Recipient Correction**: Fixed WhatsApp order notifications to send to wholesaler's business phone instead of customer's phone number
+  - **Customer Email Enhancement**: Added "Payment Status: PAID ✅" section to customer confirmation emails for clear payment confirmation
+  - **Frontend NaN Prevention**: Enhanced cart calculation logic with fallback values to prevent NaN propagation from frontend
+  - **Backend Validation**: Added server-side recalculation from product data when frontend sends invalid totals
+  - **Customer Portal Footer Fix**: Updated customer portal to use exact same "Powered by Quikpik" footer component with logo as wholesaler platform
 - July 08, 2025. Dashboard user experience improvements and error resolution:
   - **Quick Action Button Repositioning**: Moved Add Product, Create Campaign, Add Customers, and Preview Store buttons below "Hello Michal" tagline for better visual hierarchy
   - **Enhanced Button Hover States**: Fixed text visibility issues with proper color contrast - blue for campaigns, purple for customers, green for preview store
