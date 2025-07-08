@@ -85,11 +85,11 @@ export default function LandingPage() {
               <div className="flex items-center space-x-6 text-sm text-gray-600">
                 <span className="flex items-center">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  14-day free trial
+                  Easy setup
                 </span>
                 <span className="flex items-center">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Starting at $10.99/month
+                  Starting at £10.99/month
                 </span>
                 <span className="flex items-center">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -146,7 +146,7 @@ export default function LandingPage() {
                         <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
                         <span className="text-sm font-medium text-green-800">Revenue</span>
                       </div>
-                      <div className="text-2xl font-bold text-green-900">$24K</div>
+                      <div className="text-2xl font-bold text-green-900">£24K</div>
                       <div className="text-sm text-green-700">This month</div>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-4 rounded-lg border border-blue-200">
