@@ -1409,7 +1409,20 @@ export class DatabaseStorage implements IStorage {
 
   async getStockMovements(productId: number): Promise<StockMovement[]> {
     return await db
-      .select()
+      .select({
+        id: stockMovements.id,
+        productId: stockMovements.productId,
+        wholesalerId: stockMovements.wholesalerId,
+        movementType: stockMovements.movementType,
+        quantity: stockMovements.quantity,
+        unitType: stockMovements.unitType,
+        stockBefore: stockMovements.stockBefore,
+        stockAfter: stockMovements.stockAfter,
+        reason: stockMovements.reason,
+        orderId: stockMovements.orderId,
+        customerName: stockMovements.customerName,
+        createdAt: stockMovements.createdAt,
+      })
       .from(stockMovements)
       .where(eq(stockMovements.productId, productId))
       .orderBy(desc(stockMovements.createdAt));
@@ -1423,6 +1436,7 @@ export class DatabaseStorage implements IStorage {
         wholesalerId: stockMovements.wholesalerId,
         movementType: stockMovements.movementType,
         quantity: stockMovements.quantity,
+        unitType: stockMovements.unitType,
         unitType: stockMovements.unitType,
         stockBefore: stockMovements.stockBefore,
         stockAfter: stockMovements.stockAfter,
