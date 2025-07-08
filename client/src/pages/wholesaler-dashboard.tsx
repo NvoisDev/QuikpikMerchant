@@ -307,7 +307,7 @@ export default function WholesalerDashboard() {
                 <p className="text-sm text-gray-600">Your best performing product this period</p>
               </CardHeader>
               <CardContent>
-                {isTopProductsLoading ? (
+                {productsLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
@@ -315,7 +315,7 @@ export default function WholesalerDashboard() {
                   <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
                     {/* Product Image */}
                     <div className="flex-shrink-0">
-                      <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
                         {topProducts[0].images && topProducts[0].images.length > 0 ? (
                           <img 
                             src={topProducts[0].images[0]} 
@@ -324,7 +324,7 @@ export default function WholesalerDashboard() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                            <Package className="w-12 h-12 text-gray-400" />
+                            <Package className="w-8 h-8 text-gray-400" />
                           </div>
                         )}
                       </div>
@@ -359,7 +359,7 @@ export default function WholesalerDashboard() {
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
                             {user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$'}
-                            {topProducts[0].price?.toFixed(2) || '0.00'}
+                            {topProducts[0].price ? parseFloat(topProducts[0].price.toString()).toFixed(2) : '0.00'}
                           </p>
                         </div>
                       </div>
