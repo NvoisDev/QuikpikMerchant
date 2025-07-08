@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/logo";
 import { 
@@ -17,7 +18,8 @@ import {
   X,
   Lock,
   HelpCircle,
-  FileText
+  FileText,
+  Crown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -30,7 +32,7 @@ const navigation = [
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3 },
-  { name: "Marketplace (coming soon)", href: "/marketplace", icon: Store },
+  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true },
   { name: "Help Hub", href: "/help", icon: HelpCircle },
 ];
 
@@ -38,6 +40,7 @@ export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const { currentTier } = useSubscription();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -93,6 +96,23 @@ export default function Sidebar() {
           {navigation.map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
+            const isPremiumFeature = item.premiumOnly;
+            const hasAccess = !isPremiumFeature || currentTier === 'premium';
+            
+            if (isPremiumFeature && !hasAccess) {
+              return (
+                <div key={item.name} className="px-6 py-3">
+                  <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed">
+                    <IconComponent className="mr-3 h-5 w-5" />
+                    <span className="flex-1">{item.name}</span>
+                    <div className="flex items-center space-x-1">
+                      <Crown className="h-3 w-3" />
+                      <Lock className="h-3 w-3" />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             
             return (
               <Link key={item.name} href={item.href}>
@@ -103,7 +123,7 @@ export default function Sidebar() {
                       ? "text-primary bg-blue-50 border-r-4 border-primary"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
-                  onClick={() => setIsCollapsed(true)} // Close mobile menu on click
+                  onClick={() => setIsCollapsed(true)}
                   data-onboarding={item.onboardingId}
                 >
                   <IconComponent 
@@ -112,7 +132,10 @@ export default function Sidebar() {
                       isActive ? "text-primary" : "text-gray-400"
                     )} 
                   />
-                  <span>{item.name}</span>
+                  <span className="flex-1">{item.name}</span>
+                  {isPremiumFeature && (
+                    <Crown className="h-3 w-3 text-yellow-500" />
+                  )}
                 </div>
               </Link>
             );

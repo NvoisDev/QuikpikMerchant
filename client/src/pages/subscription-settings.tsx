@@ -46,7 +46,10 @@ export default function SubscriptionSettings() {
       period: "forever",
       features: [
         "Up to 3 products",
-        "3 edits per product",
+        "3 edits per product", 
+        "Up to 2 customer groups",
+        "5 broadcasts per month",
+        "10 customers per group",
         "Basic WhatsApp integration",
         "Email support"
       ],
@@ -65,8 +68,10 @@ export default function SubscriptionSettings() {
       features: [
         "Up to 10 products",
         "Unlimited product edits",
-        "Advanced WhatsApp features", 
-        "Customer group management",
+        "Up to 5 customer groups",
+        "25 broadcasts per month", 
+        "50 customers per group",
+        "Advanced WhatsApp features",
         "Basic analytics",
         "Priority email support"
       ],
@@ -84,8 +89,12 @@ export default function SubscriptionSettings() {
       features: [
         "Unlimited products",
         "Unlimited product edits",
+        "Unlimited customer groups",
+        "Unlimited broadcasts",
+        "Unlimited customers per group",
+        "Marketplace access (selling platform)",
         "Advanced WhatsApp & automation",
-        "Advanced customer segmentation",
+        "Advanced customer segmentation", 
         "Detailed analytics & reports",
         "Priority support & phone calls",
         "Custom branding options"

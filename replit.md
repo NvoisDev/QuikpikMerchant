@@ -124,6 +124,27 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **STRIPE_SECRET_KEY**: Stripe API key for payments
 - **REPL_ID**: Replit environment identifier
 
+## Subscription System
+
+### Plan Tiers & Pricing
+- **Free Plan (£0)**: 3 products, 3 edits per product, 2 customer groups, 5 broadcasts/month, 10 customers per group
+- **Standard Plan (£10.99/month)**: 10 products, unlimited edits, 5 customer groups, 25 broadcasts/month, 50 customers per group
+- **Premium Plan (£19.99/month)**: Unlimited everything + marketplace access
+
+### Feature Limitations
+- **Product Limits**: Enforced at creation with upgrade prompts when limits reached
+- **Edit Limits**: Tracked per product with visual indicators (e.g., "2/3 edits used")
+- **Customer Group Limits**: Restricted creation when tier limits exceeded
+- **Marketplace Access**: Premium-only feature with visual lock indicators in sidebar
+- **Broadcast Limits**: Monthly broadcasting restrictions based on subscription tier
+
+### Technical Implementation
+- **Stripe Integration**: Real price IDs for monthly billing (price_1RieBnBLkKweDa5PCS7fdhWO, price_1RieBnBLkKweDa5Py3yl0gTP)
+- **Backend Enforcement**: Product, edit, and customer group limit checks on all creation endpoints
+- **Subscription Status API**: Real-time subscription status and usage tracking
+- **Upgrade Modal System**: Context-aware upgrade prompts with plan comparisons
+- **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
+
 ## Changelog
 - July 08, 2025. Enhanced WhatsApp provider selection with recognizable brand logos:
   - **Brand Logo Integration**: Added official Twilio and WhatsApp logos using react-icons/si for better user recognition
@@ -409,6 +430,16 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Webhook Invoice Fix**: Fixed Stripe webhook to properly call `createAndSendStripeInvoice` function so customers automatically receive professional invoices after payment
   - **Refund Field Mapping Fix**: Corrected order field mapping from `paymentIntentId` to `stripePaymentIntentId` to resolve "No payment information found" refund errors
   - **Enhanced Refund Logging**: Added detailed error logging to refund route for better debugging of payment processing issues
+- July 08, 2025. Complete Subscription System Implementation:
+  - **Comprehensive Subscription Tiers**: Implemented Free, Standard (£10.99/month), and Premium (£19.99/month) plans with appropriate feature limitations
+  - **Stripe Payment Integration**: Created real Stripe products and price IDs for monthly billing with automated subscription management
+  - **Feature Limit Enforcement**: Added backend validation for product limits (3/10/unlimited), edit limits (3/unlimited/unlimited), customer group limits (2/5/unlimited), and broadcast restrictions
+  - **Premium Marketplace Access**: Restricted marketplace feature to Premium subscribers only with visual lock indicators in navigation
+  - **Subscription Management Interface**: Built comprehensive subscription settings page with current usage, plan comparison, and upgrade controls
+  - **Usage Tracking**: Real-time subscription status monitoring with usage counters and limit enforcement
+  - **Upgrade Modal System**: Context-aware upgrade prompts when users hit plan limits with direct Stripe checkout integration
+  - **Enhanced Navigation**: Added subscription tier indicators and premium feature locks in sidebar navigation
+  - **Webhook Integration**: Complete Stripe webhook handling for subscription lifecycle events and automatic user tier updates
 - July 08, 2025. Landing page updates and onboarding system completion:
   - **Contact Information**: Added hello@quikpik.co contact link in footer with proper styling
   - **Messaging Updates**: Replaced "Free 30-day trial" text with "Easy setup" across landing page

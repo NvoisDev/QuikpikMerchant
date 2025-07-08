@@ -1382,6 +1382,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      // Check customer group limit
+      const groups = await storage.getCustomerGroupsByUser(userId);
+      const groupLimit = getCustomerGroupLimit(user?.subscriptionTier || 'free');
+      
+      if (groupLimit !== -1 && groups.length >= groupLimit) {
+        return res.status(403).json({ 
+          error: "Customer group limit reached",
+          message: `You've reached your limit of ${groupLimit} customer groups. Upgrade your plan to create more.`,
+          currentCount: groups.length,
+          limit: groupLimit,
+          tier: user?.subscriptionTier || 'free'
+        });
+      }
+      
       const groupData = insertCustomerGroupSchema.parse({
         ...req.body,
         wholesalerId: userId
@@ -5475,6 +5491,33 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       case 'standard':
       case 'premium': return -1; // Unlimited
       default: return 3;
+    }
+  }
+
+  function getCustomerGroupLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 2;
+      case 'standard': return 5;
+      case 'premium': return -1; // unlimited
+      default: return 2;
+    }
+  }
+
+  function getBroadcastLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 5; // 5 broadcasts per month
+      case 'standard': return 25; // 25 broadcasts per month
+      case 'premium': return -1; // unlimited
+      default: return 5;
+    }
+  }
+
+  function getCustomersPerGroupLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 10; // 10 customers per group
+      case 'standard': return 50; // 50 customers per group
+      case 'premium': return -1; // unlimited
+      default: return 10;
     }
   }
 
