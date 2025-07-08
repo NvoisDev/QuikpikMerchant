@@ -94,36 +94,7 @@ export default function WholesalerDashboard() {
                   Your business performance at a glance
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link href="/products">
-                  <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25" data-onboarding="add-product-button">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
-                </Link>
-                <Link href="/campaigns">
-                  <Button variant="outline" className="border-2 border-blue-200 hover:bg-blue-50">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Create Campaign
-                  </Button>
-                </Link>
-                <Link href="/customer-groups">
-                  <Button variant="outline" className="border-2 border-purple-200 hover:bg-purple-50">
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Customers
-                  </Button>
-                </Link>
-                <Link href="/preview-store">
-                  <Button 
-                    variant="outline" 
-                    className="border-2 border-green-200 hover:bg-green-50"
-                    data-onboarding="preview-store"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Preview Store
-                  </Button>
-                </Link>
-              </div>
+
               
               {/* Stock Alerts - Top Right */}
               <div className="relative">
@@ -142,8 +113,42 @@ export default function WholesalerDashboard() {
           </div>
         </div>
 
+        {/* Quick Actions Section */}
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/products">
+              <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25" data-onboarding="add-product-button">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
+            <Link href="/campaigns">
+              <Button variant="outline" className="border-2 border-blue-200 hover:bg-blue-50">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Create Campaign
+              </Button>
+            </Link>
+            <Link href="/customer-groups">
+              <Button variant="outline" className="border-2 border-purple-200 hover:bg-purple-50">
+                <Users className="h-4 w-4 mr-2" />
+                Add Customers
+              </Button>
+            </Link>
+            <Link href="/preview-store">
+              <Button 
+                variant="outline" 
+                className="border-2 border-green-200 hover:bg-green-50"
+                data-onboarding="preview-store"
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Preview Store
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* Dashboard Content */}
-        <div className="max-w-7xl mx-auto p-8">
+        <div className="max-w-7xl mx-auto px-8 pb-8">
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg shadow-emerald-500/25">
