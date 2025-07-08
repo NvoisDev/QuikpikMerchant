@@ -120,6 +120,13 @@ export function useOnboarding() {
     setIsActive(false);
   };
 
+  const startOnboarding = () => {
+    setCurrentStepIndex(0);
+    setCompletedSteps([]);
+    setIsActive(true);
+    setIsPlaying(true);
+  };
+
   const restartOnboarding = () => {
     setCurrentStepIndex(0);
     setCompletedSteps([]);
@@ -151,11 +158,14 @@ export function useOnboarding() {
     completedSteps,
     nextStep,
     prevStep,
+    startOnboarding,
     skipOnboarding,
     completeOnboarding,
     restartOnboarding,
     pauseResume,
     goToStep,
     setIsActive,
+    user,
+    isLoading: updateOnboardingMutation.isPending,
   };
 }
