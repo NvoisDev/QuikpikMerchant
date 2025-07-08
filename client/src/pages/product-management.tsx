@@ -1268,26 +1268,8 @@ export default function ProductManagement() {
 
                       <div className="flex items-center justify-between">
                         <div className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="priceVisible"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Price Visible</FormLabel>
-                                  <div className="text-sm text-muted-foreground">
-                                    Show price to customers
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                          {/* Price visibility toggle removed - marketplace-specific pricing controls are in subscription settings for Premium users */}
+                          
                           <FormField
                             control={form.control}
                             name="negotiationEnabled"
