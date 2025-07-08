@@ -38,7 +38,7 @@ export function TaglineGenerator({
 
   const generateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await apiRequest("/api/ai/generate-taglines", "POST", data);
+      const response = await apiRequest("POST", "/api/ai/generate-taglines", data);
       return response;
     },
     onSuccess: (data) => {
