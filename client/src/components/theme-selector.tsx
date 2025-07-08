@@ -20,6 +20,10 @@ export default function ThemeSelector() {
   const handleThemeChange = (themeId: DashboardTheme) => {
     changeTheme(themeId);
     setIsOpen(false);
+    // Force a page refresh to ensure theme changes are applied
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   };
 
   return (

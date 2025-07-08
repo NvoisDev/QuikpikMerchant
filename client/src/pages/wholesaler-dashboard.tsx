@@ -97,7 +97,7 @@ export default function WholesalerDashboard() {
     : 'text-gray-900';
 
   return (
-    <div className={`${dashboardBgClass} min-h-screen`} data-onboarding="dashboard">
+    <div key={currentTheme} className={`${dashboardBgClass} min-h-screen`} data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
         <div className={`backdrop-blur-sm ${headerBgClass} border-b px-8 py-8`}>
