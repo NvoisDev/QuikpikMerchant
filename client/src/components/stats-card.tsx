@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 
 interface StatsCardProps {
   title: string;
@@ -28,6 +29,17 @@ export default function StatsCard({
   className,
   tooltip
 }: StatsCardProps) {
+  const { currentTheme } = useTheme();
+  
+  // Theme-aware styling
+  const cardBg = currentTheme === 'dark' 
+    ? 'bg-gray-800 border-gray-700'
+    : currentTheme === 'minimal'
+    ? 'bg-white border-gray-200 shadow-lg'
+    : 'bg-gradient-to-br from-blue-500 to-purple-600 border-0 text-white';
+
+  const textColor = currentTheme === 'minimal' ? 'text-gray-900' : 'text-white';
+  const subtextColor = currentTheme === 'minimal' ? 'text-gray-600' : 'text-white/80';
   if (loading) {
     return (
       <Card className={cn("animate-pulse", className)}>
@@ -49,17 +61,16 @@ export default function StatsCard({
     <Card className={cn(
       "group cursor-pointer transform transition-all duration-300 ease-out", 
       "hover:shadow-xl hover:-translate-y-1 hover:scale-105",
-      "hover:bg-gradient-to-r hover:from-white hover:to-gray-50",
-      "border border-gray-200 hover:border-primary/20",
+      cardBg,
       className
     )}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1 transition-colors duration-300">
-            <p className="text-sm font-medium text-gray-600 mb-1 group-hover:text-gray-700 transition-colors duration-300">
+            <p className={cn("text-sm font-medium mb-1 transition-colors duration-300", subtextColor)}>
               {title}
             </p>
-            <p className="text-2xl font-bold text-gray-900 mb-1 group-hover:text-primary transition-colors duration-300">
+            <p className={cn("text-2xl font-bold mb-1 transition-colors duration-300", textColor)}>
               {value}
             </p>
             {change && (
@@ -76,9 +87,10 @@ export default function StatsCard({
                     "w-12 h-12 rounded-lg flex items-center justify-center cursor-help",
                     "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
                     "group-hover:shadow-lg",
-                    iconBg
+                    currentTheme === 'minimal' ? iconBg : 'bg-white/20'
                   )}>
-                    <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", iconColor)} />
+                    <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", 
+                      currentTheme === 'minimal' ? iconColor : 'text-white')} />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -91,9 +103,10 @@ export default function StatsCard({
               "w-12 h-12 rounded-lg flex items-center justify-center",
               "transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3",
               "group-hover:shadow-lg",
-              iconBg
+              currentTheme === 'minimal' ? iconBg : 'bg-white/20'
             )}>
-              <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", iconColor)} />
+              <Icon className={cn("h-6 w-6 transition-all duration-300 group-hover:scale-110", 
+                currentTheme === 'minimal' ? iconColor : 'text-white')} />
             </div>
           )}
         </div>

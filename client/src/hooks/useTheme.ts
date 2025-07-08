@@ -101,10 +101,15 @@ export function useTheme() {
     });
   };
 
-  // Apply current theme on mount
+  // Apply current theme on mount and when theme changes
   useEffect(() => {
-    changeTheme(currentTheme);
-  }, []);
+    const config = themeConfigs[currentTheme];
+    const root = document.documentElement;
+    
+    Object.entries(config.colors).forEach(([key, value]) => {
+      root.style.setProperty(`--theme-${key}`, value);
+    });
+  }, [currentTheme]);
 
   return {
     currentTheme,

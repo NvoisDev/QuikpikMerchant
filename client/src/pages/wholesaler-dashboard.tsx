@@ -83,25 +83,41 @@ export default function WholesalerDashboard() {
   }
 
   const dashboardBgClass = currentTheme === 'gradient' 
-    ? themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50"
+    ? themeConfig.gradient || "bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500"
     : currentTheme === 'dark'
     ? "bg-gray-900"
     : currentTheme === 'minimal'
-    ? "bg-gray-50"
+    ? "bg-white"
+    : currentTheme === 'ocean'
+    ? "bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500"
+    : currentTheme === 'sunset'
+    ? "bg-gradient-to-br from-orange-400 via-red-400 to-pink-500"
     : themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50";
+
+  const headerBgClass = currentTheme === 'dark' 
+    ? 'bg-gray-800/90 border-gray-700/50'
+    : currentTheme === 'gradient' || currentTheme === 'ocean' || currentTheme === 'sunset'
+    ? 'bg-white/20 backdrop-blur-lg border-white/30'
+    : 'bg-white/80 border-gray-200/50';
+
+  const textColorClass = currentTheme === 'dark'
+    ? 'text-white'
+    : (currentTheme === 'gradient' || currentTheme === 'ocean' || currentTheme === 'sunset')
+    ? 'text-white'
+    : 'text-gray-900';
 
   return (
     <div className={`${dashboardBgClass} min-h-screen`} data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
-        <div className={`backdrop-blur-sm ${currentTheme === 'dark' ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-gray-200/50'} border-b px-8 py-8`}>
+        <div className={`backdrop-blur-sm ${headerBgClass} border-b px-8 py-8`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2" data-onboarding="dashboard-header">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                <h1 className={`text-4xl font-bold ${textColorClass}`}>
                   Hello, {user?.firstName || user?.businessName || 'Wholesaler'} 👋
                 </h1>
-                <p className="text-lg text-gray-600">
+                <p className={`text-lg ${textColorClass} opacity-80`}>
                   Your business performance at a glance
                 </p>
               </div>
