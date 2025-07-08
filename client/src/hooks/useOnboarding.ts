@@ -151,8 +151,36 @@ export function useOnboarding() {
   const nextStep = () => {
     if (currentStepIndex < ONBOARDING_STEPS.length - 1) {
       const newIndex = currentStepIndex + 1;
+      const currentStep = ONBOARDING_STEPS[currentStepIndex];
+      
+      // Handle navigation actions for current step
+      if (currentStep.action === 'navigate') {
+        const targetElement = document.querySelector(`[data-onboarding="${currentStep.target}"]`) as HTMLAnchorElement;
+        if (targetElement && targetElement.click) {
+          // Smooth scroll to element before clicking
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          });
+          
+          // Wait for scroll, then click
+          setTimeout(() => {
+            targetElement.click();
+            // Wait for navigation to complete before showing next step
+            setTimeout(() => {
+              setCurrentStepIndex(newIndex);
+              setCompletedSteps(prev => [...prev, currentStep.id]);
+              updateOnboardingMutation.mutate({ step: newIndex });
+            }, 1200);
+          }, 300);
+          return;
+        }
+      }
+      
+      // Standard step progression
       setCurrentStepIndex(newIndex);
-      setCompletedSteps(prev => [...prev, ONBOARDING_STEPS[currentStepIndex].id]);
+      setCompletedSteps(prev => [...prev, currentStep.id]);
       
       // Update backend with current step
       updateOnboardingMutation.mutate({ step: newIndex });
@@ -194,8 +222,11 @@ export function useOnboarding() {
 
   const goToStep = (stepIndex: number) => {
     if (stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) {
-      setCurrentStepIndex(stepIndex);
-      updateOnboardingMutation.mutate({ step: stepIndex });
+      // Add delay for smooth transition
+      setTimeout(() => {
+        setCurrentStepIndex(stepIndex);
+        updateOnboardingMutation.mutate({ step: stepIndex });
+      }, 200);
     }
   };
 

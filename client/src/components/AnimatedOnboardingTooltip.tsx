@@ -84,33 +84,52 @@ export function AnimatedOnboardingTooltip({
   // Find and highlight target element
   useEffect(() => {
     const findTarget = () => {
-      const element = document.querySelector(`[data-onboarding="${step.target}"]`) as HTMLElement;
-      if (element) {
-        setTargetElement(element);
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'center'
-        });
-        
-        // Add highlight class
-        element.classList.add('onboarding-highlight');
-        
-        // Show animated pointer
-        setTimeout(() => setShowPointer(true), 500);
-        
-        return element;
-      }
-      return null;
+      // Wait a bit for any route changes to complete
+      setTimeout(() => {
+        const element = document.querySelector(`[data-onboarding="${step.target}"]`) as HTMLElement;
+        if (element) {
+          setTargetElement(element);
+          
+          // Enhanced scrolling with better timing and smoother behavior
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+          });
+          
+          // Ensure element is visible and accessible
+          element.style.position = 'relative';
+          element.style.zIndex = '9998';
+          
+          // Add highlight class with delay
+          setTimeout(() => {
+            element.classList.add('onboarding-highlight');
+            
+            // Show animated pointer with additional delay
+            setTimeout(() => setShowPointer(true), 700);
+          }, 500);
+          
+          return element;
+        } else {
+          // Retry finding the element after a short delay
+          setTimeout(() => findTarget(), 200);
+        }
+        return null;
+      }, 200);
     };
 
     const target = findTarget();
     
     return () => {
-      if (target) {
-        target.classList.remove('onboarding-highlight');
-      }
-      setShowPointer(false);
+      // Clean up with proper timing
+      setTimeout(() => {
+        if (targetElement) {
+          targetElement.classList.remove('onboarding-highlight');
+          // Reset z-index
+          targetElement.style.zIndex = '';
+        }
+        setShowPointer(false);
+      }, 100);
     };
   }, [step.target]);
 
@@ -385,20 +404,7 @@ export function AnimatedOnboardingTooltip({
         </Card>
       </motion.div>
 
-      {/* Custom CSS for highlighting */}
-      <style jsx global>{`
-        .onboarding-highlight {
-          position: relative;
-          z-index: 9999 !important;
-          animation: onboarding-pulse 2s infinite;
-        }
-        
-        @keyframes onboarding-pulse {
-          0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-        }
-      `}</style>
+
     </>
   );
 }
