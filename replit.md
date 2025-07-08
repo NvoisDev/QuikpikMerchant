@@ -175,6 +175,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Navigation Update**: Added premiumOnly flag to Business Performance in sidebar navigation
   - **Subscription Integration**: Uses real-time subscription status check to enforce access controls
   - **Professional Upgrade UI**: Clean upgrade prompt with feature list and direct subscription link
+- July 08, 2025. Enhanced dashboard with top selling product display and currency updates:
+  - **Top Selling Product Section**: Added prominent top selling product card with product image, sales metrics, and performance indicators
+  - **Product Image Display**: Compact 80x80px product images with fallback placeholder icons for products without images
+  - **Performance Metrics**: Four colorful metric cards showing Total Sales, Units Sold, Orders, and Current Price
+  - **Currency Standardization**: Updated all pricing displays to use pounds (£) for consistent UK market focus
+  - **Professional Layout**: Trophy icon header with comprehensive product performance data and responsive design
 - July 08, 2025. Complete dashboard redesign with modern interactive visualization:
   - **Modern Visual Design**: Implemented gradient backgrounds with glass-effect header styling and professional color scheme
   - **Interactive Data Charts**: Replaced static warehouse images with dynamic Recharts visualizations showing sales performance and order volume

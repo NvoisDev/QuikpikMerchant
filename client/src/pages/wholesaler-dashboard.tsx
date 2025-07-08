@@ -339,8 +339,7 @@ export default function WholesalerDashboard() {
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            {user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$'}
-                            {topProducts[0].revenue?.toLocaleString() || '0'}
+                            £{topProducts[0].revenue?.toLocaleString() || '0'}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
@@ -358,8 +357,7 @@ export default function WholesalerDashboard() {
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            {user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$'}
-                            {topProducts[0].price ? parseFloat(topProducts[0].price.toString()).toFixed(2) : '0.00'}
+                            £{topProducts[0].price ? parseFloat(topProducts[0].price.toString()).toFixed(2) : '0.00'}
                           </p>
                         </div>
                       </div>
