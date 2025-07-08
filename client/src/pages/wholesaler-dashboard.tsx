@@ -8,8 +8,6 @@ import { formatNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { useTheme } from "@/hooks/useTheme";
-import ThemeSelector from "@/components/theme-selector";
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { useState, useEffect } from 'react';
 
@@ -45,7 +43,6 @@ const generateSalesData = (stats: any) => {
 export default function WholesalerDashboard() {
   const { user } = useAuth();
   const { isActive } = useOnboarding();
-  const { currentTheme, themeConfig } = useTheme();
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
 
   // Keyboard shortcuts functionality
@@ -118,40 +115,25 @@ export default function WholesalerDashboard() {
     );
   }
 
-  const dashboardBgClass = themeConfig.gradient || "bg-white";
-
-  const headerBgClass = currentTheme === 'dark' 
-    ? 'bg-gray-800/90 border-gray-700/50'
-    : currentTheme === 'gradient' || currentTheme === 'ocean' || currentTheme === 'sunset'
-    ? 'bg-white/20 backdrop-blur-lg border-white/30'
-    : 'bg-white/80 border-gray-200/50';
-
-  const textColorClass = currentTheme === 'dark'
-    ? 'text-white'
-    : (currentTheme === 'gradient' || currentTheme === 'ocean' || currentTheme === 'sunset')
-    ? 'text-white'
-    : 'text-gray-900';
-
   return (
-    <div key={currentTheme} className={`${dashboardBgClass} min-h-screen`} data-onboarding="dashboard">
+    <div className="bg-white min-h-screen" data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
-        <div className={`backdrop-blur-sm ${headerBgClass} border-b px-8 py-8`}>
+        <div className="backdrop-blur-sm bg-white/80 border-gray-200/50 border-b px-8 py-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2" data-onboarding="dashboard-header">
-                <h1 className={`text-4xl font-bold ${textColorClass}`}>
+                <h1 className="text-4xl font-bold text-gray-900">
                   Hello, {user?.firstName || user?.businessName || 'Wholesaler'} 👋
                 </h1>
-                <p className={`text-lg ${textColorClass} opacity-80`}>
+                <p className="text-lg text-gray-900 opacity-80">
                   Your business performance at a glance
                 </p>
               </div>
 
               
-              {/* Theme Selector and Stock Alerts */}
+              {/* Stock Alerts */}
               <div className="flex items-center gap-3">
-                <ThemeSelector />
                 <Link href="/stock-alerts">
                   <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
                     <Bell className="h-5 w-5" />
@@ -205,7 +187,7 @@ export default function WholesalerDashboard() {
         <div className="max-w-7xl mx-auto px-8 pb-8">
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.primary }}>
+            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -220,7 +202,7 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.secondary }}>
+            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -235,7 +217,7 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.accent }}>
+            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -316,7 +298,7 @@ export default function WholesalerDashboard() {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Sales Performance Chart */}
-            <Card className={`${currentTheme === 'minimal' ? 'bg-white border-gray-200' : 'bg-white/80 backdrop-blur-sm border-0'} shadow-lg`}>
+            <Card className="bg-white border-gray-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
@@ -364,10 +346,10 @@ export default function WholesalerDashboard() {
                         <Line 
                           type="monotone" 
                           dataKey="revenue" 
-                          stroke={themeConfig.colors.primary} 
+                          stroke="#10b981" 
                           strokeWidth={3}
-                          dot={{ fill: themeConfig.colors.primary, strokeWidth: 2, r: 5 }}
-                          activeDot={{ r: 7, stroke: themeConfig.colors.primary, strokeWidth: 2, fill: '#ffffff' }}
+                          dot={{ fill: "#10b981", strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 7, stroke: "#10b981", strokeWidth: 2, fill: '#ffffff' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -377,7 +359,7 @@ export default function WholesalerDashboard() {
             </Card>
 
             {/* Orders Chart */}
-            <Card className={`${currentTheme === 'minimal' ? 'bg-white border-gray-200' : 'bg-white/80 backdrop-blur-sm border-0'} shadow-lg`}>
+            <Card className="bg-white border-gray-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
@@ -423,7 +405,7 @@ export default function WholesalerDashboard() {
                         />
                         <Bar 
                           dataKey="orders" 
-                          fill={themeConfig.colors.secondary}
+                          fill="#3b82f6"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>

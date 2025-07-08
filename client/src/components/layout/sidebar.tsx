@@ -2,7 +2,6 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import Logo from "@/components/ui/logo";
 import { 
   LayoutDashboard, 
@@ -70,17 +69,17 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <div className={cn(
-        "bg-white dark:bg-gray-900 shadow-lg h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
+        "bg-white shadow-lg h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
         "w-64",
         isCollapsed ? "-translate-x-full lg:translate-x-0" : "translate-x-0",
         "lg:translate-x-0 lg:block"
       )}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <Logo size="lg" className="mb-2" />
-              <p className="text-xs text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-600">
                 {user?.businessName || "Wholesale Business"}
               </p>
             </div>
@@ -88,7 +87,7 @@ export default function Sidebar() {
             {/* Mobile close button */}
             <button
               onClick={() => setIsCollapsed(true)}
-              className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              className="lg:hidden p-1 hover:bg-gray-100 rounded"
             >
               <X className="h-5 w-5" />
             </button>
@@ -155,10 +154,10 @@ export default function Sidebar() {
               </span>
             </div>
             <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              <p className="text-xs text-gray-500 truncate">
                 {user?.email}
               </p>
             </div>
@@ -173,7 +172,7 @@ export default function Sidebar() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
