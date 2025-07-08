@@ -123,18 +123,20 @@ export default function WholesalerDashboard() {
                     Preview Store
                   </Button>
                 </Link>
-                <div className="relative">
-                  <Link href="/stock-alerts">
-                    <Button variant="ghost" size="icon" className="relative">
-                      <Bell className="h-5 w-5" />
-                      {alertsData?.count > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {alertsData.count}
-                        </span>
-                      )}
-                    </Button>
-                  </Link>
-                </div>
+              </div>
+              
+              {/* Stock Alerts - Top Right */}
+              <div className="relative">
+                <Link href="/stock-alerts">
+                  <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
+                    <Bell className="h-5 w-5" />
+                    {alertsData?.count > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {alertsData.count}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

@@ -1,5 +1,7 @@
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   BarChart3, 
   FileText, 
@@ -10,10 +12,61 @@ import {
   ArrowRight,
   PieChart,
   LineChart,
-  Calendar
+  Calendar,
+  Lock
 } from "lucide-react";
 
 export default function BusinessPerformance() {
+  const { data: subscriptionStatus } = useQuery({
+    queryKey: ["/api/subscription/status"],
+  });
+
+  // Check if user has premium access
+  const isPremium = subscriptionStatus?.tier === 'premium';
+
+  if (!isPremium) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center py-16">
+          <div className="bg-amber-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+            <Lock className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Premium Feature</h1>
+          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+            Business Performance analytics and insights are available with Premium subscription. 
+            Upgrade to access detailed performance metrics, financial analytics, and advanced reporting.
+          </p>
+          <div className="bg-white rounded-lg p-6 shadow-sm border max-w-md mx-auto mb-8">
+            <h3 className="font-semibold text-lg mb-3">Premium Features Include:</h3>
+            <ul className="text-left space-y-2 text-gray-600">
+              <li className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                Advanced Analytics Dashboard
+              </li>
+              <li className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" />
+                Financial Performance Tracking
+              </li>
+              <li className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Revenue Trend Analysis
+              </li>
+              <li className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                Detailed Reporting
+              </li>
+            </ul>
+          </div>
+          <Link href="/subscription">
+            <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
+              Upgrade to Premium
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">

@@ -42,6 +42,9 @@ import {
   type InsertStockMovement,
   type StockAlert,
   type InsertStockAlert,
+  teamMembers,
+  type TeamMember,
+  type InsertTeamMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -1596,6 +1599,36 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
+  }
+
+  // Team Members
+  async getTeamMembers(wholesalerId: string): Promise<TeamMember[]> {
+    return await db.select().from(teamMembers).where(eq(teamMembers.wholesalerId, wholesalerId));
+  }
+
+  async createTeamMember(data: InsertTeamMember): Promise<TeamMember> {
+    const [member] = await db.insert(teamMembers).values(data).returning();
+    return member;
+  }
+
+  async updateTeamMemberStatus(id: number, status: string): Promise<TeamMember> {
+    const [member] = await db.update(teamMembers)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(teamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deleteTeamMember(id: number): Promise<void> {
+    await db.delete(teamMembers).where(eq(teamMembers.id, id));
+  }
+
+  async getTeamMemberCount(wholesalerId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(teamMembers)
+      .where(eq(teamMembers.wholesalerId, wholesalerId));
+    return result[0].count;
   }
 }
 

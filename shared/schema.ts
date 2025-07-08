@@ -106,6 +106,22 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Team members table for multi-user access
+export const teamMembers = pgTable("team_members", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: varchar("email").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  role: varchar("role").notNull().default("member"), // owner, admin, member
+  permissions: jsonb("permissions").default({}), // JSON object with permission flags
+  status: varchar("status").notNull().default("pending"), // pending, active, suspended
+  invitedAt: timestamp("invited_at").defaultNow(),
+  joinedAt: timestamp("joined_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
@@ -337,6 +353,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   ordersAsRetailer: many(orders, { relationName: "retailer" }),
   negotiations: many(negotiations),
   groupMemberships: many(customerGroupMembers),
+  teamMembers: many(teamMembers),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  wholesaler: one(users, {
+    fields: [teamMembers.wholesalerId],
+    references: [users.id]
+  }),
 }));
 
 export const productsRelations = relations(products, ({ one, many }) => ({
@@ -584,3 +608,12 @@ export const insertStockMovementSchema = createInsertSchema(stockMovements).omit
 });
 export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
 export type StockMovement = typeof stockMovements.$inferSelect;
+
+// Team Members Schema
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;

@@ -33,7 +33,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
-  { name: "Business Performance", href: "/business-performance", icon: BarChart3 },
+  { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true },
   { name: "Help Hub", href: "/help", icon: HelpCircle },
 ];

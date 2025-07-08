@@ -146,6 +146,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 08, 2025. Business performance access restricted to Premium subscribers only:
+  - **Premium Access Control**: Business Performance section now requires Premium subscription tier for access
+  - **Lock Screen Implementation**: Non-premium users see upgrade prompt with feature benefits instead of analytics
+  - **Navigation Update**: Added premiumOnly flag to Business Performance in sidebar navigation
+  - **Subscription Integration**: Uses real-time subscription status check to enforce access controls
+  - **Professional Upgrade UI**: Clean upgrade prompt with feature list and direct subscription link
 - July 08, 2025. Complete dashboard redesign with modern interactive visualization:
   - **Modern Visual Design**: Implemented gradient backgrounds with glass-effect header styling and professional color scheme
   - **Interactive Data Charts**: Replaced static warehouse images with dynamic Recharts visualizations showing sales performance and order volume
