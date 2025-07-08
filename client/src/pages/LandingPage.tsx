@@ -505,7 +505,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              Free 30-day trial
+              Easy setup
             </div>
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
@@ -533,8 +533,11 @@ export default function LandingPage() {
             <p className="mb-4">
               Empowering wholesale businesses to reach more customers and grow faster.
             </p>
-            <p>
+            <p className="mb-2">
               © 2025 Quikpik Merchant. Built with ❤️ for entrepreneurs worldwide.
+            </p>
+            <p>
+              Questions? Contact us at <a href="mailto:hello@quikpik.co" className="text-primary hover:text-primary/80 transition-colors">hello@quikpik.co</a>
             </p>
           </div>
         </div>

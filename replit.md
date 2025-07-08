@@ -383,6 +383,11 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Webhook Invoice Fix**: Fixed Stripe webhook to properly call `createAndSendStripeInvoice` function so customers automatically receive professional invoices after payment
   - **Refund Field Mapping Fix**: Corrected order field mapping from `paymentIntentId` to `stripePaymentIntentId` to resolve "No payment information found" refund errors
   - **Enhanced Refund Logging**: Added detailed error logging to refund route for better debugging of payment processing issues
+- July 08, 2025. Landing page updates and onboarding system completion:
+  - **Contact Information**: Added hello@quikpik.co contact link in footer with proper styling
+  - **Messaging Updates**: Replaced "Free 30-day trial" text with "Easy setup" across landing page
+  - **Comprehensive Animated Onboarding System**: Complete walkthrough system with framer-motion animations, backend API integration, and database progress tracking
+  - **User Experience Enhancement**: Onboarding attributes added to dashboard and navigation elements for guided tours
 - July 07, 2025. Comprehensive Promotional Pricing System Implementation:
   - **Database Schema Enhancement**: Added promo_price, promo_active, and promo_end_date fields to products table with proper decimal precision
   - **Product Management Integration**: Enhanced product creation/edit forms with promotional price field, active toggle, and form validation
