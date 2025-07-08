@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Package, Users, MessageSquare, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Check, Crown, Package, Users, MessageSquare, TrendingUp, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -13,9 +16,38 @@ export default function SubscriptionSettings() {
   const { user } = useAuth();
   const { subscription, currentTier, isActive } = useSubscription();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
+
+  // Marketplace settings
+  const { data: marketplaceSettings } = useQuery({
+    queryKey: ["/api/user/marketplace-settings"],
+    enabled: currentTier === 'premium'
+  });
+
+  const updateMarketplaceSettings = useMutation({
+    mutationFn: async (settings: { showPricesToWholesalers: boolean }) => {
+      const response = await apiRequest("PATCH", "/api/user/marketplace-settings", settings);
+      if (!response.ok) throw new Error("Failed to update settings");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/marketplace-settings"] });
+      toast({
+        title: "Settings Updated",
+        description: "Marketplace price visibility settings have been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update marketplace settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleCancelSubscription = async () => {
     setCanceling(true);
@@ -277,6 +309,62 @@ export default function SubscriptionSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Marketplace Settings - Premium Only */}
+      {currentTier === 'premium' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Marketplace Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="show-prices" className="text-base font-medium">
+                  Show Prices to Other Wholesalers
+                </Label>
+                <p className="text-sm text-gray-600">
+                  Allow other wholesalers in the marketplace to see your product prices. 
+                  When disabled, prices are hidden and blurred for privacy.
+                </p>
+              </div>
+              <Switch
+                id="show-prices"
+                checked={marketplaceSettings?.showPricesToWholesalers || false}
+                onCheckedChange={(checked) => 
+                  updateMarketplaceSettings.mutate({ showPricesToWholesalers: checked })
+                }
+                disabled={updateMarketplaceSettings.isPending}
+              />
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-100 rounded-full p-1">
+                  {marketplaceSettings?.showPricesToWholesalers ? (
+                    <Eye className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 text-blue-600" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">
+                    Current Setting: {marketplaceSettings?.showPricesToWholesalers ? 'Prices Visible' : 'Prices Hidden'}
+                  </h4>
+                  <p className="text-sm text-blue-700">
+                    {marketplaceSettings?.showPricesToWholesalers 
+                      ? 'Other wholesalers can see your product prices in the B2B marketplace.'
+                      : 'Your product prices are hidden and blurred for other wholesalers in the marketplace.'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Subscription Upgrade Modal */}
       <SubscriptionUpgradeModal

@@ -2399,6 +2399,36 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // User marketplace settings
+  app.get("/api/user/marketplace-settings", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      res.json({ 
+        showPricesToWholesalers: user?.showPricesToWholesalers || false 
+      });
+    } catch (error) {
+      console.error("Error fetching marketplace settings:", error);
+      res.status(500).json({ message: "Failed to fetch marketplace settings" });
+    }
+  });
+
+  app.patch("/api/user/marketplace-settings", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { showPricesToWholesalers } = req.body;
+      
+      await storage.updateUser(userId, { showPricesToWholesalers });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating marketplace settings:", error);
+      res.status(500).json({ message: "Failed to update marketplace settings" });
+    }
+  });
+
+
   // Enhanced wholesalers discovery with location and rating filters
   app.get('/api/marketplace/wholesalers', async (req, res) => {
     try {

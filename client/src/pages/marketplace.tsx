@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Star, Package, Filter, Grid, List, Users, TrendingUp, Award } from "lucide-react";
+import { Search, MapPin, Star, Package, Filter, Grid, List, Users, TrendingUp, Award, Crown, Lock, Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -79,6 +82,8 @@ const locations = [
 ];
 
 export default function Marketplace() {
+  const { user } = useAuth();
+  const { currentTier } = useSubscription();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [viewMode, setViewMode] = useState<"featured" | "products" | "wholesalers">("featured");
@@ -88,6 +93,10 @@ export default function Marketplace() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [ratingFilter, setRatingFilter] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  // Check if user has premium access to marketplace
+  const hasMarketplaceAccess = currentTier === 'premium';
 
   const { data: products = [], isLoading: productsLoading } = useQuery<MarketplaceProduct[]>({
     queryKey: ["/api/marketplace/products", searchQuery, selectedCategory, sortBy, selectedLocation, priceRange, ratingFilter],
@@ -158,6 +167,80 @@ export default function Marketplace() {
         return 0;
     }
   });
+
+  // Show premium access gate if user doesn't have premium subscription
+  if (!hasMarketplaceAccess) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">B2B Marketplace</h1>
+            <p className="text-gray-600 mt-1">Connect with trusted wholesalers and discover premium products</p>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="hidden lg:inline-flex">
+              <Crown className="mr-1 h-3 w-3" />
+              Premium Feature
+            </Badge>
+          </div>
+        </div>
+
+        {/* Premium Access Gate */}
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="p-8 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Premium B2B Marketplace</h2>
+              <p className="text-gray-600">
+                Access our exclusive wholesale marketplace to source products from like-minded wholesalers. 
+                Connect, discover, and grow your business with premium suppliers.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Marketplace Features:</h3>
+              <ul className="text-left space-y-2 text-gray-600">
+                <li className="flex items-center">
+                  <Package className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                  Browse products from verified wholesalers
+                </li>
+                <li className="flex items-center">
+                  <Users className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                  Connect with like-minded wholesale businesses
+                </li>
+                <li className="flex items-center">
+                  <Eye className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                  Flexible price visibility controls
+                </li>
+                <li className="flex items-center">
+                  <TrendingUp className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                  Expand your sourcing opportunities
+                </li>
+              </ul>
+            </div>
+
+            <Button 
+              onClick={() => setUpgradeModalOpen(true)}
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-8 py-3"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Upgrade to Premium
+            </Button>
+          </CardContent>
+        </Card>
+
+        <SubscriptionUpgradeModal 
+          isOpen={upgradeModalOpen}
+          onOpenChange={setUpgradeModalOpen}
+          currentTier={currentTier}
+          feature="marketplace access"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -484,6 +567,18 @@ function ProductsView({
   isLoading: boolean; 
   layoutMode: "grid" | "list" 
 }) {
+  // Query user's price visibility setting
+  const { data: userSettings } = useQuery({
+    queryKey: ["/api/user/marketplace-settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/user/marketplace-settings");
+      if (!response.ok) throw new Error("Failed to fetch user settings");
+      return response.json();
+    }
+  });
+
+  const showPrices = userSettings?.showPricesToWholesalers || false;
+
   if (isLoading) {
     return (
       <div className={`grid gap-6 ${layoutMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
@@ -534,9 +629,18 @@ function ProductsView({
                 <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
                 <p className="text-sm text-gray-600 mb-2">{product.description}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-blue-600">
-                    {formatCurrency(parseFloat(product.price))}
-                  </span>
+                  {showPrices ? (
+                    <span className="text-lg font-bold text-blue-600">
+                      {formatCurrency(parseFloat(product.price), product.currency || 'GBP')}
+                    </span>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <div className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-500 blur-sm">
+                        Price Hidden
+                      </div>
+                      <EyeOff className="w-4 h-4 text-gray-400" />
+                    </div>
+                  )}
                   <Badge variant="secondary">MOQ: {formatNumber(product.moq)}</Badge>
                 </div>
                 <div className="flex justify-end mt-2">

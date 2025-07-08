@@ -90,6 +90,9 @@ export const users = pgTable("users", {
   
   storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
   
+  // Marketplace settings
+  showPricesToWholesalers: boolean("show_prices_to_wholesalers").default(false), // Whether to show prices to other wholesalers in marketplace
+  
   // Onboarding fields
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingStep: integer("onboarding_step").default(0),
