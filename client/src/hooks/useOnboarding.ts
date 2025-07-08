@@ -71,13 +71,13 @@ export function useOnboarding() {
     },
   });
 
-  // Auto-start onboarding for first-time users
-  useEffect(() => {
-    if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
-      // Show onboarding for users who haven't completed or skipped it
-      setIsActive(true);
-    }
-  }, [user]);
+  // Auto-start onboarding disabled to prevent interference with normal operations
+  // Users can manually start the tour via help section
+  // useEffect(() => {
+  //   if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
+  //     setIsActive(true);
+  //   }
+  // }, [user]);
 
   const nextStep = () => {
     if (currentStepIndex < ONBOARDING_STEPS.length - 1) {
