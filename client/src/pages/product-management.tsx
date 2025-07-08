@@ -269,6 +269,63 @@ export default function ProductManagement() {
     }
   };
 
+  const handleMultipleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, currentImages: string[], onChange: (value: string[]) => void) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    // Check if adding these files would exceed the 5-image limit
+    if (currentImages.length + files.length > 5) {
+      toast({
+        title: "Too many images",
+        description: `You can only upload up to 5 images total. You currently have ${currentImages.length} images.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file types
+    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "Invalid file type",
+        description: "Please choose only image files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Show loading state
+      toast({
+        title: "Processing images",
+        description: `Optimizing ${files.length} image(s)...`,
+      });
+
+      const processedImages = await Promise.all(
+        files.map(file => resizeImage(file, 500))
+      );
+
+      const updatedImages = [...currentImages, ...processedImages];
+      onChange(updatedImages);
+      
+      toast({
+        title: "Images uploaded",
+        description: `${files.length} image(s) optimized and uploaded successfully!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Failed to process one or more image files.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeImage = (imageIndex: number, currentImages: string[], onChange: (value: string[]) => void) => {
+    const updatedImages = currentImages.filter((_, index) => index !== imageIndex);
+    onChange(updatedImages);
+  };
+
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products", user?.id],
     queryFn: async () => {
@@ -1056,58 +1113,92 @@ export default function ProductManagement() {
 
                       <FormField
                         control={form.control}
-                        name="imageUrl"
+                        name="images"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Product Image</FormLabel>
+                            <FormLabel>Product Images</FormLabel>
                             <FormControl>
                               <div className="space-y-4">
                                 <div className="flex space-x-2">
                                   <Input 
-                                    placeholder="Enter image URL or upload file" 
-                                    {...field} 
+                                    placeholder="Enter image URL and press Enter" 
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        const input = e.target as HTMLInputElement;
+                                        const url = input.value.trim();
+                                        if (url && (field.value?.length || 0) < 5) {
+                                          const currentImages = field.value || [];
+                                          field.onChange([...currentImages, url]);
+                                          input.value = '';
+                                        } else if ((field.value?.length || 0) >= 5) {
+                                          toast({
+                                            title: "Maximum images reached",
+                                            description: "You can only have up to 5 images per product.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }
+                                    }}
                                     className="flex-1"
                                   />
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => document.getElementById('image-upload')?.click()}
+                                    onClick={() => document.getElementById('multiple-image-upload')?.click()}
                                     className="px-3"
+                                    disabled={(field.value?.length || 0) >= 5}
                                   >
                                     <Upload className="h-4 w-4" />
                                   </Button>
                                 </div>
                                 
                                 <input
-                                  id="image-upload"
+                                  id="multiple-image-upload"
                                   type="file"
                                   accept="image/*"
-                                  onChange={(e) => handleImageUpload(e, field.onChange)}
+                                  multiple
+                                  onChange={(e) => handleMultipleImageUpload(e, field.value || [], field.onChange)}
                                   className="hidden"
                                 />
                                 
-                                {field.value && (
-                                  <div className="flex items-center space-x-4">
-                                    <img 
-                                      src={field.value} 
-                                      alt="Product preview" 
-                                      className="h-20 w-20 object-cover rounded-lg border"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => field.onChange("")}
-                                      className="text-red-600 hover:text-red-800"
-                                    >
-                                      Remove
-                                    </Button>
+                                {field.value && field.value.length > 0 && (
+                                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    {field.value.map((imageUrl: string, index: number) => (
+                                      <div key={index} className="relative group">
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={`Product image ${index + 1}`} 
+                                          className="h-20 w-20 object-cover rounded-lg border"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeImage(index, field.value || [], field.onChange)}
+                                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          ×
+                                        </Button>
+                                        {index === 0 && (
+                                          <Badge className="absolute -bottom-2 left-0 text-xs bg-blue-500">
+                                            Primary
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                                 
                                 <p className="text-sm text-gray-600">
-                                  Upload an image file or paste an image URL. Images are automatically optimized for best performance.
+                                  Upload up to 5 images or paste image URLs. First image will be the primary display image. Images are automatically optimized.
                                 </p>
+                                
+                                {(field.value?.length || 0) > 0 && (
+                                  <p className="text-sm text-blue-600">
+                                    {field.value?.length || 0}/5 images uploaded
+                                  </p>
+                                )}
                               </div>
                             </FormControl>
                             <FormMessage />
