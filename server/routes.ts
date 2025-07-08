@@ -852,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           try {
             const { whatsappService } = await import('./whatsapp');
-            await whatsappService.sendMessage(customerPhone, message, wholesaler.id);
+            await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
           } catch (error) {
             console.error('Failed to send WhatsApp notification:', error);
           }
@@ -978,7 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             try {
               const { whatsappService } = await import('./whatsapp');
-              await whatsappService.sendMessage(customerPhone, message, wholesaler.id);
+              await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
             } catch (error) {
               console.error('Failed to send WhatsApp notification:', error);
             }
@@ -3932,7 +3932,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       } else {
         // Create regular payment intent when no Connect account
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalAmount * 100), // Convert to cents
+          amount: Math.round(validatedTotalAmount * 100), // Convert to cents
           currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
           metadata: {
             orderType: 'customer_portal',
@@ -3941,7 +3941,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             customerEmail: customerData.email,
             customerPhone: customerData.phone,
             customerAddress: JSON.stringify(customerData.address),
-            totalAmount: totalAmount.toString(),
+            totalAmount: validatedTotalAmount.toString(),
             platformFee: platformFee,
             connectAccountUsed: 'false',
             items: JSON.stringify(items.map(item => ({
