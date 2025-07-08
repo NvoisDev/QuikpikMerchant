@@ -114,17 +114,17 @@ export default function LandingPage() {
               </div>
               
               <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center bg-gradient-to-r from-green-100 to-emerald-100 px-4 py-2 rounded-full border border-green-200">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="font-semibold text-green-800">Easy setup</span>
+                <div className="flex items-center bg-gradient-to-r from-emerald-50 to-emerald-100 px-4 py-2 rounded-full border border-emerald-200">
+                  <CheckCircle className="h-5 w-5 text-emerald-500 mr-2" />
+                  <span className="font-semibold text-emerald-700">Easy setup</span>
                 </div>
-                <div className="flex items-center bg-gradient-to-r from-blue-100 to-cyan-100 px-4 py-2 rounded-full border border-blue-200">
-                  <MessageSquare className="h-5 w-5 text-blue-600 mr-2" />
-                  <span className="font-semibold text-blue-800">WhatsApp integrated</span>
+                <div className="flex items-center bg-gradient-to-r from-sky-50 to-sky-100 px-4 py-2 rounded-full border border-sky-200">
+                  <MessageSquare className="h-5 w-5 text-sky-500 mr-2" />
+                  <span className="font-semibold text-sky-700">WhatsApp integrated</span>
                 </div>
-                <div className="flex items-center bg-gradient-to-r from-purple-100 to-violet-100 px-4 py-2 rounded-full border border-purple-200">
-                  <CreditCard className="h-5 w-5 text-purple-600 mr-2" />
-                  <span className="font-semibold text-purple-800">Instant payments</span>
+                <div className="flex items-center bg-gradient-to-r from-yellow-50 to-yellow-100 px-4 py-2 rounded-full border border-yellow-200">
+                  <CreditCard className="h-5 w-5 text-yellow-500 mr-2" />
+                  <span className="font-semibold text-yellow-700">Instant payments</span>
                 </div>
               </div>
             </div>
@@ -138,39 +138,39 @@ export default function LandingPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-4 rounded-lg border border-green-200">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
                       <div className="flex items-center mb-2">
-                        <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="text-sm font-medium text-green-800">Revenue</span>
+                        <TrendingUp className="h-5 w-5 text-emerald-500 mr-2" />
+                        <span className="text-sm font-medium text-emerald-700">Revenue</span>
                       </div>
-                      <div className="text-2xl font-bold text-green-900">£24K</div>
-                      <div className="text-sm text-green-700">This month</div>
+                      <div className="text-2xl font-bold text-emerald-800">£24K</div>
+                      <div className="text-sm text-emerald-600">This month</div>
                     </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-4 rounded-lg border border-blue-200">
+                    <div className="bg-gradient-to-br from-sky-50 to-sky-100 p-4 rounded-lg border border-sky-200">
                       <div className="flex items-center mb-2">
-                        <Users className="h-5 w-5 text-blue-600 mr-2" />
-                        <span className="text-sm font-medium text-blue-800">Customers</span>
+                        <Users className="h-5 w-5 text-sky-500 mr-2" />
+                        <span className="text-sm font-medium text-sky-700">Customers</span>
                       </div>
-                      <div className="text-2xl font-bold text-blue-900">156</div>
-                      <div className="text-sm text-blue-700">Active retailers</div>
+                      <div className="text-2xl font-bold text-sky-800">156</div>
+                      <div className="text-sm text-sky-600">Active retailers</div>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200">
+                    <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-lg border border-yellow-200">
                       <div className="flex items-center">
                         <div className="flex items-center">
-                          <MessageSquare className="h-5 w-5 text-orange-600 mr-2" />
-                          <span className="text-orange-800 font-medium">New stock alert sent</span>
+                          <MessageSquare className="h-5 w-5 text-yellow-500 mr-2" />
+                          <span className="text-yellow-700 font-medium">New stock alert sent</span>
                         </div>
-                        <span className="ml-auto text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">2m ago</span>
+                        <span className="ml-auto text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">2m ago</span>
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
+                    <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
                       <div className="flex items-center">
                         <div className="flex items-center">
-                          <Package className="h-5 w-5 text-emerald-600 mr-2" />
-                          <span className="text-emerald-800 font-medium">Order from Kano received</span>
+                          <Package className="h-5 w-5 text-emerald-500 mr-2" />
+                          <span className="text-emerald-700 font-medium">Order from Kano received</span>
                         </div>
                         <span className="ml-auto text-sm text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">5m ago</span>
                       </div>
@@ -202,32 +202,32 @@ export default function LandingPage() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-sky-50 to-sky-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-sky-400 to-sky-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <MessageSquare className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-blue-900">Instant Broadcasting</h3>
-              <p className="text-blue-700 text-sm font-medium">
+              <h3 className="text-xl font-bold mb-3 text-sky-800">Instant Broadcasting</h3>
+              <p className="text-sky-700 text-sm font-medium">
                 Send stock updates to all retailers instantly via WhatsApp
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Shield className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-emerald-900">Secure Payments</h3>
-              <p className="text-emerald-700 text-sm font-medium">
+              <h3 className="text-xl font-bold mb-3 text-yellow-800">Secure Payments</h3>
+              <p className="text-yellow-700 text-sm font-medium">
                 Get paid instantly with integrated payment processing
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-rose-50 to-rose-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-rose-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <BarChart3 className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-purple-900">Smart Analytics</h3>
-              <p className="text-purple-700 text-sm font-medium">
+              <h3 className="text-xl font-bold mb-3 text-rose-800">Smart Analytics</h3>
+              <p className="text-rose-700 text-sm font-medium">
                 Track sales and inventory with detailed insights
               </p>
             </Card>
