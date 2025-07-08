@@ -69,6 +69,8 @@ export function TaglineGenerator({
       });
       return;
     }
+    console.log("Generating with data:", formData);
+    setGeneratedTaglines([]); // Clear previous results
     generateMutation.mutate(formData);
   };
 
@@ -238,9 +240,17 @@ export function TaglineGenerator({
           </Button>
         </div>
 
+        {/* Debug info */}
+        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+          <p>Debug: {generatedTaglines.length} taglines in state</p>
+          {generatedTaglines.length > 0 && (
+            <p>First tagline: {generatedTaglines[0]}</p>
+          )}
+        </div>
+
         {generatedTaglines.length > 0 && (
           <div className="space-y-3 mt-6">
-            <h4 className="font-medium text-sm">Generated Taglines:</h4>
+            <h4 className="font-medium text-sm">Generated Taglines ({generatedTaglines.length}):</h4>
             <div className="grid gap-2">
               {generatedTaglines.map((tagline, index) => (
                 <div
