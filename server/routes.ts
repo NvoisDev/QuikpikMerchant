@@ -1406,10 +1406,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(group);
     } catch (error) {
       console.error("Error creating customer group:", error);
+      console.error("Request body:", req.body);
+      console.error("User ID:", req.user?.id);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid group data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create customer group" });
+      res.status(500).json({ message: "Failed to create customer group", error: error.message });
     }
   });
 
