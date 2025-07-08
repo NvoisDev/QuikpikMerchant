@@ -146,6 +146,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 08, 2025. Added live Sales Overview section with professional warehouse imagery:
+  - **Random Warehouse Images**: Implemented high-quality warehouse/distribution center images from Unsplash that rotate randomly
+  - **Live Sales Overview Header**: Created prominent header section displaying real-time business metrics over warehouse background
+  - **Dynamic Data Display**: Shows live total revenue, orders, active products, and WhatsApp reach with loading states
+  - **Professional Visual Design**: Uses gradient overlay and backdrop blur effects for sophisticated presentation
+  - **Time Period Selector**: Added dropdown for filtering data by different time periods (30 days, 90 days, year, all time)
+  - **Removed WhatsApp Sandbox Warnings**: Eliminated all sandbox notification banners from campaigns and settings pages for cleaner interface
 - July 08, 2025. Enhanced WhatsApp provider selection with recognizable brand logos:
   - **Brand Logo Integration**: Added official Twilio and WhatsApp logos using react-icons/si for better user recognition
   - **Professional Provider Cards**: Users now see familiar red Twilio logo and green WhatsApp logo instead of generic icons

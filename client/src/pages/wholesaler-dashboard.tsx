@@ -61,6 +61,21 @@ export default function WholesalerDashboard() {
     });
   };
 
+  // High-quality warehouse/stock images that rotate randomly
+  const warehouseImages = [
+    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80", // Modern warehouse with organized shelving
+    "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80", // Large warehouse with high shelving
+    "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80", // Warehouse with boxes and equipment
+    "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80", // Distribution center view
+    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80", // Professional warehouse interior
+    "https://images.unsplash.com/photo-1601598851547-4302969d0614?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&h=400&q=80"  // Clean organized warehouse
+  ];
+
+  const getRandomWarehouseImage = () => {
+    const randomIndex = Math.floor(Math.random() * warehouseImages.length);
+    return warehouseImages[randomIndex];
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" data-onboarding="dashboard">
       <div className="flex-1">
@@ -125,8 +140,55 @@ export default function WholesalerDashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8">
-          {/* Onboarding Welcome for New Users */}
-          {/* Onboarding welcome removed - tour available via help section */}
+          {/* Sales Overview Header with Warehouse Image */}
+          <Card className="overflow-hidden mb-8">
+            <div className="relative">
+              {/* Warehouse Background Image */}
+              <div 
+                className="h-64 bg-cover bg-center relative"
+                style={{
+                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${getRandomWarehouseImage()}')`
+                }}
+              >
+                <div className="absolute inset-0 flex items-center justify-between p-8">
+                  <div className="text-white">
+                    <h1 className="text-4xl font-bold mb-2">Sales Overview</h1>
+                    <p className="text-xl opacity-90">
+                      {user?.businessName || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Your Business'}
+                    </p>
+                    <div className="mt-4 flex items-center space-x-8">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</div>
+                        <div className="text-sm opacity-80">Total Revenue</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</div>
+                        <div className="text-sm opacity-80">Total Orders</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</div>
+                        <div className="text-sm opacity-80">Active Products</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</div>
+                        <div className="text-sm opacity-80">Customers Reached</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Time Period Selector */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                    <select className="bg-transparent text-white border border-white/30 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/50">
+                      <option value="30" className="text-gray-900">Last 30 days</option>
+                      <option value="90" className="text-gray-900">Last 90 days</option>
+                      <option value="365" className="text-gray-900">Last year</option>
+                      <option value="all" className="text-gray-900">All time</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
           
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
