@@ -76,6 +76,7 @@ export interface IStorage {
   
   // Customer group operations
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
+  getCustomerGroupsByUser(wholesalerId: string): Promise<CustomerGroup[]>;
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
   updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
   deleteCustomerGroup(id: number): Promise<void>;
