@@ -14,7 +14,9 @@ import {
   Globe,
   Zap,
   Clock,
-  BarChart3
+  BarChart3,
+  CreditCard,
+  Package
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -114,18 +116,18 @@ export default function LandingPage() {
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-8 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  Easy setup
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center bg-gradient-to-r from-green-100 to-emerald-100 px-4 py-2 rounded-full border border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <span className="font-semibold text-green-800">Easy setup</span>
                 </div>
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  WhatsApp integrated
+                <div className="flex items-center bg-gradient-to-r from-blue-100 to-cyan-100 px-4 py-2 rounded-full border border-blue-200">
+                  <MessageSquare className="h-5 w-5 text-blue-600 mr-2" />
+                  <span className="font-semibold text-blue-800">WhatsApp integrated</span>
                 </div>
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  Instant payments
+                <div className="flex items-center bg-gradient-to-r from-purple-100 to-violet-100 px-4 py-2 rounded-full border border-purple-200">
+                  <CreditCard className="h-5 w-5 text-purple-600 mr-2" />
+                  <span className="font-semibold text-purple-800">Instant payments</span>
                 </div>
               </div>
             </div>
@@ -139,30 +141,42 @@ export default function LandingPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-900">$24K</div>
-                      <div className="text-sm text-gray-600">This month</div>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center mb-2">
+                        <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
+                        <span className="text-sm font-medium text-green-800">Revenue</span>
+                      </div>
+                      <div className="text-2xl font-bold text-green-900">$24K</div>
+                      <div className="text-sm text-green-700">This month</div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-900">156</div>
-                      <div className="text-sm text-gray-600">Active retailers</div>
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-4 rounded-lg border border-blue-200">
+                      <div className="flex items-center mb-2">
+                        <Users className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="text-sm font-medium text-blue-800">Customers</span>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">156</div>
+                      <div className="text-sm text-blue-700">Active retailers</div>
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <MessageSquare className="h-5 w-5 text-primary" />
-                        <span className="text-sm">New stock alert sent</span>
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200">
+                      <div className="flex items-center">
+                        <div className="flex items-center">
+                          <MessageSquare className="h-5 w-5 text-orange-600 mr-2" />
+                          <span className="text-orange-800 font-medium">New stock alert sent</span>
+                        </div>
+                        <span className="ml-auto text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-full">2m ago</span>
                       </div>
-                      <span className="text-xs text-gray-500">2m ago</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                        <span className="text-sm">New order received</span>
+                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
+                      <div className="flex items-center">
+                        <div className="flex items-center">
+                          <Package className="h-5 w-5 text-emerald-600 mr-2" />
+                          <span className="text-emerald-800 font-medium">Order from Kano received</span>
+                        </div>
+                        <span className="ml-auto text-sm text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">5m ago</span>
                       </div>
-                      <span className="text-xs text-gray-500">5m ago</span>
                     </div>
                   </div>
                 </div>
@@ -191,32 +205,32 @@ export default function LandingPage() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6 text-center border-0 shadow-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-6 w-6 text-primary" />
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <MessageSquare className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Instant Broadcasting</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold mb-3 text-blue-900">Instant Broadcasting</h3>
+              <p className="text-blue-700 text-sm font-medium">
                 Send stock updates to all retailers instantly via WhatsApp
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-6 w-6 text-primary" />
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Shield className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Secure Payments</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold mb-3 text-emerald-900">Secure Payments</h3>
+              <p className="text-emerald-700 text-sm font-medium">
                 Get paid instantly with integrated payment processing
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="h-6 w-6 text-primary" />
+            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <BarChart3 className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Smart Analytics</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold mb-3 text-purple-900">Smart Analytics</h3>
+              <p className="text-purple-700 text-sm font-medium">
                 Track sales and inventory with detailed insights
               </p>
             </Card>
@@ -277,7 +291,7 @@ export default function LandingPage() {
             <img 
               src="@assets/Quikpik - Products (2)_1751933843381.png" 
               alt="Quikpik Logo" 
-              className="h-12 w-12"
+              className="h-12 w-12 object-contain"
             />
             <span className="text-2xl font-bold">Quikpik Merchant</span>
           </div>
