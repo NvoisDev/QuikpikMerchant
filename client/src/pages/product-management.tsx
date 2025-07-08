@@ -690,7 +690,8 @@ export default function ProductManagement() {
       <div className="flex-1">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="space-y-4">
+            {/* Header Section */}
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
@@ -703,42 +704,46 @@ export default function ProductManagement() {
               </div>
               <p className="text-gray-600 mt-1">Manage your inventory, pricing, and product details.</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline"
-                className="border-green-600 text-green-600 hover:bg-green-50"
-                onClick={() => window.open('/preview-store', '_blank')}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Preview Store
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className={alertsData?.count > 0 ? "border-red-500 text-red-600 hover:bg-red-50" : "border-gray-300 text-gray-600 hover:bg-gray-50"}
-                onClick={() => window.location.href = '/stock-alerts'}
-              >
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                Stock Alerts
-                {alertsData?.count > 0 && (
-                  <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
-                    {alertsData.count}
-                  </Badge>
-                )}
-              </Button>
-              
-              <Button variant="outline" onClick={downloadTemplate}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Template
-              </Button>
-              
-              <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Bulk Upload
-                  </Button>
-                </DialogTrigger>
+            
+            {/* Action Buttons Section */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button 
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                  onClick={() => window.open('/preview-store', '_blank')}
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Preview Store
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className={alertsData?.count > 0 ? "border-red-500 text-red-600 hover:bg-red-50" : "border-gray-300 text-gray-600 hover:bg-gray-50"}
+                  onClick={() => window.location.href = '/stock-alerts'}
+                >
+                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  Stock Alerts
+                  {alertsData?.count > 0 && (
+                    <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                      {alertsData.count}
+                    </Badge>
+                  )}
+                </Button>
+                
+                <Button variant="outline" onClick={downloadTemplate}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+                
+                <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Bulk Upload
+                    </Button>
+                  </DialogTrigger>
+
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Bulk Upload Products</DialogTitle>
@@ -856,7 +861,9 @@ export default function ProductManagement() {
                     </div>
                   )}
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              </div>
+              
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => {
