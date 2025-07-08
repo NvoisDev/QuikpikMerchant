@@ -125,6 +125,11 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **REPL_ID**: Replit environment identifier
 
 ## Changelog
+- July 08, 2025. Enhanced WhatsApp provider selection with recognizable brand logos:
+  - **Brand Logo Integration**: Added official Twilio and WhatsApp logos using react-icons/si for better user recognition
+  - **Professional Provider Cards**: Users now see familiar red Twilio logo and green WhatsApp logo instead of generic icons
+  - **Improved User Experience**: Brand recognition helps users confidently select the right WhatsApp provider for their business needs
+  - **Visual Consistency**: Maintained consistent styling while incorporating authentic brand elements
 - July 08, 2025. Fixed WhatsApp messaging and Stripe Connect redirect issues:
   - **WhatsApp Reach Dashboard Fix**: Updated analytics endpoints to use real user authentication and calculate actual WhatsApp reach from broadcast statistics
   - **Stripe Connect Redirect Fix**: Changed return URL from settings page to business-performance/financials page after successful Stripe Connect onboarding

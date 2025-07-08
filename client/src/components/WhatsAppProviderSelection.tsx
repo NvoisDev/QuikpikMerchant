@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, MessageSquare, Zap, Shield, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { SiTwilio, SiWhatsapp } from "react-icons/si";
 import { ContextualHelpBubble } from "./ContextualHelpBubble";
 import { whatsappHelpContent } from "@/data/whatsapp-help-content";
 
@@ -20,9 +21,7 @@ export function WhatsAppProviderSelection({ onSelectProvider, onCancel }: WhatsA
       name: 'Twilio WhatsApp',
       logo: (
         <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="w-10 h-10 text-red-600" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
+          <SiTwilio className="w-10 h-10 text-red-600" />
         </div>
       ),
       tagline: "Perfect for getting started quickly",
@@ -55,7 +54,7 @@ export function WhatsAppProviderSelection({ onSelectProvider, onCancel }: WhatsA
       name: 'WhatsApp Business API',
       logo: (
         <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-          <MessageSquare className="w-10 h-10 text-green-600" />
+          <SiWhatsapp className="w-10 h-10 text-green-600" />
         </div>
       ),
       tagline: "Best for high-volume businesses",
