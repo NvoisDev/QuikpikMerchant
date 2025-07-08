@@ -388,6 +388,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Messaging Updates**: Replaced "Free 30-day trial" text with "Easy setup" across landing page
   - **Comprehensive Animated Onboarding System**: Complete walkthrough system with framer-motion animations, backend API integration, and database progress tracking
   - **User Experience Enhancement**: Onboarding attributes added to dashboard and navigation elements for guided tours
+- July 08, 2025. Enhanced landing page visual design and fixed authentication issues:
+  - **Colorful Landing Page Design**: Implemented beautiful pastel color scheme with sky blue, yellow, rose pink, and emerald gradients throughout feature tiles and interface elements
+  - **Professional Visual Elements**: Added meaningful icons, hover effects, and gradient backgrounds while maintaining clean, modern aesthetic
+  - **Google OAuth Configuration Fix**: Resolved redirect URI mismatch by updating OAuth configuration to use Replit domain consistently
+  - **User Role Authentication Fix**: Corrected user role assignment issue where users were defaulting to 'retailer' instead of 'wholesaler', ensuring proper access to full platform features
+  - **Pricing Information Update**: Corrected landing page to show accurate £10.99/month pricing instead of $10.99 and removed incorrect 14-day trial reference
 - July 07, 2025. Comprehensive Promotional Pricing System Implementation:
   - **Database Schema Enhancement**: Added promo_price, promo_active, and promo_end_date fields to products table with proper decimal precision
   - **Product Management Integration**: Enhanced product creation/edit forms with promotional price field, active toggle, and form validation
