@@ -42,10 +42,13 @@ export function TaglineGenerator({
       return response;
     },
     onSuccess: (data) => {
-      setGeneratedTaglines(data.taglines || []);
+      console.log("Received data:", data);
+      const taglines = data.taglines || [];
+      console.log("Setting taglines:", taglines);
+      setGeneratedTaglines(taglines);
       toast({
         title: "Taglines Generated!",
-        description: `Generated ${data.taglines?.length || 0} unique taglines for your store.`,
+        description: `Generated ${taglines.length} unique taglines for your store.`,
       });
     },
     onError: (error: any) => {
