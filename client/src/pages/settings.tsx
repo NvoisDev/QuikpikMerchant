@@ -1087,20 +1087,7 @@ function WhatsAppIntegrationSection() {
         </div>
       )}
 
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-orange-600 mt-1" />
-          <div>
-            <p className="text-sm text-orange-800 font-medium">Sandbox Mode Active</p>
-            <p className="text-sm text-orange-700 mt-1">
-              You're using Twilio sandbox (+14155238886). Messages only reach numbers that have joined your sandbox by texting "join [your-code]" to +1 (415) 523-8886. For production broadcasts to all customers, apply for WhatsApp Business API approval through Twilio.
-            </p>
-            <p className="text-xs text-orange-600 mt-2 font-medium">
-              💡 Tip: Find your sandbox code in Twilio Console → Messaging → WhatsApp → Sandbox
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h4 className="font-medium text-gray-800 mb-3">📚 Twilio WhatsApp Setup Guide</h4>
