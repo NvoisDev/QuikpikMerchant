@@ -499,12 +499,12 @@ export default function WholesalerDashboard() {
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{product.name}</p>
-                              <p className="text-sm text-gray-600">Stock: {product.stock}</p>
+                              <p className="text-sm text-gray-600">Stock: {formatNumber(product.stock || 0)} units</p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-gray-900">{formatCurrency(product.price)}</p>
-                            <p className="text-sm text-gray-600">{formatNumber(product.totalQuantitySold || 0)} sold</p>
+                            <p className="text-sm text-emerald-600 font-medium">{formatNumber(product.totalQuantitySold || 0)} sold</p>
                           </div>
                         </div>
                       ))
