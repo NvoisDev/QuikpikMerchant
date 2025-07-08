@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ContextualHelpBubble } from "./ContextualHelpBubble";
+import { whatsappHelpContent } from "@/data/whatsapp-help-content";
 
 interface ProviderSelectionProps {
   selectedProvider: 'twilio' | 'direct';
@@ -94,7 +96,15 @@ export function ProviderSelection({
       <div className="space-y-4">
         {selectedProvider === 'twilio' ? (
           <>
-            <h4 className="font-medium text-gray-800">Twilio Configuration</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-gray-800">Twilio Configuration</h4>
+              <ContextualHelpBubble
+                topic="Twilio setup"
+                title="Setting Up Twilio WhatsApp"
+                steps={whatsappHelpContent.twilioSetup.steps}
+                position="right"
+              />
+            </div>
             <div className="space-y-3">
               <div>
                 <Label>Account SID</Label>
@@ -125,7 +135,15 @@ export function ProviderSelection({
           </>
         ) : (
           <>
-            <h4 className="font-medium text-gray-800">Direct WhatsApp Business API Configuration</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-gray-800">Direct WhatsApp Business API Configuration</h4>
+              <ContextualHelpBubble
+                topic="Direct WhatsApp setup"
+                title="Setting Up Direct WhatsApp Business API"
+                steps={whatsappHelpContent.directWhatsAppSetup.steps}
+                position="right"
+              />
+            </div>
             <div className="space-y-3">
               <div>
                 <Label>Business Phone Number ID</Label>

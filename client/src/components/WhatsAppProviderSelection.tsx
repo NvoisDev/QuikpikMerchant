@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, MessageSquare, Zap, Shield, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { ContextualHelpBubble } from "./ContextualHelpBubble";
+import { whatsappHelpContent } from "@/data/whatsapp-help-content";
 
 interface WhatsAppProviderSelectionProps {
   onSelectProvider: (provider: 'twilio' | 'direct') => void;
@@ -86,7 +88,15 @@ export function WhatsAppProviderSelection({ onSelectProvider, onCancel }: WhatsA
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h3 className="text-2xl font-bold text-gray-900">Choose Your WhatsApp Integration</h3>
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-2xl font-bold text-gray-900">Choose Your WhatsApp Integration</h3>
+          <ContextualHelpBubble
+            topic="provider selection"
+            title="Choosing Your WhatsApp Provider"
+            steps={whatsappHelpContent.providerSelection.steps}
+            position="bottom"
+          />
+        </div>
         <p className="text-gray-600 max-w-2xl mx-auto">
           Select the WhatsApp integration method that best fits your business needs and messaging volume.
         </p>

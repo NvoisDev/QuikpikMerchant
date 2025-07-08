@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { TaglineGenerator } from "@/components/TaglineGenerator";
 import { ProviderSelection } from "@/components/provider-selection";
 import { WhatsAppProviderSelection } from "@/components/WhatsAppProviderSelection";
+import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
+import { whatsappHelpContent } from "@/data/whatsapp-help-content";
 
 // Utility function to convert any image format to PNG
 const convertImageToPNG = (file: File): Promise<string> => {
@@ -912,7 +914,21 @@ function WhatsAppIntegrationSection() {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">WhatsApp Integration</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-medium">WhatsApp Integration</h3>
+          <ContextualHelpBubble
+            topic="WhatsApp troubleshooting"
+            title="Common WhatsApp Issues"
+            steps={whatsappHelpContent.troubleshooting.steps}
+            position="right"
+          />
+          <ContextualHelpBubble
+            topic="WhatsApp best practices"
+            title="WhatsApp Messaging Best Practices"
+            steps={whatsappHelpContent.bestPractices.steps}
+            position="right"
+          />
+        </div>
         <p className="text-gray-600 text-sm">
           Choose your WhatsApp integration method and configure your credentials to send product broadcasts and updates to customer groups.
         </p>
@@ -921,7 +937,31 @@ function WhatsAppIntegrationSection() {
           <div className="text-center space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <MessageSquare className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-blue-900 mb-2">Set Up WhatsApp Integration</h4>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h4 className="text-lg font-medium text-blue-900">Set Up WhatsApp Integration</h4>
+                <ContextualHelpBubble
+                  topic="getting started"
+                  title="Getting Started with WhatsApp"
+                  steps={[
+                    {
+                      title: "Why WhatsApp Integration?",
+                      content: "WhatsApp is the world's most popular messaging app with over 2 billion users. Integrating WhatsApp allows you to reach customers directly with product updates, order notifications, and marketing campaigns.",
+                      tip: "WhatsApp messages have a 98% open rate compared to 20% for emails - it's the most effective way to reach customers."
+                    },
+                    {
+                      title: "What You Can Do",
+                      content: "Send product broadcasts to customer groups, notify customers about new stock arrivals, send order confirmations and delivery updates, and enable direct customer communication.",
+                      tip: "Start with order notifications - customers love real-time updates about their purchases."
+                    },
+                    {
+                      title: "Choosing Your Provider",
+                      content: "You'll choose between Twilio (easy setup, great for beginners) or Direct WhatsApp API (lower costs, better for high volume). We'll guide you through the decision and setup process.",
+                      tip: "Don't worry about choosing wrong - you can always switch providers later as your business grows."
+                    }
+                  ]}
+                  position="bottom"
+                />
+              </div>
               <p className="text-blue-700 mb-4">
                 Connect WhatsApp to send product broadcasts and updates to your customers.
               </p>
@@ -1000,7 +1040,31 @@ function WhatsAppIntegrationSection() {
 
       {isConfigured && (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Test Integration</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">Test Integration</h3>
+            <ContextualHelpBubble
+              topic="testing WhatsApp"
+              title="Testing Your WhatsApp Integration"
+              steps={[
+                {
+                  title: "Test Message Purpose",
+                  content: "Sending a test message helps verify that your WhatsApp integration is working correctly before you start sending to customers. It's like a practice run.",
+                  tip: "Always test with your own number first to see exactly what your customers will receive."
+                },
+                {
+                  title: "Phone Number Format",
+                  content: "Enter the phone number in international format: +[country code][number]. For example, +1234567890 for US numbers or +447891234567 for UK numbers.",
+                  tip: "Don't include spaces, dashes, or parentheses - just the + symbol and numbers."
+                },
+                {
+                  title: "Sandbox vs Production",
+                  content: "If using Twilio sandbox, remember the recipient must have joined your sandbox first by texting your sandbox code. Production numbers work immediately.",
+                  tip: "For Twilio sandbox testing, use the number +14155238886 and make sure you've joined your own sandbox."
+                }
+              ]}
+              position="right"
+            />
+          </div>
           <p className="text-gray-600 text-sm">
             Send a test message to verify your WhatsApp Business API integration is working correctly.
           </p>
