@@ -2297,8 +2297,23 @@ Write a professional, sales-focused description that highlights the key benefits
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
+    const sig = req.headers['stripe-signature'];
+    let event;
+
     try {
-      const event = req.body;
+      // Verify webhook signature if webhook secret is available
+      if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      } else {
+        // For development, accept the event without verification
+        event = req.body;
+      }
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
 
       switch (event.type) {
         case 'checkout.session.completed':
