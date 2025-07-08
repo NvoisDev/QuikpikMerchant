@@ -146,6 +146,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 08, 2025. Dashboard user experience improvements and error resolution:
+  - **Quick Action Button Repositioning**: Moved Add Product, Create Campaign, Add Customers, and Preview Store buttons below "Hello Michal" tagline for better visual hierarchy
+  - **Enhanced Button Hover States**: Fixed text visibility issues with proper color contrast - blue for campaigns, purple for customers, green for preview store
+  - **Database Schema Fixes**: Resolved "column does not exist" errors by adding missing columns (images, default_low_stock_threshold) and team_members table
+  - **API Route Corrections**: Fixed frontend dashboard to call correct /api/analytics/top-products endpoint instead of non-existent /api/products/top
+  - **Customer Group Creation Fix**: Added missing getCustomerGroupsByUser function to storage interface, resolving "is not a function" errors
+  - **Input Validation Enhancement**: Added NaN protection for product ID parameters to prevent database parsing errors
+  - **Application Stability**: All dashboard functionality now working smoothly with improved user experience and error-free operation
 - July 08, 2025. Business performance access restricted to Premium subscribers only:
   - **Premium Access Control**: Business Performance section now requires Premium subscription tier for access
   - **Lock Screen Implementation**: Non-premium users see upgrade prompt with feature benefits instead of analytics
