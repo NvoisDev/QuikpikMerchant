@@ -303,9 +303,12 @@ export default function WholesalerDashboard() {
                   <p className="text-sm text-gray-600 mt-1">Revenue trends over time</p>
                 </div>
                 <select className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
-                  <option>Last 30 days</option>
-                  <option>Last 90 days</option>
-                  <option>Last 12 months</option>
+                  <option>Today</option>
+                  <option>Last 7 days</option>
+                  <option>Bi-weekly</option>
+                  <option>Quarterly</option>
+                  <option>12 months</option>
+                  <option>24 months</option>
                 </select>
               </CardHeader>
               <CardContent>
@@ -355,11 +358,19 @@ export default function WholesalerDashboard() {
 
             {/* Orders Chart */}
             <Card className={`${currentTheme === 'minimal' ? 'bg-white border-gray-200' : 'bg-white/80 backdrop-blur-sm border-0'} shadow-lg`}>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Orders processed over time</p>
                 </div>
+                <select className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
+                  <option>Today</option>
+                  <option>Last 7 days</option>
+                  <option>Bi-weekly</option>
+                  <option>Quarterly</option>
+                  <option>12 months</option>
+                  <option>24 months</option>
+                </select>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -428,15 +439,17 @@ export default function WholesalerDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {(orders || []).slice(0, 5).map((order: any) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-900">Order #{order.id}</p>
-                          <p className="text-sm text-gray-600">{order.customerName}</p>
+                      <Link key={order.id} href={`/orders?id=${order.id}`}>
+                        <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                          <div>
+                            <p className="font-medium text-gray-900">Order #{order.id}</p>
+                            <p className="text-sm text-gray-600">{order.customerName}</p>
+                          </div>
+                          <Badge variant={order.status === 'paid' ? 'default' : 'secondary'}>
+                            {order.status}
+                          </Badge>
                         </div>
-                        <Badge variant={order.status === 'paid' ? 'default' : 'secondary'}>
-                          {order.status}
-                        </Badge>
-                      </div>
+                      </Link>
                     ))}
                     {(orders || []).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
@@ -491,7 +504,7 @@ export default function WholesalerDashboard() {
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-gray-900">{formatCurrency(product.price)}</p>
-                            <p className="text-sm text-gray-600">{product.salesCount || 0} sold</p>
+                            <p className="text-sm text-gray-600">{formatNumber(product.totalQuantitySold || 0)} sold</p>
                           </div>
                         </div>
                       ))
