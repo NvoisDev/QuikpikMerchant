@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import Footer from "@/components/ui/footer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Initialize Stripe
@@ -1688,14 +1689,7 @@ export default function CustomerPortal() {
       )}
 
       {/* Powered by Quikpik Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center text-sm text-gray-500">
-            <span className="mr-2">Powered by</span>
-            <Logo variant="full" size="sm" />
-          </div>
-        </div>
-      </footer>
+      <Footer className="mt-12" />
     </div>
   );
 }
