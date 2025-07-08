@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
+      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock, ...otherData } = req.body;
       const productData = insertProductSchema.parse({
         ...otherData,
         price: price.toString(),
@@ -361,6 +361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stock: parseInt(stock),
         minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null,
         unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null,
+        palletPrice: palletPrice ? palletPrice.toString() : null,
+        palletMoq: palletMoq ? parseInt(palletMoq) : 1,
+        palletStock: palletStock ? parseInt(palletStock) : 0,
         wholesalerId: userId
       });
       const product = await storage.createProduct(productData);
@@ -413,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, ...otherData } = req.body;
+      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock, ...otherData } = req.body;
       const convertedData = {
         ...otherData,
         ...(price !== undefined && { price: price.toString() }),
@@ -421,7 +424,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(moq !== undefined && { moq: parseInt(moq) }),
         ...(stock !== undefined && { stock: parseInt(stock) }),
         ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null }),
-        ...(unitsPerPallet !== undefined && { unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null })
+        ...(unitsPerPallet !== undefined && { unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null }),
+        ...(palletPrice !== undefined && { palletPrice: palletPrice ? palletPrice.toString() : null }),
+        ...(palletMoq !== undefined && { palletMoq: palletMoq ? parseInt(palletMoq) : 1 }),
+        ...(palletStock !== undefined && { palletStock: palletStock ? parseInt(palletStock) : 0 })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       

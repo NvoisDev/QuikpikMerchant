@@ -89,6 +89,16 @@ interface Product {
   priceVisible: boolean;
   negotiationEnabled: boolean;
   minimumBidPrice?: string;
+  promoPrice?: string;
+  promoActive?: boolean;
+  
+  // Pallet/Unit selling options
+  sellingFormat: "units" | "pallets" | "both";
+  unitsPerPallet?: number;
+  palletPrice?: string;
+  palletMoq?: number;
+  palletStock?: number;
+  
   wholesaler: {
     id: string;
     businessName: string;
@@ -102,6 +112,7 @@ interface Product {
 interface CartItem {
   product: Product;
   quantity: number;
+  sellingType: "units" | "pallets"; // What type of quantity this item represents
 }
 
 interface CustomerData {
@@ -311,6 +322,7 @@ export default function CustomerPortal() {
   const [showQuantityEditor, setShowQuantityEditor] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editQuantity, setEditQuantity] = useState(1);
+  const [selectedSellingType, setSelectedSellingType] = useState<"units" | "pallets">("units");
   const [showNegotiation, setShowNegotiation] = useState(false);
   const [negotiationProduct, setNegotiationProduct] = useState<Product | null>(null);
   const [negotiationData, setNegotiationData] = useState({
@@ -404,9 +416,14 @@ export default function CustomerPortal() {
   const cartStats = useMemo(() => {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = cart.reduce((sum, item) => {
-      const price = item.product.promoActive && item.product.promoPrice 
-        ? parseFloat(item.product.promoPrice)
-        : parseFloat(item.product.price);
+      let price;
+      if (item.sellingType === "pallets") {
+        price = parseFloat(item.product.palletPrice || "0");
+      } else {
+        price = item.product.promoActive && item.product.promoPrice 
+          ? parseFloat(item.product.promoPrice)
+          : parseFloat(item.product.price);
+      }
       return sum + (price * item.quantity);
     }, 0);
     return { totalItems, totalValue };
@@ -463,7 +480,17 @@ export default function CustomerPortal() {
       return;
     }
     setSelectedProduct(product);
-    setEditQuantity(product.moq);
+    // Set default selling type based on product configuration
+    const defaultSellingType = product.sellingFormat === "pallets" ? "pallets" : "units";
+    setSelectedSellingType(defaultSellingType);
+    
+    // Set initial quantity based on selling type
+    if (defaultSellingType === "pallets") {
+      setEditQuantity(product.palletMoq || 1);
+    } else {
+      setEditQuantity(product.moq);
+    }
+    
     setShowQuantityEditor(true);
   }, [isPreviewMode, toast]);
 
@@ -485,29 +512,44 @@ export default function CustomerPortal() {
     setShowNegotiation(true);
   }, [isPreviewMode, toast]);
 
-  const addToCart = useCallback((product: Product, quantity: number) => {
+  const addToCart = useCallback((product: Product, quantity: number, sellingType: "units" | "pallets" = "units") => {
+    if (isPreviewMode) {
+      toast({
+        title: "Preview Mode",
+        description: "Cart functionality is disabled in preview mode.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.product.id === product.id);
+      const existingItem = prevCart.find(item => item.product.id === product.id && item.sellingType === sellingType);
       if (existingItem) {
         return prevCart.map(item =>
-          item.product.id === product.id
+          item.product.id === product.id && item.sellingType === sellingType
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prevCart, { product, quantity }];
+      return [...prevCart, { product, quantity, sellingType }];
     });
     
+    const unitLabel = sellingType === "pallets" ? "pallets" : "units";
     toast({
       title: "Added to Cart",
-      description: `${product.name} (${quantity} units) added to your cart`,
+      description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
     });
-  }, [toast]);
+  }, [toast, isPreviewMode]);
 
   // Handle add to cart from quantity editor
   const handleAddToCart = () => {
-    if (selectedProduct && editQuantity >= selectedProduct.moq) {
-      addToCart(selectedProduct, editQuantity);
+    if (!selectedProduct) return;
+    
+    const minQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
+    const maxQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
+    
+    if (editQuantity >= minQuantity && editQuantity <= maxQuantity) {
+      addToCart(selectedProduct, editQuantity, selectedSellingType);
       setShowQuantityEditor(false);
       setSelectedProduct(null);
     }
@@ -1108,10 +1150,54 @@ export default function CustomerPortal() {
               <DialogTitle>Add {selectedProduct.name} to Cart</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Selling Format Selection */}
+              {selectedProduct?.sellingFormat === "both" && (
+                <div className="space-y-2">
+                  <Label>Purchase Format:</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={selectedSellingType === "units" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSellingType("units");
+                        setEditQuantity(selectedProduct.moq);
+                      }}
+                      className="w-full"
+                    >
+                      Individual Units
+                    </Button>
+                    <Button
+                      variant={selectedSellingType === "pallets" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSellingType("pallets");
+                        setEditQuantity(selectedProduct.palletMoq || 1);
+                      }}
+                      className="w-full"
+                    >
+                      Pallets
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
               <div className="text-sm text-gray-600">
-                <p>Minimum order: {selectedProduct.moq} units</p>
-                <p>Available stock: {formatNumber(selectedProduct.stock)} units</p>
-                <p>Price per unit: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(selectedProduct.price).toFixed(2)}</p>
+                {selectedSellingType === "pallets" ? (
+                  <>
+                    <p>Minimum order: {selectedProduct.palletMoq || 1} pallets</p>
+                    <p>Available stock: {formatNumber(selectedProduct.palletStock || 0)} pallets</p>
+                    <p>Price per pallet: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(selectedProduct.palletPrice || "0").toFixed(2)}</p>
+                    {selectedProduct.unitsPerPallet && (
+                      <p className="text-xs text-blue-600">Each pallet contains {selectedProduct.unitsPerPallet} units</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p>Minimum order: {selectedProduct.moq} units</p>
+                    <p>Available stock: {formatNumber(selectedProduct.stock)} units</p>
+                    <p>Price per unit: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(selectedProduct.price).toFixed(2)}</p>
+                  </>
+                )}
               </div>
               
               <div className="flex items-center space-x-3">
@@ -1120,8 +1206,11 @@ export default function CustomerPortal() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditQuantity(Math.max(selectedProduct.moq, editQuantity - 1))}
-                    disabled={editQuantity <= selectedProduct.moq}
+                    onClick={() => {
+                      const minQty = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
+                      setEditQuantity(Math.max(minQty, editQuantity - 1));
+                    }}
+                    disabled={editQuantity <= (selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq)}
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
@@ -1144,22 +1233,28 @@ export default function CustomerPortal() {
                     }}
                     onBlur={(e) => {
                       const value = parseInt(e.target.value);
-                      if (isNaN(value) || value < selectedProduct.moq) {
-                        setEditQuantity(selectedProduct.moq);
-                      } else if (value > selectedProduct.stock) {
-                        setEditQuantity(selectedProduct.stock);
+                      const minQty = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
+                      const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
+                      
+                      if (isNaN(value) || value < minQty) {
+                        setEditQuantity(minQty);
+                      } else if (value > maxQty) {
+                        setEditQuantity(maxQty);
                       }
                     }}
                     className="w-24 text-center"
-                    min={selectedProduct.moq}
-                    max={selectedProduct.stock}
-                    placeholder={`${selectedProduct.moq}-${selectedProduct.stock}`}
+                    min={selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq}
+                    max={selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock}
+                    placeholder={`${selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq}-${selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock}`}
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditQuantity(Math.min(selectedProduct.stock, editQuantity + 1))}
-                    disabled={editQuantity >= selectedProduct.stock}
+                    onClick={() => {
+                      const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
+                      setEditQuantity(Math.min(maxQty, editQuantity + 1));
+                    }}
+                    disabled={editQuantity >= (selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock)}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -1167,28 +1262,57 @@ export default function CustomerPortal() {
               </div>
               
               {/* Stock limit warning */}
-              {editQuantity >= selectedProduct.stock && (
-                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
-                  ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.stock)} units)
-                </div>
+              {selectedSellingType === "pallets" ? (
+                editQuantity >= (selectedProduct.palletStock || 0) && (
+                  <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
+                    ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.palletStock || 0)} pallets)
+                  </div>
+                )
+              ) : (
+                editQuantity >= selectedProduct.stock && (
+                  <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
+                    ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.stock)} units)
+                  </div>
+                )
               )}
               
               {/* MOQ warning when below minimum */}
-              {editQuantity > 0 && editQuantity < selectedProduct.moq && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
-                  ❌ Quantity must be at least {formatNumber(selectedProduct.moq)} units (minimum order quantity)
-                </div>
+              {selectedSellingType === "pallets" ? (
+                editQuantity > 0 && editQuantity < (selectedProduct.palletMoq || 1) && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                    ❌ Quantity must be at least {formatNumber(selectedProduct.palletMoq || 1)} pallets (minimum order quantity)
+                  </div>
+                )
+              ) : (
+                editQuantity > 0 && editQuantity < selectedProduct.moq && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                    ❌ Quantity must be at least {formatNumber(selectedProduct.moq)} units (minimum order quantity)
+                  </div>
+                )
               )}
               
               {/* MOQ reminder */}
-              {editQuantity === selectedProduct.moq && selectedProduct.moq > 1 && (
-                <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
-                  ℹ️ Minimum order quantity is {formatNumber(selectedProduct.moq)} units
-                </div>
+              {selectedSellingType === "pallets" ? (
+                editQuantity === (selectedProduct.palletMoq || 1) && (selectedProduct.palletMoq || 1) > 1 && (
+                  <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                    ℹ️ Minimum order quantity is {formatNumber(selectedProduct.palletMoq || 1)} pallets
+                  </div>
+                )
+              ) : (
+                editQuantity === selectedProduct.moq && selectedProduct.moq > 1 && (
+                  <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                    ℹ️ Minimum order quantity is {formatNumber(selectedProduct.moq)} units
+                  </div>
+                )
               )}
               
               <div className="text-lg font-semibold">
-                Total: {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(selectedProduct.price) * editQuantity).toFixed(2)}
+                Total: {getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
+                  const unitPrice = selectedSellingType === "pallets" 
+                    ? parseFloat(selectedProduct.palletPrice || "0")
+                    : parseFloat(selectedProduct.price);
+                  return (unitPrice * editQuantity).toFixed(2);
+                })()}
               </div>
               
               <div className="flex space-x-2">
@@ -1198,7 +1322,11 @@ export default function CustomerPortal() {
                 <Button 
                   onClick={handleAddToCart} 
                   className="flex-1 bg-green-600 hover:bg-green-700"
-                  disabled={editQuantity < selectedProduct.moq || editQuantity > selectedProduct.stock}
+                  disabled={
+                    selectedSellingType === "pallets" 
+                      ? (editQuantity < (selectedProduct.palletMoq || 1) || editQuantity > (selectedProduct.palletStock || 0))
+                      : (editQuantity < selectedProduct.moq || editQuantity > selectedProduct.stock)
+                  }
                 >
                   Add to Cart
                 </Button>
@@ -1225,11 +1353,22 @@ export default function CustomerPortal() {
                 <h3 className="font-semibold mb-3">Order Summary</h3>
                 <div className="space-y-2">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex justify-between items-center py-2">
+                    <div key={`${item.product.id}-${item.sellingType}`} className="flex justify-between items-center py-2">
                       <div className="flex-1">
                         <span className="font-medium">{item.product.name}</span>
                         <div className="text-sm text-gray-500">
-                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} per unit
+                          {item.sellingType === "pallets" ? (
+                            <>
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.palletPrice || "0").toFixed(2)} per pallet
+                              {item.product.unitsPerPallet && (
+                                <span className="text-blue-600"> ({item.product.unitsPerPallet} units/pallet)</span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} per unit
+                            </>
+                          )}
                         </div>
                       </div>
                       
@@ -1239,16 +1378,17 @@ export default function CustomerPortal() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const newQuantity = Math.max(item.product.moq, item.quantity - 1);
+                            const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
+                            const newQuantity = Math.max(minQty, item.quantity - 1);
                             if (newQuantity !== item.quantity) {
                               setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id 
+                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                   ? { ...cartItem, quantity: newQuantity }
                                   : cartItem
                               ));
                             }
                           }}
-                          disabled={item.quantity <= item.product.moq}
+                          disabled={item.quantity <= (item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq)}
                           className="w-8 h-8 p-0"
                         >
                           <Minus className="w-3 h-3" />
@@ -1260,44 +1400,52 @@ export default function CustomerPortal() {
                             value={item.quantity}
                             onChange={(e) => {
                               const newQuantity = parseInt(e.target.value) || 0;
-                              if (newQuantity >= item.product.moq && newQuantity <= item.product.stock) {
+                              const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
+                              const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
+                              
+                              if (newQuantity >= minQty && newQuantity <= maxQty) {
                                 setCart(cart.map(cartItem => 
-                                  cartItem.product.id === item.product.id 
+                                  cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                     ? { ...cartItem, quantity: newQuantity }
                                     : cartItem
                                 ));
                               }
                             }}
                             onBlur={(e) => {
-                              const newQuantity = parseInt(e.target.value) || item.product.moq;
-                              const validQuantity = Math.min(Math.max(newQuantity, item.product.moq), item.product.stock);
+                              const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
+                              const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
+                              const newQuantity = parseInt(e.target.value) || minQty;
+                              const validQuantity = Math.min(Math.max(newQuantity, minQty), maxQty);
                               setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id 
+                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                   ? { ...cartItem, quantity: validQuantity }
                                   : cartItem
                               ));
                             }}
-                            min={item.product.moq}
-                            max={item.product.stock}
+                            min={item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq}
+                            max={item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock}
                             className="h-8 text-center text-sm"
                           />
-                          <div className="text-xs text-gray-500 mt-1">units</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.sellingType === "pallets" ? "pallets" : "units"}
+                          </div>
                         </div>
                         
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const newQuantity = Math.min(item.product.stock, item.quantity + 1);
+                            const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
+                            const newQuantity = Math.min(maxQty, item.quantity + 1);
                             if (newQuantity !== item.quantity) {
                               setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id 
+                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                   ? { ...cartItem, quantity: newQuantity }
                                   : cartItem
                               ));
                             }
                           }}
-                          disabled={item.quantity >= item.product.stock}
+                          disabled={item.quantity >= (item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock)}
                           className="w-8 h-8 p-0"
                         >
                           <Plus className="w-3 h-3" />
@@ -1306,13 +1454,20 @@ export default function CustomerPortal() {
                       
                       <div className="text-right flex items-center space-x-2">
                         <span className="font-semibold">
-                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
+                            const price = item.sellingType === "pallets" 
+                              ? parseFloat(item.product.palletPrice || "0")
+                              : parseFloat(item.product.price);
+                            return (price * item.quantity).toFixed(2);
+                          })()}
                         </span>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setCart(cart.filter(cartItem => cartItem.product.id !== item.product.id));
+                            setCart(cart.filter(cartItem => 
+                              !(cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType)
+                            ));
                           }}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 w-8 h-8 p-0"
                         >

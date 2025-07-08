@@ -69,9 +69,12 @@ const productFormSchema = z.object({
   minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
   
-  // New fields for unit types and delivery options
-  unitType: z.enum(["units", "pallets"]),
+  // Pallet/Unit selling options
+  sellingFormat: z.enum(["units", "pallets", "both"]),
   unitsPerPallet: z.string().optional(),
+  palletPrice: z.string().optional(),
+  palletMoq: z.string().optional(),
+  palletStock: z.string().optional(),
   deliveryOptions: z.object({
     pickup: z.boolean(),
     delivery: z.boolean(),
@@ -112,8 +115,11 @@ export default function ProductManagement() {
       negotiationEnabled: false,
       minimumBidPrice: "",
       status: "active",
-      unitType: "units",
+      sellingFormat: "units",
       unitsPerPallet: "",
+      palletPrice: "",
+      palletMoq: "1",
+      palletStock: "0",
       deliveryOptions: {
         pickup: true,
         delivery: true,
@@ -275,6 +281,9 @@ export default function ProductManagement() {
         moq: parseInt(data.moq),
         stock: parseInt(data.stock),
         unitsPerPallet: data.unitsPerPallet ? parseInt(data.unitsPerPallet) : null,
+        palletPrice: data.palletPrice ? parseFloat(data.palletPrice) : null,
+        palletMoq: data.palletMoq ? parseInt(data.palletMoq) : 1,
+        palletStock: data.palletStock ? parseInt(data.palletStock) : 0,
       };
       return await apiRequest("POST", "/api/products", productData);
     },
@@ -306,6 +315,9 @@ export default function ProductManagement() {
         moq: parseInt(productData.moq),
         stock: parseInt(productData.stock),
         unitsPerPallet: productData.unitsPerPallet ? parseInt(productData.unitsPerPallet) : null,
+        palletPrice: productData.palletPrice ? parseFloat(productData.palletPrice) : null,
+        palletMoq: productData.palletMoq ? parseInt(productData.palletMoq) : 1,
+        palletStock: productData.palletStock ? parseInt(productData.palletStock) : 0,
       };
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
@@ -402,8 +414,11 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
-      unitType: product.unitType || "units",
+      sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
+      palletPrice: product.palletPrice?.toString() || "",
+      palletMoq: product.palletMoq?.toString() || "1",
+      palletStock: product.palletStock?.toString() || "0",
       deliveryOptions: {
         pickup: product.supportsPickup !== false,
         delivery: product.supportsDelivery !== false,
@@ -1075,19 +1090,20 @@ export default function ProductManagement() {
                         
                         <FormField
                           control={form.control}
-                          name="unitType"
+                          name="sellingFormat"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Unit Type</FormLabel>
+                              <FormLabel>Selling Format</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select unit type" />
+                                    <SelectValue placeholder="Select selling format" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="units">Individual Units</SelectItem>
-                                  <SelectItem value="pallets">Pallets</SelectItem>
+                                  <SelectItem value="units">Individual Units Only</SelectItem>
+                                  <SelectItem value="pallets">Pallets Only</SelectItem>
+                                  <SelectItem value="both">Both Units & Pallets</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1096,23 +1112,82 @@ export default function ProductManagement() {
                         />
                       </div>
 
-                      {form.watch("unitType") === "pallets" && (
-                        <FormField
-                          control={form.control}
-                          name="unitsPerPallet"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Units per Pallet</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="e.g., 48" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                              <div className="text-sm text-muted-foreground">
-                                How many individual units are included in one pallet
-                              </div>
-                            </FormItem>
-                          )}
-                        />
+                      {(form.watch("sellingFormat") === "pallets" || form.watch("sellingFormat") === "both") && (
+                        <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                          <div className="font-medium text-sm">Pallet Configuration</div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="unitsPerPallet"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Units per Pallet</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" placeholder="e.g., 48" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-sm text-muted-foreground">
+                                    How many individual units are included in one pallet
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name="palletPrice"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Price per Pallet ({currentUser?.preferredCurrency || "GBP"})</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-sm text-muted-foreground">
+                                    Price for one complete pallet
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="palletMoq"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Minimum Pallet Order</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" placeholder="1" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-sm text-muted-foreground">
+                                    Minimum pallets per order
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name="palletStock"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Pallets in Stock</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" placeholder="0" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-sm text-muted-foreground">
+                                    Number of pallets available
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       <div className="space-y-4">

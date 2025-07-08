@@ -114,9 +114,13 @@ export const products = pgTable("products", {
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   
-  // New unit type and delivery options
-  unitType: varchar("unit_type").notNull().default("units"), // 'units' | 'pallets'
-  unitsPerPallet: integer("units_per_pallet"), // How many units make up one pallet (only relevant for pallet-based products)
+  // Pallet/Unit selling options
+  sellingFormat: varchar("selling_format").notNull().default("units"), // 'units', 'pallets', 'both'
+  unitsPerPallet: integer("units_per_pallet"), // How many units make up one pallet
+  palletPrice: decimal("pallet_price", { precision: 10, scale: 2 }), // Price per pallet (when selling pallets)
+  palletMoq: integer("pallet_moq").default(1), // Minimum pallet order quantity
+  palletStock: integer("pallet_stock").default(0), // Stock count in pallets
+  
   deliveryOptions: jsonb("delivery_options").default({
     pickup: true,
     delivery: true
