@@ -1559,6 +1559,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const wholesaler = await storage.getUser(userId);
           const businessName = wholesaler?.businessName || "Your Supplier";
           
+          // Get the application domain for customer portal link
+          const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+          const portalUrl = `https://${domain}/customer/${userId}`;
+          
           const welcomeMessage = `🎉 Welcome to ${businessName}!\n\n` +
             `Hi ${name}! 👋\n\n` +
             `You've been added to our customer network and can now:\n\n` +
@@ -1567,6 +1571,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `💬 Place orders directly via WhatsApp\n` +
             `🚚 Track your deliveries\n` +
             `💰 Access special wholesale pricing\n\n` +
+            `🌐 **Shop Online**: ${portalUrl}\n` +
+            `Visit our customer portal to browse products, place orders, and track deliveries!\n\n` +
             `We'll keep you updated with:\n` +
             `• New product arrivals\n` +
             `• Special promotions\n` +
