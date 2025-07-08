@@ -2223,7 +2223,8 @@ Write a professional, sales-focused description that highlights the key benefits
     }
 
     try {
-      const { tier } = req.body;
+      const { planId, tier } = req.body;
+      const selectedTier = planId || tier; // Support both parameter names
       const userId = req.user.id;
       const user = await storage.getUser(userId);
 
@@ -2231,17 +2232,25 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Define pricing and limits for each tier
+      // Define pricing and limits for each tier - use real Stripe price IDs
       const tierConfig = {
-        standard: { priceId: 'price_standard', productLimit: 10, price: 1099 }, // $10.99
-        premium: { priceId: 'price_premium', productLimit: -1, price: 1999 }    // $19.99
+        standard: { 
+          priceId: 'price_1RieBnBLkKweDa5PCS7fdhWO', // Real Standard price ID from replit.md
+          productLimit: 10, 
+          price: 1099 // £10.99 in pence
+        }, 
+        premium: { 
+          priceId: 'price_1RieBnBLkKweDa5Py3yl0gTP', // Real Premium price ID from replit.md
+          productLimit: -1, 
+          price: 1999 // £19.99 in pence
+        }
       };
 
-      if (!tierConfig[tier as keyof typeof tierConfig]) {
+      if (!tierConfig[selectedTier as keyof typeof tierConfig]) {
         return res.status(400).json({ message: "Invalid subscription tier" });
       }
 
-      const config = tierConfig[tier as keyof typeof tierConfig];
+      const config = tierConfig[selectedTier as keyof typeof tierConfig];
 
       // Create or retrieve Stripe customer
       let customerId = user.stripeCustomerId;
@@ -2257,35 +2266,25 @@ Write a professional, sales-focused description that highlights the key benefits
         customerId = customer.id;
       }
 
-      // Create Stripe checkout session
+      // Create Stripe checkout session using real price IDs
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Quikpik Merchant ${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan`,
-              description: `${config.productLimit === -1 ? 'Unlimited' : config.productLimit} products per month`
-            },
-            unit_amount: config.price,
-            recurring: {
-              interval: 'month'
-            }
-          },
+          price: config.priceId, // Use the real Stripe price ID
           quantity: 1,
         }],
         mode: 'subscription',
-        success_url: `${req.protocol}://${req.hostname}/subscription?success=true`,
-        cancel_url: `${req.protocol}://${req.hostname}/subscription?canceled=true`,
+        success_url: `${req.protocol}://${req.hostname}/subscription-settings?success=true`,
+        cancel_url: `${req.protocol}://${req.hostname}/subscription-settings?canceled=true`,
         metadata: {
           userId: userId,
-          tier: tier,
+          tier: selectedTier,
           productLimit: config.productLimit.toString()
         }
       });
 
-      res.json({ redirectUrl: session.url });
+      res.json({ subscriptionUrl: session.url });
     } catch (error: any) {
       console.error("Error creating subscription:", error);
       res.status(500).json({ message: "Failed to create subscription: " + error.message });

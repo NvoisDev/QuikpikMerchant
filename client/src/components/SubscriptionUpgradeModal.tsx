@@ -20,11 +20,13 @@ export function SubscriptionUpgradeModal({
   reason,
   currentPlan 
 }: SubscriptionUpgradeModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleUpgrade = async (planId: string) => {
-    setLoading(true);
+    if (loadingPlan) return; // Prevent multiple simultaneous requests
+    
+    setLoadingPlan(planId);
     try {
       const response = await apiRequest("POST", "/api/subscription/create", {
         planId
@@ -34,17 +36,19 @@ export function SubscriptionUpgradeModal({
         const { subscriptionUrl } = await response.json();
         window.location.href = subscriptionUrl;
       } else {
-        throw new Error("Failed to create subscription");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create subscription");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Subscription error:", error);
       toast({
         title: "Error",
-        description: "Failed to start subscription process. Please try again.",
+        description: error.message || "Failed to start subscription process. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      setLoadingPlan(null); // Reset loading state on error
     }
+    // Note: We don't reset loading on success since we're redirecting
   };
 
   const getReasonMessage = () => {
@@ -158,7 +162,7 @@ export function SubscriptionUpgradeModal({
 
                 <Button
                   onClick={() => handleUpgrade(plan.id)}
-                  disabled={plan.disabled || plan.current || loading}
+                  disabled={plan.disabled || plan.current || loadingPlan === plan.id}
                   className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : ''}`}
                   variant={plan.current ? "outline" : plan.popular ? "default" : "outline"}
                 >
@@ -166,7 +170,7 @@ export function SubscriptionUpgradeModal({
                     "Current Plan"
                   ) : plan.disabled ? (
                     "Current Plan"
-                  ) : loading ? (
+                  ) : loadingPlan === plan.id ? (
                     <div className="flex items-center">
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
                       Processing...
