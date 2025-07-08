@@ -22,7 +22,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
 import Papa from "papaparse";
@@ -278,6 +278,12 @@ export default function ProductManagement() {
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
+  });
+
+  // Fetch stock alerts count
+  const { data: alertsData } = useQuery({
+    queryKey: ['/api/stock-alerts/count'],
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const createProductMutation = useMutation({
@@ -706,6 +712,21 @@ export default function ProductManagement() {
                 <Package className="mr-2 h-4 w-4" />
                 Preview Store
               </Button>
+              
+              <Button 
+                variant="outline" 
+                className={alertsData?.count > 0 ? "border-red-500 text-red-600 hover:bg-red-50" : "border-gray-300 text-gray-600 hover:bg-gray-50"}
+                onClick={() => window.location.href = '/stock-alerts'}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Stock Alerts
+                {alertsData?.count > 0 && (
+                  <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                    {alertsData.count}
+                  </Badge>
+                )}
+              </Button>
+              
               <Button variant="outline" onClick={downloadTemplate}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Template

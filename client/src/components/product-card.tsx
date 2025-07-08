@@ -46,6 +46,7 @@ interface Product {
   negotiationEnabled: boolean;
   editCount?: number;
   createdAt?: string;
+  lowStockThreshold?: number;
 }
 
 interface ProductCardProps {
@@ -166,12 +167,13 @@ export default function ProductCard({
   const currentStatusConfig = getStatusConfig(product.status);
 
   const getStockStatus = () => {
+    const threshold = product.lowStockThreshold || 50; // Default to 50 if not set
     if (product.stock === 0) {
-      return { color: "text-red-600", text: "Out of stock" };
-    } else if (product.stock < 10) {
-      return { color: "text-orange-600", text: "Low stock" };
+      return { color: "text-red-600", text: "Out of stock", isAlert: true };
+    } else if (product.stock <= threshold) {
+      return { color: "text-orange-600", text: "Low stock", isAlert: true };
     }
-    return { color: "text-green-600", text: "In stock" };
+    return { color: "text-green-600", text: "In stock", isAlert: false };
   };
 
   const stockStatus = getStockStatus();
@@ -192,8 +194,21 @@ export default function ProductCard({
           className="w-full h-48 object-cover"
         />
         
-        {/* Edit Count Badge - Only show for non-premium users */}
-        {editInfo.showCounter && (
+        {/* Low Stock Alert Badge */}
+        {stockStatus.isAlert && (
+          <div className="absolute top-3 left-3">
+            <Badge 
+              variant="destructive"
+              className="text-xs bg-red-500 text-white flex items-center gap-1"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              {stockStatus.text}
+            </Badge>
+          </div>
+        )}
+
+        {/* Edit Count Badge - Only show for non-premium users and when no stock alert */}
+        {editInfo.showCounter && !stockStatus.isAlert && (
           <div className="absolute top-3 left-3">
             <Badge 
               variant={editInfo.disabled ? "destructive" : "outline"}
