@@ -82,17 +82,7 @@ export default function WholesalerDashboard() {
     );
   }
 
-  const dashboardBgClass = currentTheme === 'gradient' 
-    ? themeConfig.gradient || "bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500"
-    : currentTheme === 'dark'
-    ? "bg-gray-900"
-    : currentTheme === 'minimal'
-    ? "bg-white"
-    : currentTheme === 'ocean'
-    ? "bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500"
-    : currentTheme === 'sunset'
-    ? "bg-gradient-to-br from-orange-400 via-red-400 to-pink-500"
-    : themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50";
+  const dashboardBgClass = themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50";
 
   const headerBgClass = currentTheme === 'dark' 
     ? 'bg-gray-800/90 border-gray-700/50'
@@ -179,13 +169,13 @@ export default function WholesalerDashboard() {
         <div className="max-w-7xl mx-auto px-8 pb-8">
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg shadow-emerald-500/25">
+            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.primary }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-emerald-100 text-sm font-medium">Total Revenue</p>
+                    <p className="text-white/80 text-sm font-medium">Total Revenue</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
-                    <p className="text-emerald-100 text-xs mt-1">+12% from last month</p>
+                    <p className="text-white/80 text-xs mt-1">+12% from last month</p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <DollarSign className="h-6 w-6" />
@@ -194,13 +184,13 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg shadow-blue-500/25">
+            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.secondary }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-sm font-medium">Total Orders</p>
+                    <p className="text-white/80 text-sm font-medium">Total Orders</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
-                    <p className="text-blue-100 text-xs mt-1">+8% from last month</p>
+                    <p className="text-white/80 text-xs mt-1">+8% from last month</p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <ShoppingCart className="h-6 w-6" />
@@ -209,13 +199,13 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg shadow-purple-500/25">
+            <Card className="text-white border-0 shadow-lg" style={{ background: themeConfig.colors.accent }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-100 text-sm font-medium">Active Products</p>
+                    <p className="text-white/80 text-sm font-medium">Active Products</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
-                    <p className="text-purple-100 text-xs mt-1">+3 new this week</p>
+                    <p className="text-white/80 text-xs mt-1">+3 new this week</p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <Package className="h-6 w-6" />
@@ -224,13 +214,13 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg shadow-orange-500/25">
+            <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-orange-100 text-sm font-medium">WhatsApp Reach</p>
+                    <p className="text-white/80 text-sm font-medium">WhatsApp Reach</p>
                     <p className="text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</p>
-                    <p className="text-orange-100 text-xs mt-1">Customers reached</p>
+                    <p className="text-white/80 text-xs mt-1">Customers reached</p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <MessageSquare className="h-6 w-6" />
@@ -306,7 +296,7 @@ export default function WholesalerDashboard() {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Sales Performance Chart */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card className={`${currentTheme === 'minimal' ? 'bg-white border-gray-200' : 'bg-white/80 backdrop-blur-sm border-0'} shadow-lg`}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
@@ -351,10 +341,10 @@ export default function WholesalerDashboard() {
                         <Line 
                           type="monotone" 
                           dataKey="revenue" 
-                          stroke="#10b981" 
+                          stroke={themeConfig.colors.primary} 
                           strokeWidth={3}
-                          dot={{ fill: '#10b981', strokeWidth: 2, r: 5 }}
-                          activeDot={{ r: 7, stroke: '#10b981', strokeWidth: 2, fill: '#ffffff' }}
+                          dot={{ fill: themeConfig.colors.primary, strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 7, stroke: themeConfig.colors.primary, strokeWidth: 2, fill: '#ffffff' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -364,7 +354,7 @@ export default function WholesalerDashboard() {
             </Card>
 
             {/* Orders Chart */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card className={`${currentTheme === 'minimal' ? 'bg-white border-gray-200' : 'bg-white/80 backdrop-blur-sm border-0'} shadow-lg`}>
               <CardHeader>
                 <div>
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
@@ -402,7 +392,7 @@ export default function WholesalerDashboard() {
                         />
                         <Bar 
                           dataKey="orders" 
-                          fill="#3b82f6"
+                          fill={themeConfig.colors.secondary}
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
