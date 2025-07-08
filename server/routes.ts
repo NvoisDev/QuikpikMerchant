@@ -2429,7 +2429,8 @@ Write a professional, sales-focused description that highlights the key benefits
         sortBy: req.query.sortBy as string || "featured",
         minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
         maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-        minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined
+        minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
+        wholesalerId: req.query.wholesalerId as string
       };
       
       const products = await storage.getMarketplaceProducts(filters);

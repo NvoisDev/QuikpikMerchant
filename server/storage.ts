@@ -890,12 +890,18 @@ export class DatabaseStorage implements IStorage {
     minPrice?: number;
     maxPrice?: number;
     minRating?: number;
+    wholesalerId?: string;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
     // First get all active products from wholesalers
     let whereConditions = [
       eq(products.status, 'active'),
       eq(users.role, 'wholesaler')
     ];
+
+    // Filter by specific wholesaler if provided
+    if (filters.wholesalerId) {
+      whereConditions.push(eq(products.wholesalerId, filters.wholesalerId));
+    }
 
     if (filters.category) {
       whereConditions.push(eq(products.category, filters.category));
