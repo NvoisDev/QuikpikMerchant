@@ -125,6 +125,12 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **REPL_ID**: Replit environment identifier
 
 ## Changelog
+- July 08, 2025. Fixed WhatsApp messaging and Stripe Connect redirect issues:
+  - **WhatsApp Reach Dashboard Fix**: Updated analytics endpoints to use real user authentication and calculate actual WhatsApp reach from broadcast statistics
+  - **Stripe Connect Redirect Fix**: Changed return URL from settings page to business-performance/financials page after successful Stripe Connect onboarding
+  - **WhatsApp Configuration Improvements**: Enhanced error messages and troubleshooting guidance for Twilio sandbox setup requirements
+  - **Analytics Authentication**: Fixed analytics endpoints to require authentication and use actual user data instead of test data
+  - **Enhanced Error Handling**: Improved WhatsApp configuration feedback with clearer instructions for sandbox setup and testing
 - July 02, 2025. Initial setup
 - July 07, 2025. Implemented comprehensive onboarding system with interactive tooltips and guided user experience:
   - **Database Schema Enhancement**: Added onboarding_completed, onboarding_step, and onboarding_skipped fields to users table

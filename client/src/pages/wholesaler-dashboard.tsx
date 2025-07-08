@@ -160,8 +160,8 @@ export default function WholesalerDashboard() {
                 />
                 <StatsCard
                   title="WhatsApp Reach"
-                  value={formatNumber(1245)}
-                  change="85% open rate"
+                  value={formatNumber(stats?.whatsappReach || 0)}
+                  change={`${stats?.whatsappReach ? Math.round((stats.whatsappReach / Math.max(stats.customerCount, 1)) * 100) : 0}% coverage`}
                   icon={MessageSquare}
                   iconColor="text-green-600"
                   iconBg="bg-green-100"

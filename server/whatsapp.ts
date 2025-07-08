@@ -347,7 +347,7 @@ Update your inventory or restock soon.`;
       if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
         return {
           success: false,
-          error: 'Twilio WhatsApp is not configured. Please add your Twilio Account SID, Auth Token, and WhatsApp-enabled phone number in Settings.'
+          error: 'WhatsApp is not configured. Please configure your Twilio credentials in Settings → WhatsApp Configuration. For testing, use the Twilio sandbox number +14155238886 and ensure recipients have joined your sandbox by texting "join [your-code]" to +1 (415) 523-8886.'
         };
       }
 

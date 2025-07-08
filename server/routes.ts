@@ -1661,20 +1661,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics routes
-  app.get('/api/analytics/stats', async (req: any, res) => {
+  app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = 'test-user-123'; // Temporary test user
+      const userId = req.user.id;
       const stats = await storage.getWholesalerStats(userId);
-      res.json(stats);
+      
+      // Calculate WhatsApp reach from broadcasts
+      const broadcastStats = await storage.getBroadcastStats(userId);
+      const whatsappReach = broadcastStats.recipientsReached || 0;
+      
+      // Get total customer count for calculating coverage
+      const customerGroups = await storage.getCustomerGroups(userId);
+      const totalCustomers = customerGroups.reduce((total, group) => total + (group.memberCount || 0), 0);
+      
+      res.json({
+        ...stats,
+        whatsappReach,
+        customerCount: totalCustomers
+      });
     } catch (error) {
       console.error("Error fetching analytics stats:", error);
       res.status(500).json({ message: "Failed to fetch analytics stats" });
     }
   });
 
-  app.get('/api/analytics/top-products', async (req: any, res) => {
+  app.get('/api/analytics/top-products', requireAuth, async (req: any, res) => {
     try {
-      const userId = 'test-user-123'; // Temporary test user
+      const userId = req.user.id;
       const { limit } = req.query;
       const topProducts = await storage.getTopProducts(userId, limit ? parseInt(limit as string) : 5);
       res.json(topProducts);
@@ -1684,9 +1697,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/recent-orders', async (req: any, res) => {
+  app.get('/api/analytics/recent-orders', requireAuth, async (req: any, res) => {
     try {
-      const userId = 'test-user-123'; // Temporary test user
+      const userId = req.user.id;
       const { limit } = req.query;
       const recentOrders = await storage.getRecentOrders(userId, limit ? parseInt(limit as string) : 10);
       res.json(recentOrders);
@@ -1876,7 +1889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=refresh`,
-        return_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=complete`,
+        return_url: `${req.protocol}://${req.get('host')}/business-performance/financials?stripe_onboarding=complete`,
         type: 'account_onboarding',
       });
 
@@ -2480,12 +2493,12 @@ Write a professional, sales-focused description that highlights the key benefits
         });
       }
 
-      // Check if user is using the correct sandbox setup
+      // Get user configuration
       const user = await storage.getUser(wholesalerId);
-      if (user?.twilioPhoneNumber && user.twilioPhoneNumber !== '+14155238886') {
-        return res.status(400).json({ 
+      if (!user) {
+        return res.status(404).json({ 
           success: false,
-          error: "For testing, please use Twilio sandbox number: +14155238886. Also ensure you've joined the sandbox by texting your sandbox code to +1 (415) 523-8886 from your WhatsApp." 
+          error: "User not found" 
         });
       }
 
