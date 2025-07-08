@@ -99,6 +99,9 @@ export const users = pgTable("users", {
   onboardingSkipped: boolean("onboarding_skipped").default(false),
   isFirstLogin: boolean("is_first_login").default(true),
   
+  // Stock alert settings
+  defaultLowStockThreshold: integer("default_low_stock_threshold").default(50), // Global default for new products
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -121,6 +124,7 @@ export const products = pgTable("products", {
   negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
+  lowStockThreshold: integer("low_stock_threshold").notNull().default(50), // Alert when stock falls below this number
   
   // Pallet/Unit selling options
   sellingFormat: varchar("selling_format").notNull().default("units"), // 'units', 'pallets', 'both'
@@ -307,6 +311,21 @@ export const stockUpdateNotifications = pgTable("stock_update_notifications", {
   status: varchar("status").default("pending"), // 'pending', 'sent', 'failed'
   sentAt: timestamp("sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Stock alerts table for tracking low stock notifications
+export const stockAlerts = pgTable("stock_alerts", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  alertType: varchar("alert_type").notNull().default("low_stock"), // 'low_stock', 'out_of_stock'
+  currentStock: integer("current_stock").notNull(),
+  threshold: integer("threshold").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  isResolved: boolean("is_resolved").notNull().default(false), // Mark as resolved when stock is replenished
+  notificationSent: boolean("notification_sent").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 // Relations
@@ -535,6 +554,14 @@ export const insertTemplateCampaignSchema = createInsertSchema(templateCampaigns
 });
 export type InsertTemplateCampaign = z.infer<typeof insertTemplateCampaignSchema>;
 export type TemplateCampaign = typeof templateCampaigns.$inferSelect;
+
+export const insertStockAlertSchema = createInsertSchema(stockAlerts).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+});
+export type InsertStockAlert = z.infer<typeof insertStockAlertSchema>;
+export type StockAlert = typeof stockAlerts.$inferSelect;
 
 export const insertCampaignOrderSchema = createInsertSchema(campaignOrders).omit({
   id: true,

@@ -19,16 +19,20 @@ import {
   Lock,
   HelpCircle,
   FileText,
-  Crown
+  Crown,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list" },
   { name: "Customer Groups", href: "/customer-groups", icon: Users, onboardingId: "customer-groups" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders" },
+  { name: "Stock Alerts", href: "/stock-alerts", icon: AlertTriangle, showBadge: true },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3 },
@@ -41,6 +45,12 @@ export default function Sidebar() {
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { currentTier } = useSubscription();
+
+  // Fetch stock alerts count
+  const { data: alertsData } = useQuery({
+    queryKey: ['/api/stock-alerts/count'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -133,6 +143,11 @@ export default function Sidebar() {
                     )} 
                   />
                   <span className="flex-1">{item.name}</span>
+                  {item.showBadge && alertsData?.count > 0 && (
+                    <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                      {alertsData.count}
+                    </Badge>
+                  )}
                   {isPremiumFeature && (
                     <Crown className="h-3 w-3 text-yellow-500" />
                   )}

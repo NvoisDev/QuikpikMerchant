@@ -37,6 +37,10 @@ export default function WholesalerDashboard() {
     queryKey: ["/api/analytics/recent-orders"],
   });
 
+  const { data: alertsData } = useQuery({
+    queryKey: ['/api/stock-alerts/count'],
+  });
+
   const formatCurrency = (amount: number) => {
     const currency = user?.preferredCurrency || 'GBP';
     return new Intl.NumberFormat('en-GB', {
@@ -100,12 +104,16 @@ export default function WholesalerDashboard() {
             </div>
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
+                <Link href="/stock-alerts">
+                  <Button variant="ghost" size="icon">
+                    <Bell className="h-5 w-5" />
+                    {alertsData?.count > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {alertsData.count}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -150,12 +158,12 @@ export default function WholesalerDashboard() {
                 <StatsCard
                   title="Active Products"
                   value={formatNumber(stats?.activeProducts || 0)}
-                  change={`${formatNumber(stats?.lowStockCount || 0)} low stock alerts`}
+                  change={`${formatNumber(alertsData?.count || 0)} stock alerts`}
                   icon={Package}
                   iconColor="text-purple-600"
                   iconBg="bg-purple-100"
                   loading={statsLoading}
-                  changeColor="text-orange-600"
+                  changeColor={alertsData?.count > 0 ? "text-red-600" : "text-green-600"}
                   tooltip="Products currently available for sale in your inventory"
                 />
                 <StatsCard

@@ -5566,5 +5566,87 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   }
 
   const httpServer = createServer(app);
+  // Stock Alert endpoints
+  app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const alerts = await storage.getUnresolvedStockAlerts(userId);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching stock alerts:", error);
+      res.status(500).json({ message: "Failed to fetch stock alerts" });
+    }
+  });
+
+  app.get('/api/stock-alerts/count', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const count = await storage.getUnresolvedStockAlertsCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching stock alerts count:", error);
+      res.status(500).json({ message: "Failed to fetch stock alerts count" });
+    }
+  });
+
+  app.patch('/api/stock-alerts/:alertId/read', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { alertId } = req.params;
+      await storage.markStockAlertAsRead(parseInt(alertId), userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking alert as read:", error);
+      res.status(500).json({ message: "Failed to mark alert as read" });
+    }
+  });
+
+  app.patch('/api/stock-alerts/:alertId/resolve', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { alertId } = req.params;
+      await storage.resolveStockAlert(parseInt(alertId), userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error resolving alert:", error);
+      res.status(500).json({ message: "Failed to resolve alert" });
+    }
+  });
+
+  app.patch('/api/products/:productId/low-stock-threshold', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { productId } = req.params;
+      const { threshold } = req.body;
+      
+      if (!threshold || threshold < 0) {
+        return res.status(400).json({ message: "Valid threshold required" });
+      }
+
+      await storage.updateProductLowStockThreshold(parseInt(productId), userId, parseInt(threshold));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating low stock threshold:", error);
+      res.status(500).json({ message: "Failed to update threshold" });
+    }
+  });
+
+  app.patch('/api/settings/default-low-stock-threshold', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { threshold } = req.body;
+      
+      if (!threshold || threshold < 0) {
+        return res.status(400).json({ message: "Valid threshold required" });
+      }
+
+      await storage.updateDefaultLowStockThreshold(userId, parseInt(threshold));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating default threshold:", error);
+      res.status(500).json({ message: "Failed to update default threshold" });
+    }
+  });
+
   return httpServer;
 }

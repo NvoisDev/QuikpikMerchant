@@ -30,6 +30,7 @@ import CampaignPreview from "@/pages/campaign-preview";
 import ProductOrderPage from "@/pages/product-order-page";
 import CustomerPortal from "@/pages/customer-portal";
 import PaymentSuccess from "@/pages/payment-success";
+import StockAlerts from "@/pages/stock-alerts";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -80,6 +81,7 @@ function Router() {
               {/* Legacy route redirect */}
               <Route path="/broadcasts" component={Campaigns} />
               <Route path="/message-templates" component={Campaigns} />
+              <Route path="/stock-alerts" component={StockAlerts} />
               <Route path="/help" component={Help} />
               <Route path="/preview-store" component={CustomerPortal} />
             </>

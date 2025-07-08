@@ -13,6 +13,7 @@ import {
   campaignOrders,
   stockUpdateNotifications,
   stockMovements,
+  stockAlerts,
   type User,
   type UpsertUser,
   type Product,
@@ -39,6 +40,8 @@ import {
   type InsertStockUpdateNotification,
   type StockMovement,
   type InsertStockMovement,
+  type StockAlert,
+  type InsertStockAlert,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -140,6 +143,16 @@ export interface IStorage {
     recipientsReached: number;
     avgOpenRate: number;
   }>;
+
+  // Stock Alert operations
+  createStockAlert(alert: InsertStockAlert): Promise<StockAlert>;
+  getUnresolvedStockAlerts(wholesalerId: string): Promise<(StockAlert & { product: Product })[]>;
+  getUnresolvedStockAlertsCount(wholesalerId: string): Promise<number>;
+  markStockAlertAsRead(alertId: number, wholesalerId: string): Promise<void>;
+  resolveStockAlert(alertId: number, wholesalerId: string): Promise<void>;
+  updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void>;
+  updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void>;
+  checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void>;
 
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
@@ -656,13 +669,20 @@ export class DatabaseStorage implements IStorage {
 
   // Product stock operations  
   async updateProductStock(productId: number, newStock: number): Promise<void> {
-    await db
-      .update(products)
-      .set({ 
-        stock: newStock,
-        updatedAt: new Date()
-      })
-      .where(eq(products.id, productId));
+    // Get the product to find the wholesaler and check for alerts
+    const product = await this.getProduct(productId);
+    if (product) {
+      await db
+        .update(products)
+        .set({ 
+          stock: newStock,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId));
+
+      // Check and create stock alerts if needed
+      await this.checkAndCreateStockAlerts(productId, product.wholesalerId, newStock);
+    }
   }
 
   // Order notes operations
@@ -1435,6 +1455,145 @@ export class DatabaseStorage implements IStorage {
       totalDecreases,
       currentStock,
     };
+  }
+
+  // Stock Alert operations
+  async createStockAlert(alert: InsertStockAlert): Promise<StockAlert> {
+    const [newAlert] = await db.insert(stockAlerts).values(alert).returning();
+    return newAlert;
+  }
+
+  async getUnresolvedStockAlerts(wholesalerId: string): Promise<(StockAlert & { product: Product })[]> {
+    const alerts = await db
+      .select({
+        alert: stockAlerts,
+        product: products,
+      })
+      .from(stockAlerts)
+      .innerJoin(products, eq(stockAlerts.productId, products.id))
+      .where(
+        and(
+          eq(stockAlerts.wholesalerId, wholesalerId),
+          eq(stockAlerts.isResolved, false)
+        )
+      )
+      .orderBy(desc(stockAlerts.createdAt));
+
+    return alerts.map(row => ({
+      ...row.alert,
+      product: row.product,
+    }));
+  }
+
+  async getUnresolvedStockAlertsCount(wholesalerId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(stockAlerts)
+      .where(
+        and(
+          eq(stockAlerts.wholesalerId, wholesalerId),
+          eq(stockAlerts.isResolved, false)
+        )
+      );
+    return result[0]?.count || 0;
+  }
+
+  async markStockAlertAsRead(alertId: number, wholesalerId: string): Promise<void> {
+    await db
+      .update(stockAlerts)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(stockAlerts.id, alertId),
+          eq(stockAlerts.wholesalerId, wholesalerId)
+        )
+      );
+  }
+
+  async resolveStockAlert(alertId: number, wholesalerId: string): Promise<void> {
+    await db
+      .update(stockAlerts)
+      .set({ 
+        isResolved: true, 
+        resolvedAt: new Date() 
+      })
+      .where(
+        and(
+          eq(stockAlerts.id, alertId),
+          eq(stockAlerts.wholesalerId, wholesalerId)
+        )
+      );
+  }
+
+  async updateProductLowStockThreshold(productId: number, wholesalerId: string, threshold: number): Promise<void> {
+    await db
+      .update(products)
+      .set({ 
+        lowStockThreshold: threshold,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.wholesalerId, wholesalerId)
+        )
+      );
+  }
+
+  async updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        defaultLowStockThreshold: threshold,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Check and create stock alerts for products that fall below threshold
+  async checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void> {
+    const product = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.wholesalerId, wholesalerId)
+        )
+      )
+      .limit(1);
+
+    if (!product[0]) return;
+
+    const threshold = product[0].lowStockThreshold;
+    
+    // Only create alert if stock falls below threshold and no unresolved alert exists
+    if (newStock <= threshold) {
+      const existingAlert = await db
+        .select()
+        .from(stockAlerts)
+        .where(
+          and(
+            eq(stockAlerts.productId, productId),
+            eq(stockAlerts.wholesalerId, wholesalerId),
+            eq(stockAlerts.isResolved, false)
+          )
+        )
+        .limit(1);
+
+      if (!existingAlert[0]) {
+        await this.createStockAlert({
+          productId,
+          wholesalerId,
+          alertType: newStock === 0 ? 'out_of_stock' : 'low_stock',
+          currentStock: newStock,
+          threshold,
+          isRead: false,
+          isResolved: false,
+          notificationSent: false,
+        });
+      }
+    }
   }
 }
 
