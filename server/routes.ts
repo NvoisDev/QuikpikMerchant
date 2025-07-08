@@ -3819,11 +3819,31 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
       
-      // Validate totalAmount is a valid number
-      if (!totalAmount || isNaN(parseFloat(totalAmount))) {
-        console.error(`❌ Invalid totalAmount: ${totalAmount}`);
-        return res.status(400).json({ message: 'Invalid total amount provided' });
+      // Validate and recalculate totalAmount to prevent NaN errors
+      let validatedTotalAmount = 0;
+      
+      if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) > 0) {
+        validatedTotalAmount = parseFloat(totalAmount);
+      } else {
+        // Recalculate from items if totalAmount is invalid
+        console.log('⚠️ Invalid totalAmount, recalculating from items...');
+        for (const item of items) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.price) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            validatedTotalAmount += unitPrice * quantity;
+          }
+        }
       }
+      
+      // Final validation
+      if (!validatedTotalAmount || validatedTotalAmount <= 0) {
+        console.error(`❌ Invalid calculated totalAmount: ${validatedTotalAmount}`);
+        return res.status(400).json({ message: 'Unable to calculate valid total amount' });
+      }
+      
+      console.log(`✅ Using validated totalAmount: ${validatedTotalAmount}`);
       
       if (!items || !customerData || !wholesalerId) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -3835,9 +3855,9 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: 'Wholesaler not found' });
       }
 
-      // Calculate platform fee (5%)
-      const platformFee = (totalAmount * 0.05).toFixed(2);
-      const wholesalerAmount = (totalAmount - parseFloat(platformFee)).toFixed(2);
+      // Calculate platform fee (5%) using validated amount
+      const platformFee = (validatedTotalAmount * 0.05).toFixed(2);
+      const wholesalerAmount = (validatedTotalAmount - parseFloat(platformFee)).toFixed(2);
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
@@ -3851,7 +3871,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         try {
           // Create payment intent with Stripe Connect and 5% platform fee
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmount * 100), // Convert to cents
+            amount: Math.round(validatedTotalAmount * 100), // Convert to cents
             currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
             application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 5% platform fee in cents
             transfer_data: {
@@ -3870,7 +3890,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                 postalCode: customerData.postalCode,
                 country: customerData.country
               }),
-              totalAmount: totalAmount.toString(),
+              totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'true',
               items: JSON.stringify(items.map(item => ({
@@ -3884,7 +3904,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           
           // Fallback to regular payment intent for demo/test purposes
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmount * 100), // Convert to cents
+            amount: Math.round(validatedTotalAmount * 100), // Convert to cents
             currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
             metadata: {
               orderType: 'customer_portal',
@@ -3899,7 +3919,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                 postalCode: customerData.postalCode,
                 country: customerData.country
               }),
-              totalAmount: totalAmount.toString(),
+              totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'false',
               items: JSON.stringify(items.map(item => ({
@@ -4332,7 +4352,7 @@ Please contact the customer to confirm this order.
           </div>
 
           <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h4>What's Next?</h4>
+            <h4>Payment Status: PAID ✅</h4>
             <p>Your order has been confirmed and payment processed successfully. The wholesaler will prepare your order and contact you with delivery details.</p>
           </div>
 

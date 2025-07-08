@@ -425,17 +425,22 @@ export default function CustomerPortal() {
   const cartStats = useMemo(() => {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = cart.reduce((sum, item) => {
-      let price;
+      let price = 0;
       if (item.sellingType === "pallets") {
-        price = parseFloat(item.product.palletPrice || "0");
+        price = parseFloat(item.product.palletPrice || "0") || 0;
       } else {
-        price = item.product.promoActive && item.product.promoPrice 
-          ? parseFloat(item.product.promoPrice)
-          : parseFloat(item.product.price);
+        const promoPrice = item.product.promoActive && item.product.promoPrice 
+          ? parseFloat(item.product.promoPrice) || 0
+          : 0;
+        const regularPrice = parseFloat(item.product.price) || 0;
+        price = promoPrice > 0 ? promoPrice : regularPrice;
       }
-      return sum + (price * item.quantity);
+      // Ensure we never add NaN values
+      const itemTotal = (price || 0) * (item.quantity || 0);
+      return sum + (isNaN(itemTotal) ? 0 : itemTotal);
     }, 0);
-    return { totalItems, totalValue };
+    // Ensure totalValue is never NaN
+    return { totalItems, totalValue: isNaN(totalValue) ? 0 : totalValue };
   }, [cart]);
 
   // Handle sharing the store
