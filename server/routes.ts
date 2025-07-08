@@ -1580,6 +1580,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `Questions? Just reply to this message!\n\n` +
             `✨ This message was powered by Quikpik Merchant`;
 
+          console.log(`Sending welcome message to ${phoneNumber}:`);
+          console.log(`Portal URL: ${portalUrl}`);
+          console.log(`Welcome message length: ${welcomeMessage.length}`);
+          console.log(`Welcome message preview: ${welcomeMessage.substring(0, 200)}...`);
+          
           await whatsappService.sendMessage(phoneNumber, welcomeMessage, userId);
           console.log(`Welcome message sent to new customer: ${phoneNumber}`);
         } catch (welcomeError) {
