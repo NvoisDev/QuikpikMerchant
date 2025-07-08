@@ -1162,7 +1162,7 @@ export default function ProductManagement() {
                               name="palletPrice"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Price per Pallet ({currentUser?.preferredCurrency || "GBP"})</FormLabel>
+                                  <FormLabel>Price per Pallet ({user?.preferredCurrency || "GBP"})</FormLabel>
                                   <FormControl>
                                     <Input type="number" step="0.01" placeholder="0.00" {...field} />
                                   </FormControl>
