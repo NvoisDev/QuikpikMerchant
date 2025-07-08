@@ -745,12 +745,13 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getTopProducts(wholesalerId: string, limit = 5): Promise<(Product & { orderCount: number; revenue: number })[]> {
+  async getTopProducts(wholesalerId: string, limit = 5): Promise<(Product & { orderCount: number; revenue: number; totalQuantitySold: number })[]> {
     const result = await db
       .select({
         product: products,
         orderCount: count(orderItems.id),
-        revenue: sum(orderItems.total)
+        revenue: sum(orderItems.total),
+        totalQuantitySold: sum(orderItems.quantity)
       })
       .from(products)
       .leftJoin(orderItems, eq(products.id, orderItems.productId))
@@ -766,7 +767,8 @@ export class DatabaseStorage implements IStorage {
     return result.map(row => ({
       ...row.product,
       orderCount: row.orderCount || 0,
-      revenue: Number(row.revenue) || 0
+      revenue: Number(row.revenue) || 0,
+      totalQuantitySold: Number(row.totalQuantitySold) || 0
     }));
   }
 

@@ -37,6 +37,10 @@ export default function WholesalerDashboard() {
     queryKey: ["/api/analytics/recent-orders"],
   });
 
+  const { data: broadcastStats, isLoading: broadcastStatsLoading } = useQuery({
+    queryKey: ["/api/analytics/broadcast-stats"],
+  });
+
   const { data: alertsData } = useQuery({
     queryKey: ['/api/stock-alerts/count'],
   });
@@ -137,23 +141,25 @@ export default function WholesalerDashboard() {
               <>
                 <StatsCard
                   title="Total Revenue"
-                  value={stats ? formatCurrency(stats.totalRevenue || 0) : "$0"}
-                  change="+12.5% from last month"
+                  value={stats ? formatCurrency(stats.totalRevenue || 0) : formatCurrency(0)}
+                  change={stats?.totalRevenue > 0 ? "From completed orders" : "No sales yet"}
                   icon={DollarSign}
                   iconColor="text-green-600"
                   iconBg="bg-green-100"
                   loading={statsLoading}
+                  changeColor={stats?.totalRevenue > 0 ? "text-green-600" : "text-gray-500"}
                   tooltip="Total earnings from all completed orders and sales"
                 />
                 <StatsCard
-                  title="Orders This Month"
+                  title="Total Orders"
                   value={formatNumber(stats?.ordersCount || 0)}
-                  change="+8.2% from last month"
+                  change={stats?.ordersCount > 0 ? "All-time orders" : "No orders yet"}
                   icon={ShoppingCart}
                   iconColor="text-blue-600"
                   iconBg="bg-blue-100"
                   loading={statsLoading}
-                  tooltip="Number of orders received from customers this month"
+                  changeColor={stats?.ordersCount > 0 ? "text-blue-600" : "text-gray-500"}
+                  tooltip="Total number of orders received from customers"
                 />
                 <StatsCard
                   title="Active Products"
@@ -168,11 +174,12 @@ export default function WholesalerDashboard() {
                 />
                 <StatsCard
                   title="WhatsApp Reach"
-                  value={formatNumber(stats?.whatsappReach || 0)}
-                  change={`${stats?.whatsappReach ? Math.round((stats.whatsappReach / Math.max(stats.customerCount, 1)) * 100) : 0}% coverage`}
+                  value={formatNumber(broadcastStats?.recipientsReached || 0)}
+                  change={`${broadcastStats?.totalBroadcasts || 0} campaigns sent`}
                   icon={MessageSquare}
                   iconColor="text-green-600"
                   iconBg="bg-green-100"
+                  loading={broadcastStatsLoading}
                   tooltip="Total customers reached through WhatsApp broadcast campaigns"
                 />
               </>
@@ -282,30 +289,49 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {(topProducts || []).slice(0, 3).map((product: any) => (
-                      <div key={product.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <img 
-                            src="https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&h=50" 
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                          />
-                          <div>
-                            <p className="font-medium text-gray-900">{product.name}</p>
-                            <p className="text-sm text-gray-600">{product.orderCount} orders</p>
+                    {(topProducts || []).length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No sales data yet</p>
+                        <p className="text-sm">Add products and start selling to see your top performers here</p>
+                      </div>
+                    ) : (
+                      (topProducts || []).slice(0, 3).map((product: any, index: number) => (
+                        <div key={product.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="relative">
+                              {product.imageUrl ? (
+                                <img 
+                                  src={product.imageUrl} 
+                                  alt={product.name}
+                                  className="w-12 h-12 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                                  <Package className="h-6 w-6 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="absolute -top-2 -left-2 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                                {index + 1}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{product.name}</p>
+                              <p className="text-sm text-gray-600">{formatNumber(product.orderCount)} orders • {formatNumber(product.totalQuantitySold)} units sold</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900">
+                              {formatCurrency(product.revenue)}
+                            </p>
+                            <div className="flex items-center text-sm text-green-600">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Top #{index + 1}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">
-                            {formatCurrency(product.revenue)}
-                          </p>
-                          <p className="text-sm text-green-600 flex items-center">
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                            +15.2%
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -337,57 +363,67 @@ export default function WholesalerDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Order ID
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Customer
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {(recentOrders || []).slice(0, 5).map((order: any) => (
-                        <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            #ORD-{order.id}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || 'Unknown Customer'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(parseFloat(order.total))}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge 
-                              variant={
-                                order.status === 'completed' ? 'default' :
-                                order.status === 'processing' ? 'secondary' :
-                                order.status === 'shipped' ? 'outline' : 'destructive'
-                              }
-                            >
-                              {order.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(order.createdAt!)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  {(recentOrders || []).length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No orders yet</p>
+                      <p className="text-sm">Your recent customer orders will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Order ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Customer
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Amount
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {(recentOrders || []).slice(0, 5).map((order: any) => (
+                            <tr key={order.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                #ORD-{order.id}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {order.retailer?.businessName || [order.retailer?.firstName, order.retailer?.lastName].filter(Boolean).join(' ') || 'Unknown Customer'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {formatCurrency(parseFloat(order.total))}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <Badge 
+                                  variant={
+                                    order.status === 'completed' ? 'default' :
+                                    order.status === 'processing' ? 'secondary' :
+                                    order.status === 'shipped' ? 'outline' : 'destructive'
+                                  }
+                                >
+                                  {order.status}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(order.createdAt!)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

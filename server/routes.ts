@@ -1731,6 +1731,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/analytics/broadcast-stats', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const broadcastStats = await storage.getBroadcastStats(userId);
+      res.json(broadcastStats);
+    } catch (error) {
+      console.error("Error fetching broadcast stats:", error);
+      res.status(500).json({ message: "Failed to fetch broadcast stats" });
+    }
+  });
+
   // Advanced analytics routes
   app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
     try {
