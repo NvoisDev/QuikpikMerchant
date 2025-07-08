@@ -1,0 +1,67 @@
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "./useAuth";
+
+export function useSubscription() {
+  const { user } = useAuth();
+
+  const { data: subscription, isLoading } = useQuery({
+    queryKey: ["/api/subscription/status"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const canCreateProduct = () => {
+    if (!user || !subscription) return false;
+    
+    const productCount = subscription.productCount || 0;
+    const limit = getProductLimit(user.subscriptionTier || 'free');
+    
+    return limit === -1 || productCount < limit;
+  };
+
+  const canEditProduct = (editCount: number) => {
+    if (!user) return false;
+    
+    const tier = user.subscriptionTier || 'free';
+    if (tier === 'free') {
+      return editCount < 3;
+    }
+    return true; // Standard and Premium have unlimited edits
+  };
+
+  const getProductLimit = (tier: string) => {
+    switch (tier) {
+      case 'free':
+        return 3;
+      case 'standard':
+        return 10;
+      case 'premium':
+        return -1; // Unlimited
+      default:
+        return 3;
+    }
+  };
+
+  const getEditLimit = (tier: string) => {
+    switch (tier) {
+      case 'free':
+        return 3;
+      case 'standard':
+      case 'premium':
+        return -1; // Unlimited
+      default:
+        return 3;
+    }
+  };
+
+  return {
+    subscription,
+    isLoading,
+    canCreateProduct,
+    canEditProduct,
+    getProductLimit,
+    getEditLimit,
+    currentTier: user?.subscriptionTier || 'free',
+    isActive: user?.subscriptionStatus === 'active'
+  };
+}

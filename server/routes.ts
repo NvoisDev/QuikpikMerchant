@@ -20,6 +20,12 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
   apiVersion: "2024-06-20",
 }) : null;
 
+// Subscription price IDs for monthly plans in GBP
+const SUBSCRIPTION_PRICES = {
+  standard: 'price_1RieBnBLkKweDa5PCS7fdhWO', // £10.99/month
+  premium: 'price_1RieBnBLkKweDa5Py3yl0gTP'    // £19.99/month
+};
+
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
@@ -5273,6 +5279,204 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       res.status(500).json({ message: "Failed to update onboarding status" });
     }
   });
+
+  // Subscription endpoints
+  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
+    try {
+      const { planId } = req.body;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!['standard', 'premium'].includes(planId)) {
+        return res.status(400).json({ error: "Invalid plan" });
+      }
+
+      // Create or get Stripe customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          name: user.businessName || `${user.firstName} ${user.lastName}` || undefined,
+          metadata: {
+            userId: user.id
+          }
+        });
+        customerId = customer.id;
+        await storage.updateUser(user.id, { stripeCustomerId: customerId });
+      }
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: SUBSCRIPTION_PRICES[planId as keyof typeof SUBSCRIPTION_PRICES],
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.protocol}://${req.get('host')}/settings?tab=subscription&success=true`,
+        cancel_url: `${req.protocol}://${req.get('host')}/settings?tab=subscription&canceled=true`,
+        metadata: {
+          userId: user.id,
+          planId: planId
+        }
+      });
+
+      res.json({ subscriptionUrl: session.url });
+    } catch (error) {
+      console.error('Subscription creation error:', error);
+      res.status(500).json({ error: "Failed to create subscription" });
+    }
+  });
+
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get product count for this user
+      const products = await storage.getProductsByUser(user.id);
+      const productCount = products.length;
+
+      const subscriptionData = {
+        tier: user.subscriptionTier || 'free',
+        status: user.subscriptionStatus || 'inactive',
+        productCount: productCount,
+        productLimit: getProductLimit(user.subscriptionTier || 'free'),
+        editLimit: getEditLimit(user.subscriptionTier || 'free'),
+        expiresAt: user.subscriptionEndsAt
+      };
+
+      res.json(subscriptionData);
+    } catch (error) {
+      console.error('Subscription status error:', error);
+      res.status(500).json({ error: "Failed to get subscription status" });
+    }
+  });
+
+  app.post('/api/subscription/cancel', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.stripeSubscriptionId) {
+        return res.status(404).json({ error: "No active subscription found" });
+      }
+
+      // Cancel subscription at period end
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true
+      });
+
+      res.json({ success: true, message: "Subscription will be canceled at the end of the current period" });
+    } catch (error) {
+      console.error('Subscription cancellation error:', error);
+      res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+  });
+
+  // Stripe webhook for subscription events
+  app.post('/api/webhooks/stripe', async (req, res) => {
+    let event;
+
+    try {
+      event = req.body;
+    } catch (err) {
+      console.log(`Webhook signature verification failed.`, err);
+      return res.status(400).send(`Webhook Error: ${err}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        if (session.mode === 'subscription') {
+          const userId = session.metadata.userId;
+          const planId = session.metadata.planId;
+          
+          // Update user subscription
+          await storage.updateUser(userId, {
+            subscriptionTier: planId,
+            subscriptionStatus: 'active',
+            stripeSubscriptionId: session.subscription,
+            productLimit: getProductLimit(planId)
+          });
+        }
+        break;
+      
+      case 'invoice.payment_succeeded':
+        const invoice = event.data.object;
+        if (invoice.subscription) {
+          // Extend subscription period
+          const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          
+          if (typeof customer !== 'string' && customer.metadata?.userId) {
+            await storage.updateUser(customer.metadata.userId, {
+              subscriptionStatus: 'active',
+              subscriptionEndsAt: new Date(subscription.current_period_end * 1000)
+            });
+          }
+        }
+        break;
+
+      case 'invoice.payment_failed':
+        const failedInvoice = event.data.object;
+        if (failedInvoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(failedInvoice.subscription);
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          
+          if (typeof customer !== 'string' && customer.metadata?.userId) {
+            await storage.updateUser(customer.metadata.userId, {
+              subscriptionStatus: 'past_due'
+            });
+          }
+        }
+        break;
+
+      case 'customer.subscription.deleted':
+        const deletedSubscription = event.data.object;
+        const customer = await stripe.customers.retrieve(deletedSubscription.customer as string);
+        
+        if (typeof customer !== 'string' && customer.metadata?.userId) {
+          await storage.updateUser(customer.metadata.userId, {
+            subscriptionTier: 'free',
+            subscriptionStatus: 'inactive',
+            stripeSubscriptionId: null,
+            productLimit: 3
+          });
+        }
+        break;
+
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({ received: true });
+  });
+
+  function getProductLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 3;
+      case 'standard': return 10;
+      case 'premium': return -1; // Unlimited
+      default: return 3;
+    }
+  }
+
+  function getEditLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 3;
+      case 'standard':
+      case 'premium': return -1; // Unlimited
+      default: return 3;
+    }
+  }
 
   const httpServer = createServer(app);
   return httpServer;

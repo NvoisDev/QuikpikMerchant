@@ -15,7 +15,7 @@ import RetailerInterface from "@/pages/retailer-interface";
 import Checkout from "@/pages/checkout";
 import Broadcasts from "@/pages/broadcasts";
 import CustomerGroups from "@/pages/customer-groups";
-import Subscription from "@/pages/subscription";
+import SubscriptionSettings from "@/pages/subscription-settings";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Orders from "@/pages/orders";
@@ -70,7 +70,7 @@ function Router() {
               <Route path="/products" component={ProductManagement} />
               <Route path="/customer-groups" component={CustomerGroups} />
               <Route path="/orders" component={Orders} />
-              <Route path="/subscription" component={Subscription} />
+              <Route path="/subscription" component={SubscriptionSettings} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/business-performance" component={BusinessPerformance} />
               <Route path="/financials" component={Financials} />

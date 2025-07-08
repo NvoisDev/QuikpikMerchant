@@ -20,6 +20,8 @@ import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -99,6 +101,10 @@ export default function ProductManagement() {
   const [uploadedProducts, setUploadedProducts] = useState<any[]>([]);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<"product_limit" | "edit_limit" | "general">("general");
+  
+  const { canCreateProduct, canEditProduct, currentTier } = useSubscription();
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -400,6 +406,13 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: any) => {
+    // Check if user can edit this product based on edit count and subscription
+    if (!canEditProduct(product.editCount || 0)) {
+      setUpgradeReason("edit_limit");
+      setUpgradeModalOpen(true);
+      return;
+    }
+    
     setEditingProduct(product);
     form.reset({
       name: product.name,
@@ -1568,6 +1581,14 @@ export default function ProductManagement() {
           )}
         </div>
       </div>
+
+      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        reason={upgradeReason}
+        currentPlan={currentTier}
+      />
     </div>
   );
 }
