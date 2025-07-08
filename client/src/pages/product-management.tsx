@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 import ProductCard from "@/components/product-card";
 import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
+import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
+import { helpContent } from "@/data/whatsapp-help-content";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -671,7 +673,15 @@ export default function ProductManagement() {
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+                <ContextualHelpBubble
+                  topic="product management"
+                  title="Managing Your Products"
+                  steps={helpContent.productManagement.steps}
+                  position="right"
+                />
+              </div>
               <p className="text-gray-600 mt-1">Manage your inventory, pricing, and product details.</p>
             </div>
             <div className="flex items-center space-x-4">

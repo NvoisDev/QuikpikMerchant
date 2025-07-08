@@ -1,3 +1,117 @@
+// Platform Help Content
+export const helpContent = {
+  // Product Management Help
+  productManagement: {
+    title: "Managing Your Products",
+    steps: [
+      {
+        title: "Product Information",
+        content: "Add clear product names, descriptions, and categories. Good product information helps customers find and understand what you're selling.",
+        tip: "Use specific, searchable product names like 'Premium Basmati Rice 5kg' instead of just 'Rice'."
+      },
+      {
+        title: "Pricing Strategy",
+        content: "Set competitive prices and minimum order quantities (MOQ). MOQ helps ensure profitable sales while giving customers bulk pricing benefits.",
+        tip: "Research competitor prices and set your MOQ based on your wholesale margins and shipping costs."
+      },
+      {
+        title: "Stock Management",
+        content: "Keep stock levels accurate to avoid overselling. The system will prevent orders when stock is insufficient.",
+        tip: "Update stock regularly and set up low-stock alerts to maintain customer satisfaction."
+      },
+      {
+        title: "Product Images",
+        content: "High-quality images increase sales significantly. Upload clear, well-lit photos that show product details and packaging.",
+        tip: "Images are automatically optimized for fast loading and WhatsApp sharing."
+      }
+    ]
+  },
+
+  customerGroups: {
+    title: "Managing Customer Groups",
+    steps: [
+      {
+        title: "Creating Groups",
+        content: "Organize customers into groups based on location, business type, or purchasing patterns. This enables targeted marketing campaigns.",
+        tip: "Start with simple groups like 'Local Retailers' and 'Online Customers' then refine as you grow."
+      },
+      {
+        title: "Adding Customers",
+        content: "Add customer details including name, phone number, email, and address. Complete information enables better service and communication.",
+        tip: "Always get permission before adding customers to marketing groups to comply with messaging regulations."
+      },
+      {
+        title: "Group Broadcasting",
+        content: "Send targeted product updates and promotions to specific customer groups. This increases relevance and response rates.",
+        tip: "Personalize messages for each group - restaurant owners have different needs than retail shops."
+      }
+    ]
+  },
+
+  campaigns: {
+    title: "Creating Effective Campaigns",
+    steps: [
+      {
+        title: "Campaign Types",
+        content: "Single product broadcasts highlight specific items, while multi-product campaigns showcase your range. Choose based on your marketing goal.",
+        tip: "Use single product campaigns for new arrivals or special offers, multi-product for general inventory updates."
+      },
+      {
+        title: "Message Content",
+        content: "Include product names, prices, stock levels, and clear calls-to-action. Professional messages increase customer trust and response rates.",
+        tip: "Always include your business contact information and easy ordering instructions."
+      },
+      {
+        title: "Timing and Frequency",
+        content: "Send campaigns during business hours when customers are most likely to read and respond. Avoid overwhelming customers with too many messages.",
+        tip: "1-2 campaigns per week is usually optimal - focus on quality over quantity."
+      }
+    ]
+  },
+
+  orders: {
+    title: "Managing Customer Orders",
+    steps: [
+      {
+        title: "Order Processing",
+        content: "Review new orders for accuracy, confirm stock availability, and update order status as you process them.",
+        tip: "Respond to orders quickly - customers expect acknowledgment within a few hours."
+      },
+      {
+        title: "Status Updates",
+        content: "Keep customers informed by updating order status from pending → confirmed → processing → shipped → delivered.",
+        tip: "Customers receive automatic notifications when you update order status - this reduces support calls."
+      },
+      {
+        title: "Payment Tracking",
+        content: "Monitor payment status and follow up on pending payments. The system handles payment processing through Stripe.",
+        tip: "Most payments are automatic, but you can manually mark orders as paid for cash/bank transfer payments."
+      }
+    ]
+  },
+
+  businessSettings: {
+    title: "Business Profile Setup",
+    steps: [
+      {
+        title: "Company Information",
+        content: "Complete your business name, description, and contact details. This information appears on invoices and customer communications.",
+        tip: "Use your official business name as it appears on your registration documents."
+      },
+      {
+        title: "Currency and Location",
+        content: "Set your default currency and business address. This ensures accurate pricing display and proper tax calculations.",
+        tip: "Choose the currency you primarily operate in - you can always adjust prices for specific markets."
+      },
+      {
+        title: "Logo and Branding",
+        content: "Upload your business logo or choose text-based branding options. Consistent branding builds customer recognition and trust.",
+        tip: "A simple, clear logo works best - it will be resized for different contexts automatically."
+      }
+    ]
+  }
+};
+
 // WhatsApp Integration Help Content
 export const whatsappHelpContent = {
   providerSelection: {

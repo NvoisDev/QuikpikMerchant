@@ -63,6 +63,8 @@ import {
   MoreHorizontal,
   RefreshCw
 } from "lucide-react";
+import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
+import { helpContent } from "@/data/whatsapp-help-content";
 
 interface Order {
   id: number;
@@ -748,9 +750,17 @@ export default function Orders() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">
-            {user?.role === 'retailer' ? 'My Orders' : 'Order Management'}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">
+              {user?.role === 'retailer' ? 'My Orders' : 'Order Management'}
+            </h1>
+            <ContextualHelpBubble
+              topic="order management"
+              title="Managing Customer Orders"
+              steps={helpContent.orders.steps}
+              position="right"
+            />
+          </div>
           <p className="text-muted-foreground">
             {user?.role === 'retailer' 
               ? 'Track your orders and delivery status'

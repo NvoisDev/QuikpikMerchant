@@ -38,6 +38,8 @@ import {
   XCircle,
   Clock
 } from "lucide-react";
+import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
+import { helpContent } from "@/data/whatsapp-help-content";
 import type { Product, CustomerGroup } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -326,6 +328,21 @@ export default function Campaigns() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
+            <ContextualHelpBubble
+              topic="campaigns"
+              title="Creating Effective Campaigns"
+              steps={helpContent.campaigns.steps}
+              position="right"
+            />
+          </div>
+          <p className="text-gray-600">Create and manage WhatsApp marketing campaigns</p>
+        </div>
+      </div>
       {/* Sandbox Notification Banner */}
       {user?.twilioPhoneNumber === '+14155238886' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">

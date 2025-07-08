@@ -24,6 +24,8 @@ import {
   Trash2,
   Upload
 } from "lucide-react";
+import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
+import { helpContent } from "@/data/whatsapp-help-content";
 
 const customerGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required"),
@@ -820,7 +822,15 @@ export default function CustomerGroups() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Customer Groups</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-gray-900">Customer Groups</h1>
+            <ContextualHelpBubble
+              topic="customer groups"
+              title="Managing Customer Groups"
+              steps={helpContent.customerGroups.steps}
+              position="right"
+            />
+          </div>
           <p className="text-gray-600">Manage your customer groups and WhatsApp connections</p>
         </div>
         
