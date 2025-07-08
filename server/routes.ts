@@ -11,6 +11,7 @@ import { generateTaglines } from "./ai-taglines";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
+import nodemailer from "nodemailer";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -224,6 +225,64 @@ function generateStockUpdateMessage(product: any, notificationType: string, whol
   
   message += `\n\n✨ Powered by Quikpik`;
   return message;
+}
+
+// Email transporter for team invitations
+const emailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'noreply@quikpik.co',
+    pass: process.env.EMAIL_PASSWORD || 'fallback'
+  }
+});
+
+// Send team invitation email
+async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
+  const inviteLink = `${process.env.NODE_ENV === 'production' ? 'https://' : 'http://'}${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}/team-invite/${teamMember.id}`;
+  
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">Team Invitation</h1>
+      </div>
+      
+      <div style="padding: 40px; background: #f8f9fa;">
+        <h2 style="color: #333; margin-bottom: 20px;">You've been invited to join ${wholesaler.businessName || wholesaler.firstName + "'s"} team!</h2>
+        
+        <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+          Hello ${teamMember.firstName},
+        </p>
+        
+        <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+          You've been invited to join <strong>${wholesaler.businessName || wholesaler.firstName + "'s business"}</strong> 
+          as a <strong>${teamMember.role}</strong> on the Quikpik platform.
+        </p>
+        
+        <div style="text-align: center; margin: 40px 0;">
+          <a href="${inviteLink}" style="background: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+            Accept Invitation
+          </a>
+        </div>
+        
+        <p style="color: #999; font-size: 14px; text-align: center;">
+          If you can't click the button, copy and paste this link: ${inviteLink}
+        </p>
+      </div>
+      
+      <div style="background: #333; padding: 20px; text-align: center;">
+        <p style="color: #999; margin: 0; font-size: 14px;">
+          Powered by Quikpik - The Complete Wholesale Platform
+        </p>
+      </div>
+    </div>
+  `;
+
+  await emailTransporter.sendMail({
+    from: '"Quikpik Team" <noreply@quikpik.co>',
+    to: teamMember.email,
+    subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.firstName + "'s"} team`,
+    html: emailHtml
+  });
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -5814,6 +5873,14 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         role: role || 'member',
         permissions: permissions || ['products', 'orders', 'customers'],
       });
+
+      // Send invitation email
+      try {
+        await sendTeamInvitationEmail(teamMember, req.user);
+      } catch (emailError) {
+        console.error("Error sending invitation email:", emailError);
+        // Don't fail the team member creation if email fails
+      }
 
       res.json(teamMember);
     } catch (error) {

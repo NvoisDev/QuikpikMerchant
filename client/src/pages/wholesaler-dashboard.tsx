@@ -8,6 +8,8 @@ import { formatNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { useTheme } from "@/hooks/useTheme";
+import ThemeSelector from "@/components/theme-selector";
 
 import StatsCard from "@/components/stats-card";
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
@@ -41,6 +43,7 @@ const generateSalesData = (stats: any) => {
 export default function WholesalerDashboard() {
   const { user } = useAuth();
   const { isActive } = useOnboarding();
+  const { currentTheme, themeConfig } = useTheme();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/analytics/stats"],
@@ -79,11 +82,19 @@ export default function WholesalerDashboard() {
     );
   }
 
+  const dashboardBgClass = currentTheme === 'gradient' 
+    ? themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50"
+    : currentTheme === 'dark'
+    ? "bg-gray-900"
+    : currentTheme === 'minimal'
+    ? "bg-gray-50"
+    : themeConfig.gradient || "bg-gradient-to-br from-slate-50 to-blue-50";
+
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen" data-onboarding="dashboard">
+    <div className={`${dashboardBgClass} min-h-screen`} data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
-        <div className="backdrop-blur-sm bg-white/80 border-b border-gray-200/50 px-8 py-8">
+        <div className={`backdrop-blur-sm ${currentTheme === 'dark' ? 'bg-gray-800/80 border-gray-700/50' : 'bg-white/80 border-gray-200/50'} border-b px-8 py-8`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2" data-onboarding="dashboard-header">
@@ -96,8 +107,9 @@ export default function WholesalerDashboard() {
               </div>
 
               
-              {/* Stock Alerts - Top Right */}
-              <div className="relative">
+              {/* Theme Selector and Stock Alerts */}
+              <div className="flex items-center gap-3">
+                <ThemeSelector />
                 <Link href="/stock-alerts">
                   <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
                     <Bell className="h-5 w-5" />
