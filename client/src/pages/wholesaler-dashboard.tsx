@@ -10,6 +10,8 @@ import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useTheme } from "@/hooks/useTheme";
 import ThemeSelector from "@/components/theme-selector";
+import InteractiveActionCard from "@/components/interactive-action-card";
+import { useState, useEffect } from 'react';
 
 import StatsCard from "@/components/stats-card";
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
@@ -44,6 +46,40 @@ export default function WholesalerDashboard() {
   const { user } = useAuth();
   const { isActive } = useOnboarding();
   const { currentTheme, themeConfig } = useTheme();
+  const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+
+  // Keyboard shortcuts functionality
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case '1':
+            e.preventDefault();
+            window.location.href = '/products';
+            break;
+          case '2':
+            e.preventDefault();
+            window.location.href = '/campaigns';
+            break;
+          case '3':
+            e.preventDefault();
+            window.location.href = '/orders';
+            break;
+          case '4':
+            e.preventDefault();
+            window.location.href = '/customer-groups';
+            break;
+          case 'k':
+            e.preventDefault();
+            setShowFloatingMenu(!showFloatingMenu);
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFloatingMenu]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/analytics/stats"],
@@ -230,67 +266,51 @@ export default function WholesalerDashboard() {
             </Card>
           </div>
           
-          {/* Quick Actions Grid */}
+          {/* Interactive Quick Actions Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link href="/products">
-              <Card className="group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-blue-200 group-hover:to-blue-300 transition-all">
-                    <Package className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">Manage Products</h3>
-                  <p className="text-sm text-gray-600">Add, edit and organize your inventory</p>
-                  <div className="mt-3 text-lg font-bold text-blue-600">
-                    {formatNumber(stats?.activeProducts || 0)} Active
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/campaigns">
-              <Card className="group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-emerald-200 group-hover:to-emerald-300 transition-all">
-                    <MessageSquare className="h-8 w-8 text-emerald-600" />
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">Send Campaigns</h3>
-                  <p className="text-sm text-gray-600">Broadcast to your customers</p>
-                  <div className="mt-3 text-lg font-bold text-emerald-600">
-                    {formatNumber(broadcastStats?.recipientsReached || 0)} Reached
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/orders">
-              <Card className="group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-purple-200 group-hover:to-purple-300 transition-all">
-                    <ShoppingCart className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">View Orders</h3>
-                  <p className="text-sm text-gray-600">Track customer purchases</p>
-                  <div className="mt-3 text-lg font-bold text-purple-600">
-                    {formatNumber(stats?.ordersCount || 0)} Orders
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/customer-groups">
-              <Card className="group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:from-orange-200 group-hover:to-orange-300 transition-all">
-                    <Users className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">Customer Groups</h3>
-                  <p className="text-sm text-gray-600">Organize your customers</p>
-                  <div className="mt-3 text-lg font-bold text-orange-600">
-                    Manage Groups
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <InteractiveActionCard
+              href="/products"
+              icon={Package}
+              title="Manage Products"
+              description="Add, edit and organize your inventory"
+              metric={`${formatNumber(stats?.activeProducts || 0)} Active`}
+              colorClass="from-blue-500 to-blue-600"
+              gradientFrom="from-blue-50"
+              gradientTo="to-blue-100"
+            />
+            
+            <InteractiveActionCard
+              href="/campaigns"
+              icon={MessageSquare}
+              title="Send Campaigns"
+              description="Broadcast to your customers"
+              metric={`${formatNumber(broadcastStats?.recipientsReached || 0)} Reached`}
+              colorClass="from-emerald-500 to-emerald-600"
+              gradientFrom="from-emerald-50"
+              gradientTo="to-emerald-100"
+            />
+            
+            <InteractiveActionCard
+              href="/orders"
+              icon={ShoppingCart}
+              title="View Orders"
+              description="Track customer purchases"
+              metric={`${formatNumber(stats?.ordersCount || 0)} Orders`}
+              colorClass="from-purple-500 to-purple-600"
+              gradientFrom="from-purple-50"
+              gradientTo="to-purple-100"
+            />
+            
+            <InteractiveActionCard
+              href="/customer-groups"
+              icon={Users}
+              title="Customer Groups"
+              description="Organize your customers"
+              metric="Manage Groups"
+              colorClass="from-orange-500 to-orange-600"
+              gradientFrom="from-orange-50"
+              gradientTo="to-orange-100"
+            />
           </div>
 
           {/* Charts Section */}
@@ -514,6 +534,78 @@ export default function WholesalerDashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Floating Quick Action Menu */}
+        {showFloatingMenu && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+               onClick={() => setShowFloatingMenu(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform animate-in zoom-in-50 duration-300"
+                 onClick={(e) => e.stopPropagation()}>
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Quick Actions</h3>
+                <p className="text-sm text-gray-600">Use keyboard shortcuts for faster navigation</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Link href="/products" onClick={() => setShowFloatingMenu(false)}>
+                  <div className="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all duration-200 group hover:scale-105">
+                    <Package className="h-5 w-5 text-blue-600 mr-3 group-hover:scale-110 transition-transform" />
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Products</p>
+                      <p className="text-xs text-gray-500">Ctrl+1</p>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/campaigns" onClick={() => setShowFloatingMenu(false)}>
+                  <div className="flex items-center p-3 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all duration-200 group hover:scale-105">
+                    <MessageSquare className="h-5 w-5 text-emerald-600 mr-3 group-hover:scale-110 transition-transform" />
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Campaigns</p>
+                      <p className="text-xs text-gray-500">Ctrl+2</p>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/orders" onClick={() => setShowFloatingMenu(false)}>
+                  <div className="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-all duration-200 group hover:scale-105">
+                    <ShoppingCart className="h-5 w-5 text-purple-600 mr-3 group-hover:scale-110 transition-transform" />
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Orders</p>
+                      <p className="text-xs text-gray-500">Ctrl+3</p>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="/customer-groups" onClick={() => setShowFloatingMenu(false)}>
+                  <div className="flex items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-all duration-200 group hover:scale-105">
+                    <Users className="h-5 w-5 text-orange-600 mr-3 group-hover:scale-110 transition-transform" />
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Customers</p>
+                      <p className="text-xs text-gray-500">Ctrl+4</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">Ctrl+K</kbd> to toggle this menu
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Action Button */}
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button 
+            onClick={() => setShowFloatingMenu(!showFloatingMenu)}
+            className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95"
+          >
+            <Plus className={`h-6 w-6 text-white transition-transform duration-300 ${showFloatingMenu ? 'rotate-45' : ''}`} />
+          </Button>
         </div>
       </div>
       {isActive && <OnboardingWelcome />}
