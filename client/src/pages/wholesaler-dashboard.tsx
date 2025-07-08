@@ -114,11 +114,7 @@ export default function WholesalerDashboard() {
         {/* Dashboard Content */}
         <div className="p-8">
           {/* Onboarding Welcome for New Users */}
-          {user && !user.onboardingCompleted && !user.onboardingSkipped && (
-            <div className="mb-8">
-              <OnboardingWelcome />
-            </div>
-          )}
+          {/* Onboarding welcome removed - tour available via help section */}
           
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
