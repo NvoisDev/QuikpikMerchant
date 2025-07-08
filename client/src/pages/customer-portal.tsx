@@ -375,21 +375,29 @@ export default function CustomerPortal() {
   });
 
   // Fetch all products for the wholesaler with auto-refresh
-  const { data: products = [], isLoading: productsLoading, refetch: refetchProducts } = useQuery<Product[]>({
+  const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['/api/marketplace/products', { wholesalerId }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (wholesalerId) params.append('wholesalerId', wholesalerId);
+      
       const response = await fetch(`/api/marketplace/products?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch products");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products: ${response.status}`);
+      }
+      
       return response.json();
     },
     enabled: !!wholesalerId,
-    refetchInterval: enableAutoRefresh ? 30000 : false, // Refresh every 30 seconds when enabled
-    refetchIntervalInBackground: true
+    refetchInterval: enableAutoRefresh ? 30000 : false,
+    refetchIntervalInBackground: true,
+    retry: 1, // Reduced retries for faster failure
+    retryDelay: 500, // Faster retry
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000 // Keep in cache for 10 minutes
   });
 
-  // Memoized calculations
+  // Memoized calculations - removed excessive logging for performance
   const filteredProducts = useMemo(() => {
     return products.filter((product: Product) => {
       const matchesSearch = !searchTerm || 

@@ -933,7 +933,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(products)
       .innerJoin(users, eq(products.wholesalerId, users.id))
-      .where(and(...whereConditions));
+      .where(and(...whereConditions))
+      .limit(100); // Add limit for performance
 
     // Transform the results
     const results = productsList.map(item => ({
