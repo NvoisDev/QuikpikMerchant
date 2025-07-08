@@ -939,6 +939,27 @@ export default function CustomerPortal() {
                       <div className="space-y-3">
                         <div>
                           <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                          <div className="flex items-center gap-2 mt-1 mb-2">
+                            {product.category && (
+                              <span className="text-sm text-gray-500">{product.category}</span>
+                            )}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              product.sellingFormat === 'pallets' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : product.sellingFormat === 'both'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
+                               product.sellingFormat === 'both' ? 'Units & Pallets' : 
+                               'Units Only'}
+                            </span>
+                            {product.negotiationEnabled && (
+                              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                💬 Negotiable
+                              </span>
+                            )}
+                          </div>
                           {product.description && (
                             <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
                           )}
@@ -946,7 +967,11 @@ export default function CustomerPortal() {
                         
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Price:</span>
+                            <span className="text-gray-600">
+                              {product.sellingFormat === 'pallets' ? 'Price per pallet:' : 
+                               product.sellingFormat === 'both' ? 'Price per unit:' : 
+                               'Price per unit:'}
+                            </span>
                             <div className="font-semibold">
                               {product.promoActive && product.promoPrice ? (
                                 <div className="flex items-center gap-1">
@@ -966,12 +991,28 @@ export default function CustomerPortal() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Min order:</span>
-                            <span>{formatNumber(product.moq)} units</span>
+                            <span>{formatNumber(product.moq)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Stock:</span>
-                            <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} units</span>
+                            <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
                           </div>
+                          {product.sellingFormat === 'both' && (
+                            <div className="border-t pt-2 mt-2 space-y-1">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Pallet price:</span>
+                                <span className="font-semibold">{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.palletPrice || '0').toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Pallet MOQ:</span>
+                                <span>{formatNumber(product.palletMoq || 1)} pallets</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Pallet stock:</span>
+                                <span>{formatNumber(product.palletStock || 0)} pallets</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="text-xs text-gray-500 flex items-center">
@@ -1049,11 +1090,29 @@ export default function CustomerPortal() {
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
-                              {product.category && (
-                                <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md mt-1">
-                                  {product.category}
+                              <div className="flex items-center gap-2 mt-1">
+                                {product.category && (
+                                  <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
+                                    {product.category}
+                                  </span>
+                                )}
+                                <span className={`inline-block px-2 py-1 rounded-md text-xs font-medium ${
+                                  product.sellingFormat === 'pallets' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : product.sellingFormat === 'both'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
+                                   product.sellingFormat === 'both' ? 'Units & Pallets' : 
+                                   'Units Only'}
                                 </span>
-                              )}
+                                {product.negotiationEnabled && (
+                                  <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    💬 Negotiable
+                                  </span>
+                                )}
+                              </div>
                               {product.description && (
                                 <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
                               )}

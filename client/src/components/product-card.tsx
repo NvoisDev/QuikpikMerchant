@@ -262,9 +262,22 @@ export default function ProductCard({
             <h3 className="font-semibold text-gray-900 text-lg line-clamp-1">
               {product.name}
             </h3>
-            {product.category && (
-              <p className="text-sm text-gray-500 mt-1">{product.category}</p>
-            )}
+            <div className="flex items-center gap-2 mt-1">
+              {product.category && (
+                <p className="text-sm text-gray-500">{product.category}</p>
+              )}
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                product.sellingFormat === 'pallets' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : product.sellingFormat === 'both'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+              }`}>
+                {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
+                 product.sellingFormat === 'both' ? 'Units & Pallets' : 
+                 'Units Only'}
+              </span>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -311,7 +324,11 @@ export default function ProductCard({
         {/* Product Details */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Price per unit:</span>
+            <span className="text-sm text-gray-600">
+              {product.sellingFormat === 'pallets' ? 'Price per pallet:' : 
+               product.sellingFormat === 'both' ? 'Price per unit:' : 
+               'Price per unit:'}
+            </span>
             <span className="font-semibold text-gray-900">
               {product.priceVisible ? (() => {
                 // Force GBP currency display
@@ -329,14 +346,34 @@ export default function ProductCard({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">MOQ:</span>
-            <span className="text-sm text-gray-900">{formatNumber(product.moq)} units</span>
+            <span className="text-sm text-gray-900">
+              {formatNumber(product.moq)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Stock:</span>
             <span className={`text-sm font-medium ${stockStatus.color}`}>
-              {formatNumber(product.stock)} units
+              {formatNumber(product.stock)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
             </span>
           </div>
+          {product.sellingFormat === 'both' && (
+            <>
+              <div className="flex justify-between items-center border-t pt-2 mt-2">
+                <span className="text-sm text-gray-600">Pallet price:</span>
+                <span className="font-semibold text-gray-900">
+                  {product.priceVisible ? `£${parseFloat(product.palletPrice || '0').toFixed(2)}` : "Hidden"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Pallet MOQ:</span>
+                <span className="text-sm text-gray-900">{formatNumber(product.palletMoq || 1)} pallets</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Pallet stock:</span>
+                <span className="text-sm text-gray-900">{formatNumber(product.palletStock || 0)} pallets</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Features */}
