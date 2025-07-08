@@ -12,62 +12,111 @@ import {
   Package, 
   Crown, 
   Zap,
-  AlertCircle
+  AlertCircle,
+  Users,
+  MessageSquare,
+  TrendingUp,
+  Shield,
+  Star,
+  Infinity
 } from "lucide-react";
 
 const plans = [
   {
     name: "Free",
-    price: "$0",
+    price: "£0",
     interval: "forever",
     description: "Perfect for getting started",
     features: [
       "Up to 3 products",
-      "Basic WhatsApp broadcasts",
-      "Order management",
-      "Basic analytics",
+      "3 edits per product",
+      "2 customer groups (10 customers each)",
+      "5 WhatsApp broadcasts per month",
+      "Basic order management",
+      "Basic analytics dashboard",
       "Email support"
     ],
+    detailedFeatures: {
+      products: "3 products maximum",
+      edits: "3 edits per product",
+      customers: "2 customer groups with 10 customers each",
+      broadcasts: "5 WhatsApp broadcasts per month",
+      analytics: "Basic sales and order analytics",
+      support: "Email support during business hours"
+    },
     productLimit: 3,
+    editLimit: 3,
+    customerGroupLimit: 2,
+    broadcastLimit: 5,
     tier: "free",
     popular: false,
-    buttonText: "Current Plan"
+    buttonText: "Current Plan",
+    color: "gray"
   },
   {
     name: "Standard",
-    price: "$10.99",
+    price: "£10.99",
     interval: "per month",
     description: "Great for growing businesses",
     features: [
       "Up to 10 products",
-      "Advanced WhatsApp broadcasts",
-      "Customer groups",
-      "Priority order processing",
-      "Advanced analytics",
-      "Phone support"
+      "Unlimited product edits",
+      "5 customer groups (50 customers each)",
+      "25 WhatsApp broadcasts per month",
+      "Advanced order processing",
+      "Enhanced analytics & reports",
+      "Priority email & phone support"
     ],
+    detailedFeatures: {
+      products: "10 products maximum",
+      edits: "Unlimited product edits",
+      customers: "5 customer groups with 50 customers each",
+      broadcasts: "25 WhatsApp broadcasts per month",
+      analytics: "Advanced analytics with detailed reports",
+      support: "Priority email and phone support"
+    },
     productLimit: 10,
+    editLimit: -1,
+    customerGroupLimit: 5,
+    broadcastLimit: 25,
     tier: "standard",
     popular: true,
-    buttonText: "Upgrade to Standard"
+    buttonText: "Upgrade to Standard",
+    color: "blue"
   },
   {
     name: "Premium",
-    price: "$19.99",
+    price: "£19.99",
     interval: "per month",
-    description: "For unlimited growth",
+    description: "For unlimited growth and B2B marketplace access",
     features: [
       "Unlimited products",
-      "Custom broadcast templates",
-      "Advanced customer segmentation",
-      "Real-time inventory alerts",
+      "Unlimited product edits",
+      "Unlimited customer groups",
+      "Unlimited WhatsApp broadcasts",
+      "B2B Marketplace access",
+      "Real-time stock alerts",
       "Premium analytics dashboard",
+      "Team management (up to 5 members)",
       "Dedicated account manager"
     ],
+    detailedFeatures: {
+      products: "Unlimited products",
+      edits: "Unlimited product edits",
+      customers: "Unlimited customer groups and customers",
+      broadcasts: "Unlimited WhatsApp broadcasts",
+      marketplace: "Full B2B marketplace access",
+      analytics: "Premium analytics with predictive insights",
+      support: "Dedicated account manager with 24/7 support"
+    },
     productLimit: -1,
+    editLimit: -1,
+    customerGroupLimit: -1,
+    broadcastLimit: -1,
     tier: "premium",
     popular: false,
-    buttonText: "Upgrade to Premium"
+    buttonText: "Upgrade to Premium",
+    color: "purple"
   }
 ];
 
@@ -202,65 +251,131 @@ export default function Subscription() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {plans.map((plan) => (
-                <Card 
-                  key={plan.tier} 
-                  className={`relative ${plan.popular ? 'border-blue-500 border-2' : ''}`}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <Badge className="bg-blue-500 text-white">Most Popular</Badge>
-                    </div>
-                  )}
+              {plans.map((plan) => {
+                const isPlanCurrent = isCurrentPlan(plan.tier);
+                const canUpgradePlan = canUpgrade(plan.tier);
+                
+                const getColorClasses = (color: string, isPopular: boolean, isCurrent: boolean) => {
+                  if (isCurrent) return 'bg-green-50 border-green-500 border-2';
+                  if (isPopular) return 'border-2 border-blue-500 shadow-lg scale-105';
                   
-                  <CardHeader className="text-center">
-                    <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      <span className="text-gray-600 ml-2">{plan.interval}</span>
-                    </div>
-                    <p className="text-gray-600 mt-2">{plan.description}</p>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-center">
-                          <Check className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  switch(color) {
+                    case 'blue': return 'border border-blue-200 hover:border-blue-400 hover:shadow-lg';
+                    case 'purple': return 'border border-purple-200 hover:border-purple-400 hover:shadow-lg';
+                    default: return 'border border-gray-200 hover:border-gray-300 hover:shadow-lg';
+                  }
+                };
+                
+                const getIconComponent = () => {
+                  switch(plan.name) {
+                    case "Free": return <Package className="h-8 w-8 text-gray-500" />;
+                    case "Standard": return <Zap className="h-8 w-8 text-blue-500" />;
+                    case "Premium": return <Crown className="h-8 w-8 text-purple-500" />;
+                    default: return <Package className="h-8 w-8 text-gray-500" />;
+                  }
+                };
+                
+                return (
+                  <Card 
+                    key={plan.tier} 
+                    className={`relative transition-all duration-300 ${getColorClasses(plan.color, plan.popular, isPlanCurrent)} bg-white`}
+                  >
+                    {plan.popular && (
+                      <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-1 shadow-lg">
+                        <Star className="w-3 h-3 mr-1" />
+                        Most Popular
+                      </Badge>
+                    )}
+                    {isPlanCurrent && (
+                      <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 shadow-lg">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Current Plan
+                      </Badge>
+                    )}
                     
-                    <Button
-                      className="w-full"
-                      variant={isCurrentPlan(plan.tier) ? "outline" : "default"}
-                      disabled={isCurrentPlan(plan.tier) || !canUpgrade(plan.tier) || isUpgrading}
-                      onClick={() => handleUpgrade(plan.tier)}
-                    >
-                      {isUpgrading && upgradeMutation.variables === plan.tier ? (
-                        <>
-                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          {isCurrentPlan(plan.tier) ? (
-                            <>
-                              <Check className="mr-2 h-4 w-4" />
-                              Current Plan
-                            </>
-                          ) : canUpgrade(plan.tier) ? (
-                            plan.buttonText
-                          ) : (
-                            'Downgrade Not Available'
+                    <CardHeader className="text-center pb-4">
+                      <div className="flex items-center justify-center mb-3">
+                        {getIconComponent()}
+                      </div>
+                      <CardTitle className="text-2xl font-bold text-gray-900">{plan.name}</CardTitle>
+                      <div className="text-4xl font-bold mt-3 text-gray-900">
+                        {plan.price}
+                        <span className="text-lg font-normal text-gray-500 ml-2">
+                          {plan.interval}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 mt-3 text-sm leading-relaxed">{plan.description}</p>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      {/* Key Features */}
+                      <div className="mb-6">
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Key Features:</h4>
+                        <ul className="space-y-2">
+                          {plan.features.slice(0, 6).map((feature, index) => (
+                            <li key={index} className="flex items-start">
+                              <Check className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                              <span className="text-sm text-gray-700">{feature}</span>
+                            </li>
+                          ))}
+                          {plan.features.length > 6 && (
+                            <li className="text-xs text-gray-500 italic ml-6">
+                              +{plan.features.length - 6} more features
+                            </li>
                           )}
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                        </ul>
+                      </div>
+
+                      {/* Limits Summary */}
+                      <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2 text-xs uppercase tracking-wide">Plan Limits:</h4>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center">
+                            <Package className="h-3 w-3 text-gray-400 mr-1" />
+                            <span>{plan.productLimit === -1 ? '∞' : plan.productLimit} products</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-3 w-3 text-gray-400 mr-1" />
+                            <span>{plan.customerGroupLimit === -1 ? '∞' : plan.customerGroupLimit} groups</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MessageSquare className="h-3 w-3 text-gray-400 mr-1" />
+                            <span>{plan.broadcastLimit === -1 ? '∞' : plan.broadcastLimit} broadcasts</span>
+                          </div>
+                          <div className="flex items-center">
+                            <TrendingUp className="h-3 w-3 text-gray-400 mr-1" />
+                            <span>{plan.editLimit === -1 ? '∞' : plan.editLimit} edits</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        className={`w-full transition-all duration-200 ${
+                          isPlanCurrent 
+                            ? 'bg-green-500 hover:bg-green-600 text-white' 
+                            : canUpgradePlan
+                            ? `${plan.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : plan.color === 'purple' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600 hover:bg-gray-700'} text-white`
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        disabled={isPlanCurrent || !canUpgradePlan || isUpgrading}
+                        onClick={() => canUpgradePlan && handleUpgrade(plan.tier)}
+                      >
+                        {isUpgrading && upgradeMutation.variables === plan.tier ? (
+                          <>
+                            <CreditCard className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            {isPlanCurrent ? "Current Plan" : canUpgradePlan ? plan.buttonText : 'Downgrade Not Available'}
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
 

@@ -72,11 +72,20 @@ export function SubscriptionUpgradeModal({
       features: [
         "Up to 3 products",
         "3 edits per product",
-        "Basic WhatsApp integration",
+        "2 customer groups (10 customers each)",
+        "5 WhatsApp broadcasts per month",
+        "Basic analytics dashboard",
         "Email support"
       ],
+      limits: {
+        products: 3,
+        edits: 3,
+        groups: 2,
+        broadcasts: 5
+      },
       popular: false,
-      disabled: true
+      disabled: true,
+      color: "gray"
     },
     {
       id: "standard",
@@ -87,13 +96,20 @@ export function SubscriptionUpgradeModal({
       features: [
         "Up to 10 products",
         "Unlimited product edits",
-        "Advanced WhatsApp features", 
-        "Customer group management",
-        "Basic analytics",
-        "Priority email support"
+        "5 customer groups (50 customers each)",
+        "25 WhatsApp broadcasts per month",
+        "Enhanced analytics & reports",
+        "Priority email & phone support"
       ],
+      limits: {
+        products: 10,
+        edits: "unlimited",
+        groups: 5,
+        broadcasts: 25
+      },
       popular: true,
-      disabled: false
+      disabled: false,
+      color: "blue"
     },
     {
       id: "premium",
@@ -104,14 +120,22 @@ export function SubscriptionUpgradeModal({
       features: [
         "Unlimited products",
         "Unlimited product edits",
-        "Advanced WhatsApp & automation",
-        "Advanced customer segmentation",
-        "Detailed analytics & reports",
-        "Priority support & phone calls",
-        "Custom branding options"
+        "Unlimited customer groups",
+        "Unlimited WhatsApp broadcasts",
+        "B2B Marketplace access",
+        "Premium analytics dashboard",
+        "Team management (up to 5 members)",
+        "Dedicated account manager"
       ],
+      limits: {
+        products: "unlimited",
+        edits: "unlimited",
+        groups: "unlimited",
+        broadcasts: "unlimited"
+      },
       popular: false,
-      disabled: false
+      disabled: false,
+      color: "purple"
     }
   ];
 

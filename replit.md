@@ -127,9 +127,9 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 ## Subscription System
 
 ### Plan Tiers & Pricing
-- **Free Plan (£0)**: 3 products, 3 edits per product, 2 customer groups, 5 broadcasts/month, 10 customers per group
-- **Standard Plan (£10.99/month)**: 10 products, unlimited edits, 5 customer groups, 25 broadcasts/month, 50 customers per group
-- **Premium Plan (£19.99/month)**: Unlimited everything + marketplace access
+- **Free Plan (£0)**: 3 products, 3 edits per product, 2 customer groups (10 customers each), 5 WhatsApp broadcasts/month, basic analytics, email support
+- **Standard Plan (£10.99/month)**: 10 products, unlimited edits, 5 customer groups (50 customers each), 25 WhatsApp broadcasts/month, enhanced analytics & reports, priority email & phone support
+- **Premium Plan (£19.99/month)**: Unlimited products, unlimited edits, unlimited customer groups, unlimited WhatsApp broadcasts, B2B marketplace access, premium analytics dashboard, team management (up to 5 members), dedicated account manager
 
 ### Feature Limitations
 - **Product Limits**: Enforced at creation with upgrade prompts when limits reached
@@ -146,6 +146,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 08, 2025. Enhanced Subscription System with Comprehensive Feature Lists and Interactive Dashboard:
+  - **Updated Subscription Tiers**: Enhanced Free, Standard, and Premium plans with detailed feature descriptions and accurate £ pricing
+  - **Comprehensive Feature Lists**: Added detailed features for each plan including specific limits for products, edits, customer groups, and broadcasts
+  - **Enhanced Plan Comparisons**: Added visual limits summary with icons showing exact numbers for products, groups, broadcasts, and edits
+  - **Professional Plan Cards**: Redesigned subscription cards with color-coding (gray/blue/purple), enhanced badges, and improved visual hierarchy
+  - **Interactive Dashboard Enhancements**: Completed implementation of Interactive Dashboard Quick Action Buttons with animations, keyboard shortcuts (Ctrl+1-4, Ctrl+K), and floating menu
+  - **Visual Feedback Systems**: Added hover effects, scaling animations, ripple effects, and professional styling throughout subscription and dashboard interfaces
+  - **Subscription Modal Updates**: Updated SubscriptionUpgradeModal component to match new feature lists and pricing structure
 - July 08, 2025. Critical payment and messaging fixes with customer email enhancements:
   - **Stripe Payment NaN Error Fix**: Resolved critical "Invalid integer: NaN" Stripe errors by implementing comprehensive totalAmount validation and recalculation logic
   - **WhatsApp Recipient Correction**: Fixed WhatsApp order notifications to send to wholesaler's business phone instead of customer's phone number
