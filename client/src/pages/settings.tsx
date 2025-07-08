@@ -1034,22 +1034,55 @@ function WhatsAppIntegrationSection() {
         <div className="flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-orange-600 mt-1" />
           <div>
-            <p className="text-sm text-orange-800 font-medium">Sandbox Mode Limitation</p>
+            <p className="text-sm text-orange-800 font-medium">Sandbox Mode Active</p>
             <p className="text-sm text-orange-700 mt-1">
-              Currently using Twilio sandbox mode - messages only reach your test number. For customer delivery, upgrade to production WhatsApp API and ensure customers opt-in by messaging your business number first.
+              You're using Twilio sandbox (+14155238886). Messages only reach numbers that have joined your sandbox by texting "join [your-code]" to +1 (415) 523-8886. For production broadcasts to all customers, apply for WhatsApp Business API approval through Twilio.
+            </p>
+            <p className="text-xs text-orange-600 mt-2 font-medium">
+              💡 Tip: Find your sandbox code in Twilio Console → Messaging → WhatsApp → Sandbox
             </p>
           </div>
         </div>
       </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-medium text-gray-800 mb-2">📚 Setup Guide</h4>
-        <div className="text-sm text-gray-600 space-y-2">
-          <p><strong>Step 1:</strong> Create a Meta for Developers account at <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">developers.facebook.com</a></p>
-          <p><strong>Step 2:</strong> Set up WhatsApp Business API in your Meta Business account</p>
-          <p><strong>Step 3:</strong> Get your verified business phone number and access token</p>
-          <p><strong>Step 4:</strong> Add the credentials above and verify the connection</p>
-          <p><strong>Step 5:</strong> Test the integration and start sending broadcasts!</p>
+        <h4 className="font-medium text-gray-800 mb-3">📚 Twilio WhatsApp Setup Guide</h4>
+        <div className="text-sm text-gray-600 space-y-3">
+          <div>
+            <p className="font-medium text-gray-800 mb-1">For Testing (Sandbox Mode):</p>
+            <div className="space-y-1 ml-3">
+              <p><strong>Step 1:</strong> Create a free Twilio account at <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">twilio.com</a></p>
+              <p><strong>Step 2:</strong> Go to Console → Messaging → WhatsApp → Sandbox</p>
+              <p><strong>Step 3:</strong> Find your sandbox code (e.g., "join happy-cat")</p>
+              <p><strong>Step 4:</strong> Get your Account SID and Auth Token from Console Dashboard</p>
+              <p><strong>Step 5:</strong> Use phone number: <code className="bg-gray-200 px-1 rounded">+14155238886</code></p>
+              <p><strong>Step 6:</strong> Add credentials above and test!</p>
+            </div>
+          </div>
+          
+          <div className="border-t pt-3">
+            <p className="font-medium text-gray-800 mb-1">For Production:</p>
+            <div className="space-y-1 ml-3">
+              <p><strong>Step 1:</strong> Apply for WhatsApp Business API approval through Twilio</p>
+              <p><strong>Step 2:</strong> Get your business verified and phone number approved</p>
+              <p><strong>Step 3:</strong> Use your approved business phone number instead of sandbox</p>
+              <p><strong>Step 4:</strong> Customers can message you directly without joining sandbox</p>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded p-2 mt-3">
+            <p className="text-xs text-blue-800"><strong>Important:</strong> In sandbox mode, only numbers that have texted "join [your-code]" to +1 (415) 523-8886 will receive messages. Test with your own number first!</p>
+          </div>
+          
+          <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+            <h5 className="font-medium text-green-800 mb-2">Quick Reference - Finding Your Credentials:</h5>
+            <div className="text-xs text-green-700 space-y-1">
+              <p><strong>Account SID:</strong> Twilio Console Dashboard → "Account SID" (starts with "AC")</p>
+              <p><strong>Auth Token:</strong> Twilio Console Dashboard → "Auth Token" (click "Show" to reveal)</p>
+              <p><strong>Sandbox Code:</strong> Console → Messaging → WhatsApp → Sandbox → "join [your-unique-code]"</p>
+              <p><strong>Phone Number:</strong> Always use +14155238886 for sandbox testing</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

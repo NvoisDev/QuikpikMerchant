@@ -131,6 +131,8 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **WhatsApp Configuration Improvements**: Enhanced error messages and troubleshooting guidance for Twilio sandbox setup requirements
   - **Analytics Authentication**: Fixed analytics endpoints to require authentication and use actual user data instead of test data
   - **Enhanced Error Handling**: Improved WhatsApp configuration feedback with clearer instructions for sandbox setup and testing
+  - **Comprehensive Setup Guide**: Updated WhatsApp integration guide with detailed Twilio setup instructions, sandbox vs production guidance, and credential reference section
+  - **Visual Setup Assistance**: Added quick reference guide for finding Twilio credentials (Account SID, Auth Token, sandbox code) in Twilio Console
 - July 02, 2025. Initial setup
 - July 07, 2025. Implemented comprehensive onboarding system with interactive tooltips and guided user experience:
   - **Database Schema Enhancement**: Added onboarding_completed, onboarding_step, and onboarding_skipped fields to users table
