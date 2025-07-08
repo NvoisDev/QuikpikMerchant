@@ -73,7 +73,8 @@ export function useOnboarding() {
 
   // Auto-start onboarding for first-time users
   useEffect(() => {
-    if (user && user.isFirstLogin && !user.onboardingCompleted && !user.onboardingSkipped) {
+    if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
+      // Show onboarding for users who haven't completed or skipped it
       setIsActive(true);
     }
   }, [user]);
