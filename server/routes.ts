@@ -2520,25 +2520,54 @@ Write a professional, sales-focused description that highlights the key benefits
   // Twilio WhatsApp configuration routes
   app.post('/api/whatsapp/configure', requireAuth, async (req: any, res) => {
     try {
-      const { accountSid, authToken, phoneNumber } = req.body;
+      const { provider } = req.body;
       const wholesalerId = req.user.id;
 
-      if (!accountSid || !authToken || !phoneNumber) {
-        return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
+      if (provider === 'twilio') {
+        const { accountSid, authToken, phoneNumber } = req.body;
+        if (!accountSid || !authToken || !phoneNumber) {
+          return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
+        }
+
+        // Save Twilio configuration to user settings
+        await storage.updateUserSettings(wholesalerId, {
+          whatsappProvider: 'twilio',
+          twilioAccountSid: accountSid,
+          twilioAuthToken: authToken,
+          twilioPhoneNumber: phoneNumber,
+          whatsappEnabled: true
+        });
+
+        res.json({
+          success: true,
+          message: "Twilio WhatsApp configuration saved successfully"
+        });
+
+      } else if (provider === 'direct') {
+        const { businessPhoneId, accessToken, appId, businessPhone, businessName } = req.body;
+        if (!businessPhoneId || !accessToken || !appId) {
+          return res.status(400).json({ message: "Business Phone ID, Access Token, and App ID are required for Direct WhatsApp API" });
+        }
+
+        // Save Direct WhatsApp configuration to user settings
+        await storage.updateUserSettings(wholesalerId, {
+          whatsappProvider: 'direct',
+          whatsappBusinessPhoneId: businessPhoneId,
+          whatsappAccessToken: accessToken,
+          whatsappAppId: appId,
+          whatsappBusinessPhone: businessPhone || '',
+          whatsappBusinessName: businessName || '',
+          whatsappEnabled: true
+        });
+
+        res.json({
+          success: true,
+          message: "Direct WhatsApp Business API configuration saved successfully"
+        });
+
+      } else {
+        return res.status(400).json({ message: "Provider must be 'twilio' or 'direct'" });
       }
-
-      // Save Twilio configuration to user settings
-      await storage.updateUserSettings(wholesalerId, {
-        twilioAccountSid: accountSid,
-        twilioAuthToken: authToken,
-        twilioPhoneNumber: phoneNumber,
-        whatsappEnabled: true
-      });
-
-      res.json({
-        success: true,
-        message: "Twilio WhatsApp configuration saved successfully"
-      });
     } catch (error: any) {
       console.error("Error saving Twilio configuration:", error);
       res.status(500).json({ message: "Failed to save Twilio configuration" });
@@ -2547,28 +2576,68 @@ Write a professional, sales-focused description that highlights the key benefits
 
   app.post('/api/whatsapp/verify', requireAuth, async (req: any, res) => {
     try {
-      const { accountSid, authToken, phoneNumber } = req.body;
+      const { provider } = req.body;
 
-      if (!accountSid || !authToken || !phoneNumber) {
-        return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
-      }
+      if (provider === 'twilio') {
+        const { accountSid, authToken, phoneNumber } = req.body;
+        if (!accountSid || !authToken || !phoneNumber) {
+          return res.status(400).json({ message: "Twilio Account SID, Auth Token, and phone number are required" });
+        }
 
-      // Test Twilio credentials by creating a client
-      try {
-        const twilioClient = twilio(accountSid, authToken);
-        // Test the connection by fetching account info
-        const account = await twilioClient.api.v2010.accounts(accountSid).fetch();
-        
-        res.json({
-          success: true,
-          message: "Twilio WhatsApp configuration verified successfully",
-          data: { accountSid: account.sid, status: account.status }
-        });
-      } catch (twilioError: any) {
-        res.status(400).json({
-          success: false,
-          message: `Twilio verification failed: ${twilioError.message}`
-        });
+        // Test Twilio credentials by creating a client
+        try {
+          const twilioClient = twilio(accountSid, authToken);
+          // Test the connection by fetching account info
+          const account = await twilioClient.api.v2010.accounts(accountSid).fetch();
+          
+          res.json({
+            success: true,
+            message: "Twilio WhatsApp configuration verified successfully",
+            data: { accountSid: account.sid, status: account.status }
+          });
+        } catch (twilioError: any) {
+          res.status(400).json({
+            success: false,
+            message: `Twilio verification failed: ${twilioError.message}`
+          });
+        }
+
+      } else if (provider === 'direct') {
+        const { businessPhoneId, accessToken, appId } = req.body;
+        if (!businessPhoneId || !accessToken || !appId) {
+          return res.status(400).json({ message: "Business Phone ID, Access Token, and App ID are required" });
+        }
+
+        // Test the Direct WhatsApp configuration
+        try {
+          const { DirectWhatsAppService } = await import('./direct-whatsapp');
+          const directService = new DirectWhatsAppService(accessToken, businessPhoneId, appId);
+          const verification = await directService.verifyConnection();
+          
+          if (verification.success) {
+            res.json({
+              success: true,
+              message: "Direct WhatsApp API verified successfully",
+              data: { 
+                businessName: verification.businessName, 
+                phoneNumber: verification.phoneNumber 
+              }
+            });
+          } else {
+            res.status(400).json({
+              success: false,
+              message: "Failed to verify Direct WhatsApp API configuration"
+            });
+          }
+        } catch (directError: any) {
+          res.status(400).json({
+            success: false,
+            message: `Direct WhatsApp API verification failed: ${directError.message}`
+          });
+        }
+
+      } else {
+        return res.status(400).json({ message: "Provider must be 'twilio' or 'direct'" });
       }
     } catch (error: any) {
       console.error("Error verifying Twilio configuration:", error);
@@ -2587,11 +2656,22 @@ Write a professional, sales-focused description that highlights the key benefits
 
       res.json({
         enabled: user.whatsappEnabled || false,
+        whatsappProvider: user.whatsappProvider || 'twilio',
+        // Twilio fields
         twilioAccountSid: user.twilioAccountSid || null,
         twilioAuthToken: user.twilioAuthToken ? "configured" : null,
         twilioPhoneNumber: user.twilioPhoneNumber || null,
-        serviceProvider: "Twilio WhatsApp",
-        configured: !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber)
+        // Direct WhatsApp fields
+        whatsappBusinessPhoneId: user.whatsappBusinessPhoneId || null,
+        whatsappAccessToken: user.whatsappAccessToken ? "configured" : null,
+        whatsappAppId: user.whatsappAppId || null,
+        whatsappBusinessPhone: user.whatsappBusinessPhone || null,
+        whatsappBusinessName: user.whatsappBusinessName || null,
+        // Legacy fields
+        serviceProvider: user.whatsappProvider === 'direct' ? "Direct WhatsApp Business API" : "Twilio WhatsApp",
+        configured: user.whatsappProvider === 'direct' 
+          ? !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
+          : !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber)
       });
     } catch (error: any) {
       console.error("Error fetching WhatsApp status:", error);

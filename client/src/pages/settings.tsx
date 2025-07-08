@@ -746,10 +746,18 @@ function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [isEditingConfig, setIsEditingConfig] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct'>('twilio');
   const [twilioConfig, setTwilioConfig] = useState({
     accountSid: "",
     authToken: "", 
     phoneNumber: ""
+  });
+  const [directConfig, setDirectConfig] = useState({
+    businessPhoneId: "",
+    accessToken: "",
+    appId: "",
+    businessPhone: "",
+    businessName: ""
   });
 
   // Fetch WhatsApp status
@@ -760,17 +768,34 @@ function WhatsAppIntegrationSection() {
   // Populate form when editing existing configuration
   useEffect(() => {
     if (isEditingConfig && whatsappStatus) {
+      // Set the current provider from backend data
+      setSelectedProvider(whatsappStatus.whatsappProvider || 'twilio');
+      
+      // Populate Twilio config
       setTwilioConfig({
         accountSid: whatsappStatus.twilioAccountSid || "",
         authToken: whatsappStatus.twilioAuthToken || "",
         phoneNumber: whatsappStatus.twilioPhoneNumber || ""
+      });
+      
+      // Populate Direct WhatsApp config
+      setDirectConfig({
+        businessPhoneId: whatsappStatus.whatsappBusinessPhoneId || "",
+        accessToken: whatsappStatus.whatsappAccessToken || "",
+        appId: whatsappStatus.whatsappAppId || "",
+        businessPhone: whatsappStatus.whatsappBusinessPhone || "",
+        businessName: whatsappStatus.whatsappBusinessName || ""
       });
     }
   }, [isEditingConfig, whatsappStatus]);
 
   // Save WhatsApp configuration mutation
   const saveConfigMutation = useMutation({
-    mutationFn: async (config: typeof twilioConfig) => {
+    mutationFn: async () => {
+      const config = {
+        provider: selectedProvider,
+        ...(selectedProvider === 'twilio' ? twilioConfig : directConfig)
+      };
       return await apiRequest("POST", "/api/whatsapp/configure", config);
     },
     onSuccess: () => {
@@ -792,7 +817,11 @@ function WhatsAppIntegrationSection() {
 
   // Verify WhatsApp configuration mutation
   const verifyConfigMutation = useMutation({
-    mutationFn: async (config: typeof twilioConfig) => {
+    mutationFn: async () => {
+      const config = {
+        provider: selectedProvider,
+        ...(selectedProvider === 'twilio' ? twilioConfig : directConfig)
+      };
       return await apiRequest("POST", "/api/whatsapp/verify", config);
     },
     onSuccess: () => {

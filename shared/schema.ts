@@ -52,15 +52,20 @@ export const users = pgTable("users", {
   subscriptionEndsAt: timestamp("subscription_ends_at"),
   productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
   
-  // WhatsApp/Twilio fields
+  // WhatsApp Integration - Dual Provider Support
+  whatsappProvider: varchar("whatsapp_provider").default("twilio"), // 'twilio' | 'direct'
+  whatsappEnabled: boolean("whatsapp_enabled").default(false), // Whether WhatsApp is set up
+  
+  // Twilio WhatsApp fields
   twilioPhoneNumber: varchar("twilio_phone_number"), // WhatsApp-enabled phone number from Twilio
   twilioAccountSid: varchar("twilio_account_sid"), // Twilio subaccount SID for this wholesaler
   twilioAuthToken: varchar("twilio_auth_token"), // Twilio auth token for this wholesaler
-  whatsappEnabled: boolean("whatsapp_enabled").default(false), // Whether WhatsApp is set up
   
-  // WhatsApp Business API fields (direct integration)
-  whatsappBusinessPhone: varchar("whatsapp_business_phone"), // WhatsApp Business phone number
-  whatsappApiToken: varchar("whatsapp_api_token"), // WhatsApp Business API token
+  // Direct WhatsApp Business API fields
+  whatsappBusinessPhoneId: varchar("whatsapp_business_phone_id"), // WhatsApp Business Phone Number ID
+  whatsappAccessToken: text("whatsapp_access_token"), // WhatsApp Business API Access Token
+  whatsappAppId: varchar("whatsapp_app_id"), // WhatsApp Business App ID
+  whatsappBusinessPhone: varchar("whatsapp_business_phone"), // Display phone number
   whatsappBusinessName: varchar("whatsapp_business_name"), // Display name for WhatsApp messages
   
   // Settings

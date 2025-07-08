@@ -1,10 +1,19 @@
 import { storage } from "./storage";
 import twilio from "twilio";
+import { DirectWhatsAppService } from "./direct-whatsapp";
 
-// Twilio WhatsApp integration using individual user credentials
+// WhatsApp Service Factory - supports both Twilio and Direct API
 export class WhatsAppService {
   constructor() {
-    // No shared Twilio credentials needed - each user has their own Twilio account
+    // Factory class that creates appropriate service based on user's provider choice
+  }
+
+  private createTwilioService(twilioAccountSid: string, twilioAuthToken: string) {
+    return twilio(twilioAccountSid, twilioAuthToken);
+  }
+
+  private createDirectService(accessToken: string, businessPhoneId: string, appId: string) {
+    return new DirectWhatsAppService(accessToken, businessPhoneId, appId);
   }
 
   // Format numbers with commas for better readability
