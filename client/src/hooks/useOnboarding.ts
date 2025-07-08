@@ -19,101 +19,31 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "welcome",
     title: "Welcome to Quikpik Merchant!",
-    description: "Let's take a quick tour to help you get started with managing your wholesale business. This will only take a few minutes.",
+    description: "Let's get you started with adding your first product to your wholesale platform.",
     target: "dashboard-header",
     position: "center",
     animation: "glow",
     order: 1
   },
   {
-    id: "dashboard-overview",
-    title: "Your Business Dashboard",
-    description: "This is your main dashboard where you can see your business performance, recent orders, and quick stats at a glance.",
-    target: "dashboard-stats",
-    position: "bottom",
-    animation: "pulse",
-    action: "focus",
-    order: 2
-  },
-  {
     id: "add-product",
     title: "Add Your First Product",
     description: "Start by adding your wholesale products. Click this button to create your first product listing with pricing, stock levels, and descriptions.",
-    target: "add-product-button",
+    target: "add-product-button", 
     position: "bottom",
     animation: "bounce",
     action: "click",
     interactive: true,
-    order: 3
+    order: 2
   },
   {
-    id: "products-navigation",
-    title: "Manage Your Products",
-    description: "Access your product inventory here. You can edit, update stock levels, set pricing, and manage your entire product catalog.",
-    target: "nav-products",
-    position: "right",
-    animation: "highlight",
-    action: "click",
-    order: 4
-  },
-  {
-    id: "customer-groups",
-    title: "Customer Groups",
-    description: "Organize your retail customers into groups for targeted marketing. You can create groups by location, order size, or business type.",
-    target: "nav-customers",
-    position: "right",
-    animation: "pulse",
-    action: "navigate",
-    order: 5
-  },
-  {
-    id: "broadcast-system",
-    title: "Send Product Updates",
-    description: "Use our messaging system to send product updates, promotions, and stock alerts to your customer groups instantly.",
-    target: "nav-campaigns",
-    position: "right",
-    animation: "glow",
-    action: "navigate",
-    order: 6
-  },
-  {
-    id: "orders-management",
-    title: "Track Your Orders",
-    description: "Monitor incoming orders, process payments, and track order status from pending to delivered. All your sales activity in one place.",
-    target: "nav-orders",
-    position: "right",
-    animation: "bounce",
-    action: "navigate",
-    order: 7
-  },
-  {
-    id: "business-performance",
-    title: "Business Analytics",
-    description: "View detailed analytics about your sales performance, customer trends, and business growth metrics to make informed decisions.",
-    target: "nav-analytics",
-    position: "right",
-    animation: "pulse",
-    action: "navigate",
-    order: 8
-  },
-  {
-    id: "settings-setup",
-    title: "Business Settings",
-    description: "Configure your business profile, payment methods, messaging settings, and subscription plan in the settings section.",
-    target: "nav-settings",
-    position: "right",
-    animation: "highlight",
-    action: "navigate",
-    order: 9
-  },
-  {
-    id: "completion",
+    id: "complete",
     title: "You're All Set!",
-    description: "Congratulations! You've completed the tour. Start by adding your products and building your customer base. Need help? Check our help section anytime.",
+    description: "Great! You now know how to add products to your wholesale platform. You can explore other features like customer groups, campaigns, and analytics when you're ready.",
     target: "dashboard-header",
     position: "center",
     animation: "glow",
-    order: 10
+    order: 3
   }
 ];
 
@@ -153,29 +83,10 @@ export function useOnboarding() {
       const newIndex = currentStepIndex + 1;
       const currentStep = ONBOARDING_STEPS[currentStepIndex];
       
-      // Handle navigation actions for current step
-      if (currentStep.action === 'navigate') {
-        const targetElement = document.querySelector(`[data-onboarding="${currentStep.target}"]`) as HTMLAnchorElement;
-        if (targetElement && targetElement.click) {
-          // Smooth scroll to element before clicking
-          targetElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'center'
-          });
-          
-          // Wait for scroll, then click
-          setTimeout(() => {
-            targetElement.click();
-            // Wait for navigation to complete before showing next step
-            setTimeout(() => {
-              setCurrentStepIndex(newIndex);
-              setCompletedSteps(prev => [...prev, currentStep.id]);
-              updateOnboardingMutation.mutate({ step: newIndex });
-            }, 1200);
-          }, 300);
-          return;
-        }
+      // Handle click actions for current step
+      if (currentStep.action === 'click' && currentStep.interactive) {
+        // For interactive steps, just proceed to next step
+        // The user will manually interact with the highlighted element
       }
       
       // Standard step progression

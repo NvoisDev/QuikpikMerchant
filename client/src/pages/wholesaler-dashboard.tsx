@@ -59,7 +59,7 @@ export default function WholesalerDashboard() {
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">
-            <div>
+            <div data-onboarding="dashboard-header">
               <h1 className="text-2xl font-bold text-gray-900">
                 {user?.businessName || "Dashboard"}
               </h1>
