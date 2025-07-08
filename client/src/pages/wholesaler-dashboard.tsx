@@ -21,7 +21,8 @@ import {
   Plus,
   Bell,
   TrendingUp,
-  Users
+  Users,
+  Trophy
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -293,6 +294,86 @@ export default function WholesalerDashboard() {
               gradientFrom="from-orange-50"
               gradientTo="to-orange-100"
             />
+          </div>
+
+          {/* Top Selling Product Section */}
+          <div className="mb-8">
+            <Card className="bg-white border-gray-200 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
+                  Top Selling Product
+                </CardTitle>
+                <p className="text-sm text-gray-600">Your best performing product this period</p>
+              </CardHeader>
+              <CardContent>
+                {isTopProductsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : topProducts && topProducts.length > 0 ? (
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+                    {/* Product Image */}
+                    <div className="flex-shrink-0">
+                      <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                        {topProducts[0].images && topProducts[0].images.length > 0 ? (
+                          <img 
+                            src={topProducts[0].images[0]} 
+                            alt={topProducts[0].name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                            <Package className="w-12 h-12 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{topProducts[0].name}</h3>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{topProducts[0].description}</p>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <p className="text-xs text-green-600 font-medium">Total Sales</p>
+                          <p className="text-lg font-bold text-green-700">
+                            {user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$'}
+                            {topProducts[0].revenue?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-xs text-blue-600 font-medium">Units Sold</p>
+                          <p className="text-lg font-bold text-blue-700">
+                            {topProducts[0].totalQuantitySold?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded-lg">
+                          <p className="text-xs text-purple-600 font-medium">Orders</p>
+                          <p className="text-lg font-bold text-purple-700">
+                            {topProducts[0].orderCount?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                        <div className="bg-orange-50 p-3 rounded-lg">
+                          <p className="text-xs text-orange-600 font-medium">Current Price</p>
+                          <p className="text-lg font-bold text-orange-700">
+                            {user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$'}
+                            {topProducts[0].price?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>No sales data available yet</p>
+                    <p className="text-sm mt-1">Start selling to see your top performing products</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Charts Section */}
