@@ -14,6 +14,8 @@ import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Gl
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TaglineGenerator } from "@/components/TaglineGenerator";
+import { ProviderSelection } from "@/components/provider-selection";
+import { WhatsAppProviderSelection } from "@/components/WhatsAppProviderSelection";
 
 // Utility function to convert any image format to PNG
 const convertImageToPNG = (file: File): Promise<string> => {
@@ -746,6 +748,7 @@ function WhatsAppIntegrationSection() {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [isEditingConfig, setIsEditingConfig] = useState(false);
+  const [showProviderSelection, setShowProviderSelection] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct'>('twilio');
   const [twilioConfig, setTwilioConfig] = useState({
     accountSid: "",
@@ -767,27 +770,27 @@ function WhatsAppIntegrationSection() {
 
   // Populate form when editing existing configuration
   useEffect(() => {
-    if (isEditingConfig && whatsappStatus) {
+    if (whatsappStatus) {
       // Set the current provider from backend data
       setSelectedProvider(whatsappStatus.whatsappProvider || 'twilio');
       
       // Populate Twilio config
       setTwilioConfig({
         accountSid: whatsappStatus.twilioAccountSid || "",
-        authToken: whatsappStatus.twilioAuthToken || "",
+        authToken: whatsappStatus.twilioAuthToken === "configured" ? "" : whatsappStatus.twilioAuthToken || "",
         phoneNumber: whatsappStatus.twilioPhoneNumber || ""
       });
       
       // Populate Direct WhatsApp config
       setDirectConfig({
         businessPhoneId: whatsappStatus.whatsappBusinessPhoneId || "",
-        accessToken: whatsappStatus.whatsappAccessToken || "",
+        accessToken: whatsappStatus.whatsappAccessToken === "configured" ? "" : whatsappStatus.whatsappAccessToken || "",
         appId: whatsappStatus.whatsappAppId || "",
         businessPhone: whatsappStatus.whatsappBusinessPhone || "",
         businessName: whatsappStatus.whatsappBusinessName || ""
       });
     }
-  }, [isEditingConfig, whatsappStatus]);
+  }, [whatsappStatus]);
 
   // Save WhatsApp configuration mutation
   const saveConfigMutation = useMutation({
@@ -902,133 +905,94 @@ function WhatsAppIntegrationSection() {
     return <div>Loading WhatsApp integration status...</div>;
   }
 
-  const isConfigured = whatsappStatus?.twilioAccountSid && whatsappStatus?.twilioAuthToken && whatsappStatus?.twilioPhoneNumber;
+  const isConfigured = whatsappStatus?.whatsappProvider === 'direct' 
+    ? (whatsappStatus?.whatsappBusinessPhoneId && whatsappStatus?.whatsappAccessToken && whatsappStatus?.whatsappAppId)
+    : (whatsappStatus?.twilioAccountSid && whatsappStatus?.twilioAuthToken && whatsappStatus?.twilioPhoneNumber);
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Twilio WhatsApp Configuration</h3>
+        <h3 className="text-lg font-medium">WhatsApp Integration</h3>
         <p className="text-gray-600 text-sm">
-          Connect your Twilio WhatsApp integration to send product broadcasts and updates to your customer groups.
+          Choose your WhatsApp integration method and configure your credentials to send product broadcasts and updates to customer groups.
         </p>
 
-        {!isConfigured || isEditingConfig ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-blue-800 font-medium mb-3">
-              📱 Setup Twilio WhatsApp Integration
-            </h4>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Twilio Account SID
-                </label>
-                <Input
-                  placeholder="Your Twilio Account SID"
-                  value={twilioConfig.accountSid}
-                  onChange={(e) => setTwilioConfig({...twilioConfig, accountSid: e.target.value})}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Find this in your Twilio Console dashboard.
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Twilio Auth Token
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Your Twilio Auth Token"
-                  value={twilioConfig.authToken}
-                  onChange={(e) => setTwilioConfig({...twilioConfig, authToken: e.target.value})}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Find this in your Twilio Console dashboard under Auth Token.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  WhatsApp Phone Number
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g., +1234567890"
-                    value={twilioConfig.phoneNumber}
-                    onChange={(e) => setTwilioConfig({...twilioConfig, phoneNumber: e.target.value})}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTwilioConfig({...twilioConfig, phoneNumber: '+14155238886'})}
-                    className="whitespace-nowrap"
-                  >
-                    Use Sandbox
-                  </Button>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
-                  <p className="text-xs text-amber-800 font-medium mb-2">⚠️ Important Sandbox Requirements:</p>
-                  <div className="space-y-1 text-xs text-amber-700">
-                    <p><strong>Step 1:</strong> Use sandbox number: <strong>+14155238886</strong></p>
-                    <p><strong>Step 2:</strong> Each customer must first text "join [your-sandbox-code]" to +1 (415) 523-8886</p>
-                    <p><strong>Step 3:</strong> Find your sandbox code in Twilio Console → Messaging → WhatsApp → Sandbox</p>
-                    <p className="pt-2 font-medium text-amber-800">
-                      💡 Without Step 2, all broadcasts will show "Undelivered" status
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleVerifyTwilioConfig}
-                  disabled={verifyConfigMutation.isPending || !twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber}
-                  variant="outline"
-                >
-                  {verifyConfigMutation.isPending ? "Verifying..." : "Verify"}
-                </Button>
-                <Button
-                  onClick={handleSaveTwilioConfig}
-                  disabled={saveConfigMutation.isPending || !twilioConfig.accountSid || !twilioConfig.authToken || !twilioConfig.phoneNumber}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
-                </Button>
-                {isEditingConfig && (
-                  <Button
-                    onClick={() => setIsEditingConfig(false)}
-                    variant="outline"
-                    className="border-gray-300"
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
+        {!isConfigured && !showProviderSelection && !isEditingConfig ? (
+          <div className="text-center space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <MessageSquare className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-blue-900 mb-2">Set Up WhatsApp Integration</h4>
+              <p className="text-blue-700 mb-4">
+                Connect WhatsApp to send product broadcasts and updates to your customers.
+              </p>
+              <Button 
+                onClick={() => setShowProviderSelection(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Get Started with WhatsApp
+              </Button>
             </div>
           </div>
+        ) : showProviderSelection ? (
+          <WhatsAppProviderSelection
+            onSelectProvider={(provider) => {
+              setSelectedProvider(provider);
+              setShowProviderSelection(false);
+              setIsEditingConfig(true);
+            }}
+            onCancel={() => setShowProviderSelection(false)}
+          />
+        ) : (isEditingConfig || !isConfigured) ? (
+          <ProviderSelection
+            selectedProvider={selectedProvider}
+            onProviderChange={setSelectedProvider}
+            twilioConfig={twilioConfig}
+            directConfig={directConfig}
+            onTwilioConfigChange={setTwilioConfig}
+            onDirectConfigChange={setDirectConfig}
+            onSave={handleSaveWhatsAppConfig}
+            onVerify={handleVerifyWhatsAppConfig}
+            onCancel={() => {
+              setIsEditingConfig(false);
+              setShowProviderSelection(false);
+            }}
+            isSaving={saveConfigMutation.isPending}
+            isVerifying={verifyConfigMutation.isPending}
+          />
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-800 font-medium">
-                  ✅ Twilio WhatsApp is configured and ready to use!
+                  ✅ {whatsappStatus?.serviceProvider} is configured and ready to use!
                 </p>
                 <p className="text-green-700 text-sm mt-1">
-                  WhatsApp Phone: {whatsappStatus?.twilioPhoneNumber}
+                  {whatsappStatus?.whatsappProvider === 'direct' 
+                    ? `Business Phone: ${whatsappStatus?.whatsappBusinessPhone}` 
+                    : `WhatsApp Phone: ${whatsappStatus?.twilioPhoneNumber}`}
                 </p>
                 <p className="text-green-700 text-sm">
                   You can now create campaigns and send messages to your customer groups.
                 </p>
               </div>
-              <Button
-                onClick={() => setIsEditingConfig(true)}
-                variant="outline"
-                size="sm"
-                className="text-green-700 border-green-300 hover:bg-green-100"
-              >
-                Edit Configuration
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowProviderSelection(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                >
+                  Change Provider
+                </Button>
+                <Button
+                  onClick={() => setIsEditingConfig(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-green-700 border-green-300 hover:bg-green-100"
+                >
+                  Edit Configuration
+                </Button>
+              </div>
             </div>
           </div>
         )}
