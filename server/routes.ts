@@ -1547,11 +1547,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Get user's phone number
+      // Check if WhatsApp is configured
       const user = await storage.getUser(userId);
-      if (!user?.phoneNumber) {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if WhatsApp is properly configured based on provider
+      let whatsappPhone = null;
+      if (user.whatsappProvider === 'twilio') {
+        whatsappPhone = user.twilioPhoneNumber;
+        if (!user.twilioAccountSid || !user.twilioAuthToken || !user.twilioPhoneNumber) {
+          return res.status(400).json({ 
+            message: "Please configure your Twilio WhatsApp settings first. Go to Settings → WhatsApp Integration to set up your Twilio credentials." 
+          });
+        }
+      } else if (user.whatsappProvider === 'direct') {
+        whatsappPhone = user.whatsappBusinessPhone;
+        if (!user.whatsappBusinessPhoneId || !user.whatsappAccessToken || !user.whatsappBusinessPhone) {
+          return res.status(400).json({ 
+            message: "Please configure your WhatsApp Business API settings first. Go to Settings → WhatsApp Integration to set up your Business API credentials." 
+          });
+        }
+      } else {
         return res.status(400).json({ 
-          message: "Please add your phone number in settings to create WhatsApp groups" 
+          message: "Please configure WhatsApp integration first. Go to Settings → WhatsApp Integration to get started." 
         });
       }
 
@@ -1566,7 +1586,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         groupName: `${group.name} - WhatsApp`,
         whatsappGroupId,
-        message: "WhatsApp group created successfully. You can now add customers to this group.",
+        whatsappPhone: whatsappPhone,
+        provider: user.whatsappProvider,
+        message: `WhatsApp group created successfully using ${whatsappPhone}. You can now add customers to this group.`,
       });
     } catch (error) {
       console.error("Error creating WhatsApp group:", error);
