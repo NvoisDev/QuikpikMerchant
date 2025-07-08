@@ -500,6 +500,14 @@ export class DatabaseStorage implements IStorage {
     return groupsWithCounts;
   }
 
+  async getCustomerGroupsByUser(wholesalerId: string): Promise<CustomerGroup[]> {
+    return await db
+      .select()
+      .from(customerGroups)
+      .where(eq(customerGroups.wholesalerId, wholesalerId))
+      .orderBy(desc(customerGroups.createdAt));
+  }
+
   async createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup> {
     const [newGroup] = await db.insert(customerGroups).values(group).returning();
     return newGroup;

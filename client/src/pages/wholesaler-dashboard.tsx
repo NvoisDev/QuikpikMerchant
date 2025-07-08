@@ -51,7 +51,7 @@ export default function WholesalerDashboard() {
   });
 
   const { data: topProducts, isLoading: productsLoading } = useQuery({
-    queryKey: ["/api/products/top"],
+    queryKey: ["/api/analytics/top-products"],
   });
 
   const { data: broadcastStats, isLoading: broadcastStatsLoading } = useQuery({
