@@ -212,6 +212,49 @@ The system prevents duplicate phone numbers across groups.
         `
       },
       {
+        title: "WhatsApp Group Connection",
+        content: `
+### Understanding WhatsApp Group Connectivity
+
+When you see "WhatsApp group connected" on a customer group, it means the group is ready for WhatsApp marketing and communication.
+
+#### What WhatsApp Group Connection Enables
+- **Broadcast Campaigns**: Send product announcements to all group members at once
+- **Stock Updates**: Automatically notify customers when products are back in stock
+- **Promotional Messages**: Share special offers, discounts, or new arrivals
+- **Order Notifications**: Members receive updates about their orders via WhatsApp
+- **Two-way Communication**: Customers can reply directly to ask questions or place orders
+
+#### How WhatsApp Groups Work
+- **Business Integration**: Uses your configured WhatsApp Business integration (Twilio or Direct API)
+- **Professional Messaging**: Sends messages from your business WhatsApp number
+- **Customer Experience**: Customers receive messages on their personal WhatsApp
+- **Direct Portal Access**: Messages include links to your customer portal for easy ordering
+
+#### Creating WhatsApp Group Connection
+1. **Configure WhatsApp Integration** in Settings → WhatsApp Integration
+2. **Go to Customer Groups** and select a group
+3. **Click "Create WhatsApp Group"** button
+4. **System validates** your WhatsApp configuration
+5. **Group becomes connected** for messaging campaigns
+
+#### Benefits for Your Business
+- **Instant Communication**: Reach customers immediately on their most-used platform
+- **Higher Engagement**: WhatsApp messages have much higher open rates than email
+- **Direct Ordering**: Customers can order products directly through message links
+- **Professional Image**: Branded business messages build customer trust
+- **Automated Workflows**: System handles welcome messages for new customers
+
+#### Customer Benefits
+- **Real-time Updates**: Get instant notifications about products they're interested in
+- **Easy Ordering**: Direct links to place orders without navigating websites
+- **Personal Service**: Can reply directly to ask questions or request support
+- **Exclusive Access**: First to know about new products, discounts, and special offers
+
+The "connected" status confirms your customer group is ready for WhatsApp marketing, making it easier to engage with wholesale customers and drive sales through direct messaging.
+        `
+      },
+      {
         title: "Managing Group Members",
         content: `
 ### Group Member Management
@@ -936,28 +979,28 @@ export default function Help() {
   const renderContent = (content: string) => {
     return content.split('\n').map((line, index) => {
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-lg font-semibold text-gray-900 mt-6 mb-3">{line.replace('### ', '')}</h3>;
+        return <h3 key={index} className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">{line.replace('### ', '')}</h3>;
       } else if (line.startsWith('#### ')) {
-        return <h4 key={index} className="text-base font-medium text-gray-800 mt-4 mb-2">{line.replace('#### ', '')}</h4>;
+        return <h4 key={index} className="text-base font-medium text-gray-800 dark:text-gray-200 mt-4 mb-2">{line.replace('#### ', '')}</h4>;
       } else if (line.startsWith('- ')) {
-        return <li key={index} className="ml-4 text-gray-700">{line.replace('- ', '')}</li>;
+        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300">{line.replace('- ', '')}</li>;
       } else if (line.trim().match(/^\d+\./)) {
-        return <li key={index} className="ml-4 text-gray-700 list-decimal">{line.trim()}</li>;
+        return <li key={index} className="ml-4 text-gray-700 dark:text-gray-300 list-decimal">{line.trim()}</li>;
       } else if (line.includes('[developers.facebook.com]')) {
         return (
-          <p key={index} className="text-gray-700 mb-2">
+          <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">
             {line.replace('[developers.facebook.com](https://developers.facebook.com)', '')}
-            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+            <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline">
               developers.facebook.com
             </a>
           </p>
         );
       } else if (line.startsWith('**') && line.endsWith('**')) {
-        return <p key={index} className="font-semibold text-gray-800 mb-2">{line.replace(/\*\*/g, '')}</p>;
+        return <p key={index} className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{line.replace(/\*\*/g, '')}</p>;
       } else if (line.trim() === '') {
         return <br key={index} />;
       } else {
-        return <p key={index} className="text-gray-700 mb-2">{line}</p>;
+        return <p key={index} className="text-gray-700 dark:text-gray-300 mb-2">{line}</p>;
       }
     });
   };
@@ -967,8 +1010,8 @@ export default function Help() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Help Hub</h1>
-          <p className="text-gray-600 mt-1">Comprehensive guides and documentation for all Quikpik Merchant features</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Help Hub</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Comprehensive guides and documentation for all Quikpik Merchant features</p>
         </div>
       </div>
 
@@ -1006,8 +1049,8 @@ export default function Help() {
                       key={section.id}
                       className={`flex items-center p-3 cursor-pointer border-l-4 transition-colors ${
                         selectedSection === section.id
-                          ? "bg-blue-50 text-blue-700 border-blue-500"
-                          : "text-gray-600 hover:bg-gray-50 border-transparent"
+                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-500"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-transparent"
                       }`}
                       onClick={() => setSelectedSection(section.id)}
                     >
@@ -1015,7 +1058,7 @@ export default function Help() {
                       <div className="min-w-0">
                         <div className="font-medium text-sm">{section.title}</div>
                         {section.articles.length > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {section.articles.length} articles
                           </div>
                         )}
