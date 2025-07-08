@@ -165,7 +165,6 @@ export default function Sidebar() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Theme</span>
               <ThemeToggle />
             </div>
             <Link href="/settings">
