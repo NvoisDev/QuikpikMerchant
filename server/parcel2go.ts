@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-// Environment variables for Parcel2Go API
-const PARCEL2GO_BASE_URL = process.env.PARCEL2GO_BASE_URL || 'https://api.parcel2go.com';
-const PARCEL2GO_AUTH_URL = `${PARCEL2GO_BASE_URL}/auth/connect/token`;
+// Parcel2Go API Configuration
+const PARCEL2GO_BASE_URL = 'https://api.parcel2go.com';
+const PARCEL2GO_SANDBOX_URL = 'https://sandbox-api.parcel2go.com';
+const PARCEL2GO_AUTH_PATH = '/auth/connect/token';
 
 export interface Parcel2GoCredentials {
   clientId: string;
   clientSecret: string;
+  environment?: 'live' | 'sandbox';
 }
 
 export interface ParcelDimensions {
@@ -67,6 +69,52 @@ export interface DropShop {
   longitude: number;
 }
 
+export interface OrderItem {
+  Id: string;
+  CollectionDate: string; // ISO date string
+  Service: string; // Service ID from quotes
+  Upsells?: Array<{Type: string}>; // Optional extras like SMS, Insurance
+  Parcels: Array<{
+    Id?: string;
+    Height: number;
+    Length: number;
+    Width: number;
+    Weight: number;
+    EstimatedValue: number;
+    DeliveryAddress: Address;
+    ContentsSummary: string;
+  }>;
+  CollectionAddress: Address;
+}
+
+export interface OrderRequest {
+  Items: OrderItem[];
+  CustomerDetails: {
+    Email: string;
+    Forename: string;
+    Surname: string;
+  };
+}
+
+export interface OrderResponse {
+  OrderId: string;
+  Links: {
+    PayWithPrePay?: string;
+    payment?: string;
+    help?: string;
+  };
+  TotalPrice: number;
+  TotalVat: number;
+  TotalPriceExVat: number;
+  Hash: string;
+  OrderlineIdMap: Array<{
+    Hash: string;
+    OrderLineId: string;
+    ItemId: string;
+  }>;
+  TotalDiscount: number;
+}
+
 class Parcel2GoService {
   private accessToken: string | null = null;
   private tokenExpiry: Date | null = null;
@@ -83,6 +131,10 @@ class Parcel2GoService {
     this.tokenExpiry = null;
   }
 
+  private getBaseUrl(): string {
+    return this.credentials?.environment === 'live' ? PARCEL2GO_BASE_URL : PARCEL2GO_SANDBOX_URL;
+  }
+
   private async getAccessToken(): Promise<string> {
     if (!this.credentials) {
       throw new Error('Parcel2Go credentials not configured');
@@ -94,10 +146,11 @@ class Parcel2GoService {
     }
 
     try {
-      const response = await axios.post(PARCEL2GO_AUTH_URL, 
+      const authUrl = `${this.getBaseUrl()}${PARCEL2GO_AUTH_PATH}`;
+      const response = await axios.post(authUrl, 
         new URLSearchParams({
           grant_type: 'client_credentials',
-          scope: 'public-api',
+          scope: 'public-api payment my-profile',
           client_id: this.credentials.clientId,
           client_secret: this.credentials.clientSecret
         }),
@@ -123,7 +176,7 @@ class Parcel2GoService {
 
   private async makeRequest(endpoint: string, data?: any, method: 'GET' | 'POST' = 'GET') {
     const token = await this.getAccessToken();
-    const url = `${PARCEL2GO_BASE_URL}/api${endpoint}`;
+    const url = `${this.getBaseUrl()}/api${endpoint}`;
 
     try {
       const response = await axios({
@@ -232,6 +285,66 @@ class Parcel2GoService {
     }
   }
 
+  async createOrder(orderRequest: OrderRequest): Promise<OrderResponse> {
+    try {
+      const response = await this.makeRequest('/orders', orderRequest, 'POST');
+      return response;
+    } catch (error: any) {
+      console.error('Failed to create order:', error);
+      throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async verifyOrder(orderRequest: OrderRequest): Promise<any> {
+    try {
+      const response = await this.makeRequest('/orders/verify', orderRequest, 'POST');
+      return response;
+    } catch (error: any) {
+      console.error('Failed to verify order:', error);
+      throw new Error(`Failed to verify order: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async payWithPrePay(orderId: string, hash: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/orders/${orderId}/paywithprepay?hash=${hash}`, {}, 'POST');
+      return response;
+    } catch (error: any) {
+      console.error('Failed to pay with prepay:', error);
+      throw new Error(`Failed to pay with prepay: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async getOrderDetails(orderId: string, hash: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/orders/${orderId}?hash=${hash}`);
+      return response;
+    } catch (error: any) {
+      console.error('Failed to get order details:', error);
+      throw new Error(`Failed to get order details: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async getLabels(orderId: string, hash: string, format: 'pdf' | 'png' = 'pdf'): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/orders/${orderId}/labels?hash=${hash}&format=${format}`);
+      return response;
+    } catch (error: any) {
+      console.error('Failed to get labels:', error);
+      throw new Error(`Failed to get labels: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  async trackOrder(orderLineId: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/tracking/${orderLineId}`);
+      return response;
+    } catch (error: any) {
+      console.error('Failed to track order:', error);
+      throw new Error(`Failed to track order: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   // Helper method to validate addresses
   validateAddress(address: Address): string[] {
     const errors: string[] = [];
@@ -268,5 +381,6 @@ export const parcel2goService = new Parcel2GoService();
 // Export test credentials for development/testing
 export const createTestCredentials = (): Parcel2GoCredentials => ({
   clientId: process.env.PARCEL2GO_CLIENT_ID || '',
-  clientSecret: process.env.PARCEL2GO_CLIENT_SECRET || ''
+  clientSecret: process.env.PARCEL2GO_CLIENT_SECRET || '',
+  environment: (process.env.PARCEL2GO_ENVIRONMENT as 'live' | 'sandbox') || 'sandbox'
 });
