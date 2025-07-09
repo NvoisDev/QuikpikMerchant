@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
+import { subDays, startOfToday } from "date-fns";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -77,6 +79,11 @@ export default function Analytics() {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [activeTab, setActiveTab] = useState("overview");
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(startOfToday(), 29),
+    to: startOfToday(),
+    label: "Last 30 days"
+  });
 
   const { data: analyticsData, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/analytics/dashboard", timeRange],
@@ -142,17 +149,11 @@ export default function Analytics() {
           <p className="text-gray-600 mt-1">Track your business performance and insights</p>
         </div>
         <div className="flex items-center space-x-3">
-          <Select value={timeRange} onValueChange={(value: TimeRange) => setTimeRange(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+          <DateRangePicker 
+            value={dateRange} 
+            onChange={setDateRange}
+            className="min-w-48"
+          />
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export

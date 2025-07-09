@@ -17,6 +17,14 @@ export interface ParcelDimensions {
   width: number;  // in cm
   height: number; // in cm
   value: number;  // declared value in pounds
+  contentCategory?: string; // 'food', 'pharmaceuticals', 'electronics', 'textiles', 'general'
+  temperatureRequirement?: string; // 'frozen', 'chilled', 'ambient'
+  specialHandling?: {
+    fragile?: boolean;
+    hazardous?: boolean;
+    perishable?: boolean;
+  };
+  contentDescription?: string; // Description of contents for customs/handling
 }
 
 export interface Address {
@@ -39,6 +47,12 @@ export interface QuoteRequest {
   deliveryAddress: Address;
   parcels: ParcelDimensions[];
   collectionDate?: string; // ISO date string
+  serviceFilters?: {
+    temperatureControlled?: boolean; // Filter for temperature-controlled services
+    nextDay?: boolean; // Filter for next-day delivery
+    tracked?: boolean; // Filter for tracked services
+    insured?: boolean; // Filter for insured services
+  };
 }
 
 export interface DeliveryQuote {
@@ -54,6 +68,10 @@ export interface DeliveryQuote {
   trackingAvailable: boolean;
   insuranceIncluded: boolean;
   description: string;
+  temperatureControlled?: boolean; // Whether service supports temperature control
+  specialHandlingSupported?: string[]; // Array of supported special handling types
+  maxWeight?: number; // Maximum weight limit for this service in kg
+  restrictions?: string[]; // Any restrictions or requirements
 }
 
 export interface DropShop {
@@ -211,14 +229,18 @@ class Parcel2GoService {
         Weight: parcel.weight,
         Length: parcel.length,
         Width: parcel.width,
-        Height: parcel.height
+        Height: parcel.height,
+        ...(parcel.contentDescription && { ContentsDescription: parcel.contentDescription }),
+        ...(parcel.contentCategory && { ContentCategory: parcel.contentCategory })
       })),
-      ...(request.collectionDate && { CollectionDate: request.collectionDate })
+      ...(request.collectionDate && { CollectionDate: request.collectionDate }),
+      // Add service filters for special requirements
+      ...(request.serviceFilters && { ServiceFilters: request.serviceFilters })
     };
 
     const response = await this.makeRequest('/quotes', requestData, 'POST');
 
-    return response.Services?.map((service: any) => ({
+    let services = response.Services?.map((service: any) => ({
       serviceId: service.Id,
       serviceName: service.Name,
       carrierName: service.Courier || service.Name,
@@ -230,8 +252,83 @@ class Parcel2GoService {
       deliveryType: service.DeliveryType || 'Delivery',
       trackingAvailable: service.TrackingAvailable || false,
       insuranceIncluded: service.InsuranceIncluded || false,
-      description: service.Description || service.Name
+      description: service.Description || service.Name,
+      temperatureControlled: this.isTemperatureControlledService(service.Name, service.Description),
+      specialHandlingSupported: this.getSpecialHandlingSupport(service.Name, service.Description),
+      maxWeight: service.MaxWeight || 30, // Default 30kg if not specified
+      restrictions: this.getServiceRestrictions(service.Name, service.Description)
     })) || [];
+
+    // Filter services based on parcel requirements
+    services = this.filterServicesForRequirements(services, request.parcels);
+
+    return services;
+  }
+
+  // Helper method to determine if a service supports temperature control
+  private isTemperatureControlledService(serviceName: string, description: string): boolean {
+    const tempControlIndicators = [
+      'refrigerated', 'chilled', 'frozen', 'temperature controlled', 
+      'cold chain', 'ambient', 'fresh', 'perishable'
+    ];
+    const text = `${serviceName} ${description}`.toLowerCase();
+    return tempControlIndicators.some(indicator => text.includes(indicator));
+  }
+
+  // Helper method to determine special handling support
+  private getSpecialHandlingSupport(serviceName: string, description: string): string[] {
+    const supported = [];
+    const text = `${serviceName} ${description}`.toLowerCase();
+    
+    if (text.includes('fragile') || text.includes('delicate')) supported.push('fragile');
+    if (text.includes('hazardous') || text.includes('dangerous')) supported.push('hazardous');
+    if (text.includes('perishable') || text.includes('fresh')) supported.push('perishable');
+    if (text.includes('signature') || text.includes('secure')) supported.push('signature');
+    
+    return supported;
+  }
+
+  // Helper method to get service restrictions
+  private getServiceRestrictions(serviceName: string, description: string): string[] {
+    const restrictions = [];
+    const text = `${serviceName} ${description}`.toLowerCase();
+    
+    if (text.includes('mainland uk only')) restrictions.push('UK mainland only');
+    if (text.includes('no weekend delivery')) restrictions.push('No weekend delivery');
+    if (text.includes('business addresses only')) restrictions.push('Business addresses only');
+    
+    return restrictions;
+  }
+
+  // Helper method to filter services based on parcel requirements
+  private filterServicesForRequirements(services: DeliveryQuote[], parcels: ParcelDimensions[]): DeliveryQuote[] {
+    return services.filter(service => {
+      // Check if service meets temperature requirements
+      const hasTemperatureRequirements = parcels.some(p => 
+        p.temperatureRequirement && p.temperatureRequirement !== 'ambient'
+      );
+      
+      if (hasTemperatureRequirements && !service.temperatureControlled) {
+        return false; // Service doesn't support temperature control
+      }
+
+      // Check weight limits
+      const maxParcelWeight = Math.max(...parcels.map(p => p.weight));
+      if (service.maxWeight && maxParcelWeight > service.maxWeight) {
+        return false; // Parcel exceeds weight limit
+      }
+
+      // Check special handling requirements
+      const specialHandlingNeeded = parcels.some(p => 
+        p.specialHandling && (p.specialHandling.fragile || p.specialHandling.hazardous || p.specialHandling.perishable)
+      );
+      
+      if (specialHandlingNeeded && service.specialHandlingSupported?.length === 0) {
+        return false; // Service doesn't support required special handling
+      }
+
+      return true;
+    });
   }
 
   async getDropShops(postcode: string, countryCode: string = 'GBR'): Promise<DropShop[]> {

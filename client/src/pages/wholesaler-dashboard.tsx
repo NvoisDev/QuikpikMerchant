@@ -9,7 +9,9 @@ import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
+import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
+import { subDays, startOfToday } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
@@ -45,6 +47,11 @@ export default function WholesalerDashboard() {
   const { user } = useAuth();
   const { isActive } = useOnboarding();
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(startOfToday(), 29),
+    to: startOfToday(),
+    label: "Last 30 days"
+  });
 
   // Keyboard shortcuts functionality
   useEffect(() => {
@@ -393,14 +400,11 @@ export default function WholesalerDashboard() {
                   <CardTitle className="text-xl font-bold text-gray-900">Sales Performance</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Revenue trends over time</p>
                 </div>
-                <select className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
-                  <option>Today</option>
-                  <option>Last 7 days</option>
-                  <option>Bi-weekly</option>
-                  <option>Quarterly</option>
-                  <option>12 months</option>
-                  <option>24 months</option>
-                </select>
+                <DateRangePicker 
+                  value={dateRange} 
+                  onChange={setDateRange}
+                  className="min-w-48"
+                />
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -454,14 +458,11 @@ export default function WholesalerDashboard() {
                   <CardTitle className="text-xl font-bold text-gray-900">Order Volume</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">Orders processed over time</p>
                 </div>
-                <select className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white">
-                  <option>Today</option>
-                  <option>Last 7 days</option>
-                  <option>Bi-weekly</option>
-                  <option>Quarterly</option>
-                  <option>12 months</option>
-                  <option>24 months</option>
-                </select>
+                <DateRangePicker 
+                  value={dateRange} 
+                  onChange={setDateRange}
+                  className="min-w-48"
+                />
               </CardHeader>
               <CardContent>
                 <div className="h-64">

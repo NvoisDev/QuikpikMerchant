@@ -157,6 +157,18 @@ export const products = pgTable("products", {
   palletMoq: integer("pallet_moq").default(1), // Minimum pallet order quantity
   palletStock: integer("pallet_stock").default(0), // Stock count in pallets
   
+  // Weight and dimensions for shipping
+  unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per unit in kg
+  palletWeight: decimal("pallet_weight", { precision: 10, scale: 3 }), // Weight per pallet in kg
+  unitDimensions: jsonb("unit_dimensions").default({}), // {length: cm, width: cm, height: cm}
+  palletDimensions: jsonb("pallet_dimensions").default({}), // {length: cm, width: cm, height: cm}
+  
+  // Temperature and special handling requirements
+  temperatureRequirement: varchar("temperature_requirement").default("ambient"), // 'frozen', 'chilled', 'ambient'
+  specialHandling: jsonb("special_handling").default({}), // {fragile: boolean, hazardous: boolean, perishable: boolean}
+  shelfLife: integer("shelf_life"), // Days before expiry
+  contentCategory: varchar("content_category").default("general"), // 'food', 'pharmaceuticals', 'electronics', 'textiles', 'general'
+  
   deliveryOptions: jsonb("delivery_options").default({
     pickup: true,
     delivery: true

@@ -36,7 +36,10 @@ import {
   CreditCard,
   TrendingDown,
   MoreHorizontal,
-  RefreshCw
+  RefreshCw,
+  Grid,
+  List,
+  ArrowUpDown
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -127,6 +130,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("orders");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // Fetch orders based on user role
   const { data: orders = [], isLoading } = useQuery({
@@ -365,6 +369,26 @@ export default function Orders() {
                   </div>
                 </div>
                 
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                  <Button
+                    variant={viewMode === "cards" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("cards")}
+                    className={viewMode === "cards" ? "bg-white shadow-sm" : ""}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "table" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    className={viewMode === "table" ? "bg-white shadow-sm" : ""}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+                
                 <div className="flex gap-2">
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[200px]">
@@ -386,19 +410,137 @@ export default function Orders() {
           </Card>
 
           {/* Order List */}
-          <div className="space-y-4">
-            {filteredOrders.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No orders found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm ? 'Try adjusting your search criteria' : 'Orders will appear here when customers place them'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredOrders.map((order: any) => (
+          {filteredOrders.length === 0 ? (
+            <Card className="py-12">
+              <CardContent className="text-center">
+                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">No orders found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm ? 'Try adjusting your search criteria' : 'Orders will appear here when customers place them'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Table View */}
+              {viewMode === "table" ? (
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="text-left p-4 font-medium text-gray-900">
+                              <div className="flex items-center gap-2">
+                                <Checkbox />
+                                Order
+                                <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                              </div>
+                            </th>
+                            <th className="text-left p-4 font-medium text-gray-900">Customer</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Channel</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Total</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Payment Status</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Fulfillment Status</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Items</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Delivery Method</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Tags</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredOrders.map((order: any) => (
+                            <tr key={order.id} className="border-b hover:bg-gray-50 cursor-pointer">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <Checkbox />
+                                  <div>
+                                    <div className="font-medium">#{order.id}</div>
+                                    <div className="text-sm text-gray-500">
+                                      {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })} at {new Date(order.createdAt).toLocaleTimeString('en-GB', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div>
+                                  <div className="font-medium">
+                                    {order.retailer ? `${order.retailer.firstName} ${order.retailer.lastName}` : 'Unknown Customer'}
+                                  </div>
+                                  {order.retailer?.businessName && (
+                                    <div className="text-sm text-gray-500">{order.retailer.businessName}</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm text-gray-600">Online Store</span>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-medium">
+                                  {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <span className="text-sm">Paid</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                {order.status === 'fulfilled' ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                    <span className="text-sm">Fulfilled</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                    <span className="text-sm">Unfulfilled</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm">{order.items?.length || 1} item{(order.items?.length || 1) !== 1 ? 's' : ''}</span>
+                              </td>
+                              <td className="p-4">
+                                <div className="text-sm">
+                                  {order.shippingOrderId ? (
+                                    <div className="flex items-center gap-1">
+                                      <Truck className="h-3 w-3" />
+                                      <span>Express</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500">Express</span>
+                                  )}
+                                  {order.shippingOrderId && (
+                                    <div className="text-xs text-gray-500 mt-1">Tracking added</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-1">
+                                  {order.retailer?.businessName && (
+                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">Business</span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Cards View */
+                <div className="space-y-4">
+                  {filteredOrders.map((order: any) => (
                 <Card key={order.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -555,9 +697,11 @@ export default function Orders() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
+              ))}
+                </div>
+              )}
+            </>
+          )}
 
           {/* Shipping Quote Modal */}
           {shippingModalOrder && businessAddress && (
