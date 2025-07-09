@@ -145,7 +145,45 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Upgrade Modal System**: Context-aware upgrade prompts with plan comparisons
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
+## Payment and Shipping Structure
+
+### Customer-Driven Shipping System
+The platform implements a customer-centric shipping model where customers control shipping choices and costs:
+
+#### Shipping Options
+- **Pickup (Free)**: Customers can collect orders from wholesaler location at no cost
+- **Delivery (Paid)**: Customers choose from available courier services and pay shipping costs directly
+
+#### Payment Breakdown
+- **Product Subtotal**: Total cost of products in cart
+- **Shipping Cost**: Customer-selected courier service charge (if delivery chosen)
+- **Platform Fee**: 5% automatically calculated on product subtotal only (not shipping)
+- **Total**: Product subtotal + shipping cost + platform fee
+
+#### Shipping Quote Process
+1. Customer completes delivery address during checkout
+2. System fetches real-time quotes from multiple carriers (Royal Mail, DPD, Evri)
+3. Customer selects preferred service based on price and delivery time
+4. Shipping cost is added to order total at checkout
+5. Wholesaler receives notification of shipping preference
+
+#### Cost Responsibility
+- **Customers**: Pay for shipping costs they select
+- **Wholesalers**: Receive 95% of product value (after 5% platform fee)
+- **Platform**: Collects 5% fee on product sales only
+
+This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
+
 ## Changelog
+- July 09, 2025. Implemented Customer-Driven Shipping System:
+  - **Customer Shipping Choice**: Customers now select between free pickup or paid delivery during checkout
+  - **Real-time Shipping Quotes**: Integration with Parcel2Go API for live courier quotes (Royal Mail, DPD, Evri)
+  - **Shipping Cost Transparency**: Clear breakdown showing subtotal, shipping cost, and total in cart
+  - **Pickup Option**: Free collection from wholesaler location as default option
+  - **Delivery Services**: Multiple courier options with pricing and delivery time information
+  - **Customer Payment**: Customers pay shipping costs directly, wholesalers receive product value only
+  - **Enhanced Checkout**: Shipping selection integrated into customer portal checkout flow
+  - **Documentation**: Added comprehensive payment and shipping structure documentation
 - July 09, 2025. Fixed Google Places API Integration and Enhanced System Stability:
   - **Google Places API Key Configuration**: Added server-side API endpoint `/api/config/google-places-key` to securely provide Google Places API key to frontend
   - **Stripe Payment NaN Error Resolution**: Enhanced cart calculation logic with robust NaN protection and comprehensive price validation in payment intent creation

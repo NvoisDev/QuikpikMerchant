@@ -126,6 +126,13 @@ interface CustomerData {
   postalCode: string;
   country: string;
   notes: string;
+  shippingOption: "pickup" | "delivery";
+  selectedShippingService?: {
+    serviceId: string;
+    serviceName: string;
+    price: number;
+    description: string;
+  };
 }
 
 // Stripe Checkout Form Component
@@ -166,7 +173,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount: totalAmount || 0
+            totalAmount: totalAmount || 0,
+            shippingInfo: {
+              option: customerData.shippingOption,
+              service: customerData.selectedShippingService
+            }
           });
           const data = await response.json();
           setClientSecret(data.clientSecret);
@@ -340,6 +351,8 @@ export default function CustomerPortal() {
     message: ''
   });
   const [showCheckout, setShowCheckout] = useState(false);
+  const [availableShippingServices, setAvailableShippingServices] = useState<any[]>([]);
+  const [loadingShippingQuotes, setLoadingShippingQuotes] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
     email: '',
@@ -349,11 +362,71 @@ export default function CustomerPortal() {
     state: '',
     postalCode: '',
     country: '',
-    notes: ''
+    notes: '',
+    shippingOption: 'pickup',
+    selectedShippingService: undefined
   });
 
+  // Fetch shipping quotes for customer delivery
+  const fetchShippingQuotes = async () => {
+    if (!customerData.address || !customerData.city || !customerData.postalCode) {
+      toast({
+        title: "Address Required",
+        description: "Please complete your address to get shipping quotes",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  
+    setLoadingShippingQuotes(true);
+    try {
+      const response = await apiRequest("POST", "/api/shipping/quotes", {
+        collectionAddress: {
+          contactName: wholesaler?.businessName || "Business Pickup",
+          property: wholesaler?.businessAddress?.split(',')[0] || "1",
+          street: wholesaler?.businessAddress?.split(',')[1] || "Business Street",
+          town: wholesaler?.businessAddress?.split(',')[2] || "City",
+          postcode: wholesaler?.businessPostcode || "SW1A 1AA",
+          countryIsoCode: 'GBR'
+        },
+        deliveryAddress: {
+          contactName: customerData.name,
+          property: customerData.address,
+          street: customerData.address,
+          town: customerData.city,
+          postcode: customerData.postalCode,
+          countryIsoCode: 'GBR'
+        },
+        parcels: [{
+          weight: Math.max(2, Math.floor(cartStats.totalValue / 50)),
+          length: 30,
+          width: 20,
+          height: 15,
+          value: cartStats.totalValue
+        }]
+      });
+
+      if (response.quotes && response.quotes.length > 0) {
+        setAvailableShippingServices(response.quotes);
+      } else {
+        toast({
+          title: "No Shipping Options",
+          description: "No shipping services available for your location",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching shipping quotes:", error);
+      toast({
+        title: "Shipping Error",
+        description: error.message || "Failed to get shipping quotes",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingShippingQuotes(false);
+    }
+  };
+
   // Get featured product ID from URL
   const urlParams = new URLSearchParams(window.location.search);
   const featuredProductId = urlParams.get('featured');
@@ -432,7 +505,7 @@ export default function CustomerPortal() {
 
   const cartStats = useMemo(() => {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalValue = cart.reduce((sum, item) => {
+    const subtotal = cart.reduce((sum, item) => {
       let price = 0;
       if (item.sellingType === "pallets") {
         price = parseFloat(item.product.palletPrice || "0") || 0;
@@ -447,9 +520,22 @@ export default function CustomerPortal() {
       const itemTotal = (price || 0) * (item.quantity || 0);
       return sum + (isNaN(itemTotal) ? 0 : itemTotal);
     }, 0);
+    
+    // Add shipping cost if delivery is selected
+    const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+      ? customerData.selectedShippingService.price || 0 
+      : 0;
+      
+    const totalValue = subtotal + shippingCost;
+    
     // Ensure totalValue is never NaN
-    return { totalItems, totalValue: isNaN(totalValue) ? 0 : totalValue };
-  }, [cart]);
+    return { 
+      totalItems, 
+      subtotal: isNaN(subtotal) ? 0 : subtotal,
+      shippingCost: isNaN(shippingCost) ? 0 : shippingCost,
+      totalValue: isNaN(totalValue) ? 0 : totalValue 
+    };
+  }, [cart, customerData.shippingOption, customerData.selectedShippingService]);
 
   // Handle sharing the store
   const handleShare = useCallback(async () => {
@@ -1559,9 +1645,28 @@ export default function CustomerPortal() {
                   ))}
                 </div>
                 <Separator className="my-3" />
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total:</span>
-                  <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.subtotal.toFixed(2)}</span>
+                  </div>
+                  {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
+                    <div className="flex justify-between">
+                      <span>Shipping ({customerData.selectedShippingService.serviceName}):</span>
+                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {customerData.shippingOption === 'pickup' && (
+                    <div className="flex justify-between">
+                      <span>Shipping (Pickup):</span>
+                      <span className="text-green-600">FREE</span>
+                    </div>
+                  )}
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-semibold text-lg">
+                    <span>Total:</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1665,6 +1770,132 @@ export default function CustomerPortal() {
                     className="min-h-[80px]"
                   />
                 </div>
+              </div>
+
+              {/* Shipping Options Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center space-x-2">
+                  <Truck className="w-4 h-4" />
+                  <span>Shipping Options</span>
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      customerData.shippingOption === 'pickup' 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setCustomerData({
+                      ...customerData, 
+                      shippingOption: 'pickup',
+                      selectedShippingService: undefined
+                    })}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        customerData.shippingOption === 'pickup' 
+                          ? 'border-green-500 bg-green-500' 
+                          : 'border-gray-300'
+                      }`} />
+                      <div>
+                        <h4 className="font-medium">Pickup</h4>
+                        <p className="text-sm text-gray-600">Collect from supplier location</p>
+                        <p className="text-sm font-medium text-green-600">FREE</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      customerData.shippingOption === 'delivery' 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => {
+                      setCustomerData({...customerData, shippingOption: 'delivery'});
+                      if (customerData.address && customerData.city && customerData.postalCode) {
+                        fetchShippingQuotes();
+                      }
+                    }}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        customerData.shippingOption === 'delivery' 
+                          ? 'border-green-500 bg-green-500' 
+                          : 'border-gray-300'
+                      }`} />
+                      <div>
+                        <h4 className="font-medium">Delivery</h4>
+                        <p className="text-sm text-gray-600">Courier delivery to your address</p>
+                        <p className="text-sm font-medium text-blue-600">Select service below</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shipping Services Selection */}
+                {customerData.shippingOption === 'delivery' && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Choose Delivery Service</h4>
+                    
+                    {loadingShippingQuotes ? (
+                      <div className="text-center py-4">
+                        <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600">Getting shipping quotes...</p>
+                      </div>
+                    ) : availableShippingServices.length > 0 ? (
+                      availableShippingServices.map((service) => (
+                        <div
+                          key={service.serviceId}
+                          className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                            customerData.selectedShippingService?.serviceId === service.serviceId
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setCustomerData({
+                            ...customerData,
+                            selectedShippingService: service
+                          })}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-3 h-3 rounded-full border-2 ${
+                                customerData.selectedShippingService?.serviceId === service.serviceId
+                                  ? 'border-green-500 bg-green-500'
+                                  : 'border-gray-300'
+                              }`} />
+                              <div>
+                                <h5 className="font-medium">{service.serviceName}</h5>
+                                <p className="text-sm text-gray-600">{service.description}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-green-600">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{service.price.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-gray-500">Inc. VAT</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : customerData.address && customerData.city && customerData.postalCode ? (
+                      <div className="text-center py-4">
+                        <Button
+                          onClick={fetchShippingQuotes}
+                          variant="outline"
+                          className="text-sm"
+                        >
+                          Get Shipping Quotes
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        <p className="text-sm">Complete your address to see shipping options</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Payment Section */}
