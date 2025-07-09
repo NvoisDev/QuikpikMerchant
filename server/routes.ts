@@ -6541,9 +6541,9 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(403).json({ message: "Not authorized to manage this order" });
       }
 
-      // Verify order is paid
-      if (order.paymentStatus !== 'paid') {
-        return res.status(400).json({ message: "Order must be paid before creating shipping" });
+      // Verify order is confirmed or paid
+      if (!order.status || (order.status !== 'paid' && order.status !== 'confirmed')) {
+        return res.status(400).json({ message: "Order must be confirmed or paid before creating shipping" });
       }
 
       // Get user's business address for collection
