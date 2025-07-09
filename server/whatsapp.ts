@@ -109,26 +109,16 @@ export class WhatsAppService {
           const isSandbox = wholesaler.twilioPhoneNumber?.includes('14155238886');
           let messageData: any;
           
-          if (isSandbox) {
-            // For Twilio sandbox, we need to use the exact approved template format
-            // The customer must first send "join <sandbox-keyword>" to the sandbox number
-            messageData = {
-              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${formattedPhone}`,
-              body: `Your appointment is coming up on July 21 at 3PM`
-            };
-          } else {
-            // Production: use full product message (same as preview)
-            messageData = {
-              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${formattedPhone}`,
-              body: productMessage
-            };
+          // Always use the full product message (user wants preview message format)
+          messageData = {
+            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+            to: `whatsapp:${formattedPhone}`,
+            body: productMessage
+          };
 
-            // Add product image if available and valid URL (production only)
-            if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
-              messageData.mediaUrl = [product.imageUrl];
-            }
+          // Add product image if available and valid URL
+          if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
+            messageData.mediaUrl = [product.imageUrl];
           }
 
           const result = await twilioClient.messages.create(messageData);
@@ -221,17 +211,8 @@ export class WhatsAppService {
       // Send message using Twilio
       const twilioClient = twilio(wholesaler.twilioAccountSid, wholesaler.twilioAuthToken);
       
-      // Check if this is a sandbox number to determine message format
-      const isSandbox = fromNumber.includes('14155238886');
+      // Always use the full message format (user wants preview message format)
       let messageBody = message;
-      
-      if (isSandbox) {
-        // For sandbox, use approved template
-        messageBody = `Your appointment is coming up on July 21 at 3PM`;
-      } else {
-        // For production, keep the original message but ensure it's template-compliant
-        messageBody = message;
-      }
 
       const result = await twilioClient.messages.create({
         from: `whatsapp:${fromNumber}`,
@@ -534,21 +515,12 @@ Update your inventory or restock soon.`;
           // Format phone number to international format
           const formattedMemberPhone = formatPhoneToInternational(memberPhone);
 
-          if (isSandbox) {
-            // For Twilio sandbox, use the exact approved template
-            messageData = {
-              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${formattedMemberPhone}`,
-              body: `Your appointment is coming up on July 21 at 3PM`
-            };
-          } else {
-            // Production: use the full template message (same as preview)
-            messageData = {
-              from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${formattedMemberPhone}`,
-              body: templateMessage
-            };
-          }
+          // Always use the full template message (user wants preview message format)
+          messageData = {
+            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+            to: `whatsapp:${formattedMemberPhone}`,
+            body: templateMessage
+          };
 
           const result = await twilioClient.messages.create(messageData);
           
