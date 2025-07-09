@@ -23,6 +23,10 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
 
   const handleGetStarted = () => {
+    window.location.href = "/signup";
+  };
+
+  const handleLogin = () => {
     window.location.href = "/login";
   };
 
@@ -44,7 +48,7 @@ export default function LandingPage() {
             <div className="flex items-center space-x-4">
               <Button 
                 variant="ghost" 
-                onClick={handleGetStarted}
+                onClick={handleLogin}
                 className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               >
                 Log In

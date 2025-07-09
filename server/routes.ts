@@ -6016,5 +6016,88 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Signup endpoint
+  app.post('/api/auth/signup', async (req, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        email,
+        password,
+        businessName,
+        businessDescription,
+        businessPhone,
+        businessEmail,
+        streetAddress,
+        city,
+        state,
+        postalCode,
+        country,
+        defaultCurrency,
+        businessType,
+        estimatedMonthlyVolume
+      } = req.body;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "An account with this email already exists" });
+      }
+
+      // Create the business address string
+      const businessAddress = `${streetAddress}, ${city}, ${state} ${postalCode}, ${country}`;
+
+      // Create user account
+      const userData = {
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: 'wholesaler',
+        subscriptionTier: 'free',
+        businessName: businessName,
+        businessDescription: businessDescription,
+        businessPhone: businessPhone,
+        businessEmail: businessEmail,
+        businessAddress: businessAddress,
+        defaultCurrency: defaultCurrency,
+        businessType: businessType,
+        estimatedMonthlyVolume: estimatedMonthlyVolume,
+        onboardingCompleted: false,
+        onboardingStep: 0,
+        onboardingSkipped: false
+      };
+
+      const newUser = await storage.createUser(userData);
+
+      // Create session for the new user
+      req.session.user = {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        subscriptionTier: newUser.subscriptionTier,
+        businessName: newUser.businessName
+      };
+
+      res.json({
+        success: true,
+        message: "Account created successfully",
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          role: newUser.role,
+          businessName: newUser.businessName
+        }
+      });
+
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account. Please try again." });
+    }
+  });
+
   return httpServer;
 }

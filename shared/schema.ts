@@ -102,6 +102,13 @@ export const users = pgTable("users", {
   // Stock alert settings
   defaultLowStockThreshold: integer("default_low_stock_threshold").default(50), // Global default for new products
   
+  // New signup fields
+  businessDescription: text("business_description"),
+  businessEmail: varchar("business_email"),
+  businessType: varchar("business_type"),
+  estimatedMonthlyVolume: varchar("estimated_monthly_volume"),
+  defaultCurrency: varchar("default_currency").default("GBP"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
