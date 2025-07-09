@@ -12,6 +12,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -236,7 +237,6 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
       throw new Error('SENDGRID_API_KEY environment variable is not set');
     }
 
-    const sgMail = require('@sendgrid/mail');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
     // Get the current domain

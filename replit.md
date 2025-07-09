@@ -146,6 +146,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 09, 2025. Fixed SendGrid email integration and performance optimizations:
+  - **SendGrid ES Module Import Fix**: Resolved "require is not defined" error by converting to proper ES module import syntax
+  - **Team Invitation Email System**: Fixed email delivery for team member invitations with professional templates
+  - **Query Performance Optimization**: Added comprehensive caching with staleTime and gcTime to reduce server load
+  - **Database Query Caching**: Dashboard stats cache for 5 minutes, orders for 2 minutes, products for 10 minutes
+  - **Team Management Caching**: Team members queries now cached for 2 minutes for improved performance
+  - **Removed Legacy Code**: Cleaned up old nodemailer transporter code and optimized email service architecture
+  - **Team Invitation Acceptance System**: Complete workflow for team members to accept invitations and create accounts
 - July 08, 2025. Enhanced Subscription System with Comprehensive Feature Lists and Interactive Dashboard:
   - **Updated Subscription Tiers**: Enhanced Free, Standard, and Premium plans with detailed feature descriptions and accurate £ pricing
   - **Comprehensive Feature Lists**: Added detailed features for each plan including specific limits for products, edits, customer groups, and broadcasts
