@@ -408,6 +408,10 @@ export default function CustomerPortal() {
 
       if (response.quotes && response.quotes.length > 0) {
         setAvailableShippingServices(response.quotes);
+        toast({
+          title: "Shipping Quotes Retrieved",
+          description: `Found ${response.quotes.length} delivery options for your location`,
+        });
       } else {
         toast({
           title: "No Shipping Options",
