@@ -23,6 +23,7 @@ import {
   Search
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import GooglePlacesAutocomplete from '@/components/google-places-autocomplete';
 
 interface ShippingQuote {
   service: string;
@@ -259,15 +260,26 @@ export default function ShippingSettings() {
                       <Package className="h-4 w-4" />
                       <span>Collection Details</span>
                     </h3>
-                    <div>
-                      <Label htmlFor="collectionPostcode">Collection Postcode</Label>
-                      <Input
-                        id="collectionPostcode"
-                        value={quoteForm.collectionPostcode}
-                        onChange={(e) => setQuoteForm({ ...quoteForm, collectionPostcode: e.target.value })}
-                        placeholder="e.g., SW1A 1AA"
-                      />
-                    </div>
+                    <GooglePlacesAutocomplete
+                      onAddressSelect={(address) => {
+                        const components = address.address_components || [];
+                        const getComponent = (types: string[]) => {
+                          const component = components.find((comp: any) => 
+                            comp.types.some((type: string) => types.includes(type))
+                          );
+                          return component ? component.long_name : '';
+                        };
+                        
+                        const postcode = getComponent(['postal_code']);
+                        if (postcode) {
+                          setQuoteForm({ ...quoteForm, collectionPostcode: postcode });
+                        }
+                      }}
+                      placeholder="Enter collection address"
+                      label="Collection Address"
+                      value={quoteForm.collectionPostcode}
+                      className="w-full"
+                    />
                   </div>
 
                   {/* Delivery Details */}
@@ -276,15 +288,26 @@ export default function ShippingSettings() {
                       <Truck className="h-4 w-4" />
                       <span>Delivery Details</span>
                     </h3>
-                    <div>
-                      <Label htmlFor="deliveryPostcode">Delivery Postcode</Label>
-                      <Input
-                        id="deliveryPostcode"
-                        value={quoteForm.deliveryPostcode}
-                        onChange={(e) => setQuoteForm({ ...quoteForm, deliveryPostcode: e.target.value })}
-                        placeholder="e.g., M1 1AA"
-                      />
-                    </div>
+                    <GooglePlacesAutocomplete
+                      onAddressSelect={(address) => {
+                        const components = address.address_components || [];
+                        const getComponent = (types: string[]) => {
+                          const component = components.find((comp: any) => 
+                            comp.types.some((type: string) => types.includes(type))
+                          );
+                          return component ? component.long_name : '';
+                        };
+                        
+                        const postcode = getComponent(['postal_code']);
+                        if (postcode) {
+                          setQuoteForm({ ...quoteForm, deliveryPostcode: postcode });
+                        }
+                      }}
+                      placeholder="Enter delivery address"
+                      label="Delivery Address"
+                      value={quoteForm.deliveryPostcode}
+                      className="w-full"
+                    />
                   </div>
                 </div>
 
