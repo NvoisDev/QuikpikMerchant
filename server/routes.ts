@@ -6554,6 +6554,62 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Shipping Automation Settings
+  app.post('/api/shipping/automation-settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { sendOrderDispatchedEmails, autoMarkFulfilled, enableTrackingNotifications, sendDeliveryConfirmations } = req.body;
+
+      // Update user settings with automation preferences
+      await storage.updateUserSettings(userId, {
+        sendOrderDispatchedEmails: sendOrderDispatchedEmails ?? true,
+        autoMarkFulfilled: autoMarkFulfilled ?? false,
+        enableTrackingNotifications: enableTrackingNotifications ?? true,
+        sendDeliveryConfirmations: sendDeliveryConfirmations ?? true
+      });
+
+      res.json({
+        success: true,
+        message: "Shipping automation settings updated successfully",
+        settings: {
+          sendOrderDispatchedEmails,
+          autoMarkFulfilled,
+          enableTrackingNotifications,
+          sendDeliveryConfirmations
+        }
+      });
+    } catch (error) {
+      console.error("Error saving automation settings:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to save automation settings" 
+      });
+    }
+  });
+
+  app.get('/api/shipping/automation-settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        sendOrderDispatchedEmails: user.sendOrderDispatchedEmails ?? true,
+        autoMarkFulfilled: user.autoMarkFulfilled ?? false,
+        enableTrackingNotifications: user.enableTrackingNotifications ?? true,
+        sendDeliveryConfirmations: user.sendDeliveryConfirmations ?? true
+      });
+    } catch (error) {
+      console.error("Error fetching automation settings:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch automation settings" 
+      });
+    }
+  });
+
   // Create shipping for a specific order
   app.post('/api/orders/:orderId/shipping', requireAuth, async (req: any, res) => {
     try {

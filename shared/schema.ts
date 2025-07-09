@@ -109,6 +109,12 @@ export const users = pgTable("users", {
   estimatedMonthlyVolume: varchar("estimated_monthly_volume"),
   defaultCurrency: varchar("default_currency").default("GBP"),
   
+  // Shipping Automation Settings
+  sendOrderDispatchedEmails: boolean("send_order_dispatched_emails").default(true),
+  autoMarkFulfilled: boolean("auto_mark_fulfilled").default(false),
+  enableTrackingNotifications: boolean("enable_tracking_notifications").default(true),
+  sendDeliveryConfirmations: boolean("send_delivery_confirmations").default(true),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

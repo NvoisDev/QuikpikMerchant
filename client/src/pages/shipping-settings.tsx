@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Package, 
@@ -20,7 +21,11 @@ import {
   Loader2,
   Calculator,
   Globe,
-  Search
+  Search,
+  Mail,
+  Bell,
+  Clock,
+  Zap
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import GooglePlacesAutocomplete from '@/components/google-places-autocomplete';
@@ -67,6 +72,27 @@ export default function ShippingSettings() {
   });
 
   const [dropShopPostcode, setDropShopPostcode] = useState('');
+  
+  // State for automation settings
+  const [automationSettings, setAutomationSettings] = useState({
+    sendOrderDispatchedEmails: true,
+    autoMarkFulfilled: false,
+    enableTrackingNotifications: true,
+    sendDeliveryConfirmations: true
+  });
+
+  // Fetch current automation settings
+  const { data: currentSettings } = useQuery({
+    queryKey: ['/api/shipping/automation-settings'],
+    staleTime: 5 * 60 * 1000 // 5 minutes
+  });
+
+  // Update local state when data is fetched
+  React.useEffect(() => {
+    if (currentSettings) {
+      setAutomationSettings(currentSettings);
+    }
+  }, [currentSettings]);
 
   // Fetch shipping status
   const { data: shippingStatus, isLoading: statusLoading } = useQuery({
@@ -126,6 +152,29 @@ export default function ShippingSettings() {
       toast({
         title: "Drop Shop Error",
         description: error.message || "Failed to find drop shops",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Save automation settings mutation
+  const saveAutomationMutation = useMutation({
+    mutationFn: async (settings: typeof automationSettings) => {
+      return await apiRequest('/api/shipping/automation-settings', {
+        method: 'POST',
+        body: JSON.stringify(settings),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Settings Saved",
+        description: "Shipping automation preferences have been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save automation settings.",
         variant: "destructive"
       });
     }
@@ -223,8 +272,12 @@ export default function ShippingSettings() {
       </Card>
 
       {shippingStatus?.ready && (
-        <Tabs defaultValue="quotes" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="automation" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="automation" className="flex items-center space-x-2">
+              <Zap className="h-4 w-4" />
+              <span>Automation</span>
+            </TabsTrigger>
             <TabsTrigger value="quotes" className="flex items-center space-x-2">
               <Calculator className="h-4 w-4" />
               <span>Get Quotes</span>
@@ -242,6 +295,127 @@ export default function ShippingSettings() {
               <span>Countries</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Automation Settings Tab */}
+          <TabsContent value="automation">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-orange-600" />
+                  <span>Configure your Quikpik Account</span>
+                </CardTitle>
+                <CardDescription>
+                  Choose whether to send out your customer emails when you mark your orders as dispatched in Smart Send.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  {/* Order Dispatched Emails */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50/50">
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <label htmlFor="sendOrderDispatchedEmails" className="font-medium cursor-pointer">
+                          Send Order Dispatched Emails
+                        </label>
+                        <p className="text-sm text-gray-600">
+                          Automatically notify customers when orders are marked as shipped
+                        </p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      id="sendOrderDispatchedEmails"
+                      checked={automationSettings.sendOrderDispatchedEmails}
+                      onCheckedChange={(checked) => 
+                        setAutomationSettings({...automationSettings, sendOrderDispatchedEmails: !!checked})
+                      }
+                    />
+                  </div>
+
+                  {/* Auto Mark Fulfilled */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div>
+                        <label htmlFor="autoMarkFulfilled" className="font-medium cursor-pointer">
+                          Auto-Mark Orders as Fulfilled
+                        </label>
+                        <p className="text-sm text-gray-600">
+                          Automatically mark orders as fulfilled when tracking shows delivery
+                        </p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      id="autoMarkFulfilled"
+                      checked={automationSettings.autoMarkFulfilled}
+                      onCheckedChange={(checked) => 
+                        setAutomationSettings({...automationSettings, autoMarkFulfilled: !!checked})
+                      }
+                    />
+                  </div>
+
+                  {/* Tracking Notifications */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Bell className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <label htmlFor="enableTrackingNotifications" className="font-medium cursor-pointer">
+                          Enable Tracking Notifications
+                        </label>
+                        <p className="text-sm text-gray-600">
+                          Send SMS/email updates about shipment tracking progress
+                        </p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      id="enableTrackingNotifications"
+                      checked={automationSettings.enableTrackingNotifications}
+                      onCheckedChange={(checked) => 
+                        setAutomationSettings({...automationSettings, enableTrackingNotifications: !!checked})
+                      }
+                    />
+                  </div>
+
+                  {/* Delivery Confirmations */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <label htmlFor="sendDeliveryConfirmations" className="font-medium cursor-pointer">
+                          Send Delivery Confirmations
+                        </label>
+                        <p className="text-sm text-gray-600">
+                          Notify customers when packages are successfully delivered
+                        </p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      id="sendDeliveryConfirmations"
+                      checked={automationSettings.sendDeliveryConfirmations}
+                      onCheckedChange={(checked) => 
+                        setAutomationSettings({...automationSettings, sendDeliveryConfirmations: !!checked})
+                      }
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => saveAutomationMutation.mutate(automationSettings)}
+                  disabled={saveAutomationMutation.isPending}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8"
+                >
+                  {saveAutomationMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Quote Calculator Tab */}
           <TabsContent value="quotes">
