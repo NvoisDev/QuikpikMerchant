@@ -664,7 +664,7 @@ export default function Orders() {
         </div>
 
         {/* Shipping Integration */}
-        {user?.role === 'wholesaler' && order.status === 'paid' && (
+        {(user?.role === 'wholesaler' || user?.role === 'team_member') && order.status === 'paid' && (
           <div className="pt-4 border-t">
             <div className="mb-3">
               <h4 className="font-medium text-sm text-muted-foreground">Shipping Management</h4>
@@ -674,7 +674,7 @@ export default function Orders() {
         )}
 
         {/* Order Actions */}
-        {user?.role === 'wholesaler' && (order.status === 'paid' || order.status === 'fulfilled') && (
+        {(user?.role === 'wholesaler' || user?.role === 'team_member') && (order.status === 'paid' || order.status === 'fulfilled') && (
           <div className="flex flex-wrap gap-2 pt-4 border-t">
             <div className="w-full mb-2">
               <h4 className="font-medium text-sm text-muted-foreground">Order Actions</h4>

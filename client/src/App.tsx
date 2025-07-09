@@ -71,7 +71,7 @@ function Router() {
       ) : (
         <AppLayout>
           <Route path="/marketplace" component={Marketplace} />
-          {user && user.role === 'wholesaler' ? (
+          {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
             <>
               <Route path="/" component={WholesalerDashboard} />
               <Route path="/products" component={ProductManagement} />
