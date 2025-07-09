@@ -177,6 +177,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 ## Changelog
 - July 09, 2025. Complete Automatic Phone Number Formatting System Implementation:
   - **Universal Phone Formatting**: Implemented comprehensive phone number formatting utility converting UK numbers (07507659550) to international format (+447507659550)
+  - **Database Migration Complete**: Successfully migrated all existing customer phone numbers (6 total) from UK format to international E.164 format
   - **Customer Group Integration**: Automatic phone formatting when adding/editing customers in groups with real-time validation
   - **Business Settings Enhancement**: Phone number formatting applied to business phone settings across all input fields
   - **WhatsApp Service Integration**: All WhatsApp message sending now uses formatted phone numbers for reliable delivery
@@ -185,6 +186,9 @@ This approach gives customers control over delivery speed and cost while ensurin
   - **Broadcast Success Validation**: Confirmed WhatsApp broadcasts now work with formatted phone numbers (logs show successful message delivery)
   - **Database Consistency**: All phone numbers stored in database now maintain consistent international format
   - **Shared Utility Function**: Created reusable formatPhoneToInternational function in shared/phone-utils.ts for platform-wide consistency
+  - **WhatsApp Template Compliance**: Updated WhatsApp service for template compliance to address WhatsApp Business API policy requirements (Error 63016)
+  - **Template Setup Guide**: Created comprehensive WhatsApp template setup guide for proper business messaging compliance
+  - **Current Status**: Phone formatting system complete and working - WhatsApp policy restrictions require approved business templates for production use
 - July 09, 2025. Implemented Customer-Driven Shipping System:
   - **Customer Shipping Choice**: Customers now select between free pickup or paid delivery during checkout
   - **Real-time Shipping Quotes**: Integration with Parcel2Go API for live courier quotes (Royal Mail, DPD, Evri)
