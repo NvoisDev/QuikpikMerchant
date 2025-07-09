@@ -326,7 +326,23 @@ export default function CustomerPortal() {
   const isPreviewMode = location === '/preview-store';
   
   // Use authenticated user's ID in preview mode, otherwise use URL parameter
-  const wholesalerId = isPreviewMode ? user?.id : wholesalerIdParam;
+  // Handle cases where ID might be undefined or empty
+  const wholesalerId = isPreviewMode ? user?.id : (wholesalerIdParam || location.split('/customer/')[1]?.split('?')[0]);
+
+
+
+  // Early return if no wholesaler ID
+  if (!wholesalerId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h1>
+          <p className="text-gray-600">The requested store could not be found.</p>
+        </div>
+      </div>
+    );
+  }
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -439,7 +455,7 @@ export default function CustomerPortal() {
 
   // Fetch wholesaler data
   const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
-    queryKey: ['/api/marketplace/wholesaler', wholesalerId],
+    queryKey: ['wholesaler', wholesalerId],
     queryFn: async () => {
       console.log(`Fetching wholesaler data for ID: ${wholesalerId}`);
       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
@@ -457,7 +473,7 @@ export default function CustomerPortal() {
 
   // Fetch featured product if specified with auto-refresh
   const { data: featuredProduct, isLoading: featuredLoading, refetch: refetchFeaturedProduct } = useQuery({
-    queryKey: ['/api/marketplace/products', featuredProductId],
+    queryKey: ['featured-product', featuredProductId],
     queryFn: async () => {
       const response = await fetch(`/api/marketplace/products/${featuredProductId}`);
       if (!response.ok) throw new Error("Failed to fetch featured product");
@@ -470,7 +486,7 @@ export default function CustomerPortal() {
 
   // Fetch all products for the wholesaler with auto-refresh
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
-    queryKey: ['/api/marketplace/products', { wholesalerId }],
+    queryKey: ['wholesaler-products', wholesalerId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (wholesalerId) params.append('wholesalerId', wholesalerId);

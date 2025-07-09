@@ -62,7 +62,7 @@ function Router() {
       {/* Public routes - accessible without authentication */}
       <Route path="/campaign/:id" component={CampaignPreview} />
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
-      <Route path="/customer/:id?" component={CustomerPortal} />
+      <Route path="/customer/:id" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
