@@ -73,6 +73,7 @@ export interface IStorage {
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
+  updateOrder(id: number, updates: Partial<Order>): Promise<Order>;
   
   // Customer group operations
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
@@ -478,6 +479,15 @@ export class DatabaseStorage implements IStorage {
     const [updatedOrder] = await db
       .update(orders)
       .set({ status, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+
+  async updateOrder(id: number, updates: Partial<Order>): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(orders.id, id))
       .returning();
     return updatedOrder;
