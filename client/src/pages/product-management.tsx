@@ -767,7 +767,7 @@ export default function ProductManagement() {
               <div className="flex items-center space-x-4">
                 <Button 
                   variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50"
+                  className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700"
                   onClick={() => window.open('/preview-store', '_blank')}
                 >
                   <Package className="mr-2 h-4 w-4" />
