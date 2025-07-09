@@ -796,123 +796,164 @@ export default function CustomerPortal() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Featured Product */}
+        {/* Featured Product - Clean Modern Design */}
         {featuredProduct && (
-          <Card className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                <CardTitle className="text-green-800">Featured Product</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  {featuredProduct.imageUrl ? (
-                    <img 
-                      src={featuredProduct.imageUrl} 
-                      alt={featuredProduct.name}
-                      className="w-full h-64 object-cover rounded-lg shadow-md"
-                    />
-                  ) : (
-                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <Package className="w-20 h-20 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{featuredProduct.name}</h2>
-                    {featuredProduct.description && (
-                      <p className="text-gray-600 mt-2">{featuredProduct.description}</p>
+          <div className="mb-12">
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="grid lg:grid-cols-2">
+                  {/* Product Image */}
+                  <div className="relative bg-white">
+                    {featuredProduct.imageUrl ? (
+                      <img 
+                        src={featuredProduct.imageUrl} 
+                        alt={featuredProduct.name}
+                        className="w-full h-80 lg:h-96 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-80 lg:h-96 bg-gray-50 flex items-center justify-center">
+                        <Package className="w-24 h-24 text-gray-300" />
+                      </div>
+                    )}
+                    
+                    {/* Sale Badge */}
+                    {featuredProduct.promoActive && featuredProduct.promoPrice && (
+                      <div className="absolute top-6 left-6">
+                        <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                          SALE
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Negotiable Badge */}
+                    {featuredProduct.negotiationEnabled && (
+                      <div className="absolute top-6 right-6">
+                        <div className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                          Negotiable
+                        </div>
+                      </div>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Price:</span>
-                      <div className="font-semibold text-lg">
-                        {featuredProduct.promoActive && featuredProduct.promoPrice ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-600">
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.promoPrice).toFixed(2)}
-                            </span>
-                            <span className="text-gray-500 line-through text-sm">
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
-                            </span>
-                            <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
-                              SALE
-                            </Badge>
+                  {/* Product Details */}
+                  <div className="p-8 lg:p-12 bg-white">
+                    <div className="space-y-6">
+                      {/* Title and Category */}
+                      <div>
+                        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                          {featuredProduct.name}
+                        </h1>
+                        {featuredProduct.category && (
+                          <div className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                            {featuredProduct.category}
                           </div>
-                        ) : (
-                          <span className="text-green-600">
-                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
-                          </span>
+                        )}
+                        {featuredProduct.description && (
+                          <p className="text-gray-600 text-lg leading-relaxed">
+                            {featuredProduct.description}
+                          </p>
                         )}
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Min Order:</span>
-                      <div className="font-semibold">{formatNumber(featuredProduct.moq)} units</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Stock:</span>
-                      <div className="font-semibold">{formatNumber(featuredProduct.stock)} units</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Supplier:</span>
-                      <div className="font-semibold text-sm">{featuredProduct.wholesaler.businessName}</div>
-                    </div>
-                  </div>
+                      
+                      {/* Price */}
+                      <div className="border-t border-b py-6">
+                        {featuredProduct.promoActive && featuredProduct.promoPrice ? (
+                          <div>
+                            <div className="flex items-baseline gap-4 mb-2">
+                              <span className="text-4xl font-bold text-green-600">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.promoPrice).toFixed(2)}
+                              </span>
+                              <span className="text-2xl text-gray-400 line-through">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="text-sm text-green-600 font-medium">
+                              Save {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(featuredProduct.price) - parseFloat(featuredProduct.promoPrice)).toFixed(2)} ({Math.round((1 - parseFloat(featuredProduct.promoPrice) / parseFloat(featuredProduct.price)) * 100)}% off)
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-4xl font-bold text-gray-900">
+                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 mt-1">Price per unit</div>
+                      </div>
+                      
+                      {/* Product Stats */}
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">Minimum Order</div>
+                          <div className="text-xl font-semibold text-gray-900">
+                            {formatNumber(featuredProduct.moq)} units
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">In Stock</div>
+                          <div className="text-xl font-semibold text-gray-900">
+                            {formatNumber(featuredProduct.stock)} units
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* Negotiation Badge for Featured Product */}
-                  {featuredProduct.negotiationEnabled && (
-                    <div className="mb-4">
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 px-3 py-1">
-                        💬 Price Negotiable - Request Custom Quote Available!
-                      </Badge>
-                      {featuredProduct.minimumBidPrice && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          💡 Minimum acceptable price: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.minimumBidPrice).toFixed(2)}
-                        </p>
+                      {/* Negotiation Info */}
+                      {featuredProduct.negotiationEnabled && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <div className="font-medium text-blue-900 mb-1">Price Negotiable</div>
+                              <p className="text-sm text-blue-700">
+                                Request a custom quote based on your quantity needs.
+                              </p>
+                              {featuredProduct.minimumBidPrice && (
+                                <p className="text-sm text-blue-600 mt-2">
+                                  Minimum price: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.minimumBidPrice).toFixed(2)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  )}
-                  
-                  <div className="flex space-x-3">
-                    {featuredProduct.negotiationEnabled ? (
-                      <>
-                        <Button
-                          onClick={() => openNegotiation(featuredProduct)}
-                          variant="outline"
-                          className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
-                        >
-                          <Mail className="w-4 h-4 mr-2" />
-                          Request Custom Quote
-                        </Button>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-3">
                         <Button
                           onClick={() => openQuantityEditor(featuredProduct)}
-                          className="px-6 bg-green-600 hover:bg-green-700"
+                          size="lg"
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
                         >
-                          <Plus className="w-4 h-4 mr-2" />
+                          <Plus className="w-5 h-5 mr-3" />
                           Add to Cart
                         </Button>
-                      </>
-                    ) : (
-                      <Button
-                        onClick={() => openQuantityEditor(featuredProduct)}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add to Cart
-                      </Button>
-                    )}
+                        
+                        {featuredProduct.negotiationEnabled && (
+                          <Button 
+                            onClick={() => openNegotiation(featuredProduct)}
+                            variant="outline"
+                            size="lg"
+                            className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold py-4 text-lg"
+                          >
+                            <Mail className="w-5 h-5 mr-3" />
+                            Request Custom Quote
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Supplier Info */}
+                      <div className="border-t pt-6">
+                        <div className="flex items-center gap-3 text-gray-600">
+                          <Store className="w-5 h-5" />
+                          <span className="text-sm">
+                            Supplied by <span className="font-semibold text-gray-900">{featuredProduct.wholesaler.businessName}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Search and Filters */}
@@ -988,19 +1029,84 @@ export default function CustomerPortal() {
           </div>
         )}
 
-        {/* More Products Available Section */}
+        {/* See All Products Section */}
         {featuredProduct && !showAllProducts && otherProducts.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">More Products Available</h2>
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">See All Products</h2>
               <Button
                 onClick={() => setShowAllProducts(true)}
                 variant="outline"
-                size="sm"
-                className="text-green-600 border-green-600 hover:bg-green-50"
+                className="text-green-600 border-green-600 hover:bg-green-50 font-medium"
               >
-                View All Products ({otherProducts.length})
+                View All ({otherProducts.length})
               </Button>
+            </div>
+            
+            {/* Preview of Products */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherProducts.slice(0, 6).map((product: Product) => (
+                <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    {/* Product Image */}
+                    <div className="mb-4">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-40 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                          <Package className="w-12 h-12 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Product Info */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                      
+                      {/* Price */}
+                      <div className="flex items-baseline gap-2">
+                        {product.promoActive && product.promoPrice ? (
+                          <>
+                            <span className="text-xl font-bold text-green-600">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                            </span>
+                            <span className="text-sm text-gray-400 line-through">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                            </span>
+                            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                              SALE
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xl font-bold text-gray-900">
+                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Quick Stats */}
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>MOQ: {formatNumber(product.moq)}</span>
+                        <span>Stock: {formatNumber(product.stock)}</span>
+                      </div>
+                      
+                      {/* Add to Cart Button */}
+                      <Button
+                        onClick={() => openQuantityEditor(product)}
+                        className="w-full bg-green-600 hover:bg-green-700 mt-4"
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         )}
