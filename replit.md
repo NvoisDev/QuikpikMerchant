@@ -146,6 +146,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 09, 2025. Enhanced Landing Page with Free In-Person Support and Calendly Integration:
+  - **Free Support Section**: Added comprehensive support section highlighting one-on-one setup sessions, priority phone support, and team training
+  - **Calendly Integration**: Integrated booking buttons for different support types (setup sessions, team training, quick help)
+  - **Professional Design**: Created emerald-themed support section with modern card layout and clear call-to-actions
+  - **Multiple Contact Options**: Added support email (support@quikpik.co) with 2-hour response time commitment
+  - **Availability Information**: Displayed business hours (Mon-Fri 9AM-6PM GMT) and weekend support availability
+  - **Visual Enhancement**: Added relevant icons (Video, Phone, Users2, Calendar) and emerald color scheme for support branding
 - July 09, 2025. Complete Business Registration System and Email Fixes:
   - **Comprehensive Signup Flow**: Built complete 3-step registration system collecting all business information (personal info, business details, address & preferences)
   - **Business Information Collection**: Added fields for business description, email, type, estimated monthly volume, and full address details
