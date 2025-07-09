@@ -122,6 +122,19 @@ export default function GooglePlacesAutocomplete({
           }
         });
 
+        // Prevent dropdown clicks from closing parent modal
+        setTimeout(() => {
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer) {
+            pacContainer.addEventListener('click', (e) => {
+              e.stopPropagation();
+            }, true);
+            pacContainer.addEventListener('mousedown', (e) => {
+              e.stopPropagation();
+            }, true);
+          }
+        }, 100);
+
         autocompleteRef.current = autocomplete;
         setIsLoaded(true);
       }

@@ -198,7 +198,21 @@ export default function ShippingQuoteModal({ isOpen, onClose, order, businessAdd
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          // Prevent modal from closing when clicking Google Places dropdown
+          const target = e.target as Element;
+          const isPacContainer = target?.closest('.pac-container');
+          const isPacItem = target?.closest('.pac-item');
+          const isGooglePlaces = target?.closest('[data-testid="google-places-autocomplete"]');
+          
+          if (isPacContainer || isPacItem || isGooglePlaces) {
+            e.preventDefault();
+            return false;
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Truck className="h-5 w-5" />
