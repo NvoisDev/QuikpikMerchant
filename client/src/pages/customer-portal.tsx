@@ -441,9 +441,15 @@ export default function CustomerPortal() {
   const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
     queryKey: ['/api/marketplace/wholesaler', wholesalerId],
     queryFn: async () => {
+      console.log(`Fetching wholesaler data for ID: ${wholesalerId}`);
       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
-      if (!response.ok) throw new Error("Failed to fetch wholesaler");
-      return response.json();
+      if (!response.ok) {
+        console.error(`Wholesaler fetch failed: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch wholesaler: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Wholesaler data received:', data);
+      return data;
     },
     enabled: !!wholesalerId,
     retry: 1
@@ -469,12 +475,16 @@ export default function CustomerPortal() {
       const params = new URLSearchParams();
       if (wholesalerId) params.append('wholesalerId', wholesalerId);
       
+      console.log(`Fetching products for wholesaler: ${wholesalerId}`);
       const response = await fetch(`/api/marketplace/products?${params}`);
       if (!response.ok) {
+        console.error(`Products fetch failed: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch products: ${response.status}`);
       }
       
-      return response.json();
+      const data = await response.json();
+      console.log(`Products received: ${data.length} items`);
+      return data;
     },
     enabled: !!wholesalerId,
     refetchInterval: enableAutoRefresh ? 30000 : false,
