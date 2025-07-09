@@ -5848,5 +5848,36 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  app.post('/api/team-members/:id/resend-invite', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+      
+      // Get team member details
+      const teamMembers = await storage.getTeamMembers(userId);
+      const teamMember = teamMembers.find(member => member.id === parseInt(id));
+      
+      if (!teamMember) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      if (teamMember.status !== 'pending') {
+        return res.status(400).json({ message: "Can only resend invites to pending members" });
+      }
+
+      // Send invitation email
+      try {
+        await sendTeamInvitationEmail(teamMember, req.user);
+        res.json({ message: "Invitation resent successfully" });
+      } catch (emailError) {
+        console.error("Error resending invitation email:", emailError);
+        res.status(500).json({ message: "Failed to resend invitation email" });
+      }
+    } catch (error) {
+      console.error("Error resending team invitation:", error);
+      res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
   return httpServer;
 }

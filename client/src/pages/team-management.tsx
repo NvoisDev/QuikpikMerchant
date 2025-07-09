@@ -143,6 +143,26 @@ export default function TeamManagement() {
     },
   });
 
+  const resendInviteMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      const response = await apiRequest("POST", `/api/team-members/${memberId}/resend-invite`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invitation resent",
+        description: "Invitation has been resent successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
   const currentTier = subscription?.subscriptionTier || 'free';
   const teamLimit = getSubscriptionLimit(currentTier);
   const currentTeamCount = teamMembers?.length || 0;
@@ -160,6 +180,10 @@ export default function TeamManagement() {
     if (window.confirm("Are you sure you want to remove this team member?")) {
       deleteMemberMutation.mutate(memberId);
     }
+  };
+
+  const handleResendInvite = (memberId: number) => {
+    resendInviteMutation.mutate(memberId);
   };
 
   if (isLoading) {
@@ -386,14 +410,28 @@ export default function TeamManagement() {
                         {member.role}
                       </Badge>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteMember(member.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {member.status === 'pending' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResendInvite(member.id)}
+                          disabled={resendInviteMutation.isPending}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          {resendInviteMutation.isPending ? "Sending..." : "Resend Invite"}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
