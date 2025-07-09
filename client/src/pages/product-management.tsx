@@ -532,6 +532,14 @@ export default function ProductManagement() {
         pickup: product.supportsPickup !== false,
         delivery: product.supportsDelivery !== false,
       },
+      // Weight and shipping fields
+      unitWeight: product.unitWeight?.toString() || "",
+      palletWeight: product.palletWeight?.toString() || "",
+      temperatureRequirement: product.temperatureRequirement || "ambient",
+      contentCategory: product.contentCategory || "general",
+      specialHandling: product.specialHandling || {},
+      shelfLife: product.shelfLife?.toString() || "",
+      lowStockThreshold: product.lowStockThreshold?.toString() || "50",
     });
     setIsDialogOpen(true);
   };
@@ -566,6 +574,14 @@ export default function ProductManagement() {
         pickup: product.supportsPickup !== false,
         delivery: product.supportsDelivery !== false,
       },
+      // Weight and shipping fields
+      unitWeight: product.unitWeight?.toString() || "",
+      palletWeight: product.palletWeight?.toString() || "",
+      temperatureRequirement: product.temperatureRequirement || "ambient",
+      contentCategory: product.contentCategory || "general",
+      specialHandling: product.specialHandling || {},
+      shelfLife: product.shelfLife?.toString() || "",
+      lowStockThreshold: product.lowStockThreshold?.toString() || "50",
     });
     setIsDialogOpen(true);
   };
