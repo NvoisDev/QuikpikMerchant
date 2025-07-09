@@ -844,6 +844,15 @@ function WhatsAppIntegrationSection() {
     },
   });
 
+  // Handler functions for the provider selection component
+  const handleSaveWhatsAppConfig = () => {
+    saveConfigMutation.mutate();
+  };
+
+  const handleVerifyWhatsAppConfig = () => {
+    verifyConfigMutation.mutate();
+  };
+
   // Test WhatsApp mutation
   const testMutation = useMutation({
     mutationFn: async () => {
