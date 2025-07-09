@@ -175,6 +175,15 @@ The platform implements a customer-centric shipping model where customers contro
 This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
 
 ## Changelog
+- July 09, 2025. Complete Customer Portal Enhancement with Sticky Header and Selling Format Tags:
+  - **Sticky Header Implementation**: Added sticky positioning to customer portal header panel with business name, share store, and cart buttons
+  - **Header Persistence**: Header stays fixed at top when customers scroll through products using `sticky top-0 z-50` classes
+  - **Selling Format Tags Integration**: Added comprehensive "📦 Units" (blue) and "📦 Pallets" (purple) tags throughout customer portal
+  - **Complete Tag Coverage**: Selling format tags appear in featured product section, list view, grid view, and all products view
+  - **Professional Tag Styling**: Consistent color-coded tags with proper spacing and typography matching existing design
+  - **Enhanced User Experience**: Customers can now clearly see product selling formats alongside category and negotiation indicators
+  - **List View Default**: Maintained horizontal layout as default view with toggle functionality for grid view
+  - **Responsive Design**: All enhancements work seamlessly across desktop and mobile devices
 - July 09, 2025. Complete Clean Modern Customer Portal Redesign:
   - **Hero Featured Product Section**: Redesigned featured product to use clean, modern layout without gradients
   - **Professional Product Display**: Large hero section with product image, detailed pricing, stats, and prominent action buttons
