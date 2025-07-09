@@ -153,6 +153,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Team Member Shipping Access**: Extended full shipping functionality access to team members alongside wholesalers for complete operational support
   - **Enhanced Cart Calculations**: Added fallback values and NaN validation throughout cart totals, payment processing, and checkout workflows
   - **Improved Error Handling**: Strengthened payment processing with proper price validation for promotional pricing, pallet pricing, and regular product pricing
+- July 09, 2025. Unified Orders & Shipping Management Interface:
+  - **Consolidated Shipping Interface**: Moved both Shipping Settings and Shipping Tracking into unified Orders tab with tabbed interface
+  - **Streamlined Navigation**: Removed separate shipping navigation items, now accessible through Orders section with three tabs (Orders, Shipping Settings, Shipping Tracking)
+  - **Enhanced Order Management**: Updated Orders page header to "Order Management & Shipping" reflecting expanded functionality
+  - **Tabbed User Experience**: Clean tab interface allows seamless switching between order management, shipping configuration, and delivery tracking
+  - **Simplified Sidebar**: Reduced navigation complexity by consolidating shipping features into logical order management workflow
+  - **Integrated Shipping Workflow**: Users can now manage orders, configure shipping settings, and track deliveries all from single interface
 - July 09, 2025. Complete Parcel2Go Shipping API Integration with Google Places Autocomplete:
   - **Full Shipping Management System**: Integrated comprehensive Parcel2Go API for shipping quotes, label creation, and tracking
   - **Google Places Autocomplete Enhancement**: Added intelligent address autocomplete for both collection (pickup) and delivery addresses
