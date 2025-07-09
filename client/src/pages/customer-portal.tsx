@@ -1127,321 +1127,101 @@ export default function CustomerPortal() {
           </div>
         )}
 
-        {/* Products Grid */}
-        {productsLoading ? (
-          <div className={`${viewMode === "grid" 
-            ? "grid md:grid-cols-2 lg:grid-cols-3 gap-4" 
-            : "space-y-4"
-          }`}>
-            {[...Array(6)].map((_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))}
-          </div>
-        ) : (
-          <div className={`${viewMode === "grid" 
-            ? "grid md:grid-cols-2 lg:grid-cols-3 gap-4" 
-            : "space-y-4"
-          }`}>
-            {(() => {
-              let productsToShow;
-              if (showAllProducts || !featuredProduct) {
-                productsToShow = filteredProducts;
-              } else {
-                productsToShow = otherProducts.slice(0, 6);
-              }
-              
-              if (productsToShow.length === 0) {
-                return (
+        {/* All Products View - Only shown when "View All" is clicked */}
+        {showAllProducts && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Products</h2>
+              <Button
+                onClick={() => setShowAllProducts(false)}
+                variant="outline"
+                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Featured
+              </Button>
+            </div>
+            
+            {productsLoading ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.length === 0 ? (
                   <div className="col-span-full text-center py-12">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-                    <p className="text-gray-500">
-                      {searchTerm ? 'Try adjusting your search terms' : 'No products available at the moment'}
-                    </p>
+                    <p className="text-gray-500">No products available at the moment</p>
                   </div>
-                );
-              }
-              
-              return productsToShow.map((product: Product) => (
-                viewMode === "grid" ? (
-                  // Grid View
-                  <Card key={product.id} className="border hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      {/* Product Image */}
-                      <div className="mb-3">
-                        {product.imageUrl ? (
-                          <img 
-                            src={product.imageUrl} 
-                            alt={product.name}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <Package className="w-16 h-16 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                          <div className="flex items-center gap-2 mt-1 mb-2">
-                            {product.category && (
-                              <span className="text-sm text-gray-500">{product.category}</span>
-                            )}
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              product.sellingFormat === 'pallets' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : product.sellingFormat === 'both'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
-                               product.sellingFormat === 'both' ? 'Units & Pallets' : 
-                               'Units Only'}
-                            </span>
-                            {product.negotiationEnabled && (
-                              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
-                                💬 Negotiable
-                              </span>
-                            )}
-                          </div>
-                          {product.description && (
-                            <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              {product.sellingFormat === 'pallets' ? 'Price per pallet:' : 
-                               product.sellingFormat === 'both' ? 'Price per unit:' : 
-                               'Price per unit:'}
-                            </span>
-                            <div className="font-semibold">
-                              {product.promoActive && product.promoPrice ? (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-green-600">
-                                    {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.promoPrice).toFixed(2)}
-                                  </span>
-                                  <span className="text-gray-500 line-through text-xs">
-                                    {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span>
-                                  {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Min order:</span>
-                            <span>{formatNumber(product.moq)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Stock:</span>
-                            <span className={product.stock < 100 ? "text-red-600" : ""}>{formatNumber(product.stock)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
-                          </div>
-                          {product.sellingFormat === 'both' && (
-                            <div className="border-t pt-2 mt-2 space-y-1">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Pallet price:</span>
-                                <span className="font-semibold">{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.palletPrice || '0').toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Pallet MOQ:</span>
-                                <span>{formatNumber(product.palletMoq || 1)} pallets</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Pallet stock:</span>
-                                <span>{formatNumber(product.palletStock || 0)} pallets</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Store className="w-3 h-3 mr-1" />
-                          {product.wholesaler.businessName}
-                        </div>
-                        
-                        {/* Negotiation Indicator */}
-                        {product.negotiationEnabled && (
-                          <div className="mb-2">
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                              💬 Price Negotiable
-                            </Badge>
-                          </div>
-                        )}
-                        
-                        {/* Action Buttons */}
-                        <div className="flex space-x-2 pt-2">
-                          {product.negotiationEnabled ? (
-                            <>
-                              <Button 
-                                onClick={() => openNegotiation(product)}
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
-                              >
-                                <Mail className="w-3 h-3 mr-1" />
-                                Quote
-                              </Button>
-                              <Button 
-                                onClick={() => openQuantityEditor(product)}
-                                size="sm"
-                                className="px-3 bg-green-600 hover:bg-green-700"
-                                title="Add to cart at listed price"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Button 
-                              onClick={() => openQuantityEditor(product)}
-                              size="sm"
-                              className="w-full bg-green-600 hover:bg-green-700"
-                            >
-                              <Plus className="w-3 h-3 mr-1" />
-                              Add to Cart
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
                 ) : (
-                  // List View - Optimized horizontal layout
-                  <Card key={product.id} className="border hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-4">
-                        {/* Small Product Image on Left */}
-                        <div className="flex-shrink-0">
+                  filteredProducts.map((product: Product) => (
+                    <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        {/* Product Image */}
+                        <div className="mb-4">
                           {product.imageUrl ? (
                             <img 
                               src={product.imageUrl} 
                               alt={product.name}
-                              className="w-16 h-16 object-cover rounded-lg border"
+                              className="w-full h-40 object-cover rounded-lg"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
-                              <Package className="w-8 h-8 text-gray-400" />
+                            <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                              <Package className="w-12 h-12 text-gray-300" />
                             </div>
                           )}
                         </div>
                         
-                        {/* Product Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                {product.category && (
-                                  <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
-                                    {product.category}
-                                  </span>
-                                )}
-                                <span className={`inline-block px-2 py-1 rounded-md text-xs font-medium ${
-                                  product.sellingFormat === 'pallets' 
-                                    ? 'bg-purple-100 text-purple-800' 
-                                    : product.sellingFormat === 'both'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {product.sellingFormat === 'pallets' ? 'Pallets Only' : 
-                                   product.sellingFormat === 'both' ? 'Units & Pallets' : 
-                                   'Units Only'}
+                        {/* Product Info */}
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                          
+                          {/* Price */}
+                          <div className="flex items-baseline gap-2">
+                            {product.promoActive && product.promoPrice ? (
+                              <>
+                                <span className="text-xl font-bold text-green-600">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
                                 </span>
-                                {product.negotiationEnabled && (
-                                  <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
-                                    💬 Negotiable
-                                  </span>
-                                )}
-                              </div>
-                              {product.description && (
-                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
-                              )}
-                            </div>
-                            
-                            {/* Price and Action Buttons */}
-                            <div className="flex-shrink-0 text-right ml-4">
-                              <div className="text-lg font-bold text-gray-900 mb-2">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{parseFloat(product.price).toFixed(2)}
-                              </div>
-                              
-                              {/* Action Buttons */}
-                              <div className="flex space-x-2">
-                                {product.negotiationEnabled ? (
-                                  <>
-                                    <Button 
-                                      onClick={() => openNegotiation(product)}
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                                    >
-                                      <Mail className="w-3 h-3 mr-1" />
-                                      Quote
-                                    </Button>
-                                    <Button 
-                                      onClick={() => openQuantityEditor(product)}
-                                      size="sm"
-                                      className="bg-green-600 hover:bg-green-700"
-                                    >
-                                      <Plus className="w-3 h-3 mr-1" />
-                                      Add
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <Button 
-                                    onClick={() => openQuantityEditor(product)}
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Add to Cart
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
+                                <span className="text-sm text-gray-400 line-through">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                </span>
+                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                  SALE
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xl font-bold text-gray-900">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                              </span>
+                            )}
                           </div>
                           
-                          {/* Product Stats */}
-                          <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
-                            <div>
-                              <span className="text-gray-500">MOQ:</span>
-                              <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Stock:</span>
-                              <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
-                                {formatNumber(product.stock)} units
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Supplier:</span>
-                              <div className="font-medium text-gray-900 truncate flex items-center">
-                                <Store className="w-3 h-3 mr-1" />
-                                {product.wholesaler.businessName}
-                              </div>
-                            </div>
+                          {/* Quick Stats */}
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>MOQ: {formatNumber(product.moq)}</span>
+                            <span>Stock: {formatNumber(product.stock)}</span>
                           </div>
                           
-                          {/* Negotiation Indicator */}
-                          {product.negotiationEnabled && (
-                            <div className="mt-2">
-                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                                💬 Price Negotiable
-                              </Badge>
-                            </div>
-                          )}
+                          {/* Add to Cart Button */}
+                          <Button
+                            onClick={() => openQuantityEditor(product)}
+                            className="w-full bg-green-600 hover:bg-green-700 mt-4"
+                            size="sm"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add to Cart
+                          </Button>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              ));
-            })()}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
