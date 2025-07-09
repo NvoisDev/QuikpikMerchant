@@ -94,6 +94,8 @@ export default function TeamManagement() {
 
   const { data: teamMembers, isLoading } = useQuery({
     queryKey: ["/api/team-members"],
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const inviteMemberMutation = useMutation({

@@ -227,62 +227,106 @@ function generateStockUpdateMessage(product: any, notificationType: string, whol
   return message;
 }
 
-// Email transporter for team invitations
-const emailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'noreply@quikpik.co',
-    pass: process.env.EMAIL_PASSWORD || 'fallback'
-  }
-});
+// Removed old email transporter - now using SendGrid
 
-// Send team invitation email
+// Send team invitation email using SendGrid
 async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
-  const inviteLink = `${process.env.NODE_ENV === 'production' ? 'https://' : 'http://'}${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}/team-invite/${teamMember.id}`;
-  
-  const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">Team Invitation</h1>
-      </div>
-      
-      <div style="padding: 40px; background: #f8f9fa;">
-        <h2 style="color: #333; margin-bottom: 20px;">You've been invited to join ${wholesaler.businessName || wholesaler.firstName + "'s"} team!</h2>
-        
-        <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          Hello ${teamMember.firstName},
-        </p>
-        
-        <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-          You've been invited to join <strong>${wholesaler.businessName || wholesaler.firstName + "'s business"}</strong> 
-          as a <strong>${teamMember.role}</strong> on the Quikpik platform.
-        </p>
-        
-        <div style="text-align: center; margin: 40px 0;">
-          <a href="${inviteLink}" style="background: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-            Accept Invitation
-          </a>
-        </div>
-        
-        <p style="color: #999; font-size: 14px; text-align: center;">
-          If you can't click the button, copy and paste this link: ${inviteLink}
-        </p>
-      </div>
-      
-      <div style="background: #333; padding: 20px; text-align: center;">
-        <p style="color: #999; margin: 0; font-size: 14px;">
-          Powered by Quikpik - The Complete Wholesale Platform
-        </p>
-      </div>
-    </div>
-  `;
+  try {
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY environment variable is not set');
+    }
 
-  await emailTransporter.sendMail({
-    from: '"Quikpik Team" <noreply@quikpik.co>',
-    to: teamMember.email,
-    subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.firstName + "'s"} team`,
-    html: emailHtml
-  });
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    // Get the current domain
+    const baseUrl = process.env.REPL_SLUG 
+      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`
+      : 'https://quikpik.co';
+
+    const msg = {
+      to: teamMember.email,
+      from: {
+        email: 'hello@quikpik.co',
+        name: 'Quikpik Team'
+      },
+      subject: `You're invited to join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Team Invitation</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f7f9fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">You're Invited!</h1>
+              <p style="color: #d1fae5; margin: 10px 0 0 0; font-size: 16px;">Join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">Hello ${teamMember.firstName}!</h2>
+              
+              <p style="color: #4b5563; line-height: 1.6; margin-bottom: 20px; font-size: 16px;">
+                <strong>${wholesaler.businessName || wholesaler.name}</strong> has invited you to join their team on Quikpik, the comprehensive wholesale management platform.
+              </p>
+              
+              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0; color: #374151; font-size: 16px;"><strong>Your Role:</strong> ${teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1)}</p>
+                <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">You'll have access to products, orders, customers, and broadcast management.</p>
+              </div>
+              
+              <p style="color: #4b5563; line-height: 1.6; margin-bottom: 30px; font-size: 16px;">
+                As a team member, you'll be able to help manage the wholesale business including inventory, customer communications, and order processing.
+              </p>
+              
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}" 
+                   style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; transition: transform 0.2s;">
+                  Accept Invitation & Join Team
+                </a>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 14px; text-align: center; margin-top: 20px;">
+                Or copy and paste this link in your browser:<br>
+                <span style="word-break: break-all;">${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}</span>
+              </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0; text-align: center; line-height: 1.5;">
+                This invitation was sent by <strong>${wholesaler.email}</strong><br>
+                If you didn't expect this invitation, you can safely ignore this email.
+              </p>
+              <div style="text-align: center; margin-top: 20px;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                  © 2025 Quikpik. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    await sgMail.send(msg);
+    console.log('Team invitation email sent successfully to:', teamMember.email);
+    return true;
+  } catch (error) {
+    console.error('Error sending team invitation email:', error);
+    if (error.response) {
+      console.error('SendGrid error response:', error.response.body);
+    }
+    throw new Error('Failed to send invitation email: ' + error.message);
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -5876,6 +5920,99 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Error resending team invitation:", error);
       res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  // Team invitation acceptance endpoints
+  app.get('/api/team-invitation/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { email } = req.query;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email parameter is required" });
+      }
+
+      // Get team member by ID and verify email matches
+      const teamMembers = await storage.getAllTeamMembers();
+      const teamMember = teamMembers.find(member => 
+        member.id === parseInt(token) && 
+        member.email === email && 
+        member.status === 'pending'
+      );
+      
+      if (!teamMember) {
+        return res.status(404).json({ message: "Invalid or expired invitation" });
+      }
+
+      // Get wholesaler details
+      const wholesaler = await storage.getUser(teamMember.wholesalerId);
+      
+      res.json({
+        teamMember: {
+          firstName: teamMember.firstName,
+          lastName: teamMember.lastName,
+          email: teamMember.email,
+          role: teamMember.role
+        },
+        wholesaler: {
+          name: wholesaler?.firstName + ' ' + (wholesaler?.lastName || ''),
+          businessName: wholesaler?.businessName,
+          email: wholesaler?.email
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching team invitation:", error);
+      res.status(500).json({ message: "Failed to fetch invitation details" });
+    }
+  });
+
+  app.post('/api/team-invitation/accept', async (req, res) => {
+    try {
+      const { token, email, firstName, lastName, password } = req.body;
+      
+      if (!token || !email || !firstName || !password) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get team member by ID and verify email matches
+      const teamMembers = await storage.getAllTeamMembers();
+      const teamMember = teamMembers.find(member => 
+        member.id === parseInt(token) && 
+        member.email === email && 
+        member.status === 'pending'
+      );
+      
+      if (!teamMember) {
+        return res.status(404).json({ message: "Invalid or expired invitation" });
+      }
+
+      // Create user account for team member
+      const userData = {
+        email: teamMember.email,
+        firstName: firstName,
+        lastName: lastName || '',
+        role: 'wholesaler', // Team members are wholesaler role with limited permissions
+        subscriptionTier: 'team_member', // Special tier for team members
+        businessName: '',
+        businessDescription: '',
+        businessPhone: '',
+        businessAddress: '',
+        defaultCurrency: 'GBP'
+      };
+
+      const newUser = await storage.createUser(userData);
+      
+      // Update team member status to active and link to user
+      await storage.updateTeamMemberStatus(teamMember.id, 'active');
+      
+      res.json({ 
+        message: "Team member account created successfully",
+        userId: newUser.id 
+      });
+    } catch (error) {
+      console.error("Error accepting team invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
     }
   });
 

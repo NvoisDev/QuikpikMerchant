@@ -32,6 +32,7 @@ import CustomerPortal from "@/pages/customer-portal";
 import PaymentSuccess from "@/pages/payment-success";
 import StockAlerts from "@/pages/stock-alerts";
 import TeamManagement from "@/pages/team-management";
+import TeamInvitation from "@/pages/team-invitation";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       <Route path="/customer/:id?" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
+      <Route path="/team-invitation" component={TeamInvitation} />
       
       {!isAuthenticated ? (
         <Route path="/" component={LandingPage} />

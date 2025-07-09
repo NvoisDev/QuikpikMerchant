@@ -81,22 +81,32 @@ export default function WholesalerDashboard() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/analytics/stats"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders"],
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const { data: topProducts, isLoading: productsLoading } = useQuery({
     queryKey: ["/api/analytics/top-products"],
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 
   const { data: broadcastStats, isLoading: broadcastStatsLoading } = useQuery({
     queryKey: ["/api/broadcasts/stats"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: alertsData } = useQuery({
     queryKey: ["/api/stock-alerts/count"],
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   if (statsLoading) {

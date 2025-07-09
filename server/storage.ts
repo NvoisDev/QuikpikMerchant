@@ -160,6 +160,7 @@ export interface IStorage {
   
   // Team Management operations
   getTeamMembers(wholesalerId: string): Promise<TeamMember[]>;
+  getAllTeamMembers(): Promise<TeamMember[]>;
   createTeamMember(teamMember: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
   deleteTeamMember(id: number): Promise<void>;
@@ -1507,6 +1508,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(teamMembers)
       .where(eq(teamMembers.wholesalerId, wholesalerId))
+      .orderBy(desc(teamMembers.createdAt));
+  }
+
+  async getAllTeamMembers(): Promise<TeamMember[]> {
+    return await db
+      .select()
+      .from(teamMembers)
       .orderBy(desc(teamMembers.createdAt));
   }
 
