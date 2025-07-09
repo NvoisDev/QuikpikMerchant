@@ -261,6 +261,7 @@ export default function ShippingSettings() {
                       <span>Collection Details</span>
                     </h3>
                     <GooglePlacesAutocomplete
+                      id="collection-address-autocomplete"
                       onAddressSelect={(address) => {
                         const components = address.address_components || [];
                         const getComponent = (types: string[]) => {
@@ -289,6 +290,7 @@ export default function ShippingSettings() {
                       <span>Delivery Details</span>
                     </h3>
                     <GooglePlacesAutocomplete
+                      id="delivery-address-autocomplete"
                       onAddressSelect={(address) => {
                         const components = address.address_components || [];
                         const getComponent = (types: string[]) => {

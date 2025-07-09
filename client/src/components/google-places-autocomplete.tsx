@@ -11,6 +11,7 @@ interface GooglePlacesAutocompleteProps {
   required?: boolean;
   value?: string;
   className?: string;
+  id?: string; // Add unique ID to prevent conflicts
 }
 
 interface PlaceResult {
@@ -28,13 +29,18 @@ interface PlaceResult {
   };
 }
 
+// Global state to track if Google Maps API is loaded
+let googleMapsApiLoaded = false;
+let googleMapsApiPromise: Promise<void> | null = null;
+
 export default function GooglePlacesAutocomplete({
   onAddressSelect,
   placeholder = "Enter delivery address",
   label = "Delivery Address",
   required = false,
   value = "",
-  className = ""
+  className = "",
+  id = "address-autocomplete"
 }: GooglePlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -57,8 +63,16 @@ export default function GooglePlacesAutocomplete({
       });
   }, []);
 
-  const initializeAutocomplete = useCallback(async () => {
-    // Get API key from server
+  const loadGoogleMapsApi = useCallback(async () => {
+    if (googleMapsApiLoaded) {
+      return;
+    }
+
+    if (googleMapsApiPromise) {
+      await googleMapsApiPromise;
+      return;
+    }
+
     try {
       const response = await fetch('/api/config/google-places-key');
       const data = await response.json();
@@ -75,16 +89,27 @@ export default function GooglePlacesAutocomplete({
         libraries: ['places']
       });
 
-      await loader.load();
+      googleMapsApiPromise = loader.load();
+      await googleMapsApiPromise;
+      googleMapsApiLoaded = true;
+    } catch (error) {
+      console.error('Error loading Google Places API:', error);
+      googleMapsApiPromise = null;
+    }
+  }, []);
 
-      if (inputRef.current && !autocompleteRef.current) {
-        // Create autocomplete with basic settings
+  const initializeAutocomplete = useCallback(async () => {
+    try {
+      await loadGoogleMapsApi();
+
+      if (inputRef.current && !autocompleteRef.current && googleMapsApiLoaded) {
+        // Create autocomplete with unique settings for this instance
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           types: ['address'],
           fields: ['formatted_address', 'address_components', 'geometry']
         });
 
-        // Handle place selection - this is the only event we need
+        // Handle place selection
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           
@@ -98,9 +123,9 @@ export default function GooglePlacesAutocomplete({
         setIsLoaded(true);
       }
     } catch (error) {
-      console.error('Error loading Google Places API:', error);
+      console.error('Error initializing autocomplete:', error);
     }
-  }, [onAddressSelect]);
+  }, [onAddressSelect, loadGoogleMapsApi]);
 
   useEffect(() => {
     if (isApiKeyAvailable) {
@@ -135,7 +160,7 @@ export default function GooglePlacesAutocomplete({
   return (
     <div className={className}>
       {label && (
-        <Label htmlFor="address-autocomplete" className="flex items-center gap-2">
+        <Label htmlFor={id} className="flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           {label} {required && '*'}
         </Label>
@@ -143,7 +168,7 @@ export default function GooglePlacesAutocomplete({
       <div className="relative">
         <Input
           ref={inputRef}
-          id="address-autocomplete"
+          id={id}
           value={inputValue}
           onChange={handleInputChange}
           placeholder={isApiKeyAvailable ? `${placeholder} (with autocomplete)` : placeholder}
