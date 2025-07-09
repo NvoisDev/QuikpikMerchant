@@ -44,12 +44,12 @@ export default function GooglePlacesAutocomplete({
 
   // Check if Google Maps API key is available
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
     setIsApiKeyAvailable(!!apiKey);
   }, []);
 
   const initializeAutocomplete = useCallback(async () => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
     
     if (!apiKey) {
       console.warn('Google Maps API key not found. Address autocomplete disabled.');

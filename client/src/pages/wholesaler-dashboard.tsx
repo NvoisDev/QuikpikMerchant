@@ -135,7 +135,7 @@ export default function WholesalerDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2" data-onboarding="dashboard-header">
                 <h1 className="text-4xl font-bold text-gray-900">
-                  Hello, {user?.firstName || user?.businessName || 'Wholesaler'} 👋
+                  Hello, {user?.firstName || user?.businessName?.split(' ')[0] || 'Wholesaler'} 👋
                 </h1>
                 <p className="text-lg text-gray-900 opacity-80">
                   Your business performance at a glance

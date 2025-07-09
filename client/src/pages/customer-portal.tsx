@@ -151,14 +151,22 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
             items: cart.map(item => ({
               productId: item.product.id,
-              quantity: item.quantity,
-              unitPrice: item.product.promoActive && item.product.promoPrice 
-                ? parseFloat(item.product.promoPrice)
-                : parseFloat(item.product.price)
+              quantity: item.quantity || 0,
+              unitPrice: (() => {
+                if (item.sellingType === "pallets") {
+                  return parseFloat(item.product.palletPrice || "0") || 0;
+                } else {
+                  const promoPrice = item.product.promoActive && item.product.promoPrice 
+                    ? parseFloat(item.product.promoPrice) || 0
+                    : 0;
+                  const regularPrice = parseFloat(item.product.price) || 0;
+                  return promoPrice > 0 ? promoPrice : regularPrice;
+                }
+              })()
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount
+            totalAmount: cartStats.totalValue || 0
           });
           const data = await response.json();
           setClientSecret(data.clientSecret);
