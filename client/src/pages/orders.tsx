@@ -385,7 +385,7 @@ export default function Orders() {
                     onClick={() => setViewMode("table")}
                     className={viewMode === "table" ? "bg-white shadow-sm" : ""}
                   >
-                    <List className="h-4 w-4" />
+                    <List className="h-4 w-4 text-gray-700" />
                   </Button>
                 </div>
                 
@@ -449,7 +449,11 @@ export default function Orders() {
                         </thead>
                         <tbody>
                           {filteredOrders.map((order: any) => (
-                            <tr key={order.id} className="border-b hover:bg-gray-50 cursor-pointer">
+                            <tr 
+                              key={order.id} 
+                              className="border-b hover:bg-gray-50 cursor-pointer"
+                              onClick={() => setSelectedOrder(order)}
+                            >
                               <td className="p-4">
                                 <div className="flex items-center gap-3">
                                   <Checkbox />
@@ -701,6 +705,74 @@ export default function Orders() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Order Details Dialog for Table View */}
+          {selectedOrder && (
+            <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Order #{selectedOrder.id} Details</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">Customer Information</h3>
+                      <div className="space-y-1 text-sm">
+                        <div><strong>Name:</strong> {selectedOrder.retailer ? `${selectedOrder.retailer.firstName} ${selectedOrder.retailer.lastName}` : 'Unknown'}</div>
+                        <div><strong>Email:</strong> {selectedOrder.retailer?.email || 'N/A'}</div>
+                        <div><strong>Phone:</strong> {selectedOrder.retailer?.phoneNumber || 'N/A'}</div>
+                        <div><strong>Order Total:</strong> {formatCurrency(parseFloat(selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Order Information</h3>
+                      <div className="space-y-1 text-sm">
+                        <div><strong>Status:</strong> {getStatusBadge(selectedOrder.status)}</div>
+                        <div><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
+                        <div><strong>Items:</strong> {selectedOrder.items.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedOrder.deliveryAddress && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="font-semibold mb-2">Delivery Address</h3>
+                        <div className="text-sm p-3 bg-gray-50 rounded-lg">
+                          {formatAddress(selectedOrder.deliveryAddress)}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Order Items</h3>
+                    <div className="space-y-3">
+                      {selectedOrder.items.map((item: any) => (
+                        <div key={item.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{item.product.name}</h4>
+                              <div className="text-sm text-muted-foreground">
+                                Quantity: {item.quantity} | Unit Price: {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">
+                                {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           )}
 
           {/* Shipping Quote Modal */}
