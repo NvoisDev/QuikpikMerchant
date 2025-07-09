@@ -1060,68 +1060,195 @@ export default function CustomerPortal() {
             </div>
             
             {/* Preview of Products */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`${viewMode === "grid" 
+              ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" 
+              : "space-y-4"
+            }`}>
               {otherProducts.slice(0, 6).map((product: Product) => (
-                <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    {/* Product Image */}
-                    <div className="mb-4">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-40 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
-                          <Package className="w-12 h-12 text-gray-300" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Product Info */}
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
-                      
-                      {/* Price */}
-                      <div className="flex items-baseline gap-2">
-                        {product.promoActive && product.promoPrice ? (
-                          <>
-                            <span className="text-xl font-bold text-green-600">
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
-                            </span>
-                            <span className="text-sm text-gray-400 line-through">
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                            </span>
-                            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                              SALE
-                            </span>
-                          </>
+                viewMode === "grid" ? (
+                  // Grid View
+                  <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      {/* Product Image */}
+                      <div className="mb-4">
+                        {product.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-full h-40 object-cover rounded-lg"
+                          />
                         ) : (
-                          <span className="text-xl font-bold text-gray-900">
-                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                          </span>
+                          <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <Package className="w-12 h-12 text-gray-300" />
+                          </div>
                         )}
                       </div>
                       
-                      {/* Quick Stats */}
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>MOQ: {formatNumber(product.moq)}</span>
-                        <span>Stock: {formatNumber(product.stock)}</span>
+                      {/* Product Info */}
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                        
+                        {/* Price */}
+                        <div className="flex items-baseline gap-2">
+                          {product.promoActive && product.promoPrice ? (
+                            <>
+                              <span className="text-xl font-bold text-green-600">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                              </span>
+                              <span className="text-sm text-gray-400 line-through">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                              </span>
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                SALE
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xl font-bold text-gray-900">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Quick Stats */}
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>MOQ: {formatNumber(product.moq)}</span>
+                          <span>Stock: {formatNumber(product.stock)}</span>
+                        </div>
+                        
+                        {/* Add to Cart Button */}
+                        <Button
+                          onClick={() => openQuantityEditor(product)}
+                          className="w-full bg-green-600 hover:bg-green-700 mt-4"
+                          size="sm"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add to Cart
+                        </Button>
                       </div>
-                      
-                      {/* Add to Cart Button */}
-                      <Button
-                        onClick={() => openQuantityEditor(product)}
-                        className="w-full bg-green-600 hover:bg-green-700 mt-4"
-                        size="sm"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // List View - Horizontal layout like product management
+                  <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4">
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
+                              <Package className="w-8 h-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                {product.category && (
+                                  <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
+                                    {product.category}
+                                  </span>
+                                )}
+                                {product.negotiationEnabled && (
+                                  <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    💬 Negotiable
+                                  </span>
+                                )}
+                              </div>
+                              {product.description && (
+                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
+                              )}
+                            </div>
+                            
+                            {/* Price and Action Buttons */}
+                            <div className="flex-shrink-0 text-right ml-4">
+                              <div className="text-lg font-bold text-gray-900 mb-2">
+                                {product.promoActive && product.promoPrice ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-green-600">
+                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                                    </span>
+                                    <span className="text-gray-500 line-through text-sm">
+                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>
+                                    {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Action Buttons */}
+                              <div className="flex space-x-2">
+                                {product.negotiationEnabled ? (
+                                  <>
+                                    <Button 
+                                      onClick={() => openNegotiation(product)}
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    >
+                                      <Mail className="w-3 h-3 mr-1" />
+                                      Quote
+                                    </Button>
+                                    <Button 
+                                      onClick={() => openQuantityEditor(product)}
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button 
+                                    onClick={() => openQuantityEditor(product)}
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add to Cart
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Product Stats */}
+                          <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                            <div>
+                              <span className="text-gray-500">MOQ:</span>
+                              <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Stock:</span>
+                              <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
+                                {formatNumber(product.stock)} units
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Supplier:</span>
+                              <div className="font-medium text-gray-900 truncate flex items-center">
+                                <Store className="w-3 h-3 mr-1" />
+                                {product.wholesaler.businessName}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
               ))}
             </div>
           </div>
@@ -1149,7 +1276,10 @@ export default function CustomerPortal() {
                 ))}
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className={`${viewMode === "grid" 
+                ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                : "space-y-4"
+              }`}>
                 {filteredProducts.length === 0 ? (
                   <div className="col-span-full text-center py-12">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -1158,66 +1288,190 @@ export default function CustomerPortal() {
                   </div>
                 ) : (
                   filteredProducts.map((product: Product) => (
-                    <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        {/* Product Image */}
-                        <div className="mb-4">
-                          {product.imageUrl ? (
-                            <img 
-                              src={product.imageUrl} 
-                              alt={product.name}
-                              className="w-full h-40 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
-                              <Package className="w-12 h-12 text-gray-300" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Product Info */}
-                        <div className="space-y-3">
-                          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
-                          
-                          {/* Price */}
-                          <div className="flex items-baseline gap-2">
-                            {product.promoActive && product.promoPrice ? (
-                              <>
-                                <span className="text-xl font-bold text-green-600">
-                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
-                                </span>
-                                <span className="text-sm text-gray-400 line-through">
-                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                </span>
-                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                                  SALE
-                                </span>
-                              </>
+                    viewMode === "grid" ? (
+                      // Grid View
+                      <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                        <CardContent className="p-6">
+                          {/* Product Image */}
+                          <div className="mb-4">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-full h-40 object-cover rounded-lg"
+                              />
                             ) : (
-                              <span className="text-xl font-bold text-gray-900">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                              </span>
+                              <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                                <Package className="w-12 h-12 text-gray-300" />
+                              </div>
                             )}
                           </div>
                           
-                          {/* Quick Stats */}
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span>MOQ: {formatNumber(product.moq)}</span>
-                            <span>Stock: {formatNumber(product.stock)}</span>
+                          {/* Product Info */}
+                          <div className="space-y-3">
+                            <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                            
+                            {/* Price */}
+                            <div className="flex items-baseline gap-2">
+                              {product.promoActive && product.promoPrice ? (
+                                <>
+                                  <span className="text-xl font-bold text-green-600">
+                                    {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                                  </span>
+                                  <span className="text-sm text-gray-400 line-through">
+                                    {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                  </span>
+                                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                    SALE
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-xl font-bold text-gray-900">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Quick Stats */}
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>MOQ: {formatNumber(product.moq)}</span>
+                              <span>Stock: {formatNumber(product.stock)}</span>
+                            </div>
+                            
+                            {/* Add to Cart Button */}
+                            <Button
+                              onClick={() => openQuantityEditor(product)}
+                              className="w-full bg-green-600 hover:bg-green-700 mt-4"
+                              size="sm"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add to Cart
+                            </Button>
                           </div>
-                          
-                          {/* Add to Cart Button */}
-                          <Button
-                            onClick={() => openQuantityEditor(product)}
-                            className="w-full bg-green-600 hover:bg-green-700 mt-4"
-                            size="sm"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add to Cart
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      // List View - Horizontal layout
+                      <Card key={product.id} className="border hover:shadow-lg transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-4">
+                            {/* Product Image */}
+                            <div className="flex-shrink-0">
+                              {product.imageUrl ? (
+                                <img 
+                                  src={product.imageUrl} 
+                                  alt={product.name}
+                                  className="w-16 h-16 object-cover rounded-lg border"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
+                                  <Package className="w-8 h-8 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Product Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {product.category && (
+                                      <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
+                                        {product.category}
+                                      </span>
+                                    )}
+                                    {product.negotiationEnabled && (
+                                      <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
+                                        💬 Negotiable
+                                      </span>
+                                    )}
+                                  </div>
+                                  {product.description && (
+                                    <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
+                                  )}
+                                </div>
+                                
+                                {/* Price and Action Buttons */}
+                                <div className="flex-shrink-0 text-right ml-4">
+                                  <div className="text-lg font-bold text-gray-900 mb-2">
+                                    {product.promoActive && product.promoPrice ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-green-600">
+                                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                                        </span>
+                                        <span className="text-gray-500 line-through text-sm">
+                                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span>
+                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Action Buttons */}
+                                  <div className="flex space-x-2">
+                                    {product.negotiationEnabled ? (
+                                      <>
+                                        <Button 
+                                          onClick={() => openNegotiation(product)}
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                        >
+                                          <Mail className="w-3 h-3 mr-1" />
+                                          Quote
+                                        </Button>
+                                        <Button 
+                                          onClick={() => openQuantityEditor(product)}
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700"
+                                        >
+                                          <Plus className="w-3 h-3 mr-1" />
+                                          Add
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button 
+                                        onClick={() => openQuantityEditor(product)}
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Add to Cart
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Product Stats */}
+                              <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                                <div>
+                                  <span className="text-gray-500">MOQ:</span>
+                                  <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Stock:</span>
+                                  <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
+                                    {formatNumber(product.stock)} units
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Supplier:</span>
+                                  <div className="font-medium text-gray-900 truncate flex items-center">
+                                    <Store className="w-3 h-3 mr-1" />
+                                    {product.wholesaler.businessName}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
                   ))
                 )}
               </div>
