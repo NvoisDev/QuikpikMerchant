@@ -42,6 +42,29 @@ interface QuoteData {
 }
 
 export default function ShippingQuoteModal({ isOpen, onClose, order, businessAddress }: ShippingQuoteModalProps) {
+  // Parse the delivery address from order data
+  const parsedDeliveryAddress = React.useMemo(() => {
+    try {
+      const parsed = JSON.parse(order.deliveryAddress);
+      return {
+        street: parsed.street || parsed.address || '',
+        city: parsed.city || '',
+        postcode: parsed.postalCode || parsed.postcode || '',
+        country: parsed.country || 'United Kingdom'
+      };
+    } catch {
+      // If not JSON, treat as a simple string and try to extract postcode
+      const addressStr = order.deliveryAddress;
+      const postcodeMatch = addressStr.match(/([A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2})/i);
+      return {
+        street: addressStr,
+        city: 'Unknown',
+        postcode: postcodeMatch ? postcodeMatch[1] : 'UNKNOWN',
+        country: 'United Kingdom'
+      };
+    }
+  }, [order.deliveryAddress]);
+
   const [deliveryAddress, setDeliveryAddress] = useState(order.deliveryAddress);
   const [selectedQuote, setSelectedQuote] = useState<QuoteData | null>(null);
   const [isGettingQuotes, setIsGettingQuotes] = useState(false);
@@ -60,38 +83,44 @@ export default function ShippingQuoteModal({ isOpen, onClose, order, businessAdd
   };
 
   const getShippingQuotes = async () => {
-    if (!deliveryAddress) {
+    if (!deliveryAddress || !parsedDeliveryAddress.postcode || parsedDeliveryAddress.postcode === 'UNKNOWN') {
       toast({
-        title: "Missing Delivery Address",
-        description: "Please enter a delivery address to get shipping quotes.",
+        title: "Missing Delivery Information",
+        description: "Unable to extract postcode from delivery address. Please ensure the address is complete.",
         variant: "destructive"
       });
       return;
     }
 
     setIsGettingQuotes(true);
+    
+    // Log the request data for debugging
+    const requestData = {
+      collectionAddress,
+      deliveryAddress: {
+        contactName: order.customerName,
+        property: parsedDeliveryAddress.street.split(',')[0] || parsedDeliveryAddress.street,
+        street: parsedDeliveryAddress.street,
+        town: parsedDeliveryAddress.city || "Customer City",
+        postcode: parsedDeliveryAddress.postcode,
+        countryIsoCode: "GBR"
+      },
+      parcels: [{
+        weight: 2, // Default package weight (kg)
+        length: 30, // Default dimensions (cm)
+        width: 20,
+        height: 15,
+        value: order.total // Declared value
+      }]
+    };
+    
+    console.log('Shipping quote request:', requestData);
+    
     try {
       const response = await fetch('/api/shipping/quotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          collectionAddress,
-          deliveryAddress: {
-            contactName: order.customerName,
-            property: deliveryAddress,
-            street: deliveryAddress,
-            town: "Customer City", // You can extract from parsed address
-            postcode: "CUSTOMER_POSTCODE", // You can extract from parsed address
-            countryIsoCode: "GBR"
-          },
-          parcels: [{
-            weight: 2, // Default package weight (kg)
-            length: 30, // Default dimensions (cm)
-            width: 20,
-            height: 15,
-            value: order.total // Declared value
-          }]
-        })
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
@@ -257,26 +286,37 @@ export default function ShippingQuoteModal({ isOpen, onClose, order, businessAdd
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <GooglePlacesAutocomplete
-                  id="shipping-delivery-address"
-                  onAddressSelect={(address) => {
-                    setDeliveryAddress(address.formatted_address);
-                  }}
-                  placeholder="Enter customer delivery address"
-                  label=""
-                  value={deliveryAddress.includes('"') ? 
-                    (() => {
-                      try {
-                        const parsed = JSON.parse(deliveryAddress);
-                        return parsed.street || parsed.address || deliveryAddress;
-                      } catch {
-                        return deliveryAddress;
-                      }
-                    })() : 
-                    deliveryAddress
-                  }
-                  className="w-full"
-                />
+                <div className="space-y-3">
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm">
+                      <div className="font-medium text-blue-900 mb-2">Customer Address (from order):</div>
+                      <div className="text-blue-800 space-y-1">
+                        <div><strong>Street:</strong> {parsedDeliveryAddress.street}</div>
+                        <div><strong>City:</strong> {parsedDeliveryAddress.city}</div>
+                        <div><strong>Postcode:</strong> {parsedDeliveryAddress.postcode}</div>
+                        <div><strong>Country:</strong> {parsedDeliveryAddress.country}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    The postcode "{parsedDeliveryAddress.postcode}" will be used for shipping quotes. 
+                    {parsedDeliveryAddress.postcode === 'UNKNOWN' && (
+                      <span className="text-red-600 font-medium"> Warning: Unable to extract postcode from address.</span>
+                    )}
+                  </div>
+                  
+                  <GooglePlacesAutocomplete
+                    id="shipping-delivery-address"
+                    onAddressSelect={(address) => {
+                      setDeliveryAddress(address.formatted_address);
+                    }}
+                    placeholder="Or enter a different delivery address..."
+                    label=""
+                    value={parsedDeliveryAddress.street}
+                    className="w-full"
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

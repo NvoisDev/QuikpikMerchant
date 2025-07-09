@@ -6252,6 +6252,89 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // POST endpoint for shipping quotes (used by order shipping modal)
+  app.post('/api/shipping/quotes', requireAuth, async (req: any, res) => {
+    try {
+      const { collectionAddress, deliveryAddress, parcels } = req.body;
+      
+      console.log("📦 POST: Getting shipping quotes:", { collectionAddress, deliveryAddress, parcels });
+      
+      // Check if we have valid addresses
+      if (!collectionAddress || !deliveryAddress || !parcels) {
+        return res.status(400).json({ 
+          error: "Missing required data", 
+          required: ["collectionAddress", "deliveryAddress", "parcels"] 
+        });
+      }
+      
+      // Try to get real quotes first
+      try {
+        const quotes = await parcel2goService.getQuotes({
+          collectionAddress,
+          deliveryAddress,
+          parcels
+        });
+        
+        console.log("📦 Got real quotes:", quotes);
+        res.json({ quotes, demoMode: false });
+      } catch (apiError) {
+        console.log("📦 Parcel2Go API unavailable, falling back to demo quotes");
+        throw apiError; // Fall through to demo quotes
+      }
+    } catch (error: any) {
+      console.error("Error getting shipping quotes:", error.message);
+      
+      // Return demo quotes when Parcel2Go API is not available
+      const demoQuotes = [
+        {
+          serviceId: 'demo-royal-mail-48',
+          serviceName: 'Royal Mail 48',
+          carrierName: 'Royal Mail',
+          price: 5.95,
+          priceExVat: 4.96,
+          vat: 0.99,
+          transitTime: '2-3 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: 'Standard delivery service with tracking'
+        },
+        {
+          serviceId: 'demo-dpd-next-day',
+          serviceName: 'DPD Next Day',
+          carrierName: 'DPD',
+          price: 8.50,
+          priceExVat: 7.08,
+          vat: 1.42,
+          transitTime: '1 business day',
+          collectionType: 'pickup',
+          deliveryType: 'express',
+          trackingAvailable: true,
+          insuranceIncluded: true,
+          description: 'Next day delivery with SMS notifications'
+        },
+        {
+          serviceId: 'demo-evri-standard',
+          serviceName: 'Evri Standard',
+          carrierName: 'Evri',
+          price: 4.25,
+          priceExVat: 3.54,
+          vat: 0.71,
+          transitTime: '3-5 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: 'Cost-effective delivery option'
+        }
+      ];
+      
+      console.log("📦 Returning demo quotes");
+      res.json({ quotes: demoQuotes, demoMode: true });
+    }
+  });
+
   app.get('/api/shipping/drop-shops', requireAuth, async (req: any, res) => {
     try {
       const { postcode, country = 'GBR' } = req.query;
