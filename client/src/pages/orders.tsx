@@ -66,6 +66,7 @@ import {
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import ShippingIntegration from "@/components/shipping-integration";
+import ShippingQuoteModal from "@/components/shipping-quote-modal";
 
 interface Order {
   id: number;
@@ -121,6 +122,7 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
 
   // Fetch orders based on user role
   const { data: orders = [], isLoading } = useQuery({
@@ -132,6 +134,25 @@ export default function Orders() {
       });
       if (!response.ok) throw new Error("Failed to fetch orders");
       return response.json();
+    },
+    enabled: !!user,
+  });
+
+  // Fetch user business address for shipping collection address
+  const { data: businessAddress } = useQuery({
+    queryKey: ["/api/auth/user", "business-address"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/user", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch user data");
+      const userData = await response.json();
+      return {
+        streetAddress: userData.streetAddress || '',
+        city: userData.city || '',
+        postalCode: userData.postalCode || '',
+        country: userData.country || 'United Kingdom'
+      };
     },
     enabled: !!user,
   });
@@ -1044,22 +1065,38 @@ export default function Orders() {
                       
                       {/* Quick Actions for Wholesalers */}
                       {user?.role === 'wholesaler' && order.status === 'paid' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateOrderStatusMutation.mutate({
-                              orderId: order.id,
-                              status: 'fulfilled'
-                            });
-                          }}
-                          disabled={updateOrderStatusMutation.isPending}
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Mark Fulfilled
-                        </Button>
+                        <>
+                          {!order.shippingOrderId && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShippingModalOrder(order);
+                              }}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                              <Truck className="h-4 w-4 mr-1" />
+                              Create Shipping
+                            </Button>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateOrderStatusMutation.mutate({
+                                orderId: order.id,
+                                status: 'fulfilled'
+                              });
+                            }}
+                            disabled={updateOrderStatusMutation.isPending}
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Mark Fulfilled
+                          </Button>
+                        </>
                       )}
                       
                       <Dialog>
@@ -1114,6 +1151,22 @@ export default function Orders() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Shipping Quote Modal */}
+      {shippingModalOrder && businessAddress && (
+        <ShippingQuoteModal
+          isOpen={!!shippingModalOrder}
+          onClose={() => setShippingModalOrder(null)}
+          order={{
+            id: shippingModalOrder.id,
+            customerName: [shippingModalOrder.retailer?.firstName, shippingModalOrder.retailer?.lastName].filter(Boolean).join(' ') || 'Unknown Customer',
+            customerEmail: shippingModalOrder.retailer?.email || '',
+            deliveryAddress: shippingModalOrder.deliveryAddress || '',
+            total: parseFloat(shippingModalOrder.total)
+          }}
+          businessAddress={businessAddress}
+        />
       )}
     </div>
   );

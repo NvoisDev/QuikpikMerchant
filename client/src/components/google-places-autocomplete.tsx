@@ -109,13 +109,16 @@ export default function GooglePlacesAutocomplete({
           fields: ['formatted_address', 'address_components', 'geometry']
         });
 
-        // Handle place selection
+        // Handle place selection with proper isolation
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           
-          if (place.formatted_address) {
+          if (place.formatted_address && place.address_components) {
             setInputValue(place.formatted_address);
-            onAddressSelect(place as PlaceResult);
+            // Use setTimeout to avoid conflicts between multiple autocomplete instances
+            setTimeout(() => {
+              onAddressSelect(place as PlaceResult);
+            }, 10);
           }
         });
 
@@ -141,20 +144,8 @@ export default function GooglePlacesAutocomplete({
     const newValue = e.target.value;
     setInputValue(newValue);
     
-    // If user types manually and there's no autocomplete selection, 
-    // still call onAddressSelect with basic data
-    if (!isApiKeyAvailable) {
-      onAddressSelect({
-        formatted_address: newValue,
-        address_components: [],
-        geometry: {
-          location: {
-            lat: () => 0,
-            lng: () => 0
-          }
-        }
-      });
-    }
+    // Don't trigger onAddressSelect for manual typing to prevent conflicts
+    // Only trigger when Google Places selection occurs
   };
 
   return (

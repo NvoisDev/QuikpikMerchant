@@ -6392,5 +6392,122 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Create shipping for a specific order
+  app.post('/api/orders/:orderId/shipping', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { orderId } = req.params;
+      const { serviceId, deliveryAddress, shippingCost } = req.body;
+
+      // Get the order to verify ownership and status
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Verify this order belongs to the current user (wholesaler)
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to manage this order" });
+      }
+
+      // Verify order is paid
+      if (order.paymentStatus !== 'paid') {
+        return res.status(400).json({ message: "Order must be paid before creating shipping" });
+      }
+
+      // Get user's business address for collection
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Parse delivery address
+      let parsedDeliveryAddress;
+      try {
+        parsedDeliveryAddress = typeof deliveryAddress === 'string' ? JSON.parse(deliveryAddress) : deliveryAddress;
+      } catch (error) {
+        // If not JSON, treat as a simple string address
+        parsedDeliveryAddress = {
+          street: deliveryAddress,
+          town: "Unknown City",
+          postcode: "UNKNOWN",
+          country: "GBR"
+        };
+      }
+
+      // Build collection address from user's business information
+      const collectionAddress = {
+        contactName: user.businessName || `${user.firstName} ${user.lastName}`,
+        organisation: user.businessName || '',
+        property: user.streetAddress || '1',
+        street: user.streetAddress || 'Business Street',
+        town: user.city || 'City',
+        postcode: user.postalCode || 'SW1A 1AA',
+        countryIsoCode: 'GBR'
+      };
+
+      // Default parcel dimensions based on order total
+      const parcels = [{
+        weight: Math.max(2, Math.floor(parseFloat(order.total) / 50)), // Estimate weight based on order value
+        length: 30,
+        width: 20,
+        height: 15,
+        value: parseFloat(order.total)
+      }];
+
+      const orderRequest = {
+        Items: [{
+          Id: `quikpik-order-${orderId}`,
+          CollectionDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+          Service: { Id: serviceId },
+          Parcels: parcels.map((parcel, index) => ({
+            Id: `parcel-${index}`,
+            Height: parcel.height,
+            Length: parcel.length,
+            Width: parcel.width,
+            Weight: parcel.weight,
+            EstimatedValue: parcel.value,
+            DeliveryAddress: {
+              contactName: order.retailer?.firstName && order.retailer?.lastName 
+                ? `${order.retailer.firstName} ${order.retailer.lastName}`
+                : 'Customer',
+              email: order.retailer?.email || '',
+              phone: order.retailer?.phoneNumber || '',
+              property: parsedDeliveryAddress.street || deliveryAddress,
+              street: parsedDeliveryAddress.street || deliveryAddress,
+              town: parsedDeliveryAddress.town || 'Unknown City',
+              county: parsedDeliveryAddress.county || '',
+              postcode: parsedDeliveryAddress.postcode || 'UNKNOWN',
+              countryIsoCode: parsedDeliveryAddress.country || 'GBR'
+            },
+            ContentsSummary: `Order #${orderId} - Wholesale products`
+          })),
+          CollectionAddress: collectionAddress
+        }]
+      };
+
+      const shippingOrder = await parcel2goService.createOrder(orderRequest);
+      
+      // Update the order with shipping information
+      await storage.updateOrder(parseInt(orderId), {
+        shippingOrderId: shippingOrder.OrderId,
+        shippingHash: shippingOrder.Hash,
+        shippingTotal: shippingCost.toString(),
+        shippingStatus: 'created',
+        deliveryCarrier: serviceId,
+        deliveryServiceId: serviceId
+      });
+
+      res.json({ 
+        success: true, 
+        shippingOrder,
+        message: "Shipping order created successfully"
+      });
+    } catch (error: any) {
+      console.error("Error creating order shipping:", error);
+      res.status(500).json({ message: "Failed to create shipping order", error: error.message });
+    }
+  });
+
   return httpServer;
 }
