@@ -6047,27 +6047,57 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       // Create the business address string
       const businessAddress = `${streetAddress}, ${city}, ${state} ${postalCode}, ${country}`;
 
-      // Create user account
+      // Create user account with generated ID
+      const userId = `signup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const userData = {
+        id: userId,
         email: email,
         firstName: firstName,
         lastName: lastName,
         role: 'wholesaler',
         subscriptionTier: 'free',
+        subscriptionStatus: 'inactive',
         businessName: businessName,
         businessDescription: businessDescription,
         businessPhone: businessPhone,
         businessEmail: businessEmail,
         businessAddress: businessAddress,
+        preferredCurrency: defaultCurrency,
         defaultCurrency: defaultCurrency,
         businessType: businessType,
         estimatedMonthlyVolume: estimatedMonthlyVolume,
         onboardingCompleted: false,
         onboardingStep: 0,
-        onboardingSkipped: false
+        onboardingSkipped: false,
+        isFirstLogin: true,
+        productLimit: 3
       };
 
-      const newUser = await storage.createUser(userData);
+      // Create user account
+      const newUser = await storage.createUser({
+        id: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: 'wholesaler',
+        subscriptionTier: 'free',
+        subscriptionStatus: 'inactive',
+        businessName: businessName,
+        businessDescription: businessDescription,
+        businessPhone: businessPhone,
+        businessEmail: businessEmail,
+        businessAddress: businessAddress,
+        preferredCurrency: defaultCurrency,
+        defaultCurrency: defaultCurrency,
+        businessType: businessType,
+        estimatedMonthlyVolume: estimatedMonthlyVolume,
+        onboardingCompleted: false,
+        onboardingStep: 0,
+        onboardingSkipped: false,
+        isFirstLogin: true,
+        productLimit: 3
+      } as any);
 
       // Create session for the new user
       req.session.user = {
