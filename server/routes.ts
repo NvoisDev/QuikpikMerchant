@@ -9,6 +9,7 @@ import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generateTaglines } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
+import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -412,7 +413,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/settings', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const updatedUser = await storage.updateUserSettings(userId, req.body);
+      const updateData = { ...req.body };
+      
+      // Auto-format phone numbers to international format
+      if (updateData.businessPhone) {
+        updateData.businessPhone = formatPhoneToInternational(updateData.businessPhone);
+      }
+      if (updateData.phoneNumber) {
+        updateData.phoneNumber = formatPhoneToInternational(updateData.phoneNumber);
+      }
+      
+      const updatedUser = await storage.updateUserSettings(userId, updateData);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating settings:", error);
@@ -1652,6 +1663,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Phone number and name are required" });
       }
 
+      // Automatically format phone number to international format
+      const formattedPhoneNumber = formatPhoneToInternational(phoneNumber);
+      
+      // Validate the formatted phone number
+      if (!validatePhoneNumber(formattedPhoneNumber)) {
+        return res.status(400).json({ 
+          message: `Invalid phone number format. Please provide a valid phone number (e.g., 07507659550 or +447507659550)` 
+        });
+      }
+
       // Get the customer group to verify ownership
       const groups = await storage.getCustomerGroups(userId);
       const group = groups.find(g => g.id === groupId);
@@ -1660,15 +1681,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Create or find customer with phone number
-      let customer = await storage.getUserByPhone(phoneNumber);
+      // Create or find customer with formatted phone number
+      let customer = await storage.getUserByPhone(formattedPhoneNumber);
       let isNewCustomer = false;
       
       if (!customer) {
         // Create a new customer/retailer account
         const { firstName, lastName } = parseCustomerName(name);
         customer = await storage.createCustomer({
-          phoneNumber,
+          phoneNumber: formattedPhoneNumber,
           firstName,
           lastName,
           role: "retailer",
@@ -1706,15 +1727,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `Questions? Just reply to this message!\n\n` +
             `✨ This message was powered by Quikpik Merchant`;
 
-          console.log(`Sending welcome message to ${phoneNumber}:`);
+          console.log(`Sending welcome message to ${formattedPhoneNumber}:`);
           console.log(`Portal URL: ${portalUrl}`);
           console.log(`Welcome message length: ${welcomeMessage.length}`);
           console.log(`Welcome message preview: ${welcomeMessage.substring(0, 200)}...`);
           
-          await whatsappService.sendMessage(phoneNumber, welcomeMessage, userId);
-          console.log(`Welcome message sent to new customer: ${phoneNumber}`);
+          await whatsappService.sendMessage(formattedPhoneNumber, welcomeMessage, userId);
+          console.log(`Welcome message sent to new customer: ${formattedPhoneNumber}`);
         } catch (welcomeError) {
-          console.error(`Failed to send welcome message to ${phoneNumber}:`, welcomeError);
+          console.error(`Failed to send welcome message to ${formattedPhoneNumber}:`, welcomeError);
           // Don't fail the whole operation if welcome message fails
         }
       }
@@ -1725,7 +1746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer: {
           id: customer.id,
           name: customer.firstName,
-          phoneNumber: customer.phoneNumber,
+          phoneNumber: formattedPhoneNumber,
         }
       });
     } catch (error) {
@@ -4141,6 +4162,16 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       if (!productId || !customerName || !customerPhone || !quantity || !totalAmount) {
         return res.status(400).json({ message: "Missing required fields" });
       }
+
+      // Automatically format phone number to international format
+      const formattedPhoneNumber = formatPhoneToInternational(customerPhone);
+      
+      // Validate the formatted phone number
+      if (!validatePhoneNumber(formattedPhoneNumber)) {
+        return res.status(400).json({ 
+          message: `Invalid phone number format. Please provide a valid phone number (e.g., 07507659550 or +447507659550)` 
+        });
+      }
       
       // Get product to validate and get wholesaler
       const product = await storage.getProduct(parseInt(productId));
@@ -4161,15 +4192,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         });
       }
       
-      // Get or create customer (check by phone first, then by email)
-      let customer = await storage.getUserByPhone(customerPhone);
+      // Get or create customer (check by formatted phone first, then by email)
+      let customer = await storage.getUserByPhone(formattedPhoneNumber);
       if (!customer) {
         customer = await storage.getUserByEmail(customerEmail);
       }
       if (!customer) {
         const { firstName, lastName } = parseCustomerName(customerName);
         customer = await storage.createCustomer({
-          phoneNumber: customerPhone,
+          phoneNumber: formattedPhoneNumber,
           firstName,
           lastName,
           email: customerEmail,
@@ -4188,7 +4219,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         retailerId: customer.id,
         customerName, // Store customer name
         customerEmail, // Store customer email
-        customerPhone, // Store customer phone
+        customerPhone: formattedPhoneNumber, // Store formatted phone number
         subtotal,
         platformFee,
         total,
@@ -4231,7 +4262,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           const message = `🔔 New Order Alert!
 
 Customer: ${customerName}
-Phone: ${customerPhone}
+Phone: ${formattedPhoneNumber}
 Product: ${product.name}
 Quantity: ${quantity.toLocaleString()} units
 Total: ${wholesaler.defaultCurrency === 'GBP' ? '£' : '$'}${totalAmount}

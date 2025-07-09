@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import twilio from "twilio";
 import { DirectWhatsAppService } from "./direct-whatsapp";
+import { formatPhoneToInternational } from "../shared/phone-utils";
 
 // WhatsApp Service Factory - supports both Twilio and Direct API
 export class WhatsAppService {
@@ -100,6 +101,9 @@ export class WhatsAppService {
           return false;
         }
 
+        // Format phone number to international format
+        const formattedPhone = formatPhoneToInternational(memberPhone);
+
         try {
           // For sandbox environment, use approved template format
           const isSandbox = wholesaler.twilioPhoneNumber?.includes('14155238886');
@@ -110,14 +114,14 @@ export class WhatsAppService {
             // The customer must first send "join <sandbox-keyword>" to the sandbox number
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${memberPhone}`,
+              to: `whatsapp:${formattedPhone}`,
               body: `Your appointment is coming up on July 21 at 3PM`
             };
           } else {
             // Production: use full custom message
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
-              to: `whatsapp:${memberPhone}`,
+              to: `whatsapp:${formattedPhone}`,
               body: productMessage
             };
 
@@ -129,10 +133,10 @@ export class WhatsAppService {
 
           const result = await twilioClient.messages.create(messageData);
           
-          console.log(`Twilio WhatsApp message sent to ${memberPhone}, SID: ${result.sid}`);
+          console.log(`Twilio WhatsApp message sent to ${formattedPhone}, SID: ${result.sid}`);
           return true;
         } catch (error: any) {
-          console.error(`Failed to send Twilio WhatsApp to ${memberPhone}:`, error.message);
+          console.error(`Failed to send Twilio WhatsApp to ${formattedPhone}:`, error.message);
           return false;
         }
       });
@@ -210,7 +214,7 @@ export class WhatsAppService {
 
       // Format phone numbers for Twilio
       const fromNumber = this.formatPhoneForTwilio(wholesaler.twilioPhoneNumber);
-      const toNumber = this.formatPhoneForTwilio(phoneNumber);
+      const toNumber = formatPhoneToInternational(phoneNumber);
 
       console.log(`Sending WhatsApp message via Twilio from ${fromNumber} to ${toNumber}`);
 
