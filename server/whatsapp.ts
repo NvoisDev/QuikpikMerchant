@@ -118,16 +118,17 @@ export class WhatsAppService {
               body: `Your appointment is coming up on July 21 at 3PM`
             };
           } else {
-            // Production: For non-sandbox, we need to use approved templates
-            // This uses Twilio's pre-approved template system
-            const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
-            const templateBody = `Hello! ${businessName} has new stock available. ${product.name} is now in stock at ${wholesaler.defaultCurrency === 'GBP' ? '£' : '$'}${parseFloat(product.price).toFixed(2)}. Contact us to place your order. Thank you!`;
-            
+            // Production: use full product message (same as preview)
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
               to: `whatsapp:${formattedPhone}`,
-              body: templateBody
+              body: productMessage
             };
+
+            // Add product image if available and valid URL (production only)
+            if (product.imageUrl && this.isValidImageUrl(product.imageUrl)) {
+              messageData.mediaUrl = [product.imageUrl];
+            }
           }
 
           const result = await twilioClient.messages.create(messageData);
@@ -541,15 +542,11 @@ Update your inventory or restock soon.`;
               body: `Your appointment is coming up on July 21 at 3PM`
             };
           } else {
-            // Production: use simplified template to comply with WhatsApp policies
-            const businessName = wholesaler.businessName || wholesaler.firstName + ' ' + wholesaler.lastName;
-            const productNames = template.products.map((item: any) => item.product.name).join(', ');
-            const simpleMessage = `Hello! ${businessName} has new stock available: ${productNames}. Contact us for pricing and orders. Thank you!`;
-            
+            // Production: use the full template message (same as preview)
             messageData = {
               from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
               to: `whatsapp:${formattedMemberPhone}`,
-              body: simpleMessage
+              body: templateMessage
             };
           }
 
