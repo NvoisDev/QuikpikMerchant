@@ -34,6 +34,7 @@ import StockAlerts from "@/pages/stock-alerts";
 import TeamManagement from "@/pages/team-management";
 import TeamInvitation from "@/pages/team-invitation";
 import Signup from "@/pages/signup";
+import ShippingSettings from "@/pages/shipping-settings";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -88,6 +89,7 @@ function Router() {
               <Route path="/message-templates" component={Campaigns} />
               <Route path="/stock-alerts" component={StockAlerts} />
               <Route path="/team-management" component={TeamManagement} />
+              <Route path="/shipping" component={ShippingSettings} />
               <Route path="/help" component={Help} />
               <Route path="/preview-store" component={CustomerPortal} />
             </>

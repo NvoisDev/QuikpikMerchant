@@ -8,6 +8,7 @@ import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, inse
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generateTaglines } from "./ai-taglines";
+import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -6126,6 +6127,258 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account. Please try again." });
+    }
+  });
+
+  // Initialize Parcel2Go service with credentials from environment
+  if (process.env.PARCEL2GO_CLIENT_ID && process.env.PARCEL2GO_CLIENT_SECRET) {
+    parcel2goService.setCredentials(createTestCredentials());
+  }
+
+  // Parcel2Go Shipping API Routes
+  app.get('/api/shipping/quotes', requireAuth, async (req: any, res) => {
+    try {
+      const { 
+        collectionPostcode, 
+        deliveryPostcode, 
+        weight, 
+        length, 
+        width, 
+        height, 
+        value,
+        collectionCountry = 'GBR',
+        deliveryCountry = 'GBR'
+      } = req.query;
+
+      if (!collectionPostcode || !deliveryPostcode || !weight || !length || !width || !height || !value) {
+        return res.status(400).json({ 
+          message: "Missing required parameters: collectionPostcode, deliveryPostcode, weight, length, width, height, value" 
+        });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Build collection address from user's business information
+      const collectionAddress = {
+        contactName: user.businessName || `${user.firstName} ${user.lastName}`,
+        organisation: user.businessName || '',
+        email: user.email,
+        phone: user.businessPhone || user.phoneNumber || '',
+        property: '1', // Default - could be enhanced with full address
+        street: user.businessAddress || 'Business Address',
+        town: 'City',
+        postcode: collectionPostcode as string,
+        countryIsoCode: collectionCountry as string
+      };
+
+      // Build delivery address (basic - for quotes we only need postcode)
+      const deliveryAddress = {
+        contactName: 'Customer',
+        property: '1',
+        street: 'Customer Address',
+        town: 'City',
+        postcode: deliveryPostcode as string,
+        countryIsoCode: deliveryCountry as string
+      };
+
+      const quoteRequest = {
+        collectionAddress,
+        deliveryAddress,
+        parcels: [{
+          weight: parseFloat(weight as string),
+          length: parseFloat(length as string),
+          width: parseFloat(width as string),
+          height: parseFloat(height as string),
+          value: parseFloat(value as string)
+        }]
+      };
+
+      const quotes = await parcel2goService.getQuotes(quoteRequest);
+      res.json({ quotes });
+    } catch (error: any) {
+      console.error("Error getting shipping quotes:", error);
+      res.status(500).json({ message: "Failed to get shipping quotes", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/drop-shops', requireAuth, async (req: any, res) => {
+    try {
+      const { postcode, country = 'GBR' } = req.query;
+
+      if (!postcode) {
+        return res.status(400).json({ message: "Postcode is required" });
+      }
+
+      const dropShops = await parcel2goService.getDropShops(postcode as string, country as string);
+      res.json({ dropShops });
+    } catch (error: any) {
+      console.error("Error getting drop shops:", error);
+      res.status(500).json({ message: "Failed to get drop shops", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/countries', requireAuth, async (req: any, res) => {
+    try {
+      const countries = await parcel2goService.getCountries();
+      res.json({ countries });
+    } catch (error: any) {
+      console.error("Error getting countries:", error);
+      res.status(500).json({ message: "Failed to get countries", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/services', requireAuth, async (req: any, res) => {
+    try {
+      const services = await parcel2goService.getServices();
+      res.json({ services });
+    } catch (error: any) {
+      console.error("Error getting services:", error);
+      res.status(500).json({ message: "Failed to get services", error: error.message });
+    }
+  });
+
+  app.post('/api/shipping/create-order', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { 
+        orderId, 
+        service, 
+        customerDetails, 
+        deliveryAddress,
+        parcels,
+        collectionDate
+      } = req.body;
+
+      // Build collection address from user's business information
+      const collectionAddress = {
+        contactName: user.businessName || `${user.firstName} ${user.lastName}`,
+        organisation: user.businessName || '',
+        email: user.email,
+        phone: user.businessPhone || user.phoneNumber || '',
+        property: user.businessAddress?.split(',')[0] || '1',
+        street: user.businessAddress?.split(',')[1] || 'Business Street',
+        town: user.businessAddress?.split(',')[2] || 'City',
+        postcode: user.businessPostcode || 'SW1A 1AA',
+        countryIsoCode: 'GBR'
+      };
+
+      const orderRequest = {
+        Items: [{
+          Id: `quikpik-order-${orderId}`,
+          CollectionDate: collectionDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          Service: service,
+          Parcels: parcels.map((parcel: any, index: number) => ({
+            Id: `parcel-${index}`,
+            Height: parcel.height,
+            Length: parcel.length,
+            Width: parcel.width,
+            Weight: parcel.weight,
+            EstimatedValue: parcel.value,
+            DeliveryAddress: {
+              contactName: customerDetails.name,
+              email: customerDetails.email,
+              phone: customerDetails.phone,
+              property: deliveryAddress.property,
+              street: deliveryAddress.street,
+              town: deliveryAddress.town,
+              county: deliveryAddress.county || '',
+              postcode: deliveryAddress.postcode,
+              countryIsoCode: deliveryAddress.countryIsoCode || 'GBR'
+            },
+            ContentsSummary: parcel.contents || 'Wholesale products'
+          })),
+          CollectionAddress: collectionAddress
+        }],
+        CustomerDetails: {
+          Email: customerDetails.email,
+          Forename: customerDetails.firstName || customerDetails.name.split(' ')[0],
+          Surname: customerDetails.lastName || customerDetails.name.split(' ').slice(1).join(' ')
+        }
+      };
+
+      const shippingOrder = await parcel2goService.createOrder(orderRequest);
+      
+      // Update the order in our database with shipping information
+      await storage.updateOrder(orderId, {
+        shippingOrderId: shippingOrder.OrderId,
+        shippingHash: shippingOrder.Hash,
+        shippingTotal: shippingOrder.TotalPrice.toString(),
+        shippingStatus: 'created'
+      });
+
+      res.json({ 
+        success: true, 
+        shippingOrder,
+        paymentLinks: shippingOrder.Links
+      });
+    } catch (error: any) {
+      console.error("Error creating shipping order:", error);
+      res.status(500).json({ message: "Failed to create shipping order", error: error.message });
+    }
+  });
+
+  app.post('/api/shipping/verify-order', requireAuth, async (req: any, res) => {
+    try {
+      const orderRequest = req.body;
+      const verification = await parcel2goService.verifyOrder(orderRequest);
+      res.json({ verification });
+    } catch (error: any) {
+      console.error("Error verifying shipping order:", error);
+      res.status(500).json({ message: "Failed to verify shipping order", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/track/:orderLineId', requireAuth, async (req: any, res) => {
+    try {
+      const { orderLineId } = req.params;
+      const tracking = await parcel2goService.trackOrder(orderLineId);
+      res.json({ tracking });
+    } catch (error: any) {
+      console.error("Error tracking order:", error);
+      res.status(500).json({ message: "Failed to track order", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/labels/:orderId', requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { format = 'pdf' } = req.query;
+      
+      // Get order from database to get shipping hash
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order || !order.shippingOrderId || !order.shippingHash) {
+        return res.status(404).json({ message: "Shipping order not found" });
+      }
+
+      const labels = await parcel2goService.getLabels(order.shippingOrderId, order.shippingHash, format as 'pdf' | 'png');
+      res.json({ labels });
+    } catch (error: any) {
+      console.error("Error getting shipping labels:", error);
+      res.status(500).json({ message: "Failed to get shipping labels", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/status', requireAuth, async (req: any, res) => {
+    try {
+      const configured = !!(process.env.PARCEL2GO_CLIENT_ID && process.env.PARCEL2GO_CLIENT_SECRET);
+      const environment = process.env.PARCEL2GO_ENVIRONMENT || 'sandbox';
+      
+      res.json({ 
+        configured,
+        environment,
+        ready: configured
+      });
+    } catch (error: any) {
+      console.error("Error checking shipping status:", error);
+      res.status(500).json({ message: "Failed to check shipping status" });
     }
   });
 

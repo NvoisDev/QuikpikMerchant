@@ -65,6 +65,7 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
+import ShippingIntegration from "@/components/shipping-integration";
 
 interface Order {
   id: number;
@@ -78,6 +79,11 @@ interface Order {
   updatedAt: string;
   deliveryAddress?: string;
   notes?: string;
+  // Shipping fields
+  shippingOrderId?: string;
+  shippingHash?: string;
+  shippingTotal?: string;
+  shippingStatus?: string;
   retailer: {
     id: string;
     firstName: string;
@@ -656,6 +662,16 @@ export default function Orders() {
             ))}
           </div>
         </div>
+
+        {/* Shipping Integration */}
+        {user?.role === 'wholesaler' && order.status === 'paid' && (
+          <div className="pt-4 border-t">
+            <div className="mb-3">
+              <h4 className="font-medium text-sm text-muted-foreground">Shipping Management</h4>
+            </div>
+            <ShippingIntegration order={order} />
+          </div>
+        )}
 
         {/* Order Actions */}
         {user?.role === 'wholesaler' && (order.status === 'paid' || order.status === 'fulfilled') && (

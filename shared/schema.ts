@@ -222,6 +222,12 @@ export const orders = pgTable("orders", {
   deliveryTrackingNumber: varchar("delivery_tracking_number"), // Tracking number from carrier
   estimatedDeliveryDate: timestamp("estimated_delivery_date"), // Expected delivery date
   
+  // Parcel2Go integration fields
+  shippingOrderId: varchar("shipping_order_id"), // Parcel2Go order ID
+  shippingHash: varchar("shipping_hash"), // Parcel2Go order hash for authentication
+  shippingTotal: decimal("shipping_total", { precision: 10, scale: 2 }), // Total shipping cost from Parcel2Go
+  shippingStatus: varchar("shipping_status"), // Status from Parcel2Go (created, paid, dispatched, delivered)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
