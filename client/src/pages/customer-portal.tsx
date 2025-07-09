@@ -166,7 +166,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount: cartStats.totalValue || 0
+            totalAmount: totalAmount || 0
           });
           const data = await response.json();
           setClientSecret(data.clientSecret);
