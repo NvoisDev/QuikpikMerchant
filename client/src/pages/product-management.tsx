@@ -376,6 +376,11 @@ export default function ProductManagement() {
         palletPrice: data.palletPrice ? parseFloat(data.palletPrice) : null,
         palletMoq: data.palletMoq ? parseInt(data.palletMoq) : 1,
         palletStock: data.palletStock ? parseInt(data.palletStock) : 0,
+        // Weight and shipping fields
+        unitWeight: data.unitWeight ? parseFloat(data.unitWeight) : null,
+        palletWeight: data.palletWeight ? parseFloat(data.palletWeight) : null,
+        lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
+        shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
       };
       return await apiRequest("POST", "/api/products", productData);
     },
@@ -410,6 +415,11 @@ export default function ProductManagement() {
         palletPrice: productData.palletPrice ? parseFloat(productData.palletPrice) : null,
         palletMoq: productData.palletMoq ? parseInt(productData.palletMoq) : 1,
         palletStock: productData.palletStock ? parseInt(productData.palletStock) : 0,
+        // Weight and shipping fields
+        unitWeight: productData.unitWeight ? parseFloat(productData.unitWeight) : null,
+        palletWeight: productData.palletWeight ? parseFloat(productData.palletWeight) : null,
+        lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
+        shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
       };
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },

@@ -540,7 +540,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock, ...otherData } = req.body;
+      const { 
+        price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
+        unitWeight, palletWeight, lowStockThreshold, shelfLife,
+        ...otherData 
+      } = req.body;
       const convertedData = {
         ...otherData,
         ...(price !== undefined && { price: price.toString() }),
@@ -551,7 +555,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(unitsPerPallet !== undefined && { unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null }),
         ...(palletPrice !== undefined && { palletPrice: palletPrice ? palletPrice.toString() : null }),
         ...(palletMoq !== undefined && { palletMoq: palletMoq ? parseInt(palletMoq) : 1 }),
-        ...(palletStock !== undefined && { palletStock: palletStock ? parseInt(palletStock) : 0 })
+        ...(palletStock !== undefined && { palletStock: palletStock ? parseInt(palletStock) : 0 }),
+        // Weight and shipping fields
+        ...(unitWeight !== undefined && { unitWeight: unitWeight ? unitWeight.toString() : null }),
+        ...(palletWeight !== undefined && { palletWeight: palletWeight ? palletWeight.toString() : null }),
+        ...(lowStockThreshold !== undefined && { lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50 }),
+        ...(shelfLife !== undefined && { shelfLife: shelfLife ? parseInt(shelfLife) : null })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
