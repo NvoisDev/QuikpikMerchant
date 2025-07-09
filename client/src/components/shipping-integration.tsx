@@ -85,6 +85,15 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
     countryIsoCode: 'GBR'
   });
   
+  const [collectionAddress, setCollectionAddress] = useState({
+    property: '',
+    street: '',
+    town: '',
+    county: '',
+    postcode: '',
+    countryIsoCode: 'GBR'
+  });
+  
   // Default parcel information (can be customized)
   const [parcelInfo, setParcelInfo] = useState<ParcelInfo>({
     weight: 1.0,
@@ -99,14 +108,14 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
   const getQuotesMutation = useMutation({
     mutationFn: async () => {
       const params = {
-        collectionPostcode: 'SW1A 1AA', // Default - can be from user settings
+        collectionPostcode: collectionAddress.postcode || 'SW1A 1AA', // Use collection address or default
         deliveryPostcode: deliveryAddress.postcode,
         weight: parcelInfo.weight.toString(),
         length: parcelInfo.length.toString(),
         width: parcelInfo.width.toString(),
         height: parcelInfo.height.toString(),
         value: parcelInfo.value.toString(),
-        collectionCountry: 'GBR',
+        collectionCountry: collectionAddress.countryIsoCode || 'GBR',
         deliveryCountry: deliveryAddress.countryIsoCode
       };
       
@@ -204,7 +213,7 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
     }
   });
 
-  const handleAddressSelect = (address: any) => {
+  const handleDeliveryAddressSelect = (address: any) => {
     const components = address.address_components || [];
     
     const getComponent = (types: string[]) => {
@@ -224,11 +233,47 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
     });
   };
 
+  const handleCollectionAddressSelect = (address: any) => {
+    const components = address.address_components || [];
+    
+    const getComponent = (types: string[]) => {
+      const component = components.find((comp: any) => 
+        comp.types.some((type: string) => types.includes(type))
+      );
+      return component ? component.long_name : '';
+    };
+
+    setCollectionAddress({
+      property: getComponent(['street_number']) || '1',
+      street: getComponent(['route']) || '',
+      town: getComponent(['locality', 'postal_town']) || '',
+      county: getComponent(['administrative_area_level_2']) || '',
+      postcode: getComponent(['postal_code']) || '',
+      countryIsoCode: getComponent(['country']) === 'United Kingdom' ? 'GBR' : 'GBR'
+    });
+  };
+
   const handleGetQuotes = () => {
+    if (!collectionAddress.postcode && !deliveryAddress.postcode) {
+      toast({
+        title: "Missing Addresses",
+        description: "Please enter both collection and delivery addresses to get shipping quotes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!collectionAddress.postcode) {
+      toast({
+        title: "Missing Collection Address",
+        description: "Please enter your business/warehouse address for pickup.",
+        variant: "destructive"
+      });
+      return;
+    }
     if (!deliveryAddress.postcode) {
       toast({
-        title: "Missing Address",
-        description: "Please enter a valid delivery address to get shipping quotes.",
+        title: "Missing Delivery Address",
+        description: "Please enter the customer's delivery address.",
         variant: "destructive"
       });
       return;
@@ -337,6 +382,31 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
 
         {currentStep === 'quotes' && (
           <div className="space-y-6">
+            {/* Collection Address */}
+            <div className="space-y-4">
+              <h3 className="font-semibold flex items-center space-x-2">
+                <MapPin className="h-4 w-4" />
+                <span>Collection Address (Pick-up)</span>
+              </h3>
+              
+              <GooglePlacesAutocomplete
+                onAddressSelect={handleCollectionAddressSelect}
+                placeholder="Enter warehouse/business address for pickup"
+                label="Collection Address"
+                required
+              />
+              
+              {collectionAddress.postcode && (
+                <div className="p-3 bg-blue-50 rounded-md text-sm">
+                  <p><strong>Collection:</strong> {collectionAddress.property} {collectionAddress.street}</p>
+                  <p><strong>Town:</strong> {collectionAddress.town} {collectionAddress.county}</p>
+                  <p><strong>Postcode:</strong> {collectionAddress.postcode}</p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Delivery Address */}
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center space-x-2">
@@ -345,7 +415,7 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
               </h3>
               
               <GooglePlacesAutocomplete
-                onAddressSelect={handleAddressSelect}
+                onAddressSelect={handleDeliveryAddressSelect}
                 placeholder="Enter full delivery address"
                 label="Delivery Address"
                 required
@@ -433,7 +503,7 @@ export default function ShippingIntegration({ order }: ShippingIntegrationProps)
 
             <Button 
               onClick={handleGetQuotes}
-              disabled={getQuotesMutation.isPending || !deliveryAddress.postcode}
+              disabled={getQuotesMutation.isPending || !deliveryAddress.postcode || !collectionAddress.postcode}
               className="w-full"
             >
               {getQuotesMutation.isPending ? (

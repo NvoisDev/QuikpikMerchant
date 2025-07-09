@@ -146,6 +146,16 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 09, 2025. Complete Parcel2Go Shipping API Integration with Google Places Autocomplete:
+  - **Full Shipping Management System**: Integrated comprehensive Parcel2Go API for shipping quotes, label creation, and tracking
+  - **Google Places Autocomplete Enhancement**: Added intelligent address autocomplete for both collection (pickup) and delivery addresses
+  - **Dual Address Input System**: Separate collection address for business/warehouse pickup and delivery address for customer shipment
+  - **Smart Address Parsing**: Automatic parsing of Google Places results to populate address fields (street, town, county, postcode)
+  - **Enhanced Validation**: Requires both collection and delivery addresses before generating shipping quotes
+  - **Professional Shipping Interface**: Integrated shipping controls directly into order management with shipping status tracking
+  - **Real-time Quote Generation**: Get multiple carrier quotes with pricing, delivery times, and service descriptions
+  - **Label Creation & Tracking**: Direct integration for shipping label generation and package tracking
+  - **Order Status Integration**: Shipping information appears in order details modal for paid orders
 - July 09, 2025. Enhanced Landing Page with Free In-Person Support and Calendly Integration:
   - **Free Support Section**: Added comprehensive support section highlighting one-on-one setup sessions, priority phone support, and team training
   - **Calendly Integration**: Integrated booking buttons for different support types (setup sessions, team training, quick help)
