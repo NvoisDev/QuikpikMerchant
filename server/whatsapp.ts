@@ -268,7 +268,7 @@ export class WhatsAppService {
     const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
     const domain = replitDomains.split(',')[0].trim();
     const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-    const campaignUrl = `${baseUrl}/customer/${product.id}`;
+    const campaignUrl = `${baseUrl}/customer/${wholesaler?.id || product.wholesalerId}?featured=${product.id}`;
     const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
     const businessName = wholesaler?.businessName || "Your Business";
     const phone = wholesaler?.businessPhone || wholesaler?.phoneNumber || "+1234567890";
@@ -574,11 +574,11 @@ Update your inventory or restock soon.`;
       const hasImage = item.product.imageUrl && item.product.imageUrl.length > 0;
       const imageNote = hasImage ? " 📸" : "";
       
-      // Generate direct product link for each item
+      // Generate direct customer portal link with featured product
       const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
       const domain = replitDomains.split(',')[0].trim();
       const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-      const productUrl = `${baseUrl}/customer/${item.product.id}`;
+      const productUrl = `${baseUrl}/customer/${wholesaler.id}?featured=${item.product.id}`;
       
       message += `${index + 1}. ${item.product.name}${imageNote}\n`;
       message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
