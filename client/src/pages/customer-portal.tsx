@@ -859,11 +859,35 @@ export default function CustomerPortal() {
                         <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
                           {featuredProduct.name}
                         </h1>
-                        {featuredProduct.category && (
-                          <div className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
-                            {featuredProduct.category}
-                          </div>
-                        )}
+                        {/* Product Tags */}
+                        <div className="flex flex-wrap gap-3 mb-4">
+                          {featuredProduct.category && (
+                            <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                              {featuredProduct.category}
+                            </span>
+                          )}
+                          {/* Selling Format Tags */}
+                          {featuredProduct.sellingFormat === "units" && (
+                            <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                              📦 Units
+                            </span>
+                          )}
+                          {featuredProduct.sellingFormat === "pallets" && (
+                            <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                              📦 Pallets
+                            </span>
+                          )}
+                          {featuredProduct.sellingFormat === "both" && (
+                            <>
+                              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                📦 Units
+                              </span>
+                              <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                                📦 Pallets
+                              </span>
+                            </>
+                          )}
+                        </div>
                         {featuredProduct.description && (
                           <p className="text-gray-600 text-lg leading-relaxed">
                             {featuredProduct.description}
@@ -1088,6 +1112,41 @@ export default function CustomerPortal() {
                       <div className="space-y-3">
                         <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
                         
+                        {/* Product Tags */}
+                        <div className="flex flex-wrap gap-2">
+                          {product.category && (
+                            <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
+                              {product.category}
+                            </span>
+                          )}
+                          {product.negotiationEnabled && (
+                            <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
+                              💬 Negotiable
+                            </span>
+                          )}
+                          {/* Selling Format Tags */}
+                          {product.sellingFormat === "units" && (
+                            <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                              📦 Units
+                            </span>
+                          )}
+                          {product.sellingFormat === "pallets" && (
+                            <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                              📦 Pallets
+                            </span>
+                          )}
+                          {product.sellingFormat === "both" && (
+                            <>
+                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                📦 Units
+                              </span>
+                              <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                📦 Pallets
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        
                         {/* Price */}
                         <div className="flex items-baseline gap-2">
                           {product.promoActive && product.promoPrice ? (
@@ -1162,6 +1221,27 @@ export default function CustomerPortal() {
                                   <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
                                     💬 Negotiable
                                   </span>
+                                )}
+                                {/* Selling Format Tags */}
+                                {product.sellingFormat === "units" && (
+                                  <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    📦 Units
+                                  </span>
+                                )}
+                                {product.sellingFormat === "pallets" && (
+                                  <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    📦 Pallets
+                                  </span>
+                                )}
+                                {product.sellingFormat === "both" && (
+                                  <>
+                                    <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                      📦 Units
+                                    </span>
+                                    <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                      📦 Pallets
+                                    </span>
+                                  </>
                                 )}
                               </div>
                               {product.description && (
@@ -1310,6 +1390,41 @@ export default function CustomerPortal() {
                           {/* Product Info */}
                           <div className="space-y-3">
                             <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                            
+                            {/* Product Tags */}
+                            <div className="flex flex-wrap gap-2">
+                              {product.category && (
+                                <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
+                                  {product.category}
+                                </span>
+                              )}
+                              {product.negotiationEnabled && (
+                                <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  💬 Negotiable
+                                </span>
+                              )}
+                              {/* Selling Format Tags */}
+                              {product.sellingFormat === "units" && (
+                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  📦 Units
+                                </span>
+                              )}
+                              {product.sellingFormat === "pallets" && (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  📦 Pallets
+                                </span>
+                              )}
+                              {product.sellingFormat === "both" && (
+                                <>
+                                  <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    📦 Units
+                                  </span>
+                                  <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    📦 Pallets
+                                  </span>
+                                </>
+                              )}
+                            </div>
                             
                             {/* Price */}
                             <div className="flex items-baseline gap-2">
