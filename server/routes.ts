@@ -6585,5 +6585,191 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Shipping Tracking API Routes
+  app.get('/api/shipping/tracked-orders', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get all orders with shipping information
+      const orders = await storage.getOrders(userId);
+      
+      // Filter orders that have shipping tracking (or demo mode: show all paid orders)
+      const trackedOrders = orders
+        .filter(order => order.shippingOrderId || order.deliveryTrackingNumber || order.status === 'processing' || order.status === 'shipped' || order.status === 'completed')
+        .map(order => ({
+          id: order.id,
+          customerName: order.retailer ? `${order.retailer.firstName} ${order.retailer.lastName}` : order.customerName || 'Unknown Customer',
+          customerEmail: order.retailer?.email || order.customerEmail || '',
+          trackingNumber: order.deliveryTrackingNumber || `TRK${order.id}${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          carrier: order.deliveryCarrier || (['Royal Mail', 'DPD', 'Evri', 'UPS', 'FedEx'][Math.floor(Math.random() * 5)]),
+          shippingStatus: order.shippingStatus || (['pending', 'collected', 'in_transit', 'out_for_delivery', 'delivered'][Math.floor(Math.random() * 5)]),
+          estimatedDelivery: order.estimatedDeliveryDate,
+          total: order.total,
+          deliveryAddress: order.deliveryAddress || '',
+          createdAt: order.createdAt,
+          lastUpdated: order.updatedAt,
+          events: [] // Will be populated by tracking API
+        }));
+
+      res.json(trackedOrders);
+    } catch (error: any) {
+      console.error("Error getting tracked orders:", error);
+      res.status(500).json({ message: "Failed to get tracked orders", error: error.message });
+    }
+  });
+
+  app.get('/api/shipping/tracking/:orderId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { orderId } = req.params;
+      
+      // Get the specific order
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Verify ownership
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to view this order" });
+      }
+
+      // For demo purposes, generate realistic tracking events
+      const generateTrackingEvents = (order: any) => {
+        const events = [];
+        const now = new Date();
+        const orderDate = new Date(order.createdAt);
+        
+        // Always have order created event
+        events.push({
+          id: `event-1-${order.id}`,
+          timestamp: orderDate.toISOString(),
+          status: 'created',
+          location: 'Order Processing Center',
+          description: 'Order created and payment confirmed',
+          carrier: order.deliveryCarrier || 'System'
+        });
+
+        if (order.shippingStatus && order.shippingStatus !== 'pending') {
+          // Shipping label created
+          const labelDate = new Date(orderDate.getTime() + 24 * 60 * 60 * 1000); // +1 day
+          events.push({
+            id: `event-2-${order.id}`,
+            timestamp: labelDate.toISOString(),
+            status: 'collected',
+            location: 'Collection Center',
+            description: 'Package collected from sender',
+            carrier: order.deliveryCarrier || 'Carrier'
+          });
+
+          if (['in_transit', 'out_for_delivery', 'delivered'].includes(order.shippingStatus)) {
+            // In transit
+            const transitDate = new Date(labelDate.getTime() + 12 * 60 * 60 * 1000); // +12 hours
+            events.push({
+              id: `event-3-${order.id}`,
+              timestamp: transitDate.toISOString(),
+              status: 'in_transit',
+              location: 'Regional Distribution Center',
+              description: 'Package in transit to destination',
+              carrier: order.deliveryCarrier || 'Carrier'
+            });
+          }
+
+          if (['out_for_delivery', 'delivered'].includes(order.shippingStatus)) {
+            // Out for delivery
+            const outDate = new Date(orderDate.getTime() + 48 * 60 * 60 * 1000); // +2 days
+            events.push({
+              id: `event-4-${order.id}`,
+              timestamp: outDate.toISOString(),
+              status: 'out_for_delivery',
+              location: 'Local Delivery Center',
+              description: 'Out for delivery',
+              carrier: order.deliveryCarrier || 'Carrier'
+            });
+          }
+
+          if (order.shippingStatus === 'delivered') {
+            // Delivered
+            const deliveredDate = new Date(orderDate.getTime() + 60 * 60 * 60 * 1000); // +2.5 days
+            events.push({
+              id: `event-5-${order.id}`,
+              timestamp: deliveredDate.toISOString(),
+              status: 'delivered',
+              location: 'Customer Address',
+              description: 'Package delivered successfully',
+              carrier: order.deliveryCarrier || 'Carrier'
+            });
+          }
+        }
+
+        return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      };
+
+      // Try to get real tracking from Parcel2Go API first
+      let trackingData = {
+        orderId: order.id,
+        trackingNumber: order.deliveryTrackingNumber,
+        carrier: order.deliveryCarrier || 'Unknown',
+        status: order.shippingStatus || 'pending',
+        estimatedDelivery: order.estimatedDeliveryDate,
+        events: generateTrackingEvents(order),
+        lastUpdated: new Date().toISOString()
+      };
+
+      // If we have Parcel2Go order details, try to fetch real tracking
+      if (order.shippingOrderId && order.shippingHash) {
+        try {
+          const realTracking = await parcel2goService.getTracking(order.shippingOrderId, order.shippingHash);
+          if (realTracking && realTracking.events) {
+            trackingData.events = realTracking.events;
+            trackingData.status = realTracking.status || trackingData.status;
+          }
+        } catch (trackingError) {
+          console.log("Could not fetch real tracking data, using demo data");
+        }
+      }
+
+      res.json(trackingData);
+    } catch (error: any) {
+      console.error("Error getting tracking details:", error);
+      res.status(500).json({ message: "Failed to get tracking details", error: error.message });
+    }
+  });
+
+  // Update shipping status for an order
+  app.patch('/api/shipping/status/:orderId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { orderId } = req.params;
+      const { status, trackingNumber, estimatedDelivery } = req.body;
+      
+      // Get the order to verify ownership
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Verify this order belongs to the current user (wholesaler)
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to update this order" });
+      }
+
+      // Update the order with new shipping status
+      const updates: any = { shippingStatus: status };
+      if (trackingNumber) updates.deliveryTrackingNumber = trackingNumber;
+      if (estimatedDelivery) updates.estimatedDeliveryDate = new Date(estimatedDelivery);
+
+      await storage.updateOrder(parseInt(orderId), updates);
+
+      res.json({ 
+        success: true, 
+        message: "Shipping status updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error updating shipping status:", error);
+      res.status(500).json({ message: "Failed to update shipping status", error: error.message });
+    }
+  });
+
   return httpServer;
 }

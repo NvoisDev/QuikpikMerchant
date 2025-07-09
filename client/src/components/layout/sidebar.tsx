@@ -34,6 +34,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
   { name: "Shipping", href: "/shipping", icon: Truck },
+  { name: "Shipping Tracking", href: "/shipping-tracking", icon: Truck },
   { name: "Team Management", href: "/team-management", icon: Crown },
   { name: "Subscription", href: "/subscription", icon: CreditCard },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true },
