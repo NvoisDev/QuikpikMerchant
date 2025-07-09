@@ -406,11 +406,13 @@ export default function CustomerPortal() {
         }]
       });
 
+      console.log("Shipping quotes response:", response);
+      
       if (response.quotes && response.quotes.length > 0) {
         setAvailableShippingServices(response.quotes);
         toast({
-          title: "Shipping Quotes Retrieved",
-          description: `Found ${response.quotes.length} delivery options for your location`,
+          title: response.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
+          description: `Found ${response.quotes.length} delivery options for your location${response.demoMode ? ' (demo mode)' : ''}`,
         });
       } else {
         toast({
