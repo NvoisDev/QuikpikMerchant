@@ -44,19 +44,31 @@ export default function GooglePlacesAutocomplete({
 
   // Check if Google Maps API key is available
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-    setIsApiKeyAvailable(!!apiKey);
+    // Try to get API key from server
+    fetch('/api/config/google-places-key')
+      .then(res => res.json())
+      .then(data => {
+        if (data.apiKey) {
+          setIsApiKeyAvailable(true);
+        }
+      })
+      .catch(() => {
+        console.warn('Unable to get Google Places API key from server');
+      });
   }, []);
 
   const initializeAutocomplete = useCallback(async () => {
-    const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-    
-    if (!apiKey) {
-      console.warn('Google Maps API key not found. Address autocomplete disabled.');
-      return;
-    }
-
+    // Get API key from server
     try {
+      const response = await fetch('/api/config/google-places-key');
+      const data = await response.json();
+      const apiKey = data.apiKey;
+      
+      if (!apiKey) {
+        console.warn('Google Maps API key not found. Address autocomplete disabled.');
+        return;
+      }
+
       const loader = new Loader({
         apiKey: apiKey,
         version: 'weekly',

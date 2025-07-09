@@ -6240,6 +6240,16 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Get Google Places API key for frontend
+  app.get('/api/config/google-places-key', (req, res) => {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (apiKey) {
+      res.json({ apiKey });
+    } else {
+      res.status(404).json({ error: 'Google Places API key not configured' });
+    }
+  });
+
   app.post('/api/shipping/create-order', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;

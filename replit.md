@@ -146,6 +146,13 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **Webhook Handling**: Stripe webhook integration for subscription lifecycle events
 
 ## Changelog
+- July 09, 2025. Fixed Google Places API Integration and Enhanced System Stability:
+  - **Google Places API Key Configuration**: Added server-side API endpoint `/api/config/google-places-key` to securely provide Google Places API key to frontend
+  - **Stripe Payment NaN Error Resolution**: Enhanced cart calculation logic with robust NaN protection and comprehensive price validation in payment intent creation
+  - **Dashboard Header Text Overlap Fix**: Shortened business name display to prevent text overlap by showing only first name or first word of business name
+  - **Team Member Shipping Access**: Extended full shipping functionality access to team members alongside wholesalers for complete operational support
+  - **Enhanced Cart Calculations**: Added fallback values and NaN validation throughout cart totals, payment processing, and checkout workflows
+  - **Improved Error Handling**: Strengthened payment processing with proper price validation for promotional pricing, pallet pricing, and regular product pricing
 - July 09, 2025. Complete Parcel2Go Shipping API Integration with Google Places Autocomplete:
   - **Full Shipping Management System**: Integrated comprehensive Parcel2Go API for shipping quotes, label creation, and tracking
   - **Google Places Autocomplete Enhancement**: Added intelligent address autocomplete for both collection (pickup) and delivery addresses
