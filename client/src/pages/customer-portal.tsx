@@ -325,9 +325,23 @@ export default function CustomerPortal() {
   // Detect if this is preview mode (accessed via /preview-store)
   const isPreviewMode = location === '/preview-store';
   
-  // Use authenticated user's ID in preview mode, otherwise use URL parameter
+  // Use authenticated user's ID in preview mode, but if user is team member, use parent wholesaler ID
   // Handle cases where ID might be undefined or empty
-  const wholesalerId = isPreviewMode ? user?.id : (wholesalerIdParam || location.split('/customer/')[1]?.split('?')[0]);
+  const getPreviewWholesalerId = () => {
+    if (!isPreviewMode) {
+      return wholesalerIdParam || location.split('/customer/')[1]?.split('?')[0];
+    }
+    
+    // In preview mode, use parent wholesaler ID for team members
+    if (user?.role === 'team_member' && user?.wholesalerId) {
+      return user.wholesalerId;
+    }
+    
+    // For regular wholesalers, use their own ID
+    return user?.id;
+  };
+  
+  const wholesalerId = getPreviewWholesalerId();
 
 
 
