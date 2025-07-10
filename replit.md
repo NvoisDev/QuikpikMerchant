@@ -222,11 +222,13 @@ This approach gives customers control over delivery speed and cost while ensurin
 ## Recent Bug Fixes (July 10, 2025)
 
 ### Team Member Data Inheritance System Complete (July 10, 2025):
-- **Complete Data Access Implementation**: Team members now inherit full access to parent company's operational data (products, orders, customers, analytics)
-- **Backend Endpoint Updates**: Updated all major API endpoints (/api/products, /api/orders, /api/customer-groups, /api/analytics/*) to use parent company data when user is team member
+- **Complete Data Access Implementation**: Team members now inherit full access to parent company's operational data (products, orders, customers, analytics, campaigns)
+- **Backend Endpoint Updates**: Updated all major API endpoints (/api/products, /api/orders, /api/customer-groups, /api/analytics/*, /api/campaigns, /api/campaigns/send) to use parent company data when user is team member
 - **Parent Company ID Resolution**: Implemented targetUserId logic that uses req.user.wholesalerId for team members instead of their individual user ID
 - **Full Analytics Integration**: Team members see parent company's real business metrics (revenue, orders, customer data) instead of empty/blank screens
-- **Successful Implementation**: Anthonia (anthoniabakare@hotmail.com) now has complete access to Surulere Foods Wholesale's 4 products, 3 orders (£2,293 revenue), and 5 customer groups
+- **Campaign Data Inheritance**: Team members can view, create, and resend parent company campaigns with bidirectional visibility (parent sees team-created campaigns)
+- **WhatsApp Configuration Inheritance**: Team members use parent company's WhatsApp settings for sending campaigns and broadcasts
+- **Successful Implementation**: Anthonia (anthoniabakare@hotmail.com) now has complete access to Surulere Foods Wholesale's 4 products, 3 orders (£2,293 revenue), 5 customer groups, and all campaigns
 - **Authentication Context**: requireAuth middleware enhanced to use session data including team member context for proper data inheritance
 - **Data Verification**: Confirmed team members can view and manage parent company operational data while maintaining proper permission structure
 
