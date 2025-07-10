@@ -14,6 +14,8 @@ import {
   stockUpdateNotifications,
   stockMovements,
   stockAlerts,
+  userBadges,
+  onboardingMilestones,
   type User,
   type UpsertUser,
   type Product,
@@ -48,6 +50,10 @@ import {
   tabPermissions,
   type TabPermission,
   type InsertTabPermission,
+  type UserBadge,
+  type InsertUserBadge,
+  type OnboardingMilestone,
+  type InsertOnboardingMilestone,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -219,6 +225,21 @@ export interface IStorage {
     totalDecreases: number;
     currentStock: number;
   }>;
+  
+  // Gamification operations
+  getUserBadges(userId: string): Promise<UserBadge[]>;
+  createUserBadge(badge: InsertUserBadge): Promise<UserBadge>;
+  awardBadge(userId: string, badgeId: string, badgeName: string, badgeDescription: string, experiencePoints?: number, badgeType?: string, badgeIcon?: string, badgeColor?: string): Promise<UserBadge>;
+  updateUserExperience(userId: string, experiencePoints: number): Promise<User>;
+  getUserOnboardingProgress(userId: string): Promise<{ completedSteps: string[]; currentMilestone: string; progressPercentage: number; experiencePoints: number; currentLevel: number; totalBadges: number }>;
+  updateOnboardingProgress(userId: string, progress: { completedSteps?: string[]; currentMilestone?: string; progressPercentage?: number }): Promise<User>;
+  
+  // Milestone operations
+  getUserMilestones(userId: string): Promise<OnboardingMilestone[]>;
+  createMilestone(milestone: InsertOnboardingMilestone): Promise<OnboardingMilestone>;
+  updateMilestone(id: number, updates: Partial<InsertOnboardingMilestone>): Promise<OnboardingMilestone>;
+  completeMilestone(milestoneId: string, userId: string): Promise<{ milestone: OnboardingMilestone; badge?: UserBadge; experienceGained: number }>;
+  checkMilestoneProgress(userId: string, action: string): Promise<{ completedMilestones: string[]; newBadges: UserBadge[]; experienceGained: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1045,9 +1066,20 @@ export class DatabaseStorage implements IStorage {
       eq(users.role, 'wholesaler')
     ];
 
-    // Filter by specific wholesaler if provided
+    // Filter by specific wholesaler if provided - include team member products
     if (filters.wholesalerId) {
-      whereConditions.push(eq(products.wholesalerId, filters.wholesalerId));
+      // Get team members for this wholesaler
+      const teamMemberIds = await db
+        .select({ userId: teamMembers.userId })
+        .from(teamMembers)
+        .where(eq(teamMembers.wholesalerId, filters.wholesalerId));
+      
+      const allRelevantIds = [filters.wholesalerId, ...teamMemberIds.map(tm => tm.userId)];
+      
+      // Include products from parent company AND team members
+      whereConditions.push(
+        or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!
+      );
     }
 
     if (filters.category) {
@@ -1150,12 +1182,21 @@ export class DatabaseStorage implements IStorage {
     // Get products for each wholesaler
     const wholesalersWithProducts = await Promise.all(
       wholesalers.map(async (wholesaler) => {
+        // Get team members for this wholesaler
+        const teamMemberIds = await db
+          .select({ userId: teamMembers.userId })
+          .from(teamMembers)
+          .where(eq(teamMembers.wholesalerId, wholesaler.id));
+        
+        const allRelevantIds = [wholesaler.id, ...teamMemberIds.map(tm => tm.userId)];
+        
+        // Include products from parent company AND team members
         const wholesalerProducts = await db
           .select()
           .from(products)
           .where(
             and(
-              eq(products.wholesalerId, wholesaler.id),
+              or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
               eq(products.status, 'active')
             )
           )
@@ -1188,12 +1229,21 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
+    // Get team members for this wholesaler
+    const teamMemberIds = await db
+      .select({ userId: teamMembers.userId })
+      .from(teamMembers)
+      .where(eq(teamMembers.wholesalerId, wholesaler.id));
+    
+    const allRelevantIds = [wholesaler.id, ...teamMemberIds.map(tm => tm.userId)];
+    
+    // Include products from parent company AND team members
     const wholesalerProducts = await db
       .select()
       .from(products)
       .where(
         and(
-          eq(products.wholesalerId, wholesaler.id),
+          or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
           eq(products.status, 'active')
         )
       );
@@ -1957,6 +2007,276 @@ export class DatabaseStorage implements IStorage {
     // Check if user role is in allowed roles
     const allowedRoles = permission.allowedRoles as string[] || [];
     return allowedRoles.includes(userRole);
+  }
+
+  // Gamification operations implementation
+  async getUserBadges(userId: string): Promise<UserBadge[]> {
+    return await db
+      .select()
+      .from(userBadges)
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.unlockedAt));
+  }
+
+  async createUserBadge(badge: InsertUserBadge): Promise<UserBadge> {
+    const [newBadge] = await db.insert(userBadges).values(badge).returning();
+    return newBadge;
+  }
+
+  async awardBadge(
+    userId: string,
+    badgeId: string,
+    badgeName: string,
+    badgeDescription: string,
+    experiencePoints: number = 0,
+    badgeType: string = 'achievement',
+    badgeIcon: string = '🏆',
+    badgeColor: string = '#10B981'
+  ): Promise<UserBadge> {
+    // Check if user already has this badge
+    const existingBadge = await db
+      .select()
+      .from(userBadges)
+      .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)))
+      .limit(1);
+
+    if (existingBadge.length > 0) {
+      return existingBadge[0];
+    }
+
+    // Create new badge
+    const badge = await this.createUserBadge({
+      userId,
+      badgeId,
+      badgeType,
+      badgeName,
+      badgeDescription,
+      badgeIcon,
+      badgeColor,
+      experiencePoints
+    });
+
+    // Update user's total badges and experience
+    await this.updateUserExperience(userId, experiencePoints);
+    
+    // Update total badges count
+    await db
+      .update(users)
+      .set({ 
+        totalBadges: sql`${users.totalBadges} + 1`
+      })
+      .where(eq(users.id, userId));
+
+    return badge;
+  }
+
+  async updateUserExperience(userId: string, experiencePoints: number): Promise<User> {
+    // Calculate new level based on experience points
+    const newLevel = Math.floor(experiencePoints / 100) + 1; // 100 XP per level
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        experiencePoints: sql`${users.experiencePoints} + ${experiencePoints}`,
+        currentLevel: newLevel
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return updatedUser;
+  }
+
+  async getUserOnboardingProgress(userId: string): Promise<{
+    completedSteps: string[];
+    currentMilestone: string;
+    progressPercentage: number;
+    experiencePoints: number;
+    currentLevel: number;
+    totalBadges: number;
+  }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const progress = user.onboardingProgress as any || {
+      completedSteps: [],
+      currentMilestone: 'getting_started',
+      progressPercentage: 0
+    };
+
+    return {
+      ...progress,
+      experiencePoints: user.experiencePoints || 0,
+      currentLevel: user.currentLevel || 1,
+      totalBadges: user.totalBadges || 0
+    };
+  }
+
+  async updateOnboardingProgress(
+    userId: string,
+    progress: {
+      completedSteps?: string[];
+      currentMilestone?: string;
+      progressPercentage?: number;
+    }
+  ): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const currentProgress = user.onboardingProgress as any || {
+      completedSteps: [],
+      currentMilestone: 'getting_started',
+      progressPercentage: 0
+    };
+
+    const updatedProgress = {
+      ...currentProgress,
+      ...progress
+    };
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({ onboardingProgress: updatedProgress })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return updatedUser;
+  }
+
+  // Milestone operations implementation
+  async getUserMilestones(userId: string): Promise<OnboardingMilestone[]> {
+    return await db
+      .select()
+      .from(onboardingMilestones)
+      .where(eq(onboardingMilestones.userId, userId))
+      .orderBy(onboardingMilestones.createdAt);
+  }
+
+  async createMilestone(milestone: InsertOnboardingMilestone): Promise<OnboardingMilestone> {
+    const [newMilestone] = await db.insert(onboardingMilestones).values(milestone).returning();
+    return newMilestone;
+  }
+
+  async updateMilestone(id: number, updates: Partial<InsertOnboardingMilestone>): Promise<OnboardingMilestone> {
+    const [updatedMilestone] = await db
+      .update(onboardingMilestones)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(onboardingMilestones.id, id))
+      .returning();
+
+    return updatedMilestone;
+  }
+
+  async completeMilestone(milestoneId: string, userId: string): Promise<{
+    milestone: OnboardingMilestone;
+    badge?: UserBadge;
+    experienceGained: number;
+  }> {
+    // Find the milestone
+    const [milestone] = await db
+      .select()
+      .from(onboardingMilestones)
+      .where(
+        and(
+          eq(onboardingMilestones.milestoneId, milestoneId),
+          eq(onboardingMilestones.userId, userId)
+        )
+      );
+
+    if (!milestone) {
+      throw new Error('Milestone not found');
+    }
+
+    if (milestone.isCompleted) {
+      return { milestone, experienceGained: 0 };
+    }
+
+    // Mark milestone as completed
+    const [completedMilestone] = await db
+      .update(onboardingMilestones)
+      .set({
+        isCompleted: true,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(onboardingMilestones.id, milestone.id))
+      .returning();
+
+    let badge: UserBadge | undefined;
+    let experienceGained = milestone.experienceReward || 0;
+
+    // Award experience points
+    if (experienceGained > 0) {
+      await this.updateUserExperience(userId, experienceGained);
+    }
+
+    // Award badge if specified
+    if (milestone.badgeReward) {
+      badge = await this.awardBadge(
+        userId,
+        milestone.badgeReward,
+        `${milestone.milestoneName} Complete`,
+        `Completed: ${milestone.milestoneDescription}`,
+        experienceGained,
+        'milestone'
+      );
+    }
+
+    return { milestone: completedMilestone, badge, experienceGained };
+  }
+
+  async checkMilestoneProgress(userId: string, action: string): Promise<{
+    completedMilestones: string[];
+    newBadges: UserBadge[];
+    experienceGained: number;
+  }> {
+    const milestones = await this.getUserMilestones(userId);
+    const incompleteMilestones = milestones.filter(m => !m.isCompleted);
+    
+    const completedMilestones: string[] = [];
+    const newBadges: UserBadge[] = [];
+    let totalExperienceGained = 0;
+
+    for (const milestone of incompleteMilestones) {
+      const requiredActions = milestone.requiredActions as string[] || [];
+      const completedActions = milestone.completedActions as string[] || [];
+
+      // Check if this action is required for the milestone
+      if (requiredActions.includes(action) && !completedActions.includes(action)) {
+        const updatedCompletedActions = [...completedActions, action];
+        
+        // Update completed actions
+        await db
+          .update(onboardingMilestones)
+          .set({
+            completedActions: updatedCompletedActions,
+            updatedAt: new Date()
+          })
+          .where(eq(onboardingMilestones.id, milestone.id));
+
+        // Check if all required actions are completed
+        const allCompleted = requiredActions.every(req => updatedCompletedActions.includes(req));
+        
+        if (allCompleted) {
+          const result = await this.completeMilestone(milestone.milestoneId, userId);
+          completedMilestones.push(milestone.milestoneId);
+          totalExperienceGained += result.experienceGained;
+          
+          if (result.badge) {
+            newBadges.push(result.badge);
+          }
+        }
+      }
+    }
+
+    return {
+      completedMilestones,
+      newBadges,
+      experienceGained: totalExperienceGained
+    };
   }
 }
 

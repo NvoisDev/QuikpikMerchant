@@ -577,17 +577,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/products/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      // Verify product belongs to user
+      // Verify product belongs to user or their parent company
       const existingProduct = await storage.getProduct(id);
-      if (!existingProduct || existingProduct.wholesalerId !== userId) {
+      if (!existingProduct || existingProduct.wholesalerId !== targetUserId) {
         return res.status(404).json({ message: "Product not found" });
       }
 
       // Check edit limit based on subscription tier
       const currentEditCount = existingProduct.editCount || 0;
-      const user = await storage.getUser(userId);
+      const user = await storage.getUser(targetUserId);
       const subscriptionTier = user?.subscriptionTier || "free";
       
       let editLimit = 3; // Default for free
@@ -657,11 +660,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/products/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      // Verify product belongs to user
+      // Verify product belongs to user or their parent company
       const existingProduct = await storage.getProduct(id);
-      if (!existingProduct || existingProduct.wholesalerId !== userId) {
+      if (!existingProduct || existingProduct.wholesalerId !== targetUserId) {
         return res.status(404).json({ message: "Product not found" });
       }
 
@@ -7829,6 +7835,120 @@ The Quikpik Team
     } catch (error) {
       console.error("Error checking all tab access:", error);
       res.status(500).json({ message: "Failed to check tab access" });
+    }
+  });
+
+  // Gamification API Routes
+  app.get('/api/gamification/badges', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const badges = await storage.getUserBadges(targetUserId);
+      res.json(badges);
+    } catch (error) {
+      console.error("Error fetching user badges:", error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  app.get('/api/gamification/progress', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const progress = await storage.getUserOnboardingProgress(targetUserId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching onboarding progress:", error);
+      res.status(500).json({ message: "Failed to fetch progress" });
+    }
+  });
+
+  app.get('/api/gamification/milestones', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const milestones = await storage.getUserMilestones(targetUserId);
+      res.json(milestones);
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
+      res.status(500).json({ message: "Failed to fetch milestones" });
+    }
+  });
+
+  app.post('/api/gamification/track-action', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { action } = req.body;
+      
+      if (!action) {
+        return res.status(400).json({ message: "Action is required" });
+      }
+      
+      const result = await storage.checkMilestoneProgress(targetUserId, action);
+      res.json(result);
+    } catch (error) {
+      console.error("Error tracking action:", error);
+      res.status(500).json({ message: "Failed to track action" });
+    }
+  });
+
+  app.post('/api/gamification/award-badge', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { badgeId, badgeName, badgeDescription, experiencePoints, badgeType, badgeIcon, badgeColor } = req.body;
+      
+      if (!badgeId || !badgeName || !badgeDescription) {
+        return res.status(400).json({ message: "Badge ID, name, and description are required" });
+      }
+      
+      const badge = await storage.awardBadge(
+        targetUserId,
+        badgeId,
+        badgeName,
+        badgeDescription,
+        experiencePoints || 0,
+        badgeType || 'achievement',
+        badgeIcon || '🏆',
+        badgeColor || '#10B981'
+      );
+      
+      res.json(badge);
+    } catch (error) {
+      console.error("Error awarding badge:", error);
+      res.status(500).json({ message: "Failed to award badge" });
+    }
+  });
+
+  app.patch('/api/gamification/update-progress', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { completedSteps, currentMilestone, progressPercentage } = req.body;
+      
+      const updatedUser = await storage.updateOnboardingProgress(targetUserId, {
+        completedSteps,
+        currentMilestone,
+        progressPercentage
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating progress:", error);
+      res.status(500).json({ message: "Failed to update progress" });
     }
   });
 

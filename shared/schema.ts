@@ -99,6 +99,17 @@ export const users = pgTable("users", {
   onboardingSkipped: boolean("onboarding_skipped").default(false),
   isFirstLogin: boolean("is_first_login").default(true),
   
+  // Gamification fields
+  experiencePoints: integer("experience_points").default(0),
+  currentLevel: integer("current_level").default(1),
+  totalBadges: integer("total_badges").default(0),
+  completedAchievements: jsonb("completed_achievements").default([]), // Array of achievement IDs
+  onboardingProgress: jsonb("onboarding_progress").default({
+    completedSteps: [],
+    currentMilestone: 'getting_started',
+    progressPercentage: 0
+  }),
+  
   // Stock alert settings
   defaultLowStockThreshold: integer("default_low_stock_threshold").default(50), // Global default for new products
   
@@ -145,6 +156,38 @@ export const tabPermissions = pgTable("tab_permissions", {
   tabName: varchar("tab_name").notNull(), // 'products', 'orders', 'customers', 'campaigns', 'analytics', 'settings', etc.
   isRestricted: boolean("is_restricted").default(false), // Whether this tab is restricted for team members
   allowedRoles: jsonb("allowed_roles").default(['owner', 'admin', 'member']), // Which team member roles can access
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Gamification: User badges and achievements tracking
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeId: varchar("badge_id").notNull(), // Achievement identifier
+  badgeType: varchar("badge_type").notNull(), // 'milestone', 'achievement', 'streak', 'special'
+  badgeName: varchar("badge_name").notNull(),
+  badgeDescription: text("badge_description"),
+  badgeIcon: varchar("badge_icon"), // Icon name or emoji
+  badgeColor: varchar("badge_color").default("#10B981"), // Hex color for badge
+  experiencePoints: integer("experience_points").default(0), // XP awarded for this badge
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Onboarding milestones and progress tracking
+export const onboardingMilestones = pgTable("onboarding_milestones", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  milestoneId: varchar("milestone_id").notNull(), // 'first_product', 'first_customer', 'first_order', etc.
+  milestoneName: varchar("milestone_name").notNull(),
+  milestoneDescription: text("milestone_description"),
+  requiredActions: jsonb("required_actions").default([]), // Array of actions needed to complete
+  completedActions: jsonb("completed_actions").default([]), // Array of completed actions
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  experienceReward: integer("experience_reward").default(0),
+  badgeReward: varchar("badge_reward"), // Badge ID if milestone awards a badge
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -560,6 +603,16 @@ export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// User Badges types
+export const insertUserBadgeSchema = createInsertSchema(userBadges);
+export type InsertUserBadge = typeof userBadges.$inferInsert;
+export type UserBadge = typeof userBadges.$inferSelect;
+
+// Onboarding Milestones types
+export const insertOnboardingMilestoneSchema = createInsertSchema(onboardingMilestones);
+export type InsertOnboardingMilestone = typeof onboardingMilestones.$inferInsert;
+export type OnboardingMilestone = typeof onboardingMilestones.$inferSelect;
 
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type InsertTeamMember = typeof teamMembers.$inferInsert;
