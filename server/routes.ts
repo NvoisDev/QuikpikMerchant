@@ -3379,8 +3379,10 @@ Write a professional, sales-focused description that highlights the key benefits
 
   app.get('/api/template-campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const campaigns = await storage.getTemplateCampaigns(userId);
+      const user = req.user;
+      // Use parent company data for team members
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const campaigns = await storage.getTemplateCampaigns(targetUserId);
       res.json(campaigns);
     } catch (error) {
       console.error("Error fetching template campaigns:", error);
@@ -3391,16 +3393,18 @@ Write a professional, sales-focused description that highlights the key benefits
   // Unified Campaigns API (merges broadcasts and message templates)
   app.get('/api/campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const user = req.user;
+      // Use parent company data for team members
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       
       // Get both broadcasts and message templates, then unify them
       const [broadcasts, templates] = await Promise.all([
-        storage.getBroadcasts(userId),
-        storage.getMessageTemplates(userId)
+        storage.getBroadcasts(targetUserId),
+        storage.getMessageTemplates(targetUserId)
       ]);
 
       // Get all orders for real order count calculation
-      const allOrders = await storage.getOrders(userId);
+      const allOrders = await storage.getOrders(targetUserId);
 
       // Convert broadcasts to unified campaign format with real order data
       const broadcastCampaigns = await Promise.all(broadcasts.map(async broadcast => {
@@ -3497,13 +3501,15 @@ Write a professional, sales-focused description that highlights the key benefits
 
   app.post('/api/campaigns', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const user = req.user;
+      // Use parent company data for team members
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
         // Create a broadcast for single product
         const broadcastData = {
-          wholesalerId: userId,
+          wholesalerId: targetUserId,
           productId: productId,
           customerGroupId: 1, // Will be set when sending
           message: campaignData.customMessage || '',
@@ -3527,7 +3533,7 @@ Write a professional, sales-focused description that highlights the key benefits
           name: campaignData.title,
           title: campaignData.title,
           description: campaignData.customMessage || '',
-          wholesalerId: userId,
+          wholesalerId: targetUserId,
           status: 'active'
         };
 
@@ -3555,9 +3561,11 @@ Write a professional, sales-focused description that highlights the key benefits
 
   app.post('/api/campaigns/send', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const user = req.user;
+      // Use parent company data for team members
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignId, customerGroupId, customMessage } = req.body;
-      console.log(`Campaign send request: userId=${userId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
+      console.log(`Campaign send request: userId=${targetUserId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
 
       const [type, id] = campaignId.split('_');
       const numericId = parseInt(id);
@@ -3565,7 +3573,7 @@ Write a professional, sales-focused description that highlights the key benefits
 
       if (type === 'broadcast') {
         // Get the broadcast to find the product ID
-        const broadcasts = await storage.getBroadcasts(userId);
+        const broadcasts = await storage.getBroadcasts(targetUserId);
         const broadcast = broadcasts.find(b => b.id === numericId);
         
         if (!broadcast) {
@@ -3574,9 +3582,9 @@ Write a professional, sales-focused description that highlights the key benefits
 
         // Send single product broadcast with custom message if provided
         const messageToSend = customMessage || broadcast.message;
-        console.log(`Broadcasting: userId=${userId}, productId=${broadcast.product.id}, groupId=${customerGroupId}`);
+        console.log(`Broadcasting: userId=${targetUserId}, productId=${broadcast.product.id}, groupId=${customerGroupId}`);
         const result = await whatsappService.sendProductBroadcast(
-          userId,
+          targetUserId,
           broadcast.product.id, // Use the actual product ID
           customerGroupId,
           messageToSend // Use custom message or original message
@@ -3615,7 +3623,7 @@ Write a professional, sales-focused description that highlights the key benefits
         await storage.createTemplateCampaign({
           templateId: numericId,
           customerGroupId,
-          wholesalerId: userId,
+          wholesalerId: targetUserId,
           campaignUrl,
           status: 'sent',
           sentAt: new Date(),
@@ -3713,7 +3721,9 @@ Write a professional, sales-focused description that highlights the key benefits
   app.post('/api/campaigns/:id/refresh-stock', requireAuth, async (req: any, res) => {
     try {
       const campaignId = req.params.id;
-      const userId = req.user.id;
+      const user = req.user;
+      // Use parent company data for team members
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       // No customer group needed for stock refresh - just update the data
 
       // Determine campaign type and get details
@@ -3722,11 +3732,11 @@ Write a professional, sales-focused description that highlights the key benefits
 
       if (type === 'broadcast') {
         // Handle single product stock update
-        const broadcast = await storage.getBroadcasts(userId).then(broadcasts => 
+        const broadcast = await storage.getBroadcasts(targetUserId).then(broadcasts => 
           broadcasts.find(b => b.id === campaignNumericId)
         );
         
-        if (!broadcast || broadcast.wholesalerId !== userId) {
+        if (!broadcast || broadcast.wholesalerId !== targetUserId) {
           return res.status(404).json({ message: "Campaign not found" });
         }
 
@@ -3750,7 +3760,7 @@ Write a professional, sales-focused description that highlights the key benefits
       } else if (type === 'template') {
         // Handle multi-product stock update
         const template = await storage.getMessageTemplate(campaignNumericId);
-        if (!template || template.wholesalerId !== userId) {
+        if (!template || template.wholesalerId !== targetUserId) {
           return res.status(404).json({ message: "Template not found" });
         }
 
