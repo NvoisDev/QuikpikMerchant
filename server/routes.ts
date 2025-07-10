@@ -241,10 +241,12 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
 
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-    // Get the current domain
-    const baseUrl = process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`
+    // Get the current domain - use the actual running domain
+    const baseUrl = process.env.REPL_ID 
+      ? `https://${process.env.REPL_ID}-00-p1kaa4ro8p7u.janeway.replit.dev`
       : 'https://quikpik.co';
+    
+    console.log('Team invitation URL will be:', `${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}`);
 
     const msg = {
       to: teamMember.email,
