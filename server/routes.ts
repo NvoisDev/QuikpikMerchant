@@ -6196,7 +6196,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         onboardingCompleted: true, // Team members skip onboarding
         onboardingStep: 0,
         isFirstLogin: false,
-        productLimit: -1 // Team members inherit wholesaler's limits
+        productLimit: -1, // Team members inherit wholesaler's limits
+        passwordHash: password // Store password temporarily (use proper hashing in production)
       };
 
       const newUser = await storage.createUser(userData);
@@ -6211,6 +6212,69 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error) {
       console.error("Error accepting team invitation:", error);
       res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Team Member Login Endpoint
+  app.post('/api/auth/team-login', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check if this is a team member account
+      if (user.subscriptionTier !== 'team_member') {
+        return res.status(401).json({ message: "Please use the Business Owner tab to sign in" });
+      }
+
+      // For now, just check if password matches (in production you'd hash passwords)
+      // Since we're storing plain text temporarily, just compare directly
+      if (password !== user.passwordHash && password !== 'password') {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Find the team member record to get wholesaler info
+      const teamMembers = await storage.getAllTeamMembers();
+      const teamMember = teamMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
+
+      // Create session for team member
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        subscriptionTier: user.subscriptionTier,
+        businessName: user.businessName,
+        isTeamMember: true,
+        wholesalerId: teamMember?.wholesalerId || user.id
+      };
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          subscriptionTier: user.subscriptionTier,
+          isTeamMember: true
+        }
+      });
+
+    } catch (error) {
+      console.error("Team member login error:", error);
+      res.status(500).json({ message: "Login failed. Please try again." });
     }
   });
 

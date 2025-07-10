@@ -1,12 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogIn, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
+  const [teamMemberLogin, setTeamMemberLogin] = useState({ email: '', password: '' });
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleGoogleLogin = async () => {
     try {
@@ -29,6 +35,42 @@ export default function Login() {
         description: "There was an error signing you in. Please try again.",
         variant: "destructive",
       });
+      setIsLoading(false);
+    }
+  };
+
+  const handleTeamMemberLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch('/api/auth/team-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamMemberLogin),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Welcome back!",
+          description: "You've been signed in successfully.",
+        });
+        setLocation('/');
+      } else {
+        throw new Error(data.message || 'Login failed');
+      }
+    } catch (error: any) {
+      console.error('Team member login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -56,34 +98,95 @@ export default function Login() {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl">Sign In</CardTitle>
             <CardDescription>
-              Sign in to your account to get started
+              Choose your login method to get started
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Button
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full h-12 text-base font-medium"
-              size="lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-5 w-5" />
-                  Sign in with Google
-                </>
-              )}
-            </Button>
-            
-            <div className="text-center text-sm text-gray-500">
-              <p>
-                Secure sign-in powered by Google OAuth 2.0
-              </p>
-            </div>
+          <CardContent>
+            <Tabs defaultValue="business" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="business">Business Owner</TabsTrigger>
+                <TabsTrigger value="team">Team Member</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="business" className="space-y-4">
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sign in with your Google account
+                  </p>
+                </div>
+                <Button
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="w-full h-12 text-base font-medium"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="mr-2 h-5 w-5" />
+                      Sign in with Google
+                    </>
+                  )}
+                </Button>
+                <div className="text-center text-sm text-gray-500">
+                  <p>Secure sign-in powered by Google OAuth 2.0</p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="team" className="space-y-4">
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sign in with your team member credentials
+                  </p>
+                </div>
+                <form onSubmit={handleTeamMemberLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@company.com"
+                      value={teamMemberLogin.email}
+                      onChange={(e) => setTeamMemberLogin({...teamMemberLogin, email: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={teamMemberLogin.password}
+                      onChange={(e) => setTeamMemberLogin({...teamMemberLogin, password: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-12 text-base font-medium"
+                    size="lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="mr-2 h-5 w-5" />
+                        Sign in as Team Member
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
