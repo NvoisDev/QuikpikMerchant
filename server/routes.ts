@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let responseUser = req.user;
       
       // Check if this user is a team member and get wholesaler info
-      if (req.user.isTeamMember && req.user.wholesalerId) {
+      if (req.user.role === 'team_member' && req.user.wholesalerId) {
         const wholesalerInfo = await storage.getUser(req.user.wholesalerId);
         if (wholesalerInfo) {
           responseUser = {
@@ -490,7 +490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If no specific wholesaler requested, use current user or parent company
       let targetUserId = wholesalerId as string;
       if (!targetUserId) {
-        targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        // Use parent company data for team members
+        targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
           ? req.user.wholesalerId 
           : req.user.id;
       }
@@ -664,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
         
@@ -1562,7 +1563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
         
@@ -1926,7 +1927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
         
@@ -1962,7 +1963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/chart-data', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       const { fromDate, toDate } = req.query;
@@ -2081,7 +2082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/top-products', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
-      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
         
@@ -5829,7 +5830,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }
 
       // If this is a team member, get the wholesaler's subscription info
-      if (req.user.isTeamMember && req.user.wholesalerId) {
+      if (req.user.role === 'team_member' && req.user.wholesalerId) {
         const wholesalerInfo = await storage.getUser(req.user.wholesalerId);
         if (wholesalerInfo) {
           user = wholesalerInfo; // Use wholesaler's subscription for limits
