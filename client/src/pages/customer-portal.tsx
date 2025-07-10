@@ -396,7 +396,7 @@ export default function CustomerPortal() {
 
     setLoadingShippingQuotes(true);
     try {
-      const response = await apiRequest("POST", "/api/shipping/quotes", {
+      const response = await apiRequest("POST", "/api/marketplace/shipping/quotes", {
         collectionAddress: {
           contactName: wholesaler?.businessName || "Business Pickup",
           property: wholesaler?.businessAddress?.split(',')[0] || "1",

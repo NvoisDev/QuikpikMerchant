@@ -6387,6 +6387,101 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Public shipping quotes endpoint for customer portal (no authentication required)
+  app.post('/api/marketplace/shipping/quotes', async (req: any, res) => {
+    try {
+      const { collectionAddress, deliveryAddress, parcels } = req.body;
+      
+      console.log("📦 MARKETPLACE: Getting shipping quotes:", { collectionAddress, deliveryAddress, parcels });
+      
+      // Check if we have valid addresses
+      if (!collectionAddress || !deliveryAddress || !parcels) {
+        return res.status(400).json({ 
+          error: "Missing required data", 
+          required: ["collectionAddress", "deliveryAddress", "parcels"] 
+        });
+      }
+
+      // Configure Parcel2Go service with credentials - try live API first
+      if (process.env.PARCEL2GO_CLIENT_ID && process.env.PARCEL2GO_CLIENT_SECRET) {
+        parcel2goService.setCredentials({
+          clientId: process.env.PARCEL2GO_CLIENT_ID,
+          clientSecret: process.env.PARCEL2GO_CLIENT_SECRET,
+          environment: 'live' // Use live API as sandbox seems inaccessible
+        });
+      }
+      
+      // Try to get real quotes first
+      try {
+        const quotes = await parcel2goService.getQuotes({
+          collectionAddress,
+          deliveryAddress,
+          parcels
+        });
+        
+        console.log("📦 Got real marketplace quotes:", quotes.length, "services");
+        res.json({ quotes, demoMode: false });
+      } catch (apiError) {
+        console.log("📦 Parcel2Go API unavailable, falling back to demo quotes for marketplace");
+        throw apiError; // Fall through to demo quotes
+      }
+    } catch (error: any) {
+      console.error("Error getting marketplace shipping quotes:", error.message);
+      
+      // Calculate weight-based pricing for more realistic demo quotes
+      const totalWeight = parcels.reduce((sum, parcel) => sum + parcel.weight, 0);
+      const basePrice = Math.max(3.95, totalWeight * 0.85); // Minimum £3.95, then £0.85 per kg
+      
+      const demoQuotes = [
+        {
+          serviceId: 'demo-royal-mail-48',
+          serviceName: 'Royal Mail 48',
+          carrierName: 'Royal Mail',
+          price: parseFloat((basePrice * 1.2).toFixed(2)),
+          priceExVat: parseFloat((basePrice).toFixed(2)),
+          vat: parseFloat((basePrice * 0.2).toFixed(2)),
+          transitTime: '2-3 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: `Standard delivery for ${totalWeight}kg package with tracking`
+        },
+        {
+          serviceId: 'demo-dpd-next-day',
+          serviceName: 'DPD Next Day',
+          carrierName: 'DPD',
+          price: parseFloat((basePrice * 1.8).toFixed(2)),
+          priceExVat: parseFloat((basePrice * 1.5).toFixed(2)),
+          vat: parseFloat((basePrice * 0.3).toFixed(2)),
+          transitTime: '1 business day',
+          collectionType: 'pickup',
+          deliveryType: 'express',
+          trackingAvailable: true,
+          insuranceIncluded: true,
+          description: `Next day delivery for ${totalWeight}kg package with SMS notifications`
+        },
+        {
+          serviceId: 'demo-evri-standard',
+          serviceName: 'Evri Standard',
+          carrierName: 'Evri',
+          price: parseFloat((basePrice * 0.9).toFixed(2)),
+          priceExVat: parseFloat((basePrice * 0.75).toFixed(2)),
+          vat: parseFloat((basePrice * 0.15).toFixed(2)),
+          transitTime: '3-5 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: `Cost-effective delivery for ${totalWeight}kg package`
+        }
+      ];
+      
+      console.log(`📦 Returning weight-based marketplace demo quotes for ${totalWeight}kg package`);
+      res.json({ quotes: demoQuotes, demoMode: true });
+    }
+  });
+
   app.get('/api/shipping/drop-shops', requireAuth, async (req: any, res) => {
     try {
       const { postcode, country = 'GBR' } = req.query;
