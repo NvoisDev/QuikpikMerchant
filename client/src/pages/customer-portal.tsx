@@ -436,16 +436,18 @@ export default function CustomerPortal() {
         }]
       });
 
-      console.log("Shipping quotes response:", response);
-      console.log("Response quotes array:", response.quotes);
-      console.log("Quotes length:", response.quotes?.length);
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Shipping quotes response:", data);
+      console.log("Response quotes array:", data.quotes);
+      console.log("Quotes length:", data.quotes?.length);
       
-      if (response.quotes && response.quotes.length > 0) {
-        console.log("Setting available shipping services:", response.quotes);
-        setAvailableShippingServices(response.quotes);
+      if (data.quotes && data.quotes.length > 0) {
+        console.log("Setting available shipping services:", data.quotes);
+        setAvailableShippingServices(data.quotes);
         toast({
-          title: response.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
-          description: `Found ${response.quotes.length} delivery options for your location${response.demoMode ? ' (demo mode)' : ''}`,
+          title: data.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
+          description: `Found ${data.quotes.length} delivery options for your location${data.demoMode ? ' (demo mode)' : ''}`,
         });
       } else {
         console.log("No quotes found in response");
@@ -2148,10 +2150,6 @@ export default function CustomerPortal() {
                 {customerData.shippingOption === 'delivery' && (
                   <div className="space-y-3">
                     <h4 className="font-medium">Choose Delivery Service</h4>
-                    
-                    {console.log("Rendering shipping options - availableShippingServices:", availableShippingServices)}
-                    {console.log("Loading state:", loadingShippingQuotes)}
-                    {console.log("Customer address:", customerData.address, customerData.city, customerData.postalCode)}
                     
                     {loadingShippingQuotes ? (
                       <div className="text-center py-4">
