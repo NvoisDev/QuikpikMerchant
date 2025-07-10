@@ -249,7 +249,7 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
     const msg = {
       to: teamMember.email,
       from: {
-        email: 'hello@quikpik.co',
+        email: 'noreply@quikpik.vercel.app',
         name: 'Quikpik Team'
       },
       subject: `You're invited to join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik`,
@@ -319,8 +319,18 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
       `
     };
 
-    await sgMail.send(msg);
+    const response = await sgMail.send(msg);
     console.log('Team invitation email sent successfully to:', teamMember.email);
+    console.log('SendGrid response status:', response[0].statusCode);
+    console.log('SendGrid message ID:', response[0].headers['x-message-id']);
+    
+    // Add better delivery logging
+    if (response[0].statusCode === 202) {
+      console.log('✅ Email accepted by SendGrid and queued for delivery');
+    } else {
+      console.log('⚠️ Unexpected status code:', response[0].statusCode);
+    }
+    
     return true;
   } catch (error) {
     console.error('Error sending team invitation email:', error);
