@@ -182,18 +182,25 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Chart Data Alignment Fix**: Fixed chart generation to properly align with DateRangePicker selection - "Yesterday" now shows hourly data, "Last 7 days" shows daily data, "Last 30 days" shows weekly data
 - **Dashboard Improvements**: Replaced hardcoded "+3 new this week" text with dynamic stock alert status ("X low stock alerts" or "Stock levels healthy")
 - **Application Loading Issue**: Resolved infinite loading spinner problem and ensured proper authentication flow
+- **CRITICAL: Eliminated Fake Analytics Data**: Completely replaced fake `generateSalesData` function with real API endpoint `/api/analytics/chart-data` that uses actual order history from database
+- **Real-Time Data Filtering**: Charts now show only authentic historical data - no more future timestamps or fabricated revenue/order numbers
+- **Authentic Business Metrics**: Dashboard analytics now display genuine business performance based on actual customer orders and transactions
 
 ### Technical Improvements:
 - Enhanced `generateSalesData` function to respect date range selection with appropriate time granularity
 - Added proper null checking for dateRange object to prevent JavaScript errors
 - Improved chart axis labels to match selected time period (hourly/daily/weekly/monthly)
 - Strengthened analytics API endpoints with real percentage calculations using SQL aggregations
+- **Added `getOrdersForDateRange` method**: New storage interface method filters orders by actual timestamps with proper date range validation
+- **Real Chart Data API**: Created `/api/analytics/chart-data` endpoint that processes authentic order data with time-aware filtering
+- **Eliminated Future Data Bug**: Charts respect current time boundaries and only show data for hours/days that have actually occurred
 
 ### Testing Status:
 - Application successfully running without crashes
 - Authentication and session management working correctly
-- Charts displaying appropriate data for selected time ranges
-- Analytics showing real business metrics instead of placeholder values
+- Charts displaying authentic historical data without any future timestamps
+- Analytics showing real business metrics based on actual customer orders
+- **Verified Fix**: Dashboard charts now use real order data instead of randomly generated fake numbers
 
 ## Changelog
 - July 09, 2025. Complete Customer Portal Enhancement with Sticky Header and Selling Format Tags:

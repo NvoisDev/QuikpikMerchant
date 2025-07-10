@@ -35,9 +35,9 @@ export default function WholesalerDashboard() {
   const { isActive } = useOnboarding();
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(startOfToday(), 1),
+    from: subDays(startOfToday(), 29),
     to: startOfToday(),
-    label: "Yesterday"
+    label: "Last 30 days"
   });
 
   // Keyboard shortcuts functionality
@@ -106,6 +106,28 @@ export default function WholesalerDashboard() {
   // Chart data query with real data from backend
   const { data: chartData, isLoading: chartLoading } = useQuery({
     queryKey: ["/api/analytics/chart-data", dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryFn: async () => {
+      if (!dateRange?.from || !dateRange?.to) {
+        console.log('Missing date range:', { from: dateRange?.from, to: dateRange?.to });
+        return [];
+      }
+      const params = new URLSearchParams({
+        fromDate: dateRange.from.toISOString(),
+        toDate: dateRange.to.toISOString()
+      });
+      console.log('Fetching chart data with params:', params.toString());
+      const response = await fetch(`/api/analytics/chart-data?${params}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Chart data fetch failed:', errorText);
+        throw new Error('Failed to fetch chart data');
+      }
+      const data = await response.json();
+      console.log('Chart data received:', data);
+      return data;
+    },
     enabled: !!dateRange?.from && !!dateRange?.to,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
