@@ -111,7 +111,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
-        req.user = user;
+        // Use session data which includes team member context
+        req.user = sessionUser;
         return next();
       }
     }

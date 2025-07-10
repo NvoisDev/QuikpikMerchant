@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogIn, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,6 +16,7 @@ export default function Login() {
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const handleGoogleLogin = async () => {
     try {
@@ -57,11 +59,18 @@ export default function Login() {
       const data = await response.json();
       
       if (response.ok) {
+        // Invalidate auth queries to refresh user state
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
         toast({
           title: "Welcome back!",
           description: "You've been signed in successfully.",
         });
-        setLocation('/');
+        
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          setLocation('/');
+        }, 100);
       } else {
         throw new Error(data.message || 'Login failed');
       }
@@ -93,11 +102,18 @@ export default function Login() {
       const data = await response.json();
       
       if (response.ok) {
+        // Invalidate auth queries to refresh user state
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
         toast({
           title: "Welcome back!",
           description: "You've been signed in successfully.",
         });
-        setLocation('/');
+        
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          setLocation('/');
+        }, 100);
       } else {
         throw new Error(data.message || 'Login failed');
       }

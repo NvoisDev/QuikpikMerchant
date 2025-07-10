@@ -408,7 +408,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      res.json(req.user);
+      let responseUser = req.user;
+      
+      // Check if this user is a team member and get wholesaler info
+      if (req.user.isTeamMember && req.user.wholesalerId) {
+        const wholesalerInfo = await storage.getUser(req.user.wholesalerId);
+        if (wholesalerInfo) {
+          responseUser = {
+            ...req.user,
+            subscriptionTier: wholesalerInfo.subscriptionTier,
+            businessName: wholesalerInfo.businessName,
+            isTeamMember: true,
+            role: 'team_member'
+          };
+        }
+      }
+      
+      res.json(responseUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -5769,9 +5785,17 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 
   app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      let user = await storage.getUser(req.user.claims?.sub || req.user.id);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      // If this is a team member, get the wholesaler's subscription info
+      if (req.user.isTeamMember && req.user.wholesalerId) {
+        const wholesalerInfo = await storage.getUser(req.user.wholesalerId);
+        if (wholesalerInfo) {
+          user = wholesalerInfo; // Use wholesaler's subscription for limits
+        }
       }
 
       // Get product count for this user
@@ -5779,11 +5803,15 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       const productCount = products.length;
 
       const subscriptionData = {
-        tier: user.subscriptionTier || 'free',
-        status: user.subscriptionStatus || 'inactive',
+        subscriptionTier: user.subscriptionTier || 'free',
+        subscriptionStatus: user.subscriptionStatus || 'inactive',
         productCount: productCount,
         productLimit: getProductLimit(user.subscriptionTier || 'free'),
         editLimit: getEditLimit(user.subscriptionTier || 'free'),
+        customerGroupLimit: getCustomerGroupLimit(user.subscriptionTier || 'free'),
+        broadcastLimit: getBroadcastLimit(user.subscriptionTier || 'free'),
+        customersPerGroupLimit: getCustomersPerGroupLimit(user.subscriptionTier || 'free'),
+        isTeamMember: req.user.isTeamMember || false,
         expiresAt: user.subscriptionEndsAt
       };
 
@@ -6519,16 +6547,22 @@ The Quikpik Team
       // Find the team member record to get wholesaler info
       const teamMembers = await storage.getAllTeamMembers();
       const teamMember = teamMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
+      
+      // Get wholesaler information if team member is linked
+      let wholesalerInfo = null;
+      if (teamMember?.wholesalerId) {
+        wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
+      }
 
-      // Create session for team member
+      // Create session for team member with wholesaler context
       req.session.user = {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        subscriptionTier: user.subscriptionTier,
-        businessName: user.businessName,
+        subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
+        businessName: wholesalerInfo?.businessName || user.businessName,
         isTeamMember: true,
         wholesalerId: teamMember?.wholesalerId || user.id
       };
@@ -6541,8 +6575,9 @@ The Quikpik Team
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role,
-          subscriptionTier: user.subscriptionTier,
+          role: 'team_member',
+          subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
+          businessName: wholesalerInfo?.businessName || user.businessName,
           isTeamMember: true
         }
       });
@@ -6568,7 +6603,44 @@ The Quikpik Team
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Check if this is a business owner account (not a team member)
+      // Check if this user is actually a team member of another business
+      const teamMembers = await storage.getAllTeamMembers();
+      const teamMember = teamMembers.find((tm: any) => tm.email.toLowerCase() === email.toLowerCase());
+      
+      // If user is a team member, get wholesaler info and treat as team member login
+      if (teamMember) {
+        const wholesalerInfo = await storage.getUser(teamMember.wholesalerId);
+        
+        // Create session for team member with wholesaler context
+        req.session.user = {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: 'team_member',
+          subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
+          businessName: wholesalerInfo?.businessName || user.businessName,
+          isTeamMember: true,
+          wholesalerId: teamMember.wholesalerId
+        };
+
+        return res.json({
+          success: true,
+          message: "Login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: 'team_member',
+            subscriptionTier: wholesalerInfo?.subscriptionTier || user.subscriptionTier,
+            businessName: wholesalerInfo?.businessName || user.businessName,
+            isTeamMember: true
+          }
+        });
+      }
+
+      // Check if this is a team member account tier
       if (user.subscriptionTier === 'team_member') {
         return res.status(401).json({ message: "Please use the Team Member tab to sign in" });
       }
