@@ -176,6 +176,17 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)
 
+### Complete Tab Permission System with Authentication Fix (July 10, 2025):
+- **Critical Authentication Bug Fixed**: Resolved team member login endpoint incorrectly assigning 'wholesaler' role instead of 'team_member' role
+- **Granular Tab Permission System**: Fully functional tab-level access control allowing business owners to restrict specific dashboard sections for team members
+- **Complete Permission Interface**: TabPermissionsManager component with working toggles for all dashboard tabs (Dashboard, Products, Orders, Customer Groups, Campaigns, Analytics, Marketplace, Team Management, Settings)
+- **Backend Permission Enforcement**: Comprehensive API endpoints for checking individual tab access (`/api/tab-permissions/check/:tabName`) and bulk permission checking (`/api/tab-permissions/check-all`)
+- **Sidebar Navigation Filtering**: Team members now see only authorized tabs in sidebar navigation based on business owner's permission settings
+- **Real-time Permission Updates**: Permission changes immediately affect team member access without requiring logout/login
+- **Database Schema**: Complete tab_permissions table with wholesalerId, tabName, isRestricted, and allowedRoles fields for granular control
+- **Role-Based Access Control**: Three role levels (owner, admin, member) with business owners having full control over team member permissions
+- **Production Ready**: Fully tested system with proper error handling, authentication verification, and permission inheritance for team members
+
 ### Comprehensive Welcome System for New Users (July 10, 2025):
 - **Professional Welcome Email System**: Automatic welcome emails sent to new users with comprehensive platform overview, feature explanations, and future roadmap
 - **WelcomeModal Component**: Interactive modal displaying platform goals, upcoming features, and support information for new users

@@ -1943,29 +1943,19 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    console.log(`🔍 Checking ${tabName} for wholesaler ${wholesalerId}, user role: ${userRole}`);
-    console.log('📋 Permission found:', permission);
-
     if (!permission) {
       // If no permission is set, default to allowing access
-      console.log(`✅ No permission set for ${tabName}, allowing access`);
       return true;
     }
 
     if (!permission.isRestricted) {
       // If not restricted, allow access
-      console.log(`✅ ${tabName} is not restricted, allowing access`);
       return true;
     }
 
     // Check if user role is in allowed roles
     const allowedRoles = permission.allowedRoles as string[] || [];
-    const hasAccess = allowedRoles.includes(userRole);
-    
-    console.log(`🔒 ${tabName} is restricted. Allowed roles:`, allowedRoles);
-    console.log(`👤 User role "${userRole}" ${hasAccess ? '✅ IS' : '❌ IS NOT'} in allowed roles`);
-    
-    return hasAccess;
+    return allowedRoles.includes(userRole);
   }
 }
 
