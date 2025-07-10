@@ -40,6 +40,7 @@ interface Product {
   moq: number;
   stock: number;
   imageUrl?: string;
+  images?: string[];
   category?: string;
   status: "active" | "inactive" | "out_of_stock";
   priceVisible: boolean;
@@ -189,7 +190,11 @@ export default function ProductCard({
       <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
       <div className="relative">
         <img 
-          src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200"} 
+          src={
+            (product.images && product.images.length > 0) 
+              ? product.images[0] 
+              : product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=200"
+          } 
           alt={product.name}
           className="w-full h-48 object-cover"
         />
