@@ -70,6 +70,7 @@ export interface IStorage {
   // Order operations
   getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
+  getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
@@ -97,6 +98,12 @@ export interface IStorage {
   
   // Analytics operations
   getWholesalerStats(wholesalerId: string): Promise<{
+    totalRevenue: number;
+    ordersCount: number;
+    activeProducts: number;
+    lowStockCount: number;
+  }>;
+  getWholesalerStatsForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<{
     totalRevenue: number;
     ordersCount: number;
     activeProducts: number;
@@ -403,6 +410,21 @@ export class DatabaseStorage implements IStorage {
         product: item.products!
       }))
     };
+  }
+
+  async getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]> {
+    const orderList = await db
+      .select()
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.createdAt} >= ${fromDate}`,
+        sql`${orders.createdAt} <= ${toDate}`,
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+      ))
+      .orderBy(desc(orders.createdAt));
+    
+    return orderList;
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
@@ -820,6 +842,56 @@ export class DatabaseStorage implements IStorage {
       lowStockCount: lowStockStats.lowStockCount || 0,
       revenueChange: Math.round(revenueChange * 100) / 100,
       ordersChange: Math.round(ordersChange * 100) / 100,
+    };
+  }
+
+  async getWholesalerStatsForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<{
+    totalRevenue: number;
+    ordersCount: number;
+    activeProducts: number;
+    lowStockCount: number;
+  }> {
+    // Get revenue and order count for the specified date range
+    const [revenueStats] = await db
+      .select({
+        totalRevenue: sum(orders.total),
+        ordersCount: count(orders.id)
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.createdAt} >= ${fromDate} AND ${orders.createdAt} <= ${toDate}`
+      ));
+
+    // Get product stats (current active products, not date-specific)
+    const [productStats] = await db
+      .select({
+        activeProducts: count(products.id)
+      })
+      .from(products)
+      .where(and(
+        eq(products.wholesalerId, wholesalerId),
+        eq(products.status, 'active')
+      ));
+
+    // Get low stock count using configurable thresholds
+    const [lowStockStats] = await db
+      .select({
+        lowStockCount: count(products.id)
+      })
+      .from(products)
+      .where(and(
+        eq(products.wholesalerId, wholesalerId),
+        eq(products.status, 'active'),
+        sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
+      ));
+
+    return {
+      totalRevenue: Number(revenueStats.totalRevenue) || 0,
+      ordersCount: revenueStats.ordersCount || 0,
+      activeProducts: productStats.activeProducts || 0,
+      lowStockCount: lowStockStats.lowStockCount || 0,
     };
   }
 

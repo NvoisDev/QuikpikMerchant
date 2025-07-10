@@ -48,6 +48,13 @@ export default function Logo({
 
   // Determine what to show based on user settings hierarchy
   const renderLogo = () => {
+    console.log("Logo render - user data:", { 
+      user: user?.firstName, 
+      businessName: user?.businessName, 
+      logoType: user?.logoType,
+      logoUrl: user?.logoUrl
+    });
+    
     // 1. Custom uploaded logo (highest priority)
     if (user?.logoType === "custom" && user?.logoUrl) {
       return (
@@ -68,8 +75,8 @@ export default function Logo({
         .substring(0, 2);
       
       return (
-        <div className={`${sizeClasses[size]} aspect-square bg-primary rounded-full flex items-center justify-center`}>
-          <span className={`${textSizeClasses[size]} font-bold text-white`}>
+        <div className={`${sizeClasses[size]} aspect-square bg-emerald-600 rounded-lg flex items-center justify-center`}>
+          <span className={`${textSizeClasses[size]} font-bold text-white select-none`}>
             {businessInitials}
           </span>
         </div>
@@ -78,9 +85,10 @@ export default function Logo({
     
     // 3. Name initials (fallback - default)
     const nameInitials = getInitials();
+    console.log("Logo render - using fallback initials:", nameInitials);
     return (
-      <div className={`${sizeClasses[size]} aspect-square bg-primary rounded-full flex items-center justify-center`}>
-        <span className={`${textSizeClasses[size]} font-bold text-white`}>
+      <div className={`${sizeClasses[size]} aspect-square bg-emerald-600 rounded-lg flex items-center justify-center`}>
+        <span className={`${textSizeClasses[size]} font-bold text-white select-none`}>
           {nameInitials}
         </span>
       </div>

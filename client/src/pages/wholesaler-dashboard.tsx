@@ -28,58 +28,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-// Generate realistic sales data based on actual stats and date range
-const generateSalesData = (stats: any, dateRange: DateRange) => {
-  if (!stats || !dateRange?.from || !dateRange?.to) return [];
-  
-  const totalRevenue = parseFloat(stats.totalRevenue || 0);
-  const totalOrders = stats.ordersCount || 0;
-  const daysDifference = differenceInDays(dateRange.to, dateRange.from) + 1;
-  
-  // Generate data points based on date range
-  if (daysDifference === 1) {
-    // Single day (Today/Yesterday) - show hourly data
-    const hourlyRevenue = totalRevenue / 24;
-    const baseOrdersPerHour = Math.max(1, totalOrders / 6); // Ensure at least 1 order per time slot
-    
-    return Array.from({ length: 6 }, (_, i) => ({
-      name: `${i * 4}:00`,
-      revenue: hourlyRevenue * 4 * (0.3 + Math.random() * 1.4),
-      orders: Math.max(0, Math.round(baseOrdersPerHour * (0.2 + Math.random() * 1.6)))
-    }));
-  } else if (daysDifference <= 7) {
-    // Daily data for week or less
-    const dailyRevenue = totalRevenue / daysDifference;
-    const baseOrdersPerDay = Math.max(1, totalOrders / daysDifference);
-    
-    return eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).map(date => ({
-      name: format(date, 'MMM d'),
-      revenue: dailyRevenue * (0.7 + Math.random() * 0.6),
-      orders: Math.max(0, Math.round(baseOrdersPerDay * (0.5 + Math.random() * 1.0)))
-    }));
-  } else if (daysDifference <= 30) {
-    // Weekly data for month or less
-    const weeklyRevenue = totalRevenue / 4;
-    const baseOrdersPerWeek = Math.max(1, totalOrders / 4);
-    
-    return [
-      { name: 'Week 1', revenue: weeklyRevenue * (0.8 + Math.random() * 0.4), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.7 + Math.random() * 0.6))) },
-      { name: 'Week 2', revenue: weeklyRevenue * (0.9 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.8 + Math.random() * 0.5))) },
-      { name: 'Week 3', revenue: weeklyRevenue * (0.7 + Math.random() * 0.5), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.6 + Math.random() * 0.8))) },
-      { name: 'Week 4', revenue: weeklyRevenue * (1.0 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.9 + Math.random() * 0.4))) },
-    ];
-  } else {
-    // Monthly data for longer periods
-    const monthlyRevenue = totalRevenue / 3;
-    const baseOrdersPerMonth = Math.max(1, totalOrders / 3);
-    
-    return [
-      { name: 'Month 1', revenue: monthlyRevenue * (0.8 + Math.random() * 0.4), orders: Math.max(0, Math.round(baseOrdersPerMonth * (0.7 + Math.random() * 0.6))) },
-      { name: 'Month 2', revenue: monthlyRevenue * (1.1 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerMonth * (1.0 + Math.random() * 0.4))) },
-      { name: 'Month 3', revenue: monthlyRevenue * (0.9 + Math.random() * 0.5), orders: Math.max(0, Math.round(baseOrdersPerMonth * (0.8 + Math.random() * 0.5))) },
-    ];
-  }
-};
+// Chart data is now fetched from real backend API instead of fake data generation
 
 export default function WholesalerDashboard() {
   const { user } = useAuth();
@@ -151,6 +100,14 @@ export default function WholesalerDashboard() {
   const { data: alertsData } = useQuery({
     queryKey: ["/api/stock-alerts/count"],
     staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Chart data query with real data from backend
+  const { data: chartData, isLoading: chartLoading } = useQuery({
+    queryKey: ["/api/analytics/chart-data", dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    enabled: !!dateRange?.from && !!dateRange?.to,
+    staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -456,13 +413,13 @@ export default function WholesalerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="h-64">
-                  {statsLoading ? (
+                  {chartLoading || statsLoading ? (
                     <div className="h-full flex items-center justify-center">
                       <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={generateSalesData(stats, dateRange)}>
+                      <LineChart data={chartData || []}>
                         <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                         <XAxis 
                           dataKey="name" 
@@ -514,13 +471,13 @@ export default function WholesalerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="h-64">
-                  {statsLoading ? (
+                  {chartLoading || statsLoading ? (
                     <div className="h-full flex items-center justify-center">
                       <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={generateSalesData(stats, dateRange)}>
+                      <BarChart data={chartData || []}>
                         <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                         <XAxis 
                           dataKey="name" 

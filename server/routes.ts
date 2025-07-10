@@ -1858,7 +1858,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const stats = await storage.getWholesalerStats(userId);
+      const { fromDate, toDate } = req.query;
+      
+      let stats;
+      if (fromDate && toDate) {
+        stats = await storage.getWholesalerStatsForDateRange(userId, new Date(fromDate), new Date(toDate));
+      } else {
+        stats = await storage.getWholesalerStats(userId);
+      }
       
       // Calculate WhatsApp reach from broadcasts
       const broadcastStats = await storage.getBroadcastStats(userId);
@@ -1876,6 +1883,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching analytics stats:", error);
       res.status(500).json({ message: "Failed to fetch analytics stats" });
+    }
+  });
+
+  // Chart data endpoint with real date filtering
+  app.get('/api/analytics/chart-data', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { fromDate, toDate } = req.query;
+      
+      if (!fromDate || !toDate) {
+        return res.status(400).json({ message: "fromDate and toDate are required" });
+      }
+      
+      const startDate = new Date(fromDate);
+      const endDate = new Date(toDate);
+      const now = new Date();
+      
+      // Ensure endDate doesn't exceed current time
+      const actualEndDate = endDate > now ? now : endDate;
+      
+      // Get orders within the date range
+      const orders = await storage.getOrdersForDateRange(userId, startDate, actualEndDate);
+      
+      // Calculate time span to determine chart granularity
+      const hoursDifference = (actualEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+      
+      let chartData = [];
+      
+      if (hoursDifference <= 24) {
+        // Hourly data for single day (only show past hours)
+        const currentHour = now.getHours();
+        const isToday = actualEndDate.toDateString() === now.toDateString();
+        const maxHour = isToday ? currentHour : 23;
+        
+        for (let hour = 0; hour <= maxHour; hour++) {
+          const hourStart = new Date(startDate);
+          hourStart.setHours(hour, 0, 0, 0);
+          const hourEnd = new Date(startDate);
+          hourEnd.setHours(hour, 59, 59, 999);
+          
+          const hourOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= hourStart && orderDate <= hourEnd;
+          });
+          
+          const revenue = hourOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+          const orderCount = hourOrders.length;
+          
+          chartData.push({
+            name: `${hour}:00`,
+            revenue: Math.round(revenue * 100) / 100,
+            orders: orderCount
+          });
+        }
+      } else if (hoursDifference <= 168) {
+        // Daily data for week
+        const daysDiff = Math.ceil(hoursDifference / 24);
+        for (let i = 0; i < daysDiff; i++) {
+          const dayStart = new Date(startDate);
+          dayStart.setDate(startDate.getDate() + i);
+          dayStart.setHours(0, 0, 0, 0);
+          
+          const dayEnd = new Date(dayStart);
+          dayEnd.setHours(23, 59, 59, 999);
+          
+          // Don't include future days
+          if (dayStart > now) break;
+          
+          const dayOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= dayStart && orderDate <= dayEnd;
+          });
+          
+          const revenue = dayOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+          const orderCount = dayOrders.length;
+          
+          chartData.push({
+            name: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            revenue: Math.round(revenue * 100) / 100,
+            orders: orderCount
+          });
+        }
+      } else {
+        // Weekly data for longer periods
+        const weeks = Math.ceil(hoursDifference / (24 * 7));
+        for (let i = 0; i < weeks; i++) {
+          const weekStart = new Date(startDate);
+          weekStart.setDate(startDate.getDate() + (i * 7));
+          weekStart.setHours(0, 0, 0, 0);
+          
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          
+          // Don't include future weeks
+          if (weekStart > now) break;
+          
+          const weekOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= weekStart && orderDate <= weekEnd;
+          });
+          
+          const revenue = weekOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+          const orderCount = weekOrders.length;
+          
+          chartData.push({
+            name: `Week ${i + 1}`,
+            revenue: Math.round(revenue * 100) / 100,
+            orders: orderCount
+          });
+        }
+      }
+      
+      res.json(chartData);
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      res.status(500).json({ message: "Failed to fetch chart data" });
     }
   });
 
