@@ -2878,20 +2878,47 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Test endpoint to check if basic DB connection works
+  app.get('/api/marketplace/wholesaler-test/:id', async (req, res) => {
+    try {
+      console.log("=== TESTING DB CONNECTION ===");
+      const { id } = req.params;
+      
+      // Try direct SQL without any schema references
+      const result = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE id = ${id}`);
+      console.log("Direct SQL result:", result.rows);
+      
+      res.json({ success: true, id, result: result.rows });
+    } catch (error) {
+      console.error("=== TEST ERROR ===", error);
+      res.status(500).json({ message: "Test failed", error: error.message });
+    }
+  });
+
   // Detailed wholesaler profile endpoint
   app.get('/api/marketplace/wholesaler/:id', async (req, res) => {
     try {
+      console.log("=== Starting wholesaler profile request ===");
       const { id } = req.params;
+      console.log("Requested wholesaler ID:", id);
       
+      console.log("About to call storage.getWholesalerProfile...");
       const wholesaler = await storage.getWholesalerProfile(id);
+      console.log("getWholesalerProfile completed successfully");
       
       if (!wholesaler) {
+        console.log("Wholesaler not found, returning 404");
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
+      console.log("Returning wholesaler data:", wholesaler.businessName);
       res.json(wholesaler);
     } catch (error) {
-      console.error("Error fetching wholesaler profile:", error);
+      console.error("=== Error in wholesaler profile route ===");
+      console.error("Error type:", error.constructor.name);
+      console.error("Error message:", error.message);
+      console.error("Full error:", error);
+      console.error("Stack trace:", error.stack);
       res.status(500).json({ message: "Failed to fetch wholesaler profile" });
     }
   });
