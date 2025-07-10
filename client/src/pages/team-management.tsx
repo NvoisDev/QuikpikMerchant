@@ -25,7 +25,9 @@ import {
   Lock,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
@@ -186,6 +188,15 @@ export default function TeamManagement() {
 
   const handleResendInvite = (memberId: number) => {
     resendInviteMutation.mutate(memberId);
+  };
+
+  const handleCopyInviteLink = (member: TeamMember) => {
+    const inviteLink = `${window.location.origin}/team-invitation?token=${member.id}&email=${encodeURIComponent(member.email)}`;
+    navigator.clipboard.writeText(inviteLink);
+    toast({
+      title: "Invitation link copied",
+      description: "You can now share this link directly with the team member.",
+    });
   };
 
   if (isLoading) {
@@ -414,16 +425,27 @@ export default function TeamManagement() {
                     </div>
                     <div className="flex items-center gap-2">
                       {member.status === 'pending' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleResendInvite(member.id)}
-                          disabled={resendInviteMutation.isPending}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
-                        >
-                          <Mail className="h-4 w-4 mr-1" />
-                          {resendInviteMutation.isPending ? "Sending..." : "Resend Invite"}
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleResendInvite(member.id)}
+                            disabled={resendInviteMutation.isPending}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                          >
+                            <Mail className="h-4 w-4 mr-1" />
+                            {resendInviteMutation.isPending ? "Sending..." : "Resend Email"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyInviteLink(member)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy Link
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="ghost"

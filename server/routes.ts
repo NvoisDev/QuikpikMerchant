@@ -254,7 +254,20 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
         email: 'hello@quikpik.co',
         name: 'Quikpik Team'
       },
-      subject: `You're invited to join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik`,
+      subject: `Team Invitation - Join ${wholesaler.businessName || wholesaler.name} on Quikpik`,
+      text: `Hello ${teamMember.firstName},
+
+You've been invited to join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik.
+
+Your Role: ${teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1)}
+
+To accept this invitation, please click the link below:
+${baseUrl}/team-invitation?token=${teamMember.id}&email=${encodeURIComponent(teamMember.email)}
+
+If you have any questions, please contact us.
+
+Best regards,
+The Quikpik Team`,
       html: `
         <!DOCTYPE html>
         <html>
