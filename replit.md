@@ -176,6 +176,15 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)
 
+### Critical Customer Portal API Failures Resolved (July 10, 2025):
+- **Drizzle ORM Database Errors Fixed**: Resolved persistent "Cannot convert undefined or null to object" errors blocking customer portal functionality
+- **Raw SQL Implementation**: Implemented direct SQL queries in storage layer to bypass faulty Drizzle ORM operations for wholesaler profile and marketplace products
+- **Customer Portal Restoration**: Customer portal now fully operational with proper product display and store information
+- **API Endpoint Success**: Both `/api/marketplace/wholesaler/{id}` and `/api/marketplace/products` endpoints returning successful responses
+- **Database Connection Stability**: Enhanced error handling and logging for marketplace data retrieval with reliable fallback mechanisms
+- **Complete Functionality**: Store displays "Surulere Foods Wholesale" with all 7 products correctly filtered and rendered
+- **Production Ready**: Customer portal fully functional for order placement, product browsing, and checkout workflows
+
 ### Complete Image Upload and Display System Fix (July 10, 2025):
 - **ProductCard Image Display Fix**: Resolved issue where uploaded images weren't displaying on product cards in the management grid
 - **Multiple Image Support**: Updated ProductCard component interface to support new images array field alongside legacy imageUrl

@@ -511,7 +511,7 @@ export default function CustomerPortal() {
     gcTime: 10 * 60 * 1000 // Keep in cache for 10 minutes
   });
 
-  // Memoized calculations - removed excessive logging for performance
+  // Memoized calculations
   const filteredProducts = useMemo(() => {
     return products.filter((product: Product) => {
       const matchesSearch = !searchTerm || 
