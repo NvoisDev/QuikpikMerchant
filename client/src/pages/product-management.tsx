@@ -670,7 +670,7 @@ export default function ProductManagement() {
         return;
       }
 
-      // Build product object
+      // Build product object with enhanced shipping information
       const product = {
         name: row.name,
         description: row.description || "",
@@ -686,10 +686,24 @@ export default function ProductManagement() {
         negotiationEnabled: row.negotiationEnabled === 'true',
         minimumBidPrice: row.minimumBidPrice || "",
         status: row.status || "active",
-        unitType: row.unitType || "units",
+        sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "",
-        supportsPickup: row.supportsPickup !== 'false',
-        supportsDelivery: row.supportsDelivery !== 'false',
+        palletPrice: row.palletPrice || "",
+        palletMoq: row.palletMoq || "",
+        palletStock: row.palletStock || "",
+        unitWeight: row.unitWeight || "",
+        palletWeight: row.palletWeight || "",
+        temperatureRequirement: row.temperatureRequirement || "ambient",
+        contentCategory: row.contentCategory || "general",
+        specialHandling: {
+          fragile: row.specialHandling_fragile === 'true',
+          perishable: row.specialHandling_perishable === 'true',
+          hazardous: row.specialHandling_hazardous === 'true',
+        },
+        deliveryOptions: {
+          pickup: row.deliveryOptions_pickup !== 'false',
+          delivery: row.deliveryOptions_delivery !== 'false',
+        },
       };
 
       validProducts.push(product);
@@ -713,6 +727,11 @@ export default function ProductManagement() {
             stock: parseInt(product.stock),
             minimumBidPrice: product.minimumBidPrice ? parseFloat(product.minimumBidPrice) : null,
             unitsPerPallet: product.unitsPerPallet ? parseInt(product.unitsPerPallet) : null,
+            palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : null,
+            palletMoq: product.palletMoq ? parseInt(product.palletMoq) : null,
+            palletStock: product.palletStock ? parseInt(product.palletStock) : null,
+            unitWeight: product.unitWeight ? parseFloat(product.unitWeight) : null,
+            palletWeight: product.palletWeight ? parseFloat(product.palletWeight) : null,
           };
           const result = await apiRequest("POST", "/api/products", productData);
           results.push({ success: true, product: result });
@@ -763,10 +782,20 @@ export default function ProductManagement() {
         negotiationEnabled: "false",
         minimumBidPrice: "",
         status: "active",
-        unitType: "units",
+        sellingFormat: "units",
         unitsPerPallet: "",
-        supportsPickup: "true",
-        supportsDelivery: "true"
+        palletPrice: "",
+        palletMoq: "",
+        palletStock: "",
+        unitWeight: "0.5",
+        palletWeight: "25.0",
+        temperatureRequirement: "ambient",
+        contentCategory: "general",
+        specialHandling_fragile: "false",
+        specialHandling_perishable: "false",
+        specialHandling_hazardous: "false",
+        deliveryOptions_pickup: "true",
+        deliveryOptions_delivery: "true"
       }
     ];
     
@@ -775,7 +804,7 @@ export default function ProductManagement() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'product_template.csv';
+    a.download = 'product_template_with_shipping.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
