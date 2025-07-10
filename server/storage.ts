@@ -1063,45 +1063,46 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('getMarketplaceProducts called with filters:', filters);
       
-      // Use a simpler approach: get products first, then get user data separately
-      let whereConditions = [eq(products.status, 'active')];
-
+      // Use raw SQL to bypass Drizzle ORM connection issues
+      let whereClause = "WHERE status = 'active'";
+      const params: any[] = [];
+      
       // Filter by specific wholesaler if provided
       if (filters.wholesalerId) {
-        whereConditions.push(eq(products.wholesalerId, filters.wholesalerId));
+        whereClause += " AND wholesaler_id = $" + (params.length + 1);
+        params.push(filters.wholesalerId);
       }
 
       if (filters.category) {
-        whereConditions.push(eq(products.category, filters.category));
+        whereClause += " AND category = $" + (params.length + 1);
+        params.push(filters.category);
       }
 
       if (filters.search) {
-        whereConditions.push(
-          or(
-            sql`${products.name} ILIKE ${`%${filters.search}%`}`,
-            sql`${products.description} ILIKE ${`%${filters.search}%`}`
-          )!
-        );
+        whereClause += " AND (name ILIKE $" + (params.length + 1) + " OR description ILIKE $" + (params.length + 2) + ")";
+        params.push(`%${filters.search}%`, `%${filters.search}%`);
       }
 
-      // Get products first
-      const productsList = await db
-        .select()
-        .from(products)
-        .where(and(...whereConditions))
-        .limit(100);
+      // Get products using raw SQL
+      const productsResult = await db.execute(sql.raw(`
+        SELECT * FROM products 
+        ${whereClause}
+        LIMIT 100
+      `, params));
 
+      const productsList = productsResult.rows as any[];
       console.log('Products found:', productsList.length);
 
       // Get unique wholesaler IDs
-      const wholesalerIds = [...new Set(productsList.map(p => p.wholesalerId))];
+      const wholesalerIds = [...new Set(productsList.map(p => p.wholesaler_id))];
       
-      // Get wholesaler data
-      const wholesalers = await db
-        .select()
-        .from(users)
-        .where(or(...wholesalerIds.map(id => eq(users.id, id)))!);
+      // Get wholesaler data using raw SQL
+      const wholesalersResult = await db.execute(sql.raw(`
+        SELECT * FROM users 
+        WHERE id = ANY($1) AND role = 'wholesaler'
+      `, [wholesalerIds]));
 
+      const wholesalers = wholesalersResult.rows as any[];
       console.log('Wholesalers found:', wholesalers.length);
 
       // Create wholesaler lookup map
@@ -1109,17 +1110,47 @@ export class DatabaseStorage implements IStorage {
 
       // Combine products with wholesaler data
       const results = productsList.map(product => {
-        const wholesaler = wholesalerMap.get(product.wholesalerId);
+        const wholesaler = wholesalerMap.get(product.wholesaler_id);
+        
+        // Handle image URL conversion - prioritize images array over image_url field
+        let imageUrl = product.image_url || undefined;
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+          imageUrl = product.images[0]; // Use first image from array
+        }
+        
         return {
-          ...product,
+          id: product.id,
+          wholesalerId: product.wholesaler_id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          currency: product.currency,
+          moq: product.moq,
+          stock: product.stock,
+          imageUrl, // Convert snake_case to camelCase for frontend
+          images: product.images,
+          category: product.category,
+          status: product.status,
+          priceVisible: product.price_visible,
+          negotiationEnabled: product.negotiation_enabled,
+          minimumBidPrice: product.minimum_bid_price,
+          sellingFormat: product.selling_format,
+          unitsPerPallet: product.units_per_pallet,
+          palletPrice: product.pallet_price,
+          palletMoq: product.pallet_moq,
+          palletStock: product.pallet_stock,
+          promoPrice: product.promo_price,
+          promoActive: product.promo_active,
+          createdAt: product.created_at,
+          updatedAt: product.updated_at,
           wholesaler: {
-            id: product.wholesalerId,
-            businessName: wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Business',
-            profileImageUrl: wholesaler?.profileImageUrl || undefined,
-            logoType: wholesaler?.logoType || 'initials',
-            logoUrl: wholesaler?.logoUrl || undefined,
-            firstName: wholesaler?.firstName,
-            lastName: wholesaler?.lastName,
+            id: product.wholesaler_id,
+            businessName: wholesaler?.business_name || `${wholesaler?.first_name || ''} ${wholesaler?.last_name || ''}`.trim() || 'Business',
+            profileImageUrl: wholesaler?.profile_image_url || undefined,
+            logoType: wholesaler?.logo_type || 'initials',
+            logoUrl: wholesaler?.logo_url || undefined,
+            firstName: wholesaler?.first_name,
+            lastName: wholesaler?.last_name,
             rating: 4.5,
           }
         };
@@ -1243,6 +1274,13 @@ export class DatabaseStorage implements IStorage {
 
       const wholesalerProducts = (productsResult.rows || []).map(row => {
         const product = row as any;
+        
+        // Handle image URL conversion - prioritize images array over image_url field
+        let imageUrl = product.image_url || undefined;
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+          imageUrl = product.images[0]; // Use first image from array
+        }
+        
         return {
           id: product.id,
           wholesalerId: product.wholesaler_id,
@@ -1252,7 +1290,7 @@ export class DatabaseStorage implements IStorage {
           currency: product.currency,
           moq: product.moq,
           stock: product.stock,
-          imageUrl: product.image_url,
+          imageUrl, // Use converted imageUrl
           images: product.images,
           category: product.category,
           status: product.status,
