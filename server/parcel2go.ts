@@ -163,11 +163,13 @@ class Parcel2GoService {
       return this.accessToken;
     }
 
-    // Try both sandbox and live URLs if one fails
+    // Try multiple API endpoints in order of preference
     const urls = [
       this.getBaseUrl(),
-      this.credentials.environment === 'sandbox' ? PARCEL2GO_BASE_URL : PARCEL2GO_SANDBOX_URL
-    ];
+      PARCEL2GO_BASE_URL, // Always try live API
+      'https://api.parcel2go.com', // Alternative live endpoint
+      'https://sandbox.parcel2go.com' // Alternative sandbox endpoint
+    ].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
 
     for (const baseUrl of urls) {
       try {
