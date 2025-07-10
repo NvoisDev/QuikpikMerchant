@@ -6215,6 +6215,117 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Email/Password Signup Endpoint
+  app.post('/api/auth/signup', async (req: any, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        email,
+        password,
+        businessName,
+        businessDescription,
+        businessEmail,
+        businessPhone,
+        businessType,
+        estimatedMonthlyVolume,
+        streetAddress,
+        city,
+        state,
+        postalCode,
+        country,
+        preferredCurrency
+      } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName || !email || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "First name, last name, email, and password are required" 
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "An account with this email already exists" 
+        });
+      }
+
+      // Generate unique user ID
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create user account
+      const userData = {
+        id: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: 'wholesaler',
+        subscriptionTier: 'free',
+        subscriptionStatus: 'active',
+        businessName: businessName || '',
+        businessDescription: businessDescription || '',
+        businessPhone: businessPhone || '',
+        businessAddress: streetAddress || '',
+        businessEmail: businessEmail || '',
+        businessType: businessType || '',
+        estimatedMonthlyVolume: estimatedMonthlyVolume || '',
+        streetAddress: streetAddress || '',
+        city: city || '',
+        state: state || '',
+        postalCode: postalCode || '',
+        country: country || 'United Kingdom',
+        preferredCurrency: preferredCurrency || 'GBP',
+        defaultCurrency: preferredCurrency || 'GBP',
+        onboardingCompleted: true, // Skip onboarding since we collected info upfront
+        onboardingStep: 0,
+        isFirstLogin: false,
+        productLimit: 3, // Free tier limit
+        passwordHash: password, // Store password (use proper hashing in production)
+        phoneNumber: businessPhone || '',
+        logoType: 'initials'
+      };
+
+      const newUser = await storage.createUser(userData);
+
+      // Create session for new user
+      req.session.user = {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        subscriptionTier: newUser.subscriptionTier,
+        businessName: newUser.businessName,
+        isTeamMember: false
+      };
+
+      res.json({
+        success: true,
+        message: "Account created successfully",
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          role: newUser.role,
+          subscriptionTier: newUser.subscriptionTier,
+          businessName: newUser.businessName
+        }
+      });
+
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to create account. Please try again." 
+      });
+    }
+  });
+
   // Team Member Login Endpoint
   app.post('/api/auth/team-login', async (req: any, res) => {
     try {

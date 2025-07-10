@@ -114,7 +114,7 @@ export default function LandingPage() {
                 <Button 
                   variant="outline" 
                   size="lg"
-                  onClick={handleGetStarted}
+                  onClick={handleLogin}
                   className="text-lg px-8 py-4 border-2"
                 >
                   Already have an account? Log In

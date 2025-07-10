@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogIn, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -191,9 +191,23 @@ export default function Login() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500">
-          <p>
-            By signing in, you agree to our terms of service and privacy policy.
+        <div className="text-center space-y-3">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-primary hover:underline font-medium">
+              Sign up for free
+            </Link>
+          </p>
+          <p className="text-xs text-gray-500">
+            By signing in, you agree to our{" "}
+            <a href="#" className="text-primary hover:underline">
+              terms of service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-primary hover:underline">
+              privacy policy
+            </a>
+            .
           </p>
         </div>
       </div>
