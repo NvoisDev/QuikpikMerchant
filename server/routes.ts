@@ -488,6 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { wholesalerId } = req.query;
       
       // Debug logging
+      console.log('Products request - Query wholesalerId:', wholesalerId);
       console.log('Products request - User data:', {
         id: req.user.id,
         role: req.user.role,
@@ -495,13 +496,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isTeamMember: req.user.isTeamMember
       });
       
-      // If no specific wholesaler requested, use current user or parent company
-      let targetUserId = wholesalerId as string;
-      if (!targetUserId) {
-        // Use parent company data for team members
-        targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-          ? req.user.wholesalerId 
-          : req.user.id;
+      // Always use parent company data for team members, ignore query param
+      let targetUserId;
+      if (req.user.role === 'team_member' && req.user.wholesalerId) {
+        targetUserId = req.user.wholesalerId;
+      } else if (wholesalerId) {
+        targetUserId = wholesalerId as string;
+      } else {
+        targetUserId = req.user.id;
       }
       
       console.log('Products request - Target user ID:', targetUserId);
