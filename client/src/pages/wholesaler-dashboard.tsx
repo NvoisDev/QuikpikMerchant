@@ -40,43 +40,43 @@ const generateSalesData = (stats: any, dateRange: DateRange) => {
   if (daysDifference === 1) {
     // Single day (Today/Yesterday) - show hourly data
     const hourlyRevenue = totalRevenue / 24;
-    const hourlyOrders = totalOrders / 24;
+    const baseOrdersPerHour = Math.max(1, totalOrders / 6); // Ensure at least 1 order per time slot
     
     return Array.from({ length: 6 }, (_, i) => ({
       name: `${i * 4}:00`,
       revenue: hourlyRevenue * 4 * (0.3 + Math.random() * 1.4),
-      orders: Math.floor(hourlyOrders * 4 * (0.2 + Math.random() * 1.6))
+      orders: Math.max(0, Math.round(baseOrdersPerHour * (0.2 + Math.random() * 1.6)))
     }));
   } else if (daysDifference <= 7) {
     // Daily data for week or less
     const dailyRevenue = totalRevenue / daysDifference;
-    const dailyOrders = totalOrders / daysDifference;
+    const baseOrdersPerDay = Math.max(1, totalOrders / daysDifference);
     
     return eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).map(date => ({
       name: format(date, 'MMM d'),
       revenue: dailyRevenue * (0.7 + Math.random() * 0.6),
-      orders: Math.floor(dailyOrders * (0.5 + Math.random() * 1.0))
+      orders: Math.max(0, Math.round(baseOrdersPerDay * (0.5 + Math.random() * 1.0)))
     }));
   } else if (daysDifference <= 30) {
     // Weekly data for month or less
     const weeklyRevenue = totalRevenue / 4;
-    const weeklyOrders = totalOrders / 4;
+    const baseOrdersPerWeek = Math.max(1, totalOrders / 4);
     
     return [
-      { name: 'Week 1', revenue: weeklyRevenue * (0.8 + Math.random() * 0.4), orders: Math.floor(weeklyOrders * (0.7 + Math.random() * 0.6)) },
-      { name: 'Week 2', revenue: weeklyRevenue * (0.9 + Math.random() * 0.3), orders: Math.floor(weeklyOrders * (0.8 + Math.random() * 0.5)) },
-      { name: 'Week 3', revenue: weeklyRevenue * (0.7 + Math.random() * 0.5), orders: Math.floor(weeklyOrders * (0.6 + Math.random() * 0.8)) },
-      { name: 'Week 4', revenue: weeklyRevenue * (1.0 + Math.random() * 0.3), orders: Math.floor(weeklyOrders * (0.9 + Math.random() * 0.4)) },
+      { name: 'Week 1', revenue: weeklyRevenue * (0.8 + Math.random() * 0.4), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.7 + Math.random() * 0.6))) },
+      { name: 'Week 2', revenue: weeklyRevenue * (0.9 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.8 + Math.random() * 0.5))) },
+      { name: 'Week 3', revenue: weeklyRevenue * (0.7 + Math.random() * 0.5), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.6 + Math.random() * 0.8))) },
+      { name: 'Week 4', revenue: weeklyRevenue * (1.0 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerWeek * (0.9 + Math.random() * 0.4))) },
     ];
   } else {
     // Monthly data for longer periods
     const monthlyRevenue = totalRevenue / 3;
-    const monthlyOrders = totalOrders / 3;
+    const baseOrdersPerMonth = Math.max(1, totalOrders / 3);
     
     return [
-      { name: 'Month 1', revenue: monthlyRevenue * (0.8 + Math.random() * 0.4), orders: Math.floor(monthlyOrders * (0.7 + Math.random() * 0.6)) },
-      { name: 'Month 2', revenue: monthlyRevenue * (1.1 + Math.random() * 0.3), orders: Math.floor(monthlyOrders * (1.0 + Math.random() * 0.4)) },
-      { name: 'Month 3', revenue: monthlyRevenue * (0.9 + Math.random() * 0.5), orders: Math.floor(monthlyOrders * (0.8 + Math.random() * 0.5)) },
+      { name: 'Month 1', revenue: monthlyRevenue * (0.8 + Math.random() * 0.4), orders: Math.max(0, Math.round(baseOrdersPerMonth * (0.7 + Math.random() * 0.6))) },
+      { name: 'Month 2', revenue: monthlyRevenue * (1.1 + Math.random() * 0.3), orders: Math.max(0, Math.round(baseOrdersPerMonth * (1.0 + Math.random() * 0.4))) },
+      { name: 'Month 3', revenue: monthlyRevenue * (0.9 + Math.random() * 0.5), orders: Math.max(0, Math.round(baseOrdersPerMonth * (0.8 + Math.random() * 0.5))) },
     ];
   }
 };
