@@ -174,6 +174,27 @@ The platform implements a customer-centric shipping model where customers contro
 
 This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
 
+## Recent Bug Fixes (July 10, 2025)
+
+### Critical Issues Resolved:
+- **Fixed "parcels is not defined" ReferenceError**: Resolved critical shipping quotes endpoint error that was causing application crashes when accessing shipping functionality
+- **Enhanced Analytics Calculations**: Replaced hardcoded percentage values ("+12% from last month") with real month-over-month growth calculations based on actual order data
+- **Chart Data Alignment Fix**: Fixed chart generation to properly align with DateRangePicker selection - "Yesterday" now shows hourly data, "Last 7 days" shows daily data, "Last 30 days" shows weekly data
+- **Dashboard Improvements**: Replaced hardcoded "+3 new this week" text with dynamic stock alert status ("X low stock alerts" or "Stock levels healthy")
+- **Application Loading Issue**: Resolved infinite loading spinner problem and ensured proper authentication flow
+
+### Technical Improvements:
+- Enhanced `generateSalesData` function to respect date range selection with appropriate time granularity
+- Added proper null checking for dateRange object to prevent JavaScript errors
+- Improved chart axis labels to match selected time period (hourly/daily/weekly/monthly)
+- Strengthened analytics API endpoints with real percentage calculations using SQL aggregations
+
+### Testing Status:
+- Application successfully running without crashes
+- Authentication and session management working correctly
+- Charts displaying appropriate data for selected time ranges
+- Analytics showing real business metrics instead of placeholder values
+
 ## Changelog
 - July 09, 2025. Complete Customer Portal Enhancement with Sticky Header and Selling Format Tags:
   - **Sticky Header Implementation**: Added sticky positioning to customer portal header panel with business name, share store, and cart buttons
