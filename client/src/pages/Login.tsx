@@ -11,6 +11,8 @@ import { useLocation, Link } from "wouter";
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [teamMemberLogin, setTeamMemberLogin] = useState({ email: '', password: '' });
+  const [businessOwnerLogin, setBusinessOwnerLogin] = useState({ email: '', password: '' });
+  const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -35,6 +37,42 @@ export default function Login() {
         description: "There was an error signing you in. Please try again.",
         variant: "destructive",
       });
+      setIsLoading(false);
+    }
+  };
+
+  const handleBusinessOwnerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(businessOwnerLogin),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Welcome back!",
+          description: "You've been signed in successfully.",
+        });
+        setLocation('/');
+      } else {
+        throw new Error(data.message || 'Login failed');
+      }
+    } catch (error: any) {
+      console.error('Business owner login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -111,30 +149,97 @@ export default function Login() {
               <TabsContent value="business" className="space-y-4">
                 <div className="text-center py-2">
                   <p className="text-sm text-gray-600 mb-4">
-                    Sign in with your Google account
+                    Choose your preferred sign-in method
                   </p>
                 </div>
-                <Button
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                  className="w-full h-12 text-base font-medium"
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-5 w-5" />
-                      Sign in with Google
-                    </>
-                  )}
-                </Button>
-                <div className="text-center text-sm text-gray-500">
-                  <p>Secure sign-in powered by Google OAuth 2.0</p>
+                
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={loginMethod === 'google' ? 'default' : 'outline'}
+                      onClick={() => setLoginMethod('google')}
+                      className="flex-1"
+                    >
+                      Google
+                    </Button>
+                    <Button
+                      variant={loginMethod === 'email' ? 'default' : 'outline'}
+                      onClick={() => setLoginMethod('email')}
+                      className="flex-1"
+                    >
+                      Email
+                    </Button>
+                  </div>
                 </div>
+
+                {loginMethod === 'google' ? (
+                  <div className="space-y-4">
+                    <Button
+                      onClick={handleGoogleLogin}
+                      disabled={isLoading}
+                      className="w-full h-12 text-base font-medium"
+                      size="lg"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="mr-2 h-5 w-5" />
+                          Sign in with Google
+                        </>
+                      )}
+                    </Button>
+                    <div className="text-center text-sm text-gray-500">
+                      <p>Secure sign-in powered by Google OAuth 2.0</p>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleBusinessOwnerLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="business-email">Email Address</Label>
+                      <Input
+                        id="business-email"
+                        type="email"
+                        placeholder="your.email@company.com"
+                        value={businessOwnerLogin.email}
+                        onChange={(e) => setBusinessOwnerLogin({...businessOwnerLogin, email: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="business-password">Password</Label>
+                      <Input
+                        id="business-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={businessOwnerLogin.password}
+                        onChange={(e) => setBusinessOwnerLogin({...businessOwnerLogin, password: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full h-12 text-base font-medium"
+                      size="lg"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="mr-2 h-5 w-5" />
+                          Sign in with Email
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
               
               <TabsContent value="team" className="space-y-4">

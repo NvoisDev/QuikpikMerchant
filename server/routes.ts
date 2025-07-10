@@ -6389,6 +6389,64 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Business Owner Login Endpoint
+  app.post('/api/auth/login', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check if this is a business owner account (not a team member)
+      if (user.subscriptionTier === 'team_member') {
+        return res.status(401).json({ message: "Please use the Team Member tab to sign in" });
+      }
+
+      // Check password (simple comparison for now - use proper hashing in production)
+      console.log('Checking business owner password:', password, 'against stored:', user.passwordHash);
+      if (!user.passwordHash || password !== user.passwordHash) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Create session for business owner
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        subscriptionTier: user.subscriptionTier,
+        businessName: user.businessName,
+        isTeamMember: false
+      };
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          subscriptionTier: user.subscriptionTier,
+          businessName: user.businessName
+        }
+      });
+
+    } catch (error) {
+      console.error("Business owner login error:", error);
+      res.status(500).json({ message: "Login failed. Please try again." });
+    }
+  });
+
   // Signup endpoint
   app.post('/api/auth/signup', async (req, res) => {
     try {
