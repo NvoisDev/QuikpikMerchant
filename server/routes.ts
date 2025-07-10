@@ -7794,7 +7794,7 @@ The Quikpik Team
         return res.json({}); // Return empty object for non-team members
       }
       
-      const tabNames = ['dashboard', 'products', 'orders', 'customers', 'campaigns', 'analytics', 'marketplace', 'team-management', 'settings'];
+      const tabNames = ['dashboard', 'products', 'orders', 'customers', 'campaigns', 'analytics', 'marketplace', 'team-management', 'subscription', 'settings'];
       const userRole = 'member';
       const permissionChecks: Record<string, boolean> = {};
       

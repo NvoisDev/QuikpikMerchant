@@ -17,6 +17,7 @@ import {
   Store, 
   Settings,
   UserCog,
+  CreditCard,
   Lock,
   Shield
 } from 'lucide-react';
@@ -69,6 +70,12 @@ const TAB_CONFIGS = [
     label: 'Team Management', 
     icon: UserCog,
     description: 'Team member invitations and management'
+  },
+  { 
+    name: 'subscription', 
+    label: 'Subscription', 
+    icon: CreditCard,
+    description: 'Subscription plans and billing management'
   },
   { 
     name: 'settings', 

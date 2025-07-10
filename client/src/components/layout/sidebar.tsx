@@ -35,7 +35,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   { name: "Team Management", href: "/team-management", icon: Crown, tabName: "team-management" },
-  { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "settings" },
+  { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },

@@ -1924,6 +1924,7 @@ export class DatabaseStorage implements IStorage {
       'analytics',
       'marketplace',
       'team-management',
+      'subscription',
       'settings'
     ];
 

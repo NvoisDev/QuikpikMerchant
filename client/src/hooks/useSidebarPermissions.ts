@@ -75,6 +75,7 @@ export function getTabNameFromPath(path: string): string {
     'business-performance': 'analytics',
     'marketplace': 'marketplace',
     'team-management': 'team-management',
+    'subscription': 'subscription',
     'settings': 'settings',
   };
   
