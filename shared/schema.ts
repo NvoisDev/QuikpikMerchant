@@ -115,6 +115,9 @@ export const users = pgTable("users", {
   enableTrackingNotifications: boolean("enable_tracking_notifications").default(true),
   sendDeliveryConfirmations: boolean("send_delivery_confirmations").default(true),
   
+  // Password field for team members
+  passwordHash: varchar("password_hash"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

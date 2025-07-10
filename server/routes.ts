@@ -6235,9 +6235,9 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(401).json({ message: "Please use the Business Owner tab to sign in" });
       }
 
-      // For now, just check if password matches (in production you'd hash passwords)
-      // Since we're storing plain text temporarily, just compare directly
-      if (password !== user.passwordHash && password !== 'password') {
+      // Check password (simple comparison for now - use proper hashing in production)
+      console.log('Checking password:', password, 'against stored:', user.passwordHash);
+      if (!user.passwordHash || password !== user.passwordHash) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
