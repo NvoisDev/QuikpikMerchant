@@ -249,7 +249,9 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-white/80 text-sm font-medium">Active Products</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">+3 new this week</p>
+                    <p className="text-white/80 text-xs mt-1">
+                      {alertsData?.count > 0 ? `${alertsData.count} low stock alerts` : 'Stock levels healthy'}
+                    </p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <Package className="h-6 w-6" />
