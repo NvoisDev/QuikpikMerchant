@@ -1615,7 +1615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check customer group limit using parent company data
       const groups = await storage.getCustomerGroupsByUser(targetUserId);
-      const groupLimit = getCustomerGroupLimit(user?.subscriptionTier || 'free');
+      // Team members inherit parent company subscription tier
+      const effectiveSubscriptionTier = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? user?.subscriptionTier || 'free'
+        : user?.subscriptionTier || 'free';
+      const groupLimit = getCustomerGroupLimit(effectiveSubscriptionTier);
       
       if (groupLimit !== -1 && groups.length >= groupLimit) {
         return res.status(403).json({ 
@@ -2546,7 +2550,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/broadcasts', requireAuth, async (req: any, res) => {
     try {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
-      const wholesalerId = req.user.id;
+      // Use parent company ID for team members
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
 
       // Validate the request data
       const validatedData = insertBroadcastSchema.parse({
@@ -2609,7 +2616,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/broadcasts', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.id;
+      // Use parent company ID for team members
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const broadcasts = await storage.getBroadcasts(wholesalerId);
       res.json(broadcasts);
     } catch (error) {
@@ -2620,7 +2631,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/broadcasts/stats', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = req.user.id;
+      // Use parent company ID for team members
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const stats = await storage.getBroadcastStats(wholesalerId);
       res.json(stats);
     } catch (error) {
