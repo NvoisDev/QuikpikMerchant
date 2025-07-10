@@ -549,7 +549,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert numeric fields from frontend to appropriate types
-      const { price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock, ...otherData } = req.body;
+      const { 
+        price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
+        unitWeight, palletWeight, lowStockThreshold, shelfLife,
+        ...otherData 
+      } = req.body;
       const productData = insertProductSchema.parse({
         ...otherData,
         price: price.toString(),
@@ -561,6 +565,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         palletPrice: palletPrice ? palletPrice.toString() : null,
         palletMoq: palletMoq ? parseInt(palletMoq) : 1,
         palletStock: palletStock ? parseInt(palletStock) : 0,
+        unitWeight: unitWeight ? unitWeight.toString() : null,
+        palletWeight: palletWeight ? palletWeight.toString() : null,
+        lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50,
+        shelfLife: shelfLife ? parseInt(shelfLife) : null,
         wholesalerId: userId
       });
       const product = await storage.createProduct(productData);
