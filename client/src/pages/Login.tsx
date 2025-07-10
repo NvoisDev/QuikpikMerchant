@@ -118,16 +118,23 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8 px-4">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xl">Q</span>
+          <Link href="/" className="inline-block mb-4 hover:opacity-80 transition-opacity">
+            <div className="mx-auto h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
+                <span className="text-white font-bold text-xl">Q</span>
+              </div>
             </div>
-          </div>
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome to Quikpik
           </h1>
           <p className="mt-2 text-gray-600">
             Your B2B wholesale marketplace platform
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            <Link href="/" className="text-primary hover:underline">
+              ← Back to Home
+            </Link>
           </p>
         </div>
 
