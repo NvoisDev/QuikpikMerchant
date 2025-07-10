@@ -732,7 +732,17 @@ export class DatabaseStorage implements IStorage {
     ordersCount: number;
     activeProducts: number;
     lowStockCount: number;
+    revenueChange: number;
+    ordersChange: number;
   }> {
+    // Get current month's data
+    const currentMonthStart = new Date();
+    currentMonthStart.setDate(1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+    
+    const previousMonthStart = new Date(currentMonthStart);
+    previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
+    
     // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)
     const [revenueStats] = await db
       .select({
@@ -744,6 +754,41 @@ export class DatabaseStorage implements IStorage {
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
       ));
+
+    // Get current month stats
+    const [currentMonthStats] = await db
+      .select({
+        currentRevenue: sum(orders.total),
+        currentOrders: count(orders.id)
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.createdAt} >= ${currentMonthStart}`
+      ));
+
+    // Get previous month stats
+    const [previousMonthStats] = await db
+      .select({
+        previousRevenue: sum(orders.total),
+        previousOrders: count(orders.id)
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`,
+        sql`${orders.createdAt} >= ${previousMonthStart} AND ${orders.createdAt} < ${currentMonthStart}`
+      ));
+
+    // Calculate percentage changes
+    const currentRevenue = Number(currentMonthStats.currentRevenue) || 0;
+    const previousRevenue = Number(previousMonthStats.previousRevenue) || 0;
+    const revenueChange = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    
+    const currentOrders = currentMonthStats.currentOrders || 0;
+    const previousOrders = previousMonthStats.previousOrders || 0;
+    const ordersChange = previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
 
     // Get product stats
     const [productStats] = await db
@@ -773,6 +818,8 @@ export class DatabaseStorage implements IStorage {
       ordersCount: revenueStats.ordersCount || 0,
       activeProducts: productStats.activeProducts || 0,
       lowStockCount: lowStockStats.lowStockCount || 0,
+      revenueChange: Math.round(revenueChange * 100) / 100,
+      ordersChange: Math.round(ordersChange * 100) / 100,
     };
   }
 

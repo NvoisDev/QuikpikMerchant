@@ -211,7 +211,11 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-white/80 text-sm font-medium">Total Revenue</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">+12% from last month</p>
+                    <p className="text-white/80 text-xs mt-1">
+                      {stats?.revenueChange !== undefined 
+                        ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
+                        : 'No change data'}
+                    </p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <DollarSign className="h-6 w-6" />
@@ -226,7 +230,11 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-white/80 text-sm font-medium">Total Orders</p>
                     <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">+8% from last month</p>
+                    <p className="text-white/80 text-xs mt-1">
+                      {stats?.ordersChange !== undefined 
+                        ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
+                        : 'No change data'}
+                    </p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
                     <ShoppingCart className="h-6 w-6" />
