@@ -7,6 +7,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { formatNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
+import { WelcomeModal } from "@/components/WelcomeModal";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
@@ -34,11 +35,20 @@ export default function WholesalerDashboard() {
   const { user } = useAuth();
   const { isActive } = useOnboarding();
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(startOfToday(), 29),
     to: startOfToday(),
     label: "Last 30 days"
   });
+
+  // Check for welcome message on component mount
+  useEffect(() => {
+    const welcomeMessage = sessionStorage.getItem('welcomeMessage');
+    if (welcomeMessage) {
+      setShowWelcomeModal(true);
+    }
+  }, []);
 
   // Keyboard shortcuts functionality
   useEffect(() => {
@@ -708,6 +718,10 @@ export default function WholesalerDashboard() {
         </div>
       </div>
       {isActive && <OnboardingWelcome />}
+      <WelcomeModal 
+        open={showWelcomeModal} 
+        onClose={() => setShowWelcomeModal(false)} 
+      />
     </div>
   );
 }

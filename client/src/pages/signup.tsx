@@ -154,15 +154,22 @@ export default function Signup() {
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // Show comprehensive welcome message
         toast({
-          title: "Account created successfully!",
-          description: "Welcome to Quikpik. You're now signed in.",
+          title: result.welcomeMessage?.title || "Welcome to Quikpik!",
+          description: "Your account has been created successfully. Check your email for a detailed welcome guide with platform features and future roadmap.",
+          duration: 6000,
         });
+        
+        // Store welcome message for potential display on dashboard
+        if (result.welcomeMessage) {
+          sessionStorage.setItem('welcomeMessage', JSON.stringify(result.welcomeMessage));
+        }
         
         // Small delay to ensure session is established before redirect
         setTimeout(() => {
           window.location.href = '/';
-        }, 1000);
+        }, 1500);
       } else {
         // Show specific error message from server
         const errorMessage = result.message || "Please try again.";

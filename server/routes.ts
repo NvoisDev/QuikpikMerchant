@@ -6225,6 +6225,139 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Welcome email function
+  async function sendWelcomeEmail(user: any) {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.log("⚠️ SendGrid not configured, skipping welcome email");
+      return;
+    }
+
+    try {
+      const { MailService } = await import('@sendgrid/mail');
+      const mailService = new MailService();
+      mailService.setApiKey(process.env.SENDGRID_API_KEY);
+
+      const welcomeEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to Quikpik</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Quikpik!</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">The Future of B2B Wholesale</p>
+          </div>
+          
+          <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+            <h2 style="color: #059669; margin-top: 0;">Hello ${user.firstName}!</h2>
+            
+            <p>Congratulations on joining Quikpik, the intelligent platform transforming how wholesale businesses connect, communicate, and grow. You've taken the first step toward revolutionizing your wholesale operations.</p>
+            
+            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #059669; margin-top: 0;">Our Mission</h3>
+              <p style="margin-bottom: 0;">Empower small and medium wholesalers with enterprise-level tools that streamline operations, boost revenue, and unlock new growth opportunities.</p>
+            </div>
+            
+            <h3 style="color: #059669;">What You Can Do Right Now:</h3>
+            <ul style="padding-left: 20px;">
+              <li><strong>Add Your Products:</strong> Upload your inventory with photos, pricing, and stock levels</li>
+              <li><strong>Create Customer Groups:</strong> Organize your retail customers for targeted communication</li>
+              <li><strong>Send WhatsApp Broadcasts:</strong> Instantly notify customers about new stock and promotions</li>
+              <li><strong>Process Orders:</strong> Accept online payments and manage orders efficiently</li>
+              <li><strong>Track Analytics:</strong> Monitor sales performance and customer engagement</li>
+            </ul>
+            
+            <h3 style="color: #059669;">Coming Soon - Advanced Features:</h3>
+            <ul style="padding-left: 20px;">
+              <li>🤖 <strong>AI-Powered Insights:</strong> Demand forecasting and inventory optimization</li>
+              <li>🌐 <strong>B2B Marketplace:</strong> Connect with new retail customers across industries</li>
+              <li>🚚 <strong>Integrated Logistics:</strong> Streamlined shipping and delivery partnerships</li>
+              <li>💱 <strong>Global Trade Support:</strong> Multi-currency and international commerce tools</li>
+              <li>📊 <strong>Industry Intelligence:</strong> Benchmarking and competitive insights</li>
+              <li>👥 <strong>Customer Success:</strong> Dedicated support and business growth guidance</li>
+            </ul>
+            
+            <div style="background: #059669; color: white; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: center;">
+              <h3 style="margin-top: 0; color: white;">Get Started Today</h3>
+              <p style="margin-bottom: 15px;">Your free account includes 3 products, customer groups, and WhatsApp messaging.</p>
+              <a href="https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-app.replit.dev'}" 
+                 style="background: white; color: #059669; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                Access Your Dashboard
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+              <p><strong>Need Help Getting Started?</strong></p>
+              <p>Our support team is here to help you succeed:</p>
+              <ul style="padding-left: 20px;">
+                <li>📧 Email: <a href="mailto:support@quikpik.co" style="color: #059669;">support@quikpik.co</a></li>
+                <li>⚡ Quick Setup Session: <a href="https://calendly.com/quikpik-support/setup" style="color: #059669;">Book a free 15-minute call</a></li>
+                <li>💬 Response Time: Within 2 hours during business hours</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+              <p>Thank you for choosing Quikpik to power your wholesale business!</p>
+              <p style="margin: 0;">The Quikpik Team</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const welcomeEmailText = `
+Welcome to Quikpik, ${user.firstName}!
+
+You've joined the intelligent platform transforming how wholesale businesses connect, communicate, and grow.
+
+Our Mission: Empower small and medium wholesalers with enterprise-level tools that streamline operations and boost revenue.
+
+What You Can Do Right Now:
+• Add Your Products: Upload inventory with photos, pricing, and stock levels
+• Create Customer Groups: Organize retail customers for targeted communication  
+• Send WhatsApp Broadcasts: Instantly notify customers about new stock
+• Process Orders: Accept online payments and manage orders efficiently
+• Track Analytics: Monitor sales performance and customer engagement
+
+Coming Soon - Advanced Features:
+• AI-Powered Insights: Demand forecasting and inventory optimization
+• B2B Marketplace: Connect with new retail customers across industries
+• Integrated Logistics: Streamlined shipping and delivery partnerships
+• Global Trade Support: Multi-currency and international commerce tools
+• Industry Intelligence: Benchmarking and competitive insights
+• Customer Success: Dedicated support and business growth guidance
+
+Get Started: Visit your dashboard at https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-app.replit.dev'}
+
+Need Help?
+• Email: support@quikpik.co
+• Quick Setup: Book a free call at https://calendly.com/quikpik-support/setup
+• Response Time: Within 2 hours during business hours
+
+Thank you for choosing Quikpik to power your wholesale business!
+The Quikpik Team
+      `;
+
+      await mailService.send({
+        to: user.email,
+        from: {
+          email: 'hello@quikpik.co',
+          name: 'Quikpik Team'
+        },
+        subject: `Welcome to Quikpik, ${user.firstName}! 🚀`,
+        text: welcomeEmailText,
+        html: welcomeEmailHtml
+      });
+
+      console.log(`✅ Welcome email sent to ${user.email}`);
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+    }
+  }
+
   // Email/Password Signup Endpoint
   app.post('/api/auth/signup', async (req: any, res) => {
     try {
@@ -6300,6 +6433,9 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 
       const newUser = await storage.createUser(userData);
 
+      // Send welcome email
+      await sendWelcomeEmail(newUser);
+
       // Create session for new user
       req.session.user = {
         id: newUser.id,
@@ -6314,7 +6450,26 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 
       res.json({
         success: true,
-        message: "Account created successfully",
+        message: "Welcome to Quikpik! Your account has been created successfully.",
+        welcomeMessage: {
+          title: "Welcome to the Future of B2B Wholesale",
+          content: "You've joined Quikpik, the intelligent platform transforming how wholesale businesses connect, communicate, and grow. Our mission is to empower small and medium wholesalers with enterprise-level tools that streamline operations and boost revenue.",
+          platformGoals: [
+            "Simplify product management and inventory tracking",
+            "Enable instant customer communication via WhatsApp",
+            "Streamline order processing and payment collection",
+            "Provide actionable business insights and analytics",
+            "Connect wholesalers with new retail customers"
+          ],
+          futureSupport: [
+            "AI-powered demand forecasting and inventory optimization",
+            "Advanced marketplace for discovering new business opportunities",
+            "Integrated logistics and shipping partnerships",
+            "Multi-currency and international trade support",
+            "Dedicated customer success management",
+            "Industry-specific business intelligence and benchmarking"
+          ]
+        },
         user: {
           id: newUser.id,
           email: newUser.email,
