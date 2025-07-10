@@ -487,6 +487,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { wholesalerId } = req.query;
       
+      // Debug logging
+      console.log('Products request - User data:', {
+        id: req.user.id,
+        role: req.user.role,
+        wholesalerId: req.user.wholesalerId,
+        isTeamMember: req.user.isTeamMember
+      });
+      
       // If no specific wholesaler requested, use current user or parent company
       let targetUserId = wholesalerId as string;
       if (!targetUserId) {
@@ -496,7 +504,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : req.user.id;
       }
       
+      console.log('Products request - Target user ID:', targetUserId);
       const products = await storage.getProducts(targetUserId);
+      console.log('Products found:', products.length);
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
