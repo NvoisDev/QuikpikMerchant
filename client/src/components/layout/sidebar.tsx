@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-// import { useSidebarPermissions, getTabNameFromPath } from "@/hooks/useSidebarPermissions";
+import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/logo";
 import { 
@@ -46,7 +46,7 @@ export default function Sidebar() {
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { currentTier } = useSubscription();
-  // const { checkTabAccess } = useSidebarPermissions();
+  const { checkTabAccess } = useSidebarPermissions();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -99,7 +99,7 @@ export default function Sidebar() {
         
         {/* Navigation */}
         <nav className="mt-6 flex-1">
-          {navigation.map((item) => {
+          {navigation.filter(item => checkTabAccess(item.tabName)).map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
             const isPremiumFeature = item.premiumOnly;

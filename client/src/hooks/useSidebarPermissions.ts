@@ -14,11 +14,11 @@ interface NavigationItem {
 export function useSidebarPermissions() {
   const { user } = useAuth();
 
-  // Fetch all tab permissions for this user's wholesaler
-  const { data: tabPermissions = [] } = useQuery({
-    queryKey: ['/api/tab-permissions'],
-    enabled: user?.role !== 'team_member', // Only fetch if user is owner
-    staleTime: 5 * 60 * 1000, // 5 minutes
+  // For team members, fetch permissions using their wholesaler ID check endpoint
+  const { data: permissionChecks = {} } = useQuery({
+    queryKey: ['/api/tab-permissions/check-all'],
+    enabled: user?.role === 'team_member',
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   const checkTabAccess = (tabName: string): boolean => {
@@ -27,8 +27,12 @@ export function useSidebarPermissions() {
       return true;
     }
 
-    // For team members, we'll default to allowing access
-    // The individual tab checks will be handled by the ProtectedRoute component
+    // For team members, check individual tab access using the check endpoint
+    if (user?.role === 'team_member') {
+      // Use the permission check data if available, otherwise default to true for safety
+      return permissionChecks[tabName] !== false;
+    }
+
     return true;
   };
 
@@ -50,7 +54,7 @@ export function useSidebarPermissions() {
     checkTabAccess,
     filterNavigationItems,
     isTabRestricted,
-    tabPermissions,
+    permissionChecks,
   };
 }
 

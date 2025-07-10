@@ -7784,5 +7784,31 @@ The Quikpik Team
     }
   });
 
+  // Bulk check all tab permissions for team members
+  app.get('/api/tab-permissions/check-all', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      // Only for team members
+      if (user.role !== 'team_member' || !user.wholesalerId) {
+        return res.json({}); // Return empty object for non-team members
+      }
+      
+      const tabNames = ['dashboard', 'products', 'orders', 'customers', 'campaigns', 'analytics', 'marketplace', 'team-management', 'settings'];
+      const userRole = 'member';
+      const permissionChecks: Record<string, boolean> = {};
+      
+      // Check access for each tab
+      for (const tabName of tabNames) {
+        permissionChecks[tabName] = await storage.checkTabAccess(user.wholesalerId, tabName, userRole);
+      }
+      
+      res.json(permissionChecks);
+    } catch (error) {
+      console.error("Error checking all tab access:", error);
+      res.status(500).json({ message: "Failed to check tab access" });
+    }
+  });
+
   return httpServer;
 }
