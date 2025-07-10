@@ -483,10 +483,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product routes
-  app.get('/api/products', async (req, res) => {
+  app.get('/api/products', requireAuth, async (req: any, res) => {
     try {
       const { wholesalerId } = req.query;
-      const products = await storage.getProducts(wholesalerId as string);
+      
+      // If no specific wholesaler requested, use current user or parent company
+      let targetUserId = wholesalerId as string;
+      if (!targetUserId) {
+        targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+          ? req.user.wholesalerId 
+          : req.user.id;
+      }
+      
+      const products = await storage.getProducts(targetUserId);
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -654,8 +663,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Order routes
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
+      // Use parent company ID for team members
+      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
+      const user = await storage.getUser(targetUserId);
       const role = req.query.role; // 'customer' or 'wholesaler'
       
       if (!user) {
@@ -665,10 +678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let orders;
       if (role === 'customer' || user.role === 'retailer') {
         // Get orders placed by this customer/retailer
-        orders = await storage.getOrders(undefined, userId);
+        orders = await storage.getOrders(undefined, targetUserId);
       } else {
         // Get orders received by this wholesaler
-        orders = await storage.getOrders(userId);
+        orders = await storage.getOrders(targetUserId);
       }
       
       res.json(orders);
@@ -1548,8 +1561,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer group routes
   app.get('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const groups = await storage.getCustomerGroups(userId);
+      // Use parent company ID for team members
+      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
+      const groups = await storage.getCustomerGroups(targetUserId);
       res.json(groups);
     } catch (error) {
       console.error("Error fetching customer groups:", error);
@@ -1908,22 +1925,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics routes
   app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { fromDate, toDate } = req.query;
       
       let stats;
       if (fromDate && toDate) {
-        stats = await storage.getWholesalerStatsForDateRange(userId, new Date(fromDate), new Date(toDate));
+        stats = await storage.getWholesalerStatsForDateRange(targetUserId, new Date(fromDate), new Date(toDate));
       } else {
-        stats = await storage.getWholesalerStats(userId);
+        stats = await storage.getWholesalerStats(targetUserId);
       }
       
       // Calculate WhatsApp reach from broadcasts
-      const broadcastStats = await storage.getBroadcastStats(userId);
+      const broadcastStats = await storage.getBroadcastStats(targetUserId);
       const whatsappReach = broadcastStats.recipientsReached || 0;
       
       // Get total customer count for calculating coverage
-      const customerGroups = await storage.getCustomerGroups(userId);
+      const customerGroups = await storage.getCustomerGroups(targetUserId);
       const totalCustomers = customerGroups.reduce((total, group) => total + (group.memberCount || 0), 0);
       
       res.json({
@@ -1940,7 +1961,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chart data endpoint with real date filtering
   app.get('/api/analytics/chart-data', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       const { fromDate, toDate } = req.query;
       
       if (!fromDate || !toDate) {
@@ -1955,7 +1979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actualEndDate = endDate > now ? now : endDate;
       
       // Get orders within the date range
-      const orders = await storage.getOrdersForDateRange(userId, startDate, actualEndDate);
+      const orders = await storage.getOrdersForDateRange(targetUserId, startDate, actualEndDate);
       
       // Calculate time span to determine chart granularity
       const hoursDifference = (actualEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
@@ -2056,9 +2080,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/top-products', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.isTeamMember && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { limit } = req.query;
-      const topProducts = await storage.getTopProducts(userId, limit ? parseInt(limit as string) : 5);
+      const topProducts = await storage.getTopProducts(targetUserId, limit ? parseInt(limit as string) : 5);
       res.json(topProducts);
     } catch (error) {
       console.error("Error fetching top products:", error);
