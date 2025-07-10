@@ -249,7 +249,7 @@ async function sendTeamInvitationEmail(teamMember: any, wholesaler: any) {
     const msg = {
       to: teamMember.email,
       from: {
-        email: 'noreply@quikpik.vercel.app',
+        email: 'hello@quikpik.co',
         name: 'Quikpik Team'
       },
       subject: `You're invited to join ${wholesaler.businessName || wholesaler.name}'s team on Quikpik`,
