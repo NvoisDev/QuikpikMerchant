@@ -1063,44 +1063,34 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('getMarketplaceProducts called with filters:', filters);
       
-      // Use raw SQL to bypass Drizzle ORM connection issues
-      let whereClause = "WHERE status = 'active'";
-      const params: any[] = [];
+      // Check if wholesalerId is provided
+      if (!filters.wholesalerId) {
+        console.log('No wholesaler ID provided');
+        return [];
+      }
       
-      // Filter by specific wholesaler if provided
-      if (filters.wholesalerId) {
-        whereClause += " AND wholesaler_id = $" + (params.length + 1);
-        params.push(filters.wholesalerId);
-      }
-
-      if (filters.category) {
-        whereClause += " AND category = $" + (params.length + 1);
-        params.push(filters.category);
-      }
-
-      if (filters.search) {
-        whereClause += " AND (name ILIKE $" + (params.length + 1) + " OR description ILIKE $" + (params.length + 2) + ")";
-        params.push(`%${filters.search}%`, `%${filters.search}%`);
-      }
-
-      // Get products using raw SQL
-      const productsResult = await db.execute(sql.raw(`
+      // Get products using the exact same pattern as getWholesalerProfile
+      const productsResult = await db.execute(sql`
         SELECT * FROM products 
-        ${whereClause}
-        LIMIT 100
-      `, params));
-
+        WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
+      `);
       const productsList = productsResult.rows as any[];
       console.log('Products found:', productsList.length);
 
       // Get unique wholesaler IDs
       const wholesalerIds = [...new Set(productsList.map(p => p.wholesaler_id))];
       
-      // Get wholesaler data using raw SQL
-      const wholesalersResult = await db.execute(sql.raw(`
+      if (wholesalerIds.length === 0) {
+        console.log('No wholesaler IDs found');
+        return [];
+      }
+      
+      // Get wholesaler data using same approach as getWholesalerProfile
+      const wholesalersResult = await db.execute(sql`
         SELECT * FROM users 
-        WHERE id = ANY($1) AND role = 'wholesaler'
-      `, [wholesalerIds]));
+        WHERE id = ${filters.wholesalerId} AND role = 'wholesaler'
+        LIMIT 1
+      `);
 
       const wholesalers = wholesalersResult.rows as any[];
       console.log('Wholesalers found:', wholesalers.length);
