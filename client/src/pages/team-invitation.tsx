@@ -60,13 +60,21 @@ export default function TeamInvitation() {
         }
         const data = await response.json();
         setInvitationData(data);
+        
+        // Pre-fill form with invitation data
+        form.reset({
+          firstName: data.teamMember.firstName || '',
+          lastName: data.teamMember.lastName || '',
+          password: '',
+          confirmPassword: '',
+        });
       } catch (err: any) {
         setError(err.message || 'Failed to load invitation');
       }
     };
 
     fetchInvitation();
-  }, []);
+  }, [form]);
 
   const handleAcceptInvitation = async (data: AcceptInvitationFormData) => {
     setIsLoading(true);
@@ -179,6 +187,12 @@ export default function TeamInvitation() {
             </p>
           </div>
 
+          <div className="bg-blue-50 p-4 rounded-lg mb-4">
+            <p className="text-blue-700 text-sm">
+              <strong>Login Information:</strong> You can use your email address ({invitationData.teamMember.email}) as your username to sign in after account creation.
+            </p>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleAcceptInvitation)} className="space-y-4">
               <FormField
@@ -188,7 +202,10 @@ export default function TeamInvitation() {
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input 
+                        {...field} 
+                        placeholder={invitationData.teamMember.firstName || "Enter your first name"}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +219,10 @@ export default function TeamInvitation() {
                   <FormItem>
                     <FormLabel>Last Name (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input 
+                        {...field} 
+                        placeholder={invitationData.teamMember.lastName || "Enter your last name"}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

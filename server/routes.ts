@@ -6177,18 +6177,26 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         return res.status(404).json({ message: "Invalid or expired invitation" });
       }
 
-      // Create user account for team member
+      // Create user account for team member with generated ID
+      const userId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const userData = {
+        id: userId,
         email: teamMember.email,
         firstName: firstName,
         lastName: lastName || '',
         role: 'wholesaler', // Team members are wholesaler role with limited permissions
         subscriptionTier: 'team_member', // Special tier for team members
+        subscriptionStatus: 'active',
         businessName: '',
         businessDescription: '',
         businessPhone: '',
         businessAddress: '',
-        defaultCurrency: 'GBP'
+        preferredCurrency: 'GBP',
+        onboardingCompleted: true, // Team members skip onboarding
+        onboardingStep: 0,
+        isFirstLogin: false,
+        productLimit: -1 // Team members inherit wholesaler's limits
       };
 
       const newUser = await storage.createUser(userData);
