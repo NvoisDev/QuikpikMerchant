@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 
 const customerGroupFormSchema = z.object({
   name: z.string().min(1, "Group name is required"),
@@ -76,6 +77,8 @@ export default function CustomerGroups() {
   const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<"customer_group_limit" | "general">("general");
   
   // Fetch group members when manage dialog opens
   const { data: groupMembers = [], isLoading: membersLoading } = useQuery({
@@ -99,6 +102,18 @@ export default function CustomerGroups() {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch customer groups");
+      return response.json();
+    },
+  });
+
+  // Fetch subscription status for limit checking
+  const { data: subscriptionStatus } = useQuery({
+    queryKey: ["/api/subscription/status"],
+    queryFn: async () => {
+      const response = await fetch("/api/subscription/status", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch subscription status");
       return response.json();
     },
   });
@@ -318,6 +333,31 @@ export default function CustomerGroups() {
       });
     },
   });
+
+  // Check if user can create more customer groups
+  const canCreateGroup = () => {
+    if (!subscriptionStatus) return true; // Allow if status not loaded yet
+    
+    const currentCount = customerGroups.length;
+    const limits = {
+      free: 2,
+      standard: 5,
+      premium: Infinity,
+      team_member: Infinity // Team members inherit parent company limits
+    };
+    
+    const limit = limits[subscriptionStatus.subscriptionTier as keyof typeof limits] || 2;
+    return currentCount < limit;
+  };
+
+  const handleCreateGroupClick = () => {
+    if (!canCreateGroup()) {
+      setUpgradeReason("customer_group_limit");
+      setShowUpgradeModal(true);
+      return;
+    }
+    setIsCreateDialogOpen(true);
+  };
 
   const onCreateGroup = (data: CustomerGroupFormData) => {
     createGroupMutation.mutate(data);
@@ -834,13 +874,12 @@ export default function CustomerGroups() {
           <p className="text-gray-600">Manage your customer groups and WhatsApp connections</p>
         </div>
         
+        <Button onClick={handleCreateGroupClick}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Group
+        </Button>
+        
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Group
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Customer Group</DialogTitle>
@@ -979,7 +1018,7 @@ export default function CustomerGroups() {
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No customer groups yet</h3>
             <p className="text-gray-600 mb-4">Create your first customer group to start organizing your customers</p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button onClick={handleCreateGroupClick}>
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Group
             </Button>
@@ -1472,6 +1511,14 @@ Mike Johnson, 07444 555666`}
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal 
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        reason={upgradeReason}
+        currentPlan={subscriptionStatus?.subscriptionTier || "free"}
+      />
     </div>
   );
 }

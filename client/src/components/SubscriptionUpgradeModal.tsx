@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 interface SubscriptionUpgradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  reason: "product_limit" | "edit_limit" | "general";
+  reason: "product_limit" | "edit_limit" | "customer_group_limit" | "broadcast_limit" | "team_member_limit" | "general";
   currentPlan: string;
 }
 
@@ -57,6 +57,12 @@ export function SubscriptionUpgradeModal({
         return "You've reached your product limit. Upgrade to add more products.";
       case "edit_limit":
         return "You've reached the edit limit for this product. Upgrade for unlimited edits.";
+      case "customer_group_limit":
+        return "You've reached your customer group limit. Upgrade to create more groups.";
+      case "broadcast_limit":
+        return "You've reached your monthly broadcast limit. Upgrade for more WhatsApp messages.";
+      case "team_member_limit":
+        return "You've reached your team member limit. Upgrade to add more team members.";
       default:
         return "Unlock more features with a premium plan.";
     }
