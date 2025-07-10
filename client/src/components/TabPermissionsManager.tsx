@@ -88,20 +88,25 @@ export default function TabPermissionsManager() {
     setUpdating(tabName);
     
     try {
-      await updatePermission.mutateAsync({
+      console.log('Updating permission:', { tabName, isRestricted });
+      
+      const result = await updatePermission.mutateAsync({
         tabName,
         isRestricted,
-        allowedRoles: ['owner', 'admin'] // Only owners and admins when restricted
+        allowedRoles: isRestricted ? ['owner', 'admin'] : ['owner', 'admin', 'member']
       });
+      
+      console.log('Permission update result:', result);
       
       toast({
         title: "Permissions Updated",
         description: `${TAB_CONFIGS.find(t => t.name === tabName)?.label} access ${isRestricted ? 'restricted' : 'allowed'} for team members`,
       });
     } catch (error) {
+      console.error('Permission update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update permissions",
+        description: `Failed to update permissions: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {

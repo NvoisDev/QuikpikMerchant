@@ -27,10 +27,8 @@ export function useUpdateTabPermission() {
       isRestricted: boolean;
       allowedRoles?: string[];
     }) => {
-      return apiRequest(`/api/tab-permissions/${tabName}`, {
-        method: 'PUT',
-        body: JSON.stringify({ isRestricted, allowedRoles }),
-      });
+      const response = await apiRequest('PUT', `/api/tab-permissions/${tabName}`, { isRestricted, allowedRoles });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tab-permissions'] });
