@@ -106,19 +106,32 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.session?.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+    // Check for session user object (primary method for email/password auth)
+    const sessionUser = req.session?.user;
+    if (sessionUser && sessionUser.id) {
+      const user = await storage.getUser(sessionUser.id);
+      if (user) {
+        req.user = user;
+        return next();
+      }
     }
 
-    const user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+    // Check for legacy session userId (fallback)
+    const sessionUserId = req.session?.userId;
+    if (sessionUserId) {
+      const user = await storage.getUser(sessionUserId);
+      if (user) {
+        req.user = user;
+        return next();
+      }
     }
 
-    req.user = user;
-    next();
+    // Check for Replit OAuth session
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      return next();
+    }
+
+    return res.status(401).json({ error: 'Authentication required' });
   } catch (error) {
     console.error('Authentication error:', error);
     res.status(500).json({ error: 'Authentication failed' });

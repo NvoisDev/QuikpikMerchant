@@ -357,7 +357,17 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
+  // Auth middleware - setup session handling first
+  // Set up unified session middleware 
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  
+  app.use((req: any, res: any, next: any) => {
+    // Set up app settings required for Replit Auth
+    app.set("trust proxy", 1);
+    next();
+  });
+
+  // Use simple session configuration that works for both auth methods
   await setupAuth(app);
 
   // Google Auth routes

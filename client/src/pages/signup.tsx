@@ -158,7 +158,11 @@ export default function Signup() {
           title: "Account created successfully!",
           description: "Welcome to Quikpik. You're now signed in.",
         });
-        setLocation('/');
+        
+        // Small delay to ensure session is established before redirect
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
       } else {
         // Show specific error message from server
         const errorMessage = result.message || "Please try again.";
