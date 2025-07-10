@@ -382,7 +382,6 @@ export default function ProductManagement() {
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
       };
-      console.log("Creating product with data:", productData);
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
@@ -493,9 +492,6 @@ export default function ProductManagement() {
   });
 
   const onSubmit = (data: ProductFormData) => {
-    console.log("Form submission data:", data);
-    console.log("Form validation errors:", form.formState.errors);
-    
     if (editingProduct) {
       updateProductMutation.mutate({ ...data, id: editingProduct.id });
     } else {

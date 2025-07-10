@@ -535,10 +535,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/products', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to ensure data inheritance
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
       // Check product limit before creating
-      const limitCheck = await storage.checkProductLimit(userId);
+      const limitCheck = await storage.checkProductLimit(targetUserId);
       if (!limitCheck.canAdd) {
         return res.status(403).json({ 
           message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan. Upgrade your subscription to add more products.`,
@@ -569,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         palletWeight: palletWeight ? palletWeight.toString() : null,
         lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50,
         shelfLife: shelfLife ? parseInt(shelfLife) : null,
-        wholesalerId: userId
+        wholesalerId: targetUserId
       });
       const product = await storage.createProduct(productData);
       res.json(product);
