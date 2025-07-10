@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, User, Building, Mail, Phone, MapPin } from "lucide-react";
-// import Logo from "@/components/ui/logo";
+import { ArrowLeft, User, Building, Mail, Phone, MapPin, LogIn, Loader2 } from "lucide-react";
 
 const signupSchema = z.object({
   // Personal Information (Required)
@@ -77,6 +76,7 @@ export default function Signup() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [signupMethod, setSignupMethod] = useState<'google' | 'email'>('email');
   const { toast } = useToast();
 
   const form = useForm<SignupForm>({
@@ -115,6 +115,31 @@ export default function Signup() {
 
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
+  };
+
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get Google auth URL from server
+      const response = await fetch('/api/auth/google');
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        // Redirect to Google authentication
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('Failed to get authentication URL');
+      }
+    } catch (error) {
+      console.error('Google signup error:', error);
+      toast({
+        title: "Signup Failed",
+        description: "There was an error with Google signup. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   const onSubmit = async (data: SignupForm) => {
@@ -172,374 +197,430 @@ export default function Signup() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              {currentStep > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={prevStep}
-                  className="p-1"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
-              <div className="flex-1 text-center">
-                <CardTitle className="text-lg">
-                  {currentStep === 1 ? "Personal Information" : 
-                   currentStep === 2 ? "Business Details" : "Address & Preferences"}
-                </CardTitle>
-                <CardDescription>
-                  Step {currentStep} of 3 • {currentStep > 1 ? "All fields optional" : "Required fields"}
-                </CardDescription>
-              </div>
-              <div className="w-8" />
-            </div>
+            <CardTitle className="text-xl text-center">Create Your Account</CardTitle>
+            <CardDescription className="text-center">
+              Choose your preferred signup method
+            </CardDescription>
             
-            {/* Progress indicator */}
-            <div className="flex space-x-1 mt-4">
-              {[1, 2, 3].map((step) => (
-                <div
-                  key={step}
-                  className={`h-2 flex-1 rounded ${
-                    step <= currentStep ? 'bg-primary' : 'bg-gray-200'
-                  }`}
-                />
-              ))}
+            {/* Signup Method Selection */}
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant={signupMethod === 'google' ? 'default' : 'outline'}
+                onClick={() => setSignupMethod('google')}
+                className="flex-1"
+              >
+                Google
+              </Button>
+              <Button
+                variant={signupMethod === 'email' ? 'default' : 'outline'}
+                onClick={() => setSignupMethod('email')}
+                className="flex-1"
+              >
+                Email
+              </Button>
             </div>
           </CardHeader>
 
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {currentStep === 1 && (
-                  <>
-                    <div className="flex items-center space-x-2 text-primary mb-4">
-                      <User className="h-5 w-5" />
-                      <span className="font-medium">Personal Information</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Smith" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address *</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="john@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password *</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="At least 6 characters" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password *</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Repeat your password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-
-                {currentStep === 2 && (
-                  <>
-                    <div className="flex items-center space-x-2 text-primary mb-4">
-                      <Building className="h-5 w-5" />
-                      <span className="font-medium">Business Details (Optional)</span>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="businessName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your Company Ltd" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="businessDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="What does your business do?"
-                              rows={3}
-                              {...field} 
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="businessEmail"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Business Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="info@company.com" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="businessPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Business Phone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+44 20 1234 5678" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="businessType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select business type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {businessTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="estimatedMonthlyVolume"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estimated Monthly Volume</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select monthly volume" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {monthlyVolumes.map((volume) => (
-                                <SelectItem key={volume} value={volume}>
-                                  {volume}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-
-                {currentStep === 3 && (
-                  <>
-                    <div className="flex items-center space-x-2 text-primary mb-4">
-                      <MapPin className="h-5 w-5" />
-                      <span className="font-medium">Address & Preferences (Optional)</span>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="streetAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Business Street" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="London" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="postalCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Postal Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="SW1A 1AA" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="state"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State/County</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Greater London" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input placeholder="United Kingdom" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="preferredCurrency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Currency</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {currencies.map((currency) => (
-                                <SelectItem key={currency.code} value={currency.code}>
-                                  {currency.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-
-                <div className="flex justify-between pt-4">
-                  {currentStep < 3 ? (
-                    <Button 
-                      type="button" 
-                      onClick={nextStep}
-                      className="w-full"
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading}
-                      className="w-full"
-                    >
-                      {isLoading ? "Creating Account..." : "Create Account"}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="text-center pt-4">
-                  <p className="text-sm text-gray-600">
-                    Already have an account?{" "}
-                    <Link href="/login" className="text-primary hover:underline">
-                      Sign in
-                    </Link>
+            {signupMethod === 'google' ? (
+              <div className="space-y-4">
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Sign up with your Google account for quick access
                   </p>
                 </div>
-              </form>
-            </Form>
+                
+                <Button
+                  onClick={handleGoogleSignup}
+                  disabled={isLoading}
+                  className="w-full h-12 text-base font-medium"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="mr-2 h-5 w-5" />
+                      Continue with Google
+                    </>
+                  )}
+                </Button>
+                
+                <div className="text-center text-sm text-gray-500 mt-4">
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-primary hover:underline">
+                    Sign in here
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Step Header for Email Signup */}
+                <div className="flex items-center justify-between mb-4">
+                  {currentStep > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={prevStep}
+                      className="p-1"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="flex-1 text-center">
+                    <h3 className="font-medium">
+                      {currentStep === 1 ? "Personal Information" : 
+                       currentStep === 2 ? "Business Details" : "Address & Preferences"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Step {currentStep} of 3 • {currentStep > 1 ? "All fields optional" : "Required fields"}
+                    </p>
+                  </div>
+                  <div className="w-8" />
+                </div>
+                
+                {/* Progress indicator */}
+                <div className="flex space-x-1 mb-6">
+                  {[1, 2, 3].map((step) => (
+                    <div
+                      key={step}
+                      className={`h-2 flex-1 rounded ${
+                        step <= currentStep ? 'bg-primary' : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {currentStep === 1 && (
+                      <>
+                        <div className="flex items-center space-x-2 text-primary mb-4">
+                          <User className="h-5 w-5" />
+                          <span className="font-medium">Personal Information</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>First Name *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="John" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Last Name *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Smith" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address *</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="john@example.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password *</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="At least 6 characters" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm Password *</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="Re-enter password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {currentStep === 2 && (
+                      <>
+                        <div className="flex items-center space-x-2 text-primary mb-4">
+                          <Building className="h-5 w-5" />
+                          <span className="font-medium">Business Information</span>
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="businessName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your Business Ltd" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="businessDescription"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Description</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Brief description of your business..." {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="businessEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="business@company.com" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="businessPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Phone</FormLabel>
+                              <FormControl>
+                                <Input type="tel" placeholder="+44 20 7123 4567" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="businessType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select business type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {businessTypes.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="estimatedMonthlyVolume"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estimated Monthly Volume</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select volume range" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {monthlyVolumes.map((volume) => (
+                                    <SelectItem key={volume} value={volume}>
+                                      {volume}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {currentStep === 3 && (
+                      <>
+                        <div className="flex items-center space-x-2 text-primary mb-4">
+                          <MapPin className="h-5 w-5" />
+                          <span className="font-medium">Address & Preferences</span>
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="streetAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Street Address</FormLabel>
+                              <FormControl>
+                                <Input placeholder="123 Business Street" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="London" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="postalCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Postal Code</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="SW1A 1AA" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State/County</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Greater London" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="country"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Country</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="United Kingdom" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="preferredCurrency"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preferred Currency</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {currencies.map((currency) => (
+                                    <SelectItem key={currency.code} value={currency.code}>
+                                      {currency.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+
+                    <div className="flex justify-between pt-4">
+                      {currentStep < 3 ? (
+                        <Button 
+                          type="button" 
+                          onClick={nextStep}
+                          className="w-full"
+                        >
+                          Continue
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="submit" 
+                          disabled={isLoading}
+                          className="w-full"
+                        >
+                          {isLoading ? "Creating Account..." : "Create Account"}
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="text-center pt-4">
+                      <p className="text-sm text-gray-600">
+                        Already have an account?{" "}
+                        <Link href="/login" className="text-primary hover:underline">
+                          Sign in
+                        </Link>
+                      </p>
+                    </div>
+                  </form>
+                </Form>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
