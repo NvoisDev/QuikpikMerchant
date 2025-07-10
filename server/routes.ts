@@ -1122,10 +1122,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Extract customer and order data from metadata
           const {
             customerAddress,
-            items: itemsJson
+            items: itemsJson,
+            shippingInfo: shippingInfoJson
           } = paymentIntent.metadata;
           
           const items = JSON.parse(itemsJson);
+          const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
 
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);
@@ -1149,7 +1151,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total: totalAmount,
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
-            deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+            deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+            // Add shipping information
+            fulfillmentType: shippingInfo.option || 'pickup',
+            deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+            deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
           };
 
           // Create order items
@@ -4313,7 +4319,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   // Create payment intent for customer portal orders (public - no auth required)
   app.post('/api/marketplace/create-payment-intent', async (req, res) => {
     try {
-      const { items, customerData, wholesalerId, totalAmount } = req.body;
+      const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
       
       console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
       
@@ -4391,6 +4397,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'true',
+              shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
                 ...item,
                 productName: item.productName || 'Product'
@@ -4420,6 +4427,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
               connectAccountUsed: 'false',
+              shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
                 ...item,
                 productName: item.productName || 'Product'
@@ -4438,10 +4446,17 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             customerName: customerData.name,
             customerEmail: customerData.email,
             customerPhone: customerData.phone,
-            customerAddress: JSON.stringify(customerData.address),
+            customerAddress: JSON.stringify({
+              street: customerData.address,
+              city: customerData.city,
+              state: customerData.state,
+              postalCode: customerData.postalCode,
+              country: customerData.country
+            }),
             totalAmount: validatedTotalAmount.toString(),
             platformFee: platformFee,
             connectAccountUsed: 'false',
+            shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
             items: JSON.stringify(items.map(item => ({
               ...item,
               productName: item.productName || 'Product'

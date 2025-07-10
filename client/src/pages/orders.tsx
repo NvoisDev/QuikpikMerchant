@@ -553,25 +553,40 @@ export default function Orders() {
                           <h3 className="font-semibold text-lg">Order #{order.id}</h3>
                           {getStatusBadge(order.status)}
                           
-                          {/* Add shipping button for paid orders */}
-                          {(user?.role === 'wholesaler' || user?.role === 'team_member') && 
-                           order.status === 'paid' && !order.shippingOrderId && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setShippingModalOrder(order)}
-                              className="ml-2"
-                            >
-                              <Truck className="h-4 w-4 mr-1" />
-                              Add Shipping
-                            </Button>
-                          )}
-                          
-                          {order.shippingOrderId && (
-                            <Badge variant="secondary" className="ml-2">
-                              <Truck className="h-3 w-3 mr-1" />
-                              Shipping Added
-                            </Badge>
+                          {/* Show shipping status */}
+                          {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
+                            <>
+                              {/* Customer selected delivery option */}
+                              {order.shippingOption === 'delivery' && order.shippingService ? (
+                                <Badge variant="default" className="ml-2">
+                                  <Truck className="h-3 w-3 mr-1" />
+                                  {order.shippingService} - £{order.shippingCost}
+                                </Badge>
+                              ) : order.shippingOption === 'pickup' ? (
+                                <Badge variant="secondary" className="ml-2">
+                                  <Package className="h-3 w-3 mr-1" />
+                                  Pickup
+                                </Badge>
+                              ) : order.status === 'paid' && !order.shippingOrderId && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setShippingModalOrder(order)}
+                                  className="ml-2"
+                                >
+                                  <Truck className="h-4 w-4 mr-1" />
+                                  Add Shipping
+                                </Button>
+                              )}
+                              
+                              {/* Show tracking info if available */}
+                              {order.shippingOrderId && (
+                                <Badge variant="secondary" className="ml-2">
+                                  <Truck className="h-3 w-3 mr-1" />
+                                  Tracking Added
+                                </Badge>
+                              )}
+                            </>
                           )}
                         </div>
                         

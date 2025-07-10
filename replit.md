@@ -176,6 +176,19 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)
 
+### Complete Shipping Integration Data Flow Fix (July 10, 2025):
+- **Critical Payment Intent Metadata Fix**: Resolved shipping information loss by adding `shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' })` to all payment intent creation endpoints
+- **Webhook Processing Enhancement**: Updated Stripe webhook to extract and process shipping information from payment intent metadata during order creation
+- **Database Schema Alignment**: Fixed field name mismatch between frontend (`shippingOption`) and database schema (`fulfillmentType`) for consistent data storage
+- **Complete Data Flow Verification**: Confirmed end-to-end shipping flow from customer selection → payment intent → webhook processing → database storage → order display
+- **Database Verification**: Orders table correctly storing shipping data (fulfillment_type, delivery_carrier, delivery_cost, shipping_total, shipping_status)
+- **Production Testing**: Real orders showing proper shipping information - Order 27 with "demo-dpd-next-day" carrier, £8.50 shipping total, "created" status
+- **Customer Payment Structure**: Customers pay product subtotal + shipping cost, wholesalers receive 95% of product value, platform retains 5% fee (not applied to shipping)
+- **UI Integration Complete**: Orders page displays shipping status, "Add Shipping" buttons for paid orders, shipping tracking information
+- **Status: Fully Operational**: Customer-driven shipping system working correctly with proper weight-based pricing and payment handling
+
+## Recent Bug Fixes and Feature Implementations (July 10, 2025)
+
 ### Complete Team Member Inheritance System Implemented (July 10, 2025):
 - **Universal Team Member Data Inheritance**: Implemented comprehensive team member inheritance across ALL API endpoints ensuring team members always operate with parent company data
 - **Customer Group Management Complete**: All customer group routes (GET, POST, PUT, DELETE, member management) now properly implement team member inheritance using getEffectiveWholesalerId pattern
