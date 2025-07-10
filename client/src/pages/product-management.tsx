@@ -377,8 +377,8 @@ export default function ProductManagement() {
         palletMoq: data.palletMoq ? parseInt(data.palletMoq) : 1,
         palletStock: data.palletStock ? parseInt(data.palletStock) : 0,
         // Weight and shipping fields
-        unitWeight: data.unitWeight ? parseFloat(data.unitWeight) : null,
-        palletWeight: data.palletWeight ? parseFloat(data.palletWeight) : null,
+        unitWeight: data.unitWeight || null,
+        palletWeight: data.palletWeight || null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
       };
@@ -416,8 +416,8 @@ export default function ProductManagement() {
         palletMoq: productData.palletMoq ? parseInt(productData.palletMoq) : 1,
         palletStock: productData.palletStock ? parseInt(productData.palletStock) : 0,
         // Weight and shipping fields
-        unitWeight: productData.unitWeight ? parseFloat(productData.unitWeight) : null,
-        palletWeight: productData.palletWeight ? parseFloat(productData.palletWeight) : null,
+        unitWeight: productData.unitWeight || null,
+        palletWeight: productData.palletWeight || null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
       };
@@ -730,8 +730,8 @@ export default function ProductManagement() {
             palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : null,
             palletMoq: product.palletMoq ? parseInt(product.palletMoq) : null,
             palletStock: product.palletStock ? parseInt(product.palletStock) : null,
-            unitWeight: product.unitWeight ? parseFloat(product.unitWeight) : null,
-            palletWeight: product.palletWeight ? parseFloat(product.palletWeight) : null,
+            unitWeight: product.unitWeight || null,
+            palletWeight: product.palletWeight || null,
           };
           const result = await apiRequest("POST", "/api/products", productData);
           results.push({ success: true, product: result });
