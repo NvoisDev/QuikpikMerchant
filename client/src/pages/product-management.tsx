@@ -284,9 +284,10 @@ export default function ProductManagement() {
         description: `Image optimized and uploaded successfully! (${sizeKB}KB)`,
       });
     } catch (error) {
+      console.error("Single image upload error:", error);
       toast({
         title: "Upload failed",
-        description: "Failed to process the image file.",
+        description: `Failed to process image file: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
     }
@@ -336,9 +337,10 @@ export default function ProductManagement() {
         description: `${files.length} image(s) optimized and uploaded successfully!`,
       });
     } catch (error) {
+      console.error("Image upload error:", error);
       toast({
         title: "Upload failed",
-        description: "Failed to process one or more image files.",
+        description: `Failed to process image files: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
     }
