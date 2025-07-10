@@ -179,7 +179,8 @@ This approach gives customers control over delivery speed and cost while ensurin
 ### Critical Customer Portal API Failures Resolved (July 10, 2025):
 - **Drizzle ORM Database Errors Fixed**: Resolved persistent "Cannot convert undefined or null to object" errors blocking customer portal functionality
 - **Raw SQL Implementation**: Implemented direct SQL queries in storage layer to bypass faulty Drizzle ORM operations for wholesaler profile and marketplace products
-- **Customer Portal Restoration**: Customer portal now fully operational with proper product display and store information
+- **Featured Product Dependency Fixed**: Resolved critical rendering issue where products weren't displaying due to featured product dependency logic
+- **Product Display Logic Enhancement**: Modified customer portal to show all products when no featured product is set, eliminating blank product sections
 - **API Endpoint Success**: Both `/api/marketplace/wholesaler/{id}` and `/api/marketplace/products` endpoints returning successful responses
 - **Database Connection Stability**: Enhanced error handling and logging for marketplace data retrieval with reliable fallback mechanisms
 - **Complete Functionality**: Store displays "Surulere Foods Wholesale" with all 7 products correctly filtered and rendered

@@ -1334,19 +1334,23 @@ export default function CustomerPortal() {
           </div>
         )}
 
-        {/* All Products View - Only shown when "View All" is clicked */}
-        {showAllProducts && (
+        {/* All Products View - Shown when no featured product OR when "View All" is clicked */}
+        {(!featuredProduct || showAllProducts) && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">All Products</h2>
-              <Button
-                onClick={() => setShowAllProducts(false)}
-                variant="outline"
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Featured
-              </Button>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {featuredProduct ? "All Products" : "Available Products"}
+              </h2>
+              {featuredProduct && showAllProducts && (
+                <Button
+                  onClick={() => setShowAllProducts(false)}
+                  variant="outline"
+                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Featured
+                </Button>
+              )}
             </div>
             
             {productsLoading ? (
