@@ -627,76 +627,10 @@ export default function Orders() {
                       </div>
                       
                       <div className="ml-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Order #{order.id} Details</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <h3 className="font-semibold mb-2">Customer Information</h3>
-                                  <div className="space-y-1 text-sm">
-                                    <div><strong>Name:</strong> {order.retailer ? `${order.retailer.firstName} ${order.retailer.lastName}` : 'Unknown'}</div>
-                                    <div><strong>Email:</strong> {order.retailer?.email || 'N/A'}</div>
-                                    <div><strong>Phone:</strong> {order.retailer?.phoneNumber || 'N/A'}</div>
-                                    <div><strong>Order Total:</strong> {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}</div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold mb-2">Order Information</h3>
-                                  <div className="space-y-1 text-sm">
-                                    <div><strong>Status:</strong> {getStatusBadge(order.status)}</div>
-                                    <div><strong>Date:</strong> {new Date(order.createdAt).toLocaleString()}</div>
-                                    <div><strong>Items:</strong> {order.items.length}</div>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {order.deliveryAddress && (
-                                <>
-                                  <Separator />
-                                  <div>
-                                    <h3 className="font-semibold mb-2">Delivery Address</h3>
-                                    <div className="text-sm p-3 bg-gray-50 rounded-lg">
-                                      {formatAddress(order.deliveryAddress)}
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                              
-                              <Separator />
-                              <div>
-                                <h3 className="font-semibold mb-2">Order Items</h3>
-                                <div className="space-y-3">
-                                  {order.items.map((item: any) => (
-                                    <div key={item.id} className="border rounded-lg p-3">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <h4 className="font-medium">{item.product.name}</h4>
-                                          <div className="text-sm text-muted-foreground">
-                                            Quantity: {item.quantity} | Unit Price: {formatCurrency(parseFloat(item.unitPrice), order.wholesaler?.preferredCurrency || 'GBP')}
-                                          </div>
-                                        </div>
-                                        <div className="text-right">
-                                          <div className="font-semibold">
-                                            {formatCurrency(parseFloat(item.total), order.wholesaler?.preferredCurrency || 'GBP')}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -707,7 +641,7 @@ export default function Orders() {
             </>
           )}
 
-          {/* Order Details Dialog for Table View */}
+          {/* Order Details Dialog */}
           {selectedOrder && (
             <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
