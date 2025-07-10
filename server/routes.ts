@@ -7789,8 +7789,15 @@ The Quikpik Team
     try {
       const user = req.user;
       
+      console.log('🔍 Checking tab permissions for user:', { 
+        id: user.id, 
+        role: user.role, 
+        wholesalerId: user.wholesalerId 
+      });
+      
       // Only for team members
       if (user.role !== 'team_member' || !user.wholesalerId) {
+        console.log('❌ User is not a team member, returning empty permissions');
         return res.json({}); // Return empty object for non-team members
       }
       
@@ -7800,9 +7807,12 @@ The Quikpik Team
       
       // Check access for each tab
       for (const tabName of tabNames) {
-        permissionChecks[tabName] = await storage.checkTabAccess(user.wholesalerId, tabName, userRole);
+        const hasAccess = await storage.checkTabAccess(user.wholesalerId, tabName, userRole);
+        permissionChecks[tabName] = hasAccess;
+        console.log(`📋 Tab ${tabName}: ${hasAccess ? '✅ ALLOWED' : '❌ RESTRICTED'}`);
       }
       
+      console.log('🎯 Final permission results:', permissionChecks);
       res.json(permissionChecks);
     } catch (error) {
       console.error("Error checking all tab access:", error);
