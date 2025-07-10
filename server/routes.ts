@@ -3511,7 +3511,7 @@ Write a professional, sales-focused description that highlights the key benefits
         const broadcastData = {
           wholesalerId: targetUserId,
           productId: productId,
-          customerGroupId: 1, // Will be set when sending
+          customerGroupId: null, // Will be set when sending
           message: campaignData.customMessage || '',
           specialPrice: specialPrice || null,
           status: 'draft',
