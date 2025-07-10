@@ -176,6 +176,15 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)
 
+### Campaign Creation Database Constraint Fix (July 10, 2025):
+- **Critical Database Fix**: Resolved foreign key constraint violation preventing team members from creating campaigns
+- **Schema Update**: Modified broadcasts table to allow null customer_group_id values for draft campaigns
+- **Campaign Creation Logic**: Changed draft broadcast creation to use `customerGroupId: null` instead of hardcoded non-existent ID
+- **Team Member Access**: Team members can now successfully create both single product and multi-product campaigns
+- **Bidirectional Visibility**: Confirmed campaigns created by team members appear in parent company portal and vice versa
+- **Database Migration**: Successfully executed `ALTER TABLE broadcasts ALTER COLUMN customer_group_id DROP NOT NULL`
+- **Production Ready**: Campaign inheritance system fully functional with user confirmation "it works"
+
 ### Complete Tab Permission System with Authentication Fix (July 10, 2025):
 - **Critical Authentication Bug Fixed**: Resolved team member login endpoint incorrectly assigning 'wholesaler' role instead of 'team_member' role
 - **Granular Tab Permission System**: Fully functional tab-level access control allowing business owners to restrict specific dashboard sections for team members
