@@ -1060,99 +1060,95 @@ export class DatabaseStorage implements IStorage {
     minRating?: number;
     wholesalerId?: string;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
-    // First get all active products from wholesalers
-    let whereConditions = [
-      eq(products.status, 'active'),
-      eq(users.role, 'wholesaler')
-    ];
+    try {
+      console.log('getMarketplaceProducts called with filters:', filters);
+      
+      // Use a simpler approach: get products first, then get user data separately
+      let whereConditions = [eq(products.status, 'active')];
 
-    // Filter by specific wholesaler if provided - include team member products
-    if (filters.wholesalerId) {
-      // Get team members for this wholesaler
-      const teamMemberIds = await db
-        .select({ userId: teamMembers.userId })
-        .from(teamMembers)
-        .where(eq(teamMembers.wholesalerId, filters.wholesalerId));
-      
-      const allRelevantIds = [filters.wholesalerId, ...teamMemberIds.map(tm => tm.userId)];
-      
-      // Include products from parent company AND team members
-      if (allRelevantIds.length === 1) {
+      // Filter by specific wholesaler if provided
+      if (filters.wholesalerId) {
         whereConditions.push(eq(products.wholesalerId, filters.wholesalerId));
-      } else {
+      }
+
+      if (filters.category) {
+        whereConditions.push(eq(products.category, filters.category));
+      }
+
+      if (filters.search) {
         whereConditions.push(
-          or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!
+          or(
+            sql`${products.name} ILIKE ${`%${filters.search}%`}`,
+            sql`${products.description} ILIKE ${`%${filters.search}%`}`
+          )!
         );
       }
-    }
 
-    if (filters.category) {
-      whereConditions.push(eq(products.category, filters.category));
-    }
+      // Get products first
+      const productsList = await db
+        .select()
+        .from(products)
+        .where(and(...whereConditions))
+        .limit(100);
 
-    if (filters.search) {
-      whereConditions.push(
-        or(
-          sql`${products.name} ILIKE ${`%${filters.search}%`}`,
-          sql`${products.description} ILIKE ${`%${filters.search}%`}`,
-          sql`${users.businessName} ILIKE ${`%${filters.search}%`}`
-        )!
-      );
-    }
+      console.log('Products found:', productsList.length);
 
-    if (filters.minPrice !== undefined) {
-      whereConditions.push(sql`CAST(${products.price} AS DECIMAL) >= ${filters.minPrice}`);
-    }
+      // Get unique wholesaler IDs
+      const wholesalerIds = [...new Set(productsList.map(p => p.wholesalerId))];
+      
+      // Get wholesaler data
+      const wholesalers = await db
+        .select()
+        .from(users)
+        .where(or(...wholesalerIds.map(id => eq(users.id, id)))!);
 
-    if (filters.maxPrice !== undefined) {
-      whereConditions.push(sql`CAST(${products.price} AS DECIMAL) <= ${filters.maxPrice}`);
-    }
+      console.log('Wholesalers found:', wholesalers.length);
 
-    if (filters.location) {
-      whereConditions.push(sql`${users.businessAddress} ILIKE ${`%${filters.location}%`}`);
-    }
+      // Create wholesaler lookup map
+      const wholesalerMap = new Map(wholesalers.map(w => [w.id, w]));
 
-    const productsList = await db
-      .select()
-      .from(products)
-      .innerJoin(users, eq(products.wholesalerId, users.id))
-      .where(and(...whereConditions))
-      .limit(100); // Add limit for performance
-
-    // Transform the results
-    const results = productsList.map(item => ({
-      ...item.products,
-      wholesaler: {
-        id: item.users.id,
-        businessName: item.users.businessName || `${item.users.firstName} ${item.users.lastName}`,
-        profileImageUrl: item.users.profileImageUrl || undefined,
-        logoType: item.users.logoType || 'initials',
-        logoUrl: item.users.logoUrl || undefined,
-        firstName: item.users.firstName,
-        lastName: item.users.lastName,
-        rating: 4.5, // Mock rating for now
-      }
-    }));
-
-    // Apply sorting
-    if (filters.sortBy) {
-      results.sort((a, b) => {
-        switch (filters.sortBy) {
-          case 'price_low':
-            return parseFloat(a.price) - parseFloat(b.price);
-          case 'price_high':
-            return parseFloat(b.price) - parseFloat(a.price);
-          case 'newest':
-            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-          case 'rating':
-            return (b.wholesaler.rating || 0) - (a.wholesaler.rating || 0);
-          default:
-            return 0;
-        }
+      // Combine products with wholesaler data
+      const results = productsList.map(product => {
+        const wholesaler = wholesalerMap.get(product.wholesalerId);
+        return {
+          ...product,
+          wholesaler: {
+            id: product.wholesalerId,
+            businessName: wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Business',
+            profileImageUrl: wholesaler?.profileImageUrl || undefined,
+            logoType: wholesaler?.logoType || 'initials',
+            logoUrl: wholesaler?.logoUrl || undefined,
+            firstName: wholesaler?.firstName,
+            lastName: wholesaler?.lastName,
+            rating: 4.5,
+          }
+        };
       });
-    }
 
-    return results;
+      // Apply sorting
+      if (filters.sortBy) {
+        results.sort((a, b) => {
+          switch (filters.sortBy) {
+            case 'price_low':
+              return parseFloat(a.price) - parseFloat(b.price);
+            case 'price_high':
+              return parseFloat(b.price) - parseFloat(a.price);
+            case 'newest':
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            case 'rating':
+              return (b.wholesaler.rating || 0) - (a.wholesaler.rating || 0);
+            default:
+              return 0;
+          }
+        });
+      }
+
+      console.log('Results prepared:', results.length);
+      return results;
+    } catch (error) {
+      console.error('Error in getMarketplaceProducts:', error);
+      throw error;
+    }
   }
 
   async getMarketplaceWholesalers(filters: {
