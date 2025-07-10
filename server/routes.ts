@@ -6225,7 +6225,6 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         password,
         businessName,
         businessDescription,
-        businessEmail,
         businessPhone,
         businessType,
         estimatedMonthlyVolume,
@@ -6270,7 +6269,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         businessDescription: businessDescription || '',
         businessPhone: businessPhone || '',
         businessAddress: streetAddress || '',
-        businessEmail: businessEmail || '',
+        businessEmail: email, // Use the same email for business and personal
         businessType: businessType || '',
         estimatedMonthlyVolume: estimatedMonthlyVolume || '',
         streetAddress: streetAddress || '',

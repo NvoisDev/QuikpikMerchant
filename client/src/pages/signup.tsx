@@ -24,7 +24,6 @@ const signupSchema = z.object({
   // Business Information (Optional)
   businessName: z.string().optional(),
   businessDescription: z.string().optional(),
-  businessEmail: z.string().email().optional().or(z.literal("")),
   businessPhone: z.string().optional(),
   businessType: z.string().optional(),
   estimatedMonthlyVolume: z.string().optional(),
@@ -89,7 +88,6 @@ export default function Signup() {
       confirmPassword: "",
       businessName: "",
       businessDescription: "",
-      businessEmail: "",
       businessPhone: "",
       businessType: "",
       estimatedMonthlyVolume: "",
@@ -346,9 +344,9 @@ export default function Signup() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email Address *</FormLabel>
+                              <FormLabel>Business Email Address *</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="john@example.com" {...field} />
+                                <Input type="email" placeholder="john@yourcompany.com" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -418,18 +416,7 @@ export default function Signup() {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="businessEmail"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Business Email</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="business@company.com" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+
 
                         <FormField
                           control={form.control}
