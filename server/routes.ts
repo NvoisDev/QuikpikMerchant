@@ -7714,5 +7714,75 @@ The Quikpik Team
     }
   });
 
+  // Tab permissions routes
+  app.get('/api/tab-permissions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Only allow wholesaler (owner) to view permissions
+      if (req.user.role === 'team_member') {
+        return res.status(403).json({ message: "Only business owners can manage permissions" });
+      }
+      
+      const permissions = await storage.getTabPermissions(userId);
+      
+      // If no permissions exist, create defaults
+      if (permissions.length === 0) {
+        await storage.createDefaultTabPermissions(userId);
+        const defaultPermissions = await storage.getTabPermissions(userId);
+        return res.json(defaultPermissions);
+      }
+      
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching tab permissions:", error);
+      res.status(500).json({ message: "Failed to fetch tab permissions" });
+    }
+  });
+
+  app.put('/api/tab-permissions/:tabName', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { tabName } = req.params;
+      const { isRestricted, allowedRoles } = req.body;
+      
+      // Only allow wholesaler (owner) to modify permissions
+      if (req.user.role === 'team_member') {
+        return res.status(403).json({ message: "Only business owners can manage permissions" });
+      }
+      
+      const permission = await storage.updateTabPermission(userId, tabName, isRestricted, allowedRoles);
+      
+      res.json({
+        success: true,
+        message: `Permissions updated for ${tabName}`,
+        permission
+      });
+    } catch (error) {
+      console.error("Error updating tab permission:", error);
+      res.status(500).json({ message: "Failed to update tab permission" });
+    }
+  });
+
+  app.get('/api/tab-permissions/check/:tabName', requireAuth, async (req: any, res) => {
+    try {
+      const { tabName } = req.params;
+      const user = req.user;
+      
+      let hasAccess = true;
+      
+      // If user is team member, check permissions
+      if (user.role === 'team_member' && user.wholesalerId) {
+        const userRole = 'member'; // Team members are 'member' role by default
+        hasAccess = await storage.checkTabAccess(user.wholesalerId, tabName, userRole);
+      }
+      
+      res.json({ hasAccess });
+    } catch (error) {
+      console.error("Error checking tab access:", error);
+      res.status(500).json({ message: "Failed to check tab access" });
+    }
+  });
+
   return httpServer;
 }

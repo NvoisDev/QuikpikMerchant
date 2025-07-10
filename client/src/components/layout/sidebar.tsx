@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+// import { useSidebarPermissions, getTabNameFromPath } from "@/hooks/useSidebarPermissions";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/logo";
 import { 
@@ -28,16 +29,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard" },
-  { name: "Products", href: "/products", icon: Package, onboardingId: "products-list" },
-  { name: "Customer Groups", href: "/customer-groups", icon: Users, onboardingId: "customer-groups" },
-  { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders" },
-  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns" },
-  { name: "Team Management", href: "/team-management", icon: Crown },
-  { name: "Subscription", href: "/subscription", icon: CreditCard },
-  { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true },
-  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true },
-  { name: "Help Hub", href: "/help", icon: HelpCircle },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
+  { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
+  { name: "Customer Groups", href: "/customer-groups", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
+  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
+  { name: "Team Management", href: "/team-management", icon: Crown, tabName: "team-management" },
+  { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "settings" },
+  { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
+  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
+  { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
 export default function Sidebar() {
@@ -45,6 +46,7 @@ export default function Sidebar() {
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { currentTier } = useSubscription();
+  // const { checkTabAccess } = useSidebarPermissions();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -101,9 +103,10 @@ export default function Sidebar() {
             const IconComponent = item.icon;
             const isActive = location === item.href;
             const isPremiumFeature = item.premiumOnly;
-            const hasAccess = !isPremiumFeature || currentTier === 'premium';
+            const hasPremiumAccess = !isPremiumFeature || currentTier === 'premium';
             
-            if (isPremiumFeature && !hasAccess) {
+            // Show premium lock for premium features without access
+            if (isPremiumFeature && !hasPremiumAccess) {
               return (
                 <div key={item.name} className="px-6 py-3">
                   <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed">

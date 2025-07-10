@@ -138,6 +138,17 @@ export const teamMembers = pgTable("team_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Tab permissions table for controlling team member access
+export const tabPermissions = pgTable("tab_permissions", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tabName: varchar("tab_name").notNull(), // 'products', 'orders', 'customers', 'campaigns', 'analytics', 'settings', etc.
+  isRestricted: boolean("is_restricted").default(false), // Whether this tab is restricted for team members
+  allowedRoles: jsonb("allowed_roles").default(['owner', 'admin', 'member']), // Which team member roles can access
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
@@ -549,6 +560,12 @@ export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamMember = typeof teamMembers.$inferInsert;
+
+export type TabPermission = typeof tabPermissions.$inferSelect;
+export type InsertTabPermission = typeof tabPermissions.$inferInsert;
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,

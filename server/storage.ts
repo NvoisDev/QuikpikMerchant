@@ -45,6 +45,9 @@ import {
   teamMembers,
   type TeamMember,
   type InsertTeamMember,
+  tabPermissions,
+  type TabPermission,
+  type InsertTabPermission,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -173,6 +176,12 @@ export interface IStorage {
   updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
   deleteTeamMember(id: number): Promise<void>;
   getTeamMembersCount(wholesalerId: string): Promise<number>;
+  
+  // Tab permission operations
+  getTabPermissions(wholesalerId: string): Promise<TabPermission[]>;
+  updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles?: string[]): Promise<TabPermission>;
+  createDefaultTabPermissions(wholesalerId: string): Promise<void>;
+  checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean>;
 
   // Message Template operations
   getMessageTemplates(wholesalerId: string): Promise<(MessageTemplate & { 
@@ -1852,6 +1861,101 @@ export class DatabaseStorage implements IStorage {
       .from(teamMembers)
       .where(eq(teamMembers.wholesalerId, wholesalerId));
     return result[0].count;
+  }
+
+  // Tab permission operations
+  async getTabPermissions(wholesalerId: string): Promise<TabPermission[]> {
+    const permissions = await db
+      .select()
+      .from(tabPermissions)
+      .where(eq(tabPermissions.wholesalerId, wholesalerId));
+    
+    return permissions;
+  }
+
+  async updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles?: string[]): Promise<TabPermission> {
+    const existingPermission = await db
+      .select()
+      .from(tabPermissions)
+      .where(
+        and(
+          eq(tabPermissions.wholesalerId, wholesalerId),
+          eq(tabPermissions.tabName, tabName)
+        )
+      );
+
+    if (existingPermission.length > 0) {
+      const [updated] = await db
+        .update(tabPermissions)
+        .set({
+          isRestricted,
+          allowedRoles: allowedRoles || ['owner', 'admin', 'member'],
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(tabPermissions.wholesalerId, wholesalerId),
+            eq(tabPermissions.tabName, tabName)
+          )
+        )
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(tabPermissions)
+        .values({
+          wholesalerId,
+          tabName,
+          isRestricted,
+          allowedRoles: allowedRoles || ['owner', 'admin', 'member'],
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async createDefaultTabPermissions(wholesalerId: string): Promise<void> {
+    const defaultTabs = [
+      'dashboard',
+      'products', 
+      'orders',
+      'customers',
+      'campaigns',
+      'analytics',
+      'marketplace',
+      'team-management',
+      'settings'
+    ];
+
+    for (const tabName of defaultTabs) {
+      await this.updateTabPermission(wholesalerId, tabName, false, ['owner', 'admin', 'member']);
+    }
+  }
+
+  async checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean> {
+    const [permission] = await db
+      .select()
+      .from(tabPermissions)
+      .where(
+        and(
+          eq(tabPermissions.wholesalerId, wholesalerId),
+          eq(tabPermissions.tabName, tabName)
+        )
+      );
+
+    if (!permission) {
+      // If no permission is set, default to allowing access
+      return true;
+    }
+
+    if (!permission.isRestricted) {
+      // If not restricted, allow access
+      return true;
+    }
+
+    // Check if user role is in allowed roles
+    const allowedRoles = permission.allowedRoles as string[] || [];
+    return allowedRoles.includes(userRole);
   }
 }
 

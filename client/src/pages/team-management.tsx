@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import TabPermissionsManager from "@/components/TabPermissionsManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   UserPlus, 
   Users, 
@@ -27,7 +29,8 @@ import {
   CheckCircle,
   Clock,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
@@ -357,12 +360,25 @@ export default function TeamManagement() {
         </CardContent>
       </Card>
 
-      {/* Team Members List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Main Content with Tabs */}
+      <Tabs defaultValue="members" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="members" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Team Members
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Tab Permissions
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="members" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Members</CardTitle>
+            </CardHeader>
+            <CardContent>
           {teamMembers?.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -462,7 +478,23 @@ export default function TeamManagement() {
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Tab Access Control
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TabPermissionsManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Upgrade Modal */}
       <SubscriptionUpgradeModal 
