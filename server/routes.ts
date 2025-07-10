@@ -1606,11 +1606,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      // Check customer group limit
-      const groups = await storage.getCustomerGroupsByUser(userId);
+      const user = await storage.getUser(targetUserId);
+      
+      // Check customer group limit using parent company data
+      const groups = await storage.getCustomerGroupsByUser(targetUserId);
       const groupLimit = getCustomerGroupLimit(user?.subscriptionTier || 'free');
       
       if (groupLimit !== -1 && groups.length >= groupLimit) {
@@ -1625,7 +1629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const groupData = insertCustomerGroupSchema.parse({
         ...req.body,
-        wholesalerId: userId
+        wholesalerId: targetUserId
       });
       const group = await storage.createCustomerGroup(groupData);
       res.json(group);
@@ -1633,6 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating customer group:", error);
       console.error("Request body:", req.body);
       console.error("User ID:", req.user?.id);
+      console.error("Target User ID:", req.user.role === 'team_member' ? req.user.wholesalerId : req.user.id);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid group data", errors: error.errors });
       }
@@ -1642,7 +1647,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.id);
       const { name, description } = req.body;
 
@@ -1650,8 +1659,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name is required" });
       }
 
-      // Verify the user owns this customer group
-      const groups = await storage.getCustomerGroups(userId);
+      // Verify the user owns this customer group using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -1672,11 +1681,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete customer group
   app.delete('/api/customer-groups/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.id);
 
-      // Verify the user owns this customer group
-      const groups = await storage.getCustomerGroups(userId);
+      // Verify the user owns this customer group using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -1699,19 +1712,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WhatsApp group creation
   app.post('/api/customer-groups/:groupId/whatsapp-group', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.groupId);
       
-      // Get the customer group
-      const groups = await storage.getCustomerGroups(userId);
+      // Get the customer group using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Check if WhatsApp is configured
-      const user = await storage.getUser(userId);
+      // Check if WhatsApp is configured using parent company settings
+      const user = await storage.getUser(targetUserId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1762,7 +1779,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add member to customer group
   app.post('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.groupId);
       const { phoneNumber, name } = req.body;
       
@@ -1780,8 +1801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get the customer group to verify ownership
-      const groups = await storage.getCustomerGroups(userId);
+      // Get the customer group to verify ownership using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -1810,12 +1831,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send welcome message to new customers
       if (isNewCustomer) {
         try {
-          const wholesaler = await storage.getUser(userId);
+          const wholesaler = await storage.getUser(targetUserId);
           const businessName = wholesaler?.businessName || "Your Supplier";
           
           // Get the application domain for customer portal link
           const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-          const portalUrl = `https://${domain}/customer/${userId}`;
+          const portalUrl = `https://${domain}/customer/${targetUserId}`;
           
           const welcomeMessage = `🎉 Welcome to ${businessName}!\n\n` +
             `Hi ${name}! 👋\n\n` +
@@ -1839,7 +1860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Welcome message length: ${welcomeMessage.length}`);
           console.log(`Welcome message preview: ${welcomeMessage.substring(0, 200)}...`);
           
-          await whatsappService.sendMessage(formattedPhoneNumber, welcomeMessage, userId);
+          await whatsappService.sendMessage(formattedPhoneNumber, welcomeMessage, targetUserId);
           console.log(`Welcome message sent to new customer: ${formattedPhoneNumber}`);
         } catch (welcomeError) {
           console.error(`Failed to send welcome message to ${formattedPhoneNumber}:`, welcomeError);
@@ -1865,12 +1886,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get group members
   app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.groupId);
       const search = req.query.search as string;
 
-      // Verify group ownership
-      const groups = await storage.getCustomerGroups(userId);
+      // Verify group ownership using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -1894,12 +1919,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Remove member from customer group
   app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
 
-      // Verify group ownership
-      const groups = await storage.getCustomerGroups(userId);
+      // Verify group ownership using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -1922,7 +1951,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update customer phone number in group
   app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
       const { phoneNumber } = req.body;
@@ -1931,8 +1964,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Phone number is required" });
       }
 
-      // Verify group ownership
-      const groups = await storage.getCustomerGroups(userId);
+      // Verify group ownership using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
       const group = groups.find(g => g.id === groupId);
       
       if (!group) {
@@ -2126,9 +2159,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/recent-orders', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { limit } = req.query;
-      const recentOrders = await storage.getRecentOrders(userId, limit ? parseInt(limit as string) : 10);
+      const recentOrders = await storage.getRecentOrders(targetUserId, limit ? parseInt(limit as string) : 10);
       res.json(recentOrders);
     } catch (error) {
       console.error("Error fetching recent orders:", error);
@@ -2138,8 +2175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/broadcast-stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const broadcastStats = await storage.getBroadcastStats(userId);
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
+      const broadcastStats = await storage.getBroadcastStats(targetUserId);
       res.json(broadcastStats);
     } catch (error) {
       console.error("Error fetching broadcast stats:", error);
@@ -2150,11 +2191,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Advanced analytics routes
   app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { timeRange = '30d' } = req.query;
       
-      const stats = await storage.getWholesalerStats(userId);
-      const broadcastStats = await storage.getBroadcastStats(userId);
+      const stats = await storage.getWholesalerStats(targetUserId);
+      const broadcastStats = await storage.getBroadcastStats(targetUserId);
       
       // Calculate change percentages (simplified - would need historical data)
       const analyticsData = {
@@ -2205,7 +2250,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/revenue', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { timeRange = '30d' } = req.query;
       
       // Generate sample revenue trend data
@@ -2230,7 +2279,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
       const { timeRange = '30d' } = req.query;
       
       // Generate sample customer growth data
@@ -2256,8 +2309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/products', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const topProducts = await storage.getTopProducts(userId, 10);
+      // Use parent company ID for team members
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+        
+      const topProducts = await storage.getTopProducts(targetUserId, 10);
       
       // Format for chart display
       const productPerformance = topProducts.map(product => ({
