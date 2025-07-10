@@ -145,21 +145,28 @@ export default function Signup() {
   const onSubmit = async (data: SignupForm) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(data),
       });
 
-      if (response.success) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         toast({
           title: "Account created successfully!",
           description: "Welcome to Quikpik. You're now signed in.",
         });
         setLocation('/');
       } else {
+        // Show specific error message from server
+        const errorMessage = result.message || "Please try again.";
         toast({
           title: "Signup failed",
-          description: response.message || "Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
@@ -167,7 +174,7 @@ export default function Signup() {
       console.error('Signup error:', error);
       toast({
         title: "Signup failed",
-        description: "Please try again later.",
+        description: "Network error. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
