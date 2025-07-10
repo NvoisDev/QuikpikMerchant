@@ -1077,9 +1077,13 @@ export class DatabaseStorage implements IStorage {
       const allRelevantIds = [filters.wholesalerId, ...teamMemberIds.map(tm => tm.userId)];
       
       // Include products from parent company AND team members
-      whereConditions.push(
-        or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!
-      );
+      if (allRelevantIds.length === 1) {
+        whereConditions.push(eq(products.wholesalerId, filters.wholesalerId));
+      } else {
+        whereConditions.push(
+          or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!
+        );
+      }
     }
 
     if (filters.category) {
@@ -1196,7 +1200,9 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(
             and(
-              or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
+              allRelevantIds.length === 1 
+                ? eq(products.wholesalerId, wholesaler.id)
+                : or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
               eq(products.status, 'active')
             )
           )
@@ -1243,7 +1249,9 @@ export class DatabaseStorage implements IStorage {
       .from(products)
       .where(
         and(
-          or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
+          allRelevantIds.length === 1 
+            ? eq(products.wholesalerId, wholesaler.id)
+            : or(...allRelevantIds.map(id => eq(products.wholesalerId, id)))!,
           eq(products.status, 'active')
         )
       );
