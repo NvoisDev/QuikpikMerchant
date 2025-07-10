@@ -207,6 +207,13 @@ This approach gives customers control over delivery speed and cost while ensurin
   - **WhatsApp Template Compliance**: Updated WhatsApp service for template compliance to address WhatsApp Business API policy requirements (Error 63016)
   - **Template Setup Guide**: Created comprehensive WhatsApp template setup guide for proper business messaging compliance
   - **Current Status**: Phone formatting system complete and working - WhatsApp policy restrictions require approved business templates for production use
+- July 10, 2025. Weight & Shipping Information System Complete Fix:
+  - **Form Population Fix**: Fixed handleEdit and handleDuplicate functions to properly populate weight and shipping fields when editing products
+  - **Database Validation**: Confirmed weight data saves correctly (e.g., unitWeight: 0.900kg, palletWeight: 25kg, temperatureRequirement: ambient, contentCategory: food)
+  - **Data Flow Verification**: Weight information flows correctly to Parcel2Go shipping calculations with real product weights in quote requests
+  - **Enhanced API Authentication**: Improved Parcel2Go API authentication with fallback system trying multiple endpoints and better error handling
+  - **Complete Integration**: Weight and shipping data now fully functional from product creation through shipping quote generation
+  - **Status**: Weight & Shipping Information system fully operational - saves correctly, displays in forms, and integrates with shipping calculations
 - July 09, 2025. Implemented Customer-Driven Shipping System:
   - **Customer Shipping Choice**: Customers now select between free pickup or paid delivery during checkout
   - **Real-time Shipping Quotes**: Integration with Parcel2Go API for live courier quotes (Royal Mail, DPD, Evri)

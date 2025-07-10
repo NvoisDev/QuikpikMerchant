@@ -6306,6 +6306,15 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
           required: ["collectionAddress", "deliveryAddress", "parcels"] 
         });
       }
+
+      // Configure Parcel2Go service with credentials
+      if (process.env.PARCEL2GO_CLIENT_ID && process.env.PARCEL2GO_CLIENT_SECRET) {
+        parcel2goService.setCredentials({
+          clientId: process.env.PARCEL2GO_CLIENT_ID,
+          clientSecret: process.env.PARCEL2GO_CLIENT_SECRET,
+          environment: (process.env.PARCEL2GO_ENVIRONMENT as 'live' | 'sandbox') || 'sandbox'
+        });
+      }
       
       // Try to get real quotes first
       try {
@@ -6315,7 +6324,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
           parcels
         });
         
-        console.log("📦 Got real quotes:", quotes);
+        console.log("📦 Got real quotes:", quotes.length, "services");
         res.json({ quotes, demoMode: false });
       } catch (apiError) {
         console.log("📦 Parcel2Go API unavailable, falling back to demo quotes");

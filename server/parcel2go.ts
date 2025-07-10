@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Parcel2Go API Configuration
 const PARCEL2GO_BASE_URL = 'https://api.parcel2go.com';
-const PARCEL2GO_SANDBOX_URL = 'https://sandbox-api.parcel2go.com';
+const PARCEL2GO_SANDBOX_URL = 'https://api-sandbox.parcel2go.com';
 const PARCEL2GO_AUTH_PATH = '/auth/connect/token';
 
 export interface Parcel2GoCredentials {
@@ -163,33 +163,52 @@ class Parcel2GoService {
       return this.accessToken;
     }
 
-    try {
-      const authUrl = `${this.getBaseUrl()}${PARCEL2GO_AUTH_PATH}`;
-      const response = await axios.post(authUrl, 
-        new URLSearchParams({
-          grant_type: 'client_credentials',
-          scope: 'public-api payment my-profile',
-          client_id: this.credentials.clientId,
-          client_secret: this.credentials.clientSecret
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': '*/*'
+    // Try both sandbox and live URLs if one fails
+    const urls = [
+      this.getBaseUrl(),
+      this.credentials.environment === 'sandbox' ? PARCEL2GO_BASE_URL : PARCEL2GO_SANDBOX_URL
+    ];
+
+    for (const baseUrl of urls) {
+      try {
+        const authUrl = `${baseUrl}${PARCEL2GO_AUTH_PATH}`;
+        console.log(`🔐 Attempting Parcel2Go authentication with: ${authUrl}`);
+        
+        const response = await axios.post(authUrl, 
+          new URLSearchParams({
+            grant_type: 'client_credentials',
+            scope: 'public-api payment my-profile',
+            client_id: this.credentials.clientId,
+            client_secret: this.credentials.clientSecret
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': '*/*'
+            },
+            timeout: 10000 // 10 second timeout
           }
+        );
+
+        this.accessToken = response.data.access_token;
+        // Set expiry to 90% of the actual expiry time for safety
+        const expiresIn = response.data.expires_in * 0.9;
+        this.tokenExpiry = new Date(Date.now() + (expiresIn * 1000));
+        
+        console.log(`✅ Successfully authenticated with Parcel2Go using: ${baseUrl}`);
+        return this.accessToken;
+      } catch (error: any) {
+        console.error(`❌ Failed to authenticate with ${baseUrl}:`, error.response?.data || error.message);
+        if (baseUrl === urls[urls.length - 1]) {
+          // This was the last attempt
+          throw new Error('Failed to authenticate with Parcel2Go API - all endpoints tried');
         }
-      );
-
-      this.accessToken = response.data.access_token;
-      // Set expiry to 90% of the actual expiry time for safety
-      const expiresIn = response.data.expires_in * 0.9;
-      this.tokenExpiry = new Date(Date.now() + (expiresIn * 1000));
-
-      return this.accessToken;
-    } catch (error: any) {
-      console.error('Failed to get Parcel2Go access token:', error.response?.data || error.message);
-      throw new Error('Failed to authenticate with Parcel2Go API');
+        // Continue to next URL
+        continue;
+      }
     }
+    
+    throw new Error('Failed to authenticate with Parcel2Go API');
   }
 
   private async makeRequest(endpoint: string, data?: any, method: 'GET' | 'POST' = 'GET') {
