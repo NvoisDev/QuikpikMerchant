@@ -6428,8 +6428,11 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     } catch (error: any) {
       console.error("Error getting marketplace shipping quotes:", error.message);
       
+      // Get parcels from request body for demo quotes
+      const { parcels } = req.body;
+      
       // Calculate weight-based pricing for more realistic demo quotes
-      const totalWeight = parcels.reduce((sum, parcel) => sum + parcel.weight, 0);
+      const totalWeight = parcels ? parcels.reduce((sum, parcel) => sum + parcel.weight, 0) : 1;
       const basePrice = Math.max(3.95, totalWeight * 0.85); // Minimum £3.95, then £0.85 per kg
       
       const demoQuotes = [
