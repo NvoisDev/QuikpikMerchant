@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, User, Building, Mail, Phone, MapPin } from "lucide-react";
-import Logo from "@/components/ui/logo";
+// import Logo from "@/components/ui/logo";
 
 const signupSchema = z.object({
   // Personal Information (Required)
@@ -154,7 +154,11 @@ export default function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Logo size="large" className="mx-auto mb-4" />
+          <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-white font-bold text-xl">Q</span>
+            </div>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Join Quikpik</h1>
           <p className="text-gray-600 mt-2">Start your wholesale business journey</p>
         </div>
