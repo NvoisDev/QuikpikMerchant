@@ -264,7 +264,7 @@ export default function Orders() {
     const Icon = config.icon;
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
+      <Badge variant={config.variant} className="flex items-center gap-1 w-fit px-2 py-1">
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
@@ -959,30 +959,7 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {/* Order Actions */}
-                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-3">Order Actions</h3>
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={() => {
-                              updateOrderStatusMutation.mutate({
-                                orderId: selectedOrder.id,
-                                status: 'fulfilled'
-                              });
-                            }}
-                            disabled={updateOrderStatusMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark as Fulfilled'}
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+
                 </div>
               </DialogContent>
             </Dialog>
