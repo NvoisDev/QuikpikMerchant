@@ -176,6 +176,17 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 11, 2025)
 
+### Complete Customer Portal Product Display Fix (July 11, 2025):
+- **Product Disappearing Issue Resolved**: Fixed critical issue where products would disappear from customer portal after being initially loaded
+- **Auto-Refresh Disabled**: Removed 30-second auto-refresh functionality that was causing product list to clear during re-fetch operations
+- **Enhanced Caching Strategy**: Extended staleTime to 30 minutes and gcTime to 1 hour for stable product data retention
+- **Category Filtering Fix**: Added support for "All Categories" option to prevent category filter from blocking product display
+- **Weight Display Format**: Successfully implemented "10,000 kg" format instead of "10.0 tonnes" per user preference
+- **Syntax Error Resolution**: Fixed JavaScript syntax errors that were preventing application from running
+- **Debug Logging Implementation**: Added comprehensive console logging to track product fetching, filtering, and rendering processes
+- **API Performance**: Confirmed marketplace API returns 9 products successfully with proper weight calculations (1000 units × 10kg = 10,000kg)
+- **Status**: Customer portal now displays products consistently without disappearing - user confirmed "looks good"
+
 ### Complete Flexible Quantity Input System Implementation (July 11, 2025):
 - **Universal Free Quantity Entry**: Implemented flexible quantity input system allowing customers to type any number directly (e.g., 4000 units) without validation blocking during input
 - **Product Addition Modal**: Updated "Add to Cart" quantity editor to allow unrestricted typing with validation only on blur
