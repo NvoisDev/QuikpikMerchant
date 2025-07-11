@@ -1203,10 +1203,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               const { whatsappService } = await import('./whatsapp');
               await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
+              console.log(`📱 WhatsApp notification sent to wholesaler for Order #${order.id}`);
             } catch (error) {
               console.error('Failed to send WhatsApp notification:', error);
             }
           }
+
+          console.log(`✅ Order processing complete - Order #${order.id} ready for wholesaler review`);
 
           console.log(`Order created successfully for payment ${paymentIntent.id}`);
           console.log(`✅ Stripe invoice automatically sent to customer: ${customerEmail}`);

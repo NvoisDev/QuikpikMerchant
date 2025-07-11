@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,12 +151,16 @@ export default function Orders() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
         title: "Order Updated",
-        description: "Order status has been updated successfully.",
+        description: `Order #${variables.orderId} has been marked as fulfilled successfully.`,
       });
+      
+      // Force immediate refresh of orders data
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.refetchQueries({ queryKey: ["/api/orders"] });
+      
       setSelectedOrder(null); // Close the modal after successful update
     },
     onError: (error: Error) => {
@@ -180,8 +184,10 @@ export default function Orders() {
       return response.json();
     },
     enabled: !!user,
-    staleTime: 30000, // 30 seconds
+    staleTime: 10000, // 10 seconds
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Fetch user business address for shipping collection address
@@ -264,6 +270,32 @@ export default function Orders() {
       </Badge>
     );
   };
+
+  // Add notification when new orders arrive or fulfillment status changes
+  const previousOrderCount = useRef(orders.length);
+  const previousFulfilledCount = useRef(orders.filter((o: any) => o.status === 'fulfilled').length);
+  
+  useEffect(() => {
+    // Notify for new orders
+    if (orders.length > previousOrderCount.current && previousOrderCount.current > 0) {
+      toast({
+        title: "New Order Received!",
+        description: `You have ${orders.length - previousOrderCount.current} new order(s)`,
+      });
+    }
+    
+    // Notify for fulfilled orders
+    const currentFulfilledCount = orders.filter((o: any) => o.status === 'fulfilled').length;
+    if (currentFulfilledCount > previousFulfilledCount.current && previousFulfilledCount.current > 0) {
+      toast({
+        title: "Order Fulfilled",
+        description: `${currentFulfilledCount - previousFulfilledCount.current} order(s) marked as fulfilled`,
+      });
+    }
+    
+    previousOrderCount.current = orders.length;
+    previousFulfilledCount.current = currentFulfilledCount;
+  }, [orders.length, orders, toast]);
 
   if (isLoading) {
     return (
@@ -413,17 +445,19 @@ export default function Orders() {
                     variant={viewMode === "cards" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("cards")}
-                    className={viewMode === "cards" ? "bg-white shadow-sm" : ""}
+                    className={`${viewMode === "cards" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2`}
                   >
                     <Grid className="h-4 w-4" />
+                    <span>Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className={viewMode === "table" ? "bg-white shadow-sm" : ""}
+                    className={`${viewMode === "table" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2`}
                   >
-                    <List className="h-4 w-4 text-gray-700" />
+                    <List className="h-4 w-4" />
+                    <span>List</span>
                   </Button>
                 </div>
                 
