@@ -1720,10 +1720,9 @@ export default function CustomerPortal() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const minQty = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
-                      setEditQuantity(Math.max(minQty, editQuantity - 1));
+                      setEditQuantity(Math.max(1, editQuantity - 1));
                     }}
-                    disabled={editQuantity <= (selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq)}
+                    disabled={editQuantity <= 1}
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
@@ -1732,34 +1731,24 @@ export default function CustomerPortal() {
                     value={editQuantity}
                     onChange={(e) => {
                       const inputValue = e.target.value;
-                      // Allow empty input for typing
-                      if (inputValue === '') {
-                        setEditQuantity('');
-                        return;
-                      }
-                      
-                      const value = parseInt(inputValue);
-                      // Prevent zero or negative values, allow typing any positive number
-                      if (!isNaN(value) && value > 0) {
-                        setEditQuantity(value);
-                      }
+                      // Allow any input during typing - validation happens on blur
+                      setEditQuantity(inputValue === '' ? '' : inputValue);
                     }}
                     onBlur={(e) => {
                       const value = parseInt(e.target.value);
-                      const minQty = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
                       const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
                       
-                      // Ensure quantity is never zero or negative, always at least minQty
-                      if (isNaN(value) || value <= 0 || value < minQty) {
-                        setEditQuantity(minQty);
+                      // Only enforce that quantity is positive and not more than stock
+                      if (isNaN(value) || value <= 0) {
+                        setEditQuantity(1); // Default to 1 if invalid
                       } else if (value > maxQty) {
                         setEditQuantity(maxQty);
                       }
                     }}
                     className="w-24 text-center"
-                    min={selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq}
+                    min={1}
                     max={selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock}
-                    placeholder={`${selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq}-${selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock}`}
+                    placeholder={`1-${selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock}`}
                   />
                   <Button
                     variant="outline"
@@ -1777,30 +1766,30 @@ export default function CustomerPortal() {
               
               {/* Stock limit warning */}
               {selectedSellingType === "pallets" ? (
-                editQuantity >= (selectedProduct.palletStock || 0) && (
+                parseFloat(editQuantity) >= (selectedProduct.palletStock || 0) && (
                   <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
                     ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.palletStock || 0)} pallets)
                   </div>
                 )
               ) : (
-                editQuantity >= selectedProduct.stock && (
+                parseFloat(editQuantity) >= selectedProduct.stock && (
                   <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
                     ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.stock)} units)
                   </div>
                 )
               )}
               
-              {/* MOQ warning when below minimum */}
+              {/* MOQ information when below minimum - just informational, not blocking */}
               {selectedSellingType === "pallets" ? (
-                editQuantity > 0 && editQuantity < (selectedProduct.palletMoq || 1) && (
-                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
-                    ❌ Quantity must be at least {formatNumber(selectedProduct.palletMoq || 1)} pallets (minimum order quantity)
+                parseFloat(editQuantity) > 0 && parseFloat(editQuantity) < (selectedProduct.palletMoq || 1) && (
+                  <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                    ℹ️ Note: Typical minimum order is {formatNumber(selectedProduct.palletMoq || 1)} pallets, but you can order any quantity.
                   </div>
                 )
               ) : (
-                editQuantity > 0 && editQuantity < selectedProduct.moq && (
-                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
-                    ❌ Quantity must be at least {formatNumber(selectedProduct.moq)} units (minimum order quantity)
+                parseFloat(editQuantity) > 0 && parseFloat(editQuantity) < selectedProduct.moq && (
+                  <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                    ℹ️ Note: Typical minimum order is {formatNumber(selectedProduct.moq)} units, but you can order any quantity.
                   </div>
                 )
               )}
@@ -1825,7 +1814,8 @@ export default function CustomerPortal() {
                   const unitPrice = selectedSellingType === "pallets" 
                     ? parseFloat(selectedProduct.palletPrice || "0")
                     : parseFloat(selectedProduct.price);
-                  return (unitPrice * editQuantity).toFixed(2);
+                  const quantity = parseFloat(editQuantity) || 0;
+                  return (unitPrice * quantity).toFixed(2);
                 })()}
               </div>
               
@@ -1837,9 +1827,10 @@ export default function CustomerPortal() {
                   onClick={handleAddToCart} 
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={
-                    selectedSellingType === "pallets" 
-                      ? (editQuantity < (selectedProduct.palletMoq || 1) || editQuantity > (selectedProduct.palletStock || 0))
-                      : (editQuantity < selectedProduct.moq || editQuantity > selectedProduct.stock)
+                    editQuantity === '' || parseFloat(editQuantity) <= 0 ||
+                    (selectedSellingType === "pallets" 
+                      ? parseFloat(editQuantity) > (selectedProduct.palletStock || 0)
+                      : parseFloat(editQuantity) > selectedProduct.stock)
                   }
                 >
                   Add to Cart
