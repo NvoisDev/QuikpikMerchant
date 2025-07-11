@@ -176,7 +176,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)
 
-### Complete Shipping Integration Data Flow Fix (July 10, 2025):
+### Complete Shipping Integration Data Flow Fix (July 11, 2025):
 - **Critical Payment Intent Metadata Fix**: Resolved shipping information loss by adding `shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' })` to all payment intent creation endpoints
 - **Webhook Processing Enhancement**: Updated Stripe webhook to extract and process shipping information from payment intent metadata during order creation
 - **Database Schema Alignment**: Fixed field name mismatch between frontend (`shippingOption`) and database schema (`fulfillmentType`) for consistent data storage
@@ -185,6 +185,8 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Production Testing**: Real orders showing proper shipping information - Order 27 with "demo-dpd-next-day" carrier, £8.50 shipping total, "created" status
 - **Customer Payment Structure**: Customers pay product subtotal + shipping cost, wholesalers receive 95% of product value, platform retains 5% fee (not applied to shipping)
 - **UI Integration Complete**: Orders page displays shipping status, "Add Shipping" buttons for paid orders, shipping tracking information
+- **CRITICAL Weight Calculation Fix**: Resolved incorrect weight calculation using order value instead of actual product weights - 1000 units of 10kg Basmati Rice now correctly calculates as 10,000kg total weight instead of 19kg
+- **Accurate Shipping Quotes**: Weight-based shipping quotes now reflect true package weights for proper carrier pricing (£102 for 10,000kg vs £8.50 for incorrect 19kg calculation)
 - **Status: Fully Operational**: Customer-driven shipping system working correctly with proper weight-based pricing and payment handling
 
 ## Recent Bug Fixes and Feature Implementations (July 10, 2025)

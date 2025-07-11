@@ -428,7 +428,23 @@ export default function CustomerPortal() {
           countryIsoCode: 'GBR'
         },
         parcels: [{
-          weight: Math.max(2, Math.floor(cartStats.totalValue / 50)),
+          weight: Math.max(2, cart.reduce((totalWeight, item) => {
+            // Calculate weight based on actual product unit weights and quantities
+            const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
+            const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+            
+            let itemWeight = 0;
+            if (item.sellingType === "pallets" && palletWeight > 0) {
+              itemWeight = palletWeight * item.quantity;
+            } else if (unitWeight > 0) {
+              itemWeight = unitWeight * item.quantity;
+            } else {
+              // Fallback to value-based calculation only if no weight data available
+              itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
+            }
+            
+            return totalWeight + itemWeight;
+          }, 0)),
           length: 30,
           width: 20,
           height: 15,
