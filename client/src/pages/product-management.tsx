@@ -1814,7 +1814,11 @@ export default function ProductManagement() {
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-6">
                       <img 
-                        src={product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"} 
+                        src={
+                          (product.images && product.images.length > 0) 
+                            ? product.images[0] 
+                            : product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"
+                        } 
                         alt={product.name}
                         className="w-20 h-20 object-cover rounded-lg"
                       />
