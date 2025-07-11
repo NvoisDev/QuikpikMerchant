@@ -2052,11 +2052,7 @@ export default function CustomerPortal() {
                           return total + itemWeight;
                         }, 0);
                         
-                        if (totalWeight >= 1000) {
-                          return `${(totalWeight / 1000).toFixed(1)} tonnes`;
-                        } else {
-                          return `${totalWeight.toFixed(1)} kg`;
-                        }
+                        return `${totalWeight.toLocaleString()} kg`;
                       })()}
                     </span>
                   </div>
