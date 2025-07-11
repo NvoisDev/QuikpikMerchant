@@ -443,6 +443,8 @@ export default function CustomerPortal() {
               itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
             }
             
+            console.log(`📦 Item: ${item.product.name}, Quantity: ${item.quantity}, Unit Weight: ${unitWeight}kg, Item Weight: ${itemWeight}kg`);
+            console.log(`📦 Product data:`, item.product);
             return totalWeight + itemWeight;
           }, 0)),
           length: 30,
@@ -1924,6 +1926,26 @@ export default function CustomerPortal() {
                           <div className="text-xs text-gray-500 mt-1">
                             {item.sellingType === "pallets" ? "pallets" : "units"}
                           </div>
+                          {/* Stock validation warning */}
+                          {(() => {
+                            const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
+                            const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
+                            
+                            if (item.quantity > maxQty) {
+                              return (
+                                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 mt-1">
+                                  ❌ Exceeds stock ({maxQty} available)
+                                </div>
+                              );
+                            } else if (item.quantity < minQty) {
+                              return (
+                                <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                                  ⚠️ Below minimum ({minQty} required)
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         
                         <Button
