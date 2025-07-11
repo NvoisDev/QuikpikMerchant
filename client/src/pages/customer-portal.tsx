@@ -574,7 +574,10 @@ export default function CustomerPortal() {
     console.log('🔍 otherProducts calculation:', {
       featuredProduct: featuredProduct?.name || 'none',
       filteredProductsCount: filteredProducts.length,
-      featuredProductId
+      featuredProductId,
+      showAllProducts,
+      productsLoading,
+      products: products.length
     });
     if (!featuredProduct) return filteredProducts;
     return filteredProducts.filter(p => p.id !== featuredProduct.id);
@@ -1389,7 +1392,10 @@ export default function CustomerPortal() {
           console.log('🎯 Showing All Products View:', { 
             featuredProduct: !!featuredProduct, 
             showAllProducts, 
-            filteredProductsCount: filteredProducts.length 
+            filteredProductsCount: filteredProducts.length,
+            actualProducts: products.length,
+            productsLoading,
+            productsError: productsError?.message
           }) || 
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
