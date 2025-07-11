@@ -4491,6 +4491,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: "Product not found" });
       }
       
+      console.log('Product weight data debug:', {
+        productId: product.id,
+        name: product.name,
+        unitWeight: product.unitWeight,
+        unit_weight: product.unit_weight,
+        palletWeight: product.palletWeight,
+        pallet_weight: product.pallet_weight
+      });
+      
       // Get wholesaler details
       const wholesaler = await storage.getUser(product.wholesalerId);
       
