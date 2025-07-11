@@ -873,31 +873,51 @@ export default function Orders() {
                       {/* Manual Step */}
                       <div className="text-sm">
                         <div className="font-medium text-muted-foreground mb-2">Manual Step (Wholesaler Action Required):</div>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            selectedOrder.status === 'fulfilled' 
-                              ? 'bg-green-100' : 'bg-orange-100'
-                          }`}>
-                            {selectedOrder.status === 'fulfilled' ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Clock className="h-4 w-4 text-orange-600" />
-                            )}
-                          </div>
-                          <div>
-                            <div className={`font-medium ${
-                              selectedOrder.status === 'fulfilled'
-                                ? 'text-green-600' : 'text-orange-600'
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              selectedOrder.status === 'fulfilled' 
+                                ? 'bg-green-100' : 'bg-orange-100'
                             }`}>
-                              {selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Fulfilled (Manual)
+                              {selectedOrder.status === 'fulfilled' ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-orange-600" />
+                              )}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {selectedOrder.status === 'fulfilled' 
-                                ? 'Completed manually by wholesaler' 
-                                : 'Must be clicked manually by wholesaler'
-                              }
+                            <div>
+                              <div className={`font-medium ${
+                                selectedOrder.status === 'fulfilled'
+                                  ? 'text-green-600' : 'text-orange-600'
+                              }`}>
+                                {selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Fulfilled (Manual)
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {selectedOrder.status === 'fulfilled' 
+                                  ? 'Completed manually by wholesaler' 
+                                  : 'Must be clicked manually by wholesaler'
+                                }
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Mark as Fulfilled button in timeline */}
+                          {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                updateOrderStatusMutation.mutate({
+                                  orderId: selectedOrder.id,
+                                  status: 'fulfilled'
+                                });
+                              }}
+                              disabled={updateOrderStatusMutation.isPending}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark as Fulfilled'}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -192,6 +192,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Critical Performance Optimization**: Fixed slow 25+ second order loading by replacing N+1 database queries with optimized joins
 - **Database Query Optimization**: Reduced orders page load time from 25,000ms to under 1,000ms using single JOIN queries instead of multiple Promise.all loops
 - **Reduced Auto-Refresh Frequency**: Changed from 30-second to 60-second intervals to reduce server load while maintaining real-time updates
+- **Timeline UI Enhancement**: Moved "Mark as Fulfilled" button to the right side of manual step in order timeline for better user experience and accessibility
 
 ### Complete UI Consistency Fix - Product Image Display (July 11, 2025):
 - **Product Management Image Display Issue Resolved**: Fixed critical inconsistency where product images were showing in grid view but not in list view
