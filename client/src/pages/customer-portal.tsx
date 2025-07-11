@@ -430,8 +430,9 @@ export default function CustomerPortal() {
         parcels: [{
           weight: Math.max(2, cart.reduce((totalWeight, item) => {
             // Calculate weight based on actual product unit weights and quantities
-            const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
-            const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+            // Check both camelCase and snake_case field names for compatibility
+            const unitWeight = parseFloat(item.product.unitWeight || item.product.unit_weight || "0") || 0;
+            const palletWeight = parseFloat(item.product.palletWeight || item.product.pallet_weight || "0") || 0;
             
             let itemWeight = 0;
             if (item.sellingType === "pallets" && palletWeight > 0) {
@@ -444,7 +445,12 @@ export default function CustomerPortal() {
             }
             
             console.log(`📦 Item: ${item.product.name}, Quantity: ${item.quantity}, Unit Weight: ${unitWeight}kg, Item Weight: ${itemWeight}kg`);
-            console.log(`📦 Product data:`, item.product);
+            console.log(`📦 Product weight fields:`, { 
+              unitWeight: item.product.unitWeight, 
+              unit_weight: item.product.unit_weight,
+              palletWeight: item.product.palletWeight,
+              pallet_weight: item.product.pallet_weight
+            });
             return totalWeight + itemWeight;
           }, 0)),
           length: 30,
@@ -1728,13 +1734,13 @@ export default function CustomerPortal() {
                       const inputValue = e.target.value;
                       // Allow empty input for typing
                       if (inputValue === '') {
-                        setEditQuantity(0);
+                        setEditQuantity('');
                         return;
                       }
                       
                       const value = parseInt(inputValue);
-                      // Allow typing any number, validation happens on blur
-                      if (!isNaN(value)) {
+                      // Prevent zero or negative values, allow typing any positive number
+                      if (!isNaN(value) && value > 0) {
                         setEditQuantity(value);
                       }
                     }}
@@ -1743,7 +1749,8 @@ export default function CustomerPortal() {
                       const minQty = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
                       const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
                       
-                      if (isNaN(value) || value < minQty) {
+                      // Ensure quantity is never zero or negative, always at least minQty
+                      if (isNaN(value) || value <= 0 || value < minQty) {
                         setEditQuantity(minQty);
                       } else if (value > maxQty) {
                         setEditQuantity(maxQty);
@@ -2017,8 +2024,8 @@ export default function CustomerPortal() {
                     <span className="font-medium">
                       {(() => {
                         const totalWeight = cart.reduce((total, item) => {
-                          const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
-                          const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+                          const unitWeight = parseFloat(item.product.unitWeight || item.product.unit_weight || "0") || 0;
+                          const palletWeight = parseFloat(item.product.palletWeight || item.product.pallet_weight || "0") || 0;
                           
                           let itemWeight = 0;
                           if (item.sellingType === "pallets" && palletWeight > 0) {
@@ -2044,8 +2051,8 @@ export default function CustomerPortal() {
                   {/* Weight Warning for Heavy Orders */}
                   {(() => {
                     const totalWeight = cart.reduce((total, item) => {
-                      const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
-                      const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+                      const unitWeight = parseFloat(item.product.unitWeight || item.product.unit_weight || "0") || 0;
+                      const palletWeight = parseFloat(item.product.palletWeight || item.product.pallet_weight || "0") || 0;
                       
                       let itemWeight = 0;
                       if (item.sellingType === "pallets" && palletWeight > 0) {
