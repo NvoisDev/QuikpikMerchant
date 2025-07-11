@@ -2037,9 +2037,9 @@ export default function CustomerPortal() {
                             itemWeight = unitWeight * item.quantity;
                             console.log(`Using unit weight: ${unitWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else {
-                            // Fallback to value-based calculation only if no weight data available
-                            itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
-                            console.log(`FALLBACK: Using price-based calculation: ${item.product.price} x ${item.quantity} / 50 = ${itemWeight} kg`);
+                            // Fallback: If no weight data, use 1kg per unit as a reasonable default
+                            itemWeight = 1 * item.quantity;
+                            console.log(`FALLBACK: No weight data found, using 1kg per unit: 1 kg x ${item.quantity} = ${itemWeight} kg`);
                           }
                           
                           console.log('Final itemWeight:', itemWeight);

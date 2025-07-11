@@ -4500,6 +4500,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         pallet_weight: product.pallet_weight
       });
       
+      if (product.id === 23) {
+        console.log('BASMATI RICE DEBUG - Product data being returned:', JSON.stringify(product, null, 2));
+      }
+      
       // Get wholesaler details
       const wholesaler = await storage.getUser(product.wholesalerId);
       
