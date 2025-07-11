@@ -2025,17 +2025,21 @@ export default function CustomerPortal() {
                             rawUnitWeight: item.product.unitWeight,
                             rawUnit_weight: item.product.unit_weight,
                             rawPalletWeight: item.product.palletWeight,
-                            rawPallet_weight: item.product.pallet_weight
+                            rawPallet_weight: item.product.pallet_weight,
+                            price: item.product.price
                           });
                           
                           let itemWeight = 0;
                           if (item.sellingType === "pallets" && palletWeight > 0) {
                             itemWeight = palletWeight * item.quantity;
+                            console.log(`Using pallet weight: ${palletWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else if (unitWeight > 0) {
                             itemWeight = unitWeight * item.quantity;
+                            console.log(`Using unit weight: ${unitWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else {
                             // Fallback to value-based calculation only if no weight data available
                             itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
+                            console.log(`FALLBACK: Using price-based calculation: ${item.product.price} x ${item.quantity} / 50 = ${itemWeight} kg`);
                           }
                           
                           console.log('Final itemWeight:', itemWeight);
