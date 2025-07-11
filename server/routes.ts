@@ -7118,9 +7118,9 @@ The Quikpik Team
 
   // POST endpoint for shipping quotes (used by order shipping modal)
   app.post('/api/shipping/quotes', requireAuth, async (req: any, res) => {
+    const { collectionAddress, deliveryAddress, parcels } = req.body;
+    
     try {
-      const { collectionAddress, deliveryAddress, parcels } = req.body;
-      
       console.log("📦 POST: Getting shipping quotes:", { collectionAddress, deliveryAddress, parcels });
       
       // Check if we have valid addresses
