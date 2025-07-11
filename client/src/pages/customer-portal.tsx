@@ -558,7 +558,14 @@ export default function CustomerPortal() {
 
   // Memoized calculations
   const filteredProducts = useMemo(() => {
-    return products.filter((product: Product) => {
+    console.log('🔍 filteredProducts calculation:', {
+      totalProducts: products.length,
+      searchTerm,
+      selectedCategory,
+      productsStatus: products.map(p => ({ id: p.id, name: p.name, status: p.status }))
+    });
+    
+    const filtered = products.filter((product: Product) => {
       const matchesSearch = !searchTerm || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -566,8 +573,15 @@ export default function CustomerPortal() {
       const matchesCategory = selectedCategory === "all" || 
         product.category === selectedCategory;
       
-      return matchesSearch && matchesCategory && product.status === 'active';
+      const isActive = product.status === 'active';
+      
+      console.log(`Product ${product.name}: search=${matchesSearch}, category=${matchesCategory}, active=${isActive}`);
+      
+      return matchesSearch && matchesCategory && isActive;
     });
+    
+    console.log('🔍 Filtered products result:', filtered.length);
+    return filtered;
   }, [products, searchTerm, selectedCategory]);
 
   const otherProducts = useMemo(() => {
