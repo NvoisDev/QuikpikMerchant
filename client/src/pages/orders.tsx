@@ -132,6 +132,29 @@ export default function Orders() {
   const [activeTab, setActiveTab] = useState("orders");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
+  // Update order status mutation
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order Updated",
+        description: "Order status has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setSelectedOrder(null); // Close the modal after successful update
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update Failed", 
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Fetch orders based on user role
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["/api/orders", user?.role],
@@ -445,6 +468,7 @@ export default function Orders() {
                             <th className="text-left p-4 font-medium text-gray-900">Items</th>
                             <th className="text-left p-4 font-medium text-gray-900">Delivery Method</th>
                             <th className="text-left p-4 font-medium text-gray-900">Tags</th>
+                            <th className="text-left p-4 font-medium text-gray-900">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -531,6 +555,41 @@ export default function Orders() {
                                 <div className="flex items-center gap-1">
                                   {order.retailer?.businessName && (
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">Business</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedOrder(order);
+                                    }}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    View
+                                  </Button>
+                                  {/* Quick fulfill button - only show for paid orders */}
+                                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && order.status === 'paid' && (
+                                    <Button 
+                                      variant="default" 
+                                      size="sm" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateOrderStatusMutation.mutate({
+                                          orderId: order.id,
+                                          status: 'fulfilled'
+                                        });
+                                      }}
+                                      disabled={updateOrderStatusMutation.isPending}
+                                      className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Fulfill
+                                    </Button>
                                   )}
                                 </div>
                               </td>
@@ -641,11 +700,30 @@ export default function Orders() {
                         </div>
                       </div>
                       
-                      <div className="ml-4">
+                      <div className="ml-4 flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </Button>
+                        {/* Quick fulfill button - only show for paid orders */}
+                        {(user?.role === 'wholesaler' || user?.role === 'team_member') && order.status === 'paid' && (
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateOrderStatusMutation.mutate({
+                                orderId: order.id,
+                                status: 'fulfilled'
+                              });
+                            }}
+                            disabled={updateOrderStatusMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark Fulfilled'}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -719,6 +797,31 @@ export default function Orders() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Order Actions */}
+                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="font-semibold mb-3">Order Actions</h3>
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              updateOrderStatusMutation.mutate({
+                                orderId: selectedOrder.id,
+                                status: 'fulfilled'
+                              });
+                            }}
+                            disabled={updateOrderStatusMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark as Fulfilled'}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
