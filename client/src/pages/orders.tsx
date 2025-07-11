@@ -169,7 +169,7 @@ export default function Orders() {
   });
 
   // Fetch orders based on user role
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ["/api/orders", user?.role],
     queryFn: async () => {
       const roleParam = user?.role === 'retailer' ? 'customer' : 'wholesaler';
@@ -180,6 +180,8 @@ export default function Orders() {
       return response.json();
     },
     enabled: !!user,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   // Fetch user business address for shipping collection address
