@@ -135,7 +135,20 @@ export default function Orders() {
   // Update order status mutation
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { status });
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ status }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to update order" }));
+        throw new Error(errorData.message || `Failed to update order: ${response.status}`);
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -758,6 +771,98 @@ export default function Orders() {
                         <div><strong>Status:</strong> {getStatusBadge(selectedOrder.status)}</div>
                         <div><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
                         <div><strong>Items:</strong> {selectedOrder.items.length}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
+                  {/* Order Timeline */}
+                  <div>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Order Timeline
+                    </h3>
+                    <div className="space-y-4">
+                      {/* Automatic Steps */}
+                      <div className="text-sm">
+                        <div className="font-medium text-muted-foreground mb-2">Automatic Steps:</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-green-600">✅ Order Placed (Automatic)</div>
+                              <div className="text-xs text-muted-foreground">When customer places order</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-green-600">✅ Confirmed (Automatic)</div>
+                              <div className="text-xs text-muted-foreground">When order is validated</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
+                                ? 'bg-green-100' : 'bg-gray-100'
+                            }`}>
+                              <CheckCircle className={`h-4 w-4 ${
+                                selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                  ? 'text-green-600' : 'text-gray-400'
+                              }`} />
+                            </div>
+                            <div>
+                              <div className={`font-medium ${
+                                selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                  ? 'text-green-600' : 'text-gray-400'
+                              }`}>
+                                {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Payment Received (Automatic)
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
+                                  ? 'Payment successfully processed by Stripe' 
+                                  : 'When Stripe payment succeeds'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Manual Step */}
+                      <div className="text-sm">
+                        <div className="font-medium text-muted-foreground mb-2">Manual Step (Wholesaler Action Required):</div>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            selectedOrder.status === 'fulfilled' 
+                              ? 'bg-green-100' : 'bg-orange-100'
+                          }`}>
+                            {selectedOrder.status === 'fulfilled' ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-orange-600" />
+                            )}
+                          </div>
+                          <div>
+                            <div className={`font-medium ${
+                              selectedOrder.status === 'fulfilled'
+                                ? 'text-green-600' : 'text-orange-600'
+                            }`}>
+                              {selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Fulfilled (Manual)
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {selectedOrder.status === 'fulfilled' 
+                                ? 'Completed manually by wholesaler' 
+                                : 'Must be clicked manually by wholesaler'
+                              }
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
