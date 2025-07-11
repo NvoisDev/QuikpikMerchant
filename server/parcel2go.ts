@@ -333,10 +333,20 @@ class Parcel2GoService {
         return false; // Service doesn't support temperature control
       }
 
-      // Check weight limits
+      // Check weight limits based on Parcel2Go service tiers
       const maxParcelWeight = Math.max(...parcels.map(p => p.weight));
+      const totalWeight = parcels.reduce((sum, p) => sum + p.weight, 0);
+      
+      // Parcel2Go weight limits: 20kg (small), 70kg (standard/heavy), 1000kg+ (pallet)
       if (service.maxWeight && maxParcelWeight > service.maxWeight) {
-        return false; // Parcel exceeds weight limit
+        return false; // Individual parcel exceeds weight limit
+      }
+      
+      // Filter out standard services for orders requiring pallet delivery
+      if (totalWeight > 70 && service.serviceName && 
+          !service.serviceName.toLowerCase().includes('pallet') && 
+          !service.serviceName.toLowerCase().includes('freight')) {
+        return false; // Order too heavy for standard parcel services
       }
 
       // Check special handling requirements

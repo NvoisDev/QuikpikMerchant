@@ -1978,6 +1978,66 @@ export default function CustomerPortal() {
                     <span>Subtotal:</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.subtotal.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Weight Information */}
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Total Weight:</span>
+                    <span className="font-medium">
+                      {(() => {
+                        const totalWeight = cart.reduce((total, item) => {
+                          const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
+                          const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+                          
+                          let itemWeight = 0;
+                          if (item.sellingType === "pallets" && palletWeight > 0) {
+                            itemWeight = palletWeight * item.quantity;
+                          } else if (unitWeight > 0) {
+                            itemWeight = unitWeight * item.quantity;
+                          } else {
+                            // Fallback to value-based calculation only if no weight data available
+                            itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
+                          }
+                          return total + itemWeight;
+                        }, 0);
+                        
+                        if (totalWeight >= 1000) {
+                          return `${(totalWeight / 1000).toFixed(1)} tonnes`;
+                        } else {
+                          return `${totalWeight.toFixed(1)} kg`;
+                        }
+                      })()}
+                    </span>
+                  </div>
+                  
+                  {/* Weight Warning for Heavy Orders */}
+                  {(() => {
+                    const totalWeight = cart.reduce((total, item) => {
+                      const unitWeight = parseFloat(item.product.unitWeight || "0") || 0;
+                      const palletWeight = parseFloat(item.product.palletWeight || "0") || 0;
+                      
+                      let itemWeight = 0;
+                      if (item.sellingType === "pallets" && palletWeight > 0) {
+                        itemWeight = palletWeight * item.quantity;
+                      } else if (unitWeight > 0) {
+                        itemWeight = unitWeight * item.quantity;
+                      } else {
+                        itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
+                      }
+                      return total + itemWeight;
+                    }, 0);
+                    
+                    if (totalWeight > 70) {
+                      return (
+                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                          ⚠️ {totalWeight > 1000 
+                            ? "Orders over 1 tonne require pallet delivery service" 
+                            : "Heavy order - specialized shipping required"}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  
                   {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
                     <div className="flex justify-between">
                       <span>Shipping ({customerData.selectedShippingService.serviceName}):</span>

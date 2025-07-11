@@ -7239,54 +7239,151 @@ The Quikpik Team
       // Get parcels from request body for demo quotes
       const { parcels } = req.body;
       
-      // Calculate weight-based pricing for more realistic demo quotes
+      // Calculate weight-based pricing aligned with Parcel2Go limits
       const totalWeight = parcels ? parcels.reduce((sum, parcel) => sum + parcel.weight, 0) : 1;
-      const basePrice = Math.max(3.95, totalWeight * 0.85); // Minimum £3.95, then £0.85 per kg
+      const maxParcelWeight = parcels ? Math.max(...parcels.map(p => p.weight)) : 1;
       
-      const demoQuotes = [
-        {
-          serviceId: 'demo-royal-mail-48',
-          serviceName: 'Royal Mail 48',
-          carrierName: 'Royal Mail',
-          price: parseFloat((basePrice * 1.2).toFixed(2)),
-          priceExVat: parseFloat((basePrice).toFixed(2)),
-          vat: parseFloat((basePrice * 0.2).toFixed(2)),
+      let demoQuotes = [];
+      
+      // Standard parcel services (up to 70kg total weight)
+      if (totalWeight <= 70 && maxParcelWeight <= 30) {
+        const basePrice = Math.max(3.95, totalWeight * 0.85); // Minimum £3.95, then £0.85 per kg
+        
+        // Royal Mail (up to 20kg)
+        if (maxParcelWeight <= 20) {
+          demoQuotes.push({
+            serviceId: 'demo-royal-mail-48',
+            serviceName: 'Royal Mail 48',
+            carrierName: 'Royal Mail',
+            price: parseFloat((basePrice * 1.2).toFixed(2)),
+            priceExVat: parseFloat((basePrice).toFixed(2)),
+            vat: parseFloat((basePrice * 0.2).toFixed(2)),
+            transitTime: '2-3 business days',
+            collectionType: 'pickup',
+            deliveryType: 'standard',
+            trackingAvailable: true,
+            insuranceIncluded: false,
+            description: `Standard delivery for ${totalWeight}kg package (max 20kg per parcel)`,
+            maxWeight: 20
+          });
+        }
+        
+        // DPD and Parcelforce (up to 30kg)
+        if (maxParcelWeight <= 30) {
+          demoQuotes.push({
+            serviceId: 'demo-dpd-next-day',
+            serviceName: 'DPD Next Day',
+            carrierName: 'DPD',
+            price: parseFloat((basePrice * 1.8).toFixed(2)),
+            priceExVat: parseFloat((basePrice * 1.5).toFixed(2)),
+            vat: parseFloat((basePrice * 0.3).toFixed(2)),
+            transitTime: '1 business day',
+            collectionType: 'pickup',
+            deliveryType: 'express',
+            trackingAvailable: true,
+            insuranceIncluded: true,
+            description: `Next day delivery for ${totalWeight}kg package (max 30kg per parcel)`,
+            maxWeight: 30
+          });
+          
+          demoQuotes.push({
+            serviceId: 'demo-parcelforce-express',
+            serviceName: 'Parcelforce Express 24',
+            carrierName: 'Parcelforce',
+            price: parseFloat((basePrice * 1.6).toFixed(2)),
+            priceExVat: parseFloat((basePrice * 1.33).toFixed(2)),
+            vat: parseFloat((basePrice * 0.27).toFixed(2)),
+            transitTime: '1 business day',
+            collectionType: 'pickup',
+            deliveryType: 'express',
+            trackingAvailable: true,
+            insuranceIncluded: true,
+            description: `Express delivery for ${totalWeight}kg heavy package`,
+            maxWeight: 30
+          });
+        }
+      }
+      
+      // Heavy parcel services (70kg - 1000kg)
+      if (totalWeight > 70 && totalWeight <= 1000) {
+        const heavyPrice = Math.max(25.00, totalWeight * 1.2); // Higher base price for heavy parcels
+        
+        demoQuotes.push({
+          serviceId: 'demo-heavy-parcel-service',
+          serviceName: 'Heavy Parcel Service',
+          carrierName: 'Specialist Courier',
+          price: parseFloat(heavyPrice.toFixed(2)),
+          priceExVat: parseFloat((heavyPrice * 0.83).toFixed(2)),
+          vat: parseFloat((heavyPrice * 0.17).toFixed(2)),
           transitTime: '2-3 business days',
           collectionType: 'pickup',
-          deliveryType: 'standard',
-          trackingAvailable: true,
-          insuranceIncluded: false,
-          description: `Standard delivery for ${totalWeight}kg package with tracking`
-        },
-        {
-          serviceId: 'demo-dpd-next-day',
-          serviceName: 'DPD Next Day',
-          carrierName: 'DPD',
-          price: parseFloat((basePrice * 1.8).toFixed(2)),
-          priceExVat: parseFloat((basePrice * 1.5).toFixed(2)),
-          vat: parseFloat((basePrice * 0.3).toFixed(2)),
-          transitTime: '1 business day',
-          collectionType: 'pickup',
-          deliveryType: 'express',
+          deliveryType: 'heavy-parcel',
           trackingAvailable: true,
           insuranceIncluded: true,
-          description: `Next day delivery for ${totalWeight}kg package with SMS notifications`
-        },
-        {
-          serviceId: 'demo-evri-standard',
-          serviceName: 'Evri Standard',
-          carrierName: 'Evri',
-          price: parseFloat((basePrice * 0.9).toFixed(2)),
-          priceExVat: parseFloat((basePrice * 0.75).toFixed(2)),
-          vat: parseFloat((basePrice * 0.15).toFixed(2)),
+          description: `Specialized heavy parcel delivery for ${totalWeight}kg package`,
+          maxWeight: 1000,
+          restrictions: ['Requires specialized handling', 'Heavy lifting equipment needed']
+        });
+      }
+      
+      // Pallet services (over 1000kg)
+      if (totalWeight > 1000) {
+        const palletPrice = Math.max(85.00, totalWeight * 0.08); // Bulk pricing for pallet services
+        
+        demoQuotes.push({
+          serviceId: 'demo-pallet-freight',
+          serviceName: 'Pallet Freight Service',
+          carrierName: 'Freight Logistics',
+          price: parseFloat(palletPrice.toFixed(2)),
+          priceExVat: parseFloat((palletPrice * 0.83).toFixed(2)),
+          vat: parseFloat((palletPrice * 0.17).toFixed(2)),
           transitTime: '3-5 business days',
           collectionType: 'pickup',
-          deliveryType: 'standard',
+          deliveryType: 'pallet-freight',
           trackingAvailable: true,
-          insuranceIncluded: false,
-          description: `Cost-effective delivery for ${totalWeight}kg package`
-        }
-      ];
+          insuranceIncluded: true,
+          description: `Pallet freight delivery for ${(totalWeight/1000).toFixed(1)} tonne consignment`,
+          maxWeight: 10000,
+          restrictions: ['Requires forklift access', 'Minimum 1 tonne', 'Pallet dimensions required']
+        });
+        
+        demoQuotes.push({
+          serviceId: 'demo-express-pallet',
+          serviceName: 'Express Pallet Service',
+          carrierName: 'Express Freight',
+          price: parseFloat((palletPrice * 1.4).toFixed(2)),
+          priceExVat: parseFloat((palletPrice * 1.17).toFixed(2)),
+          vat: parseFloat((palletPrice * 0.23).toFixed(2)),
+          transitTime: '1-2 business days',
+          collectionType: 'pickup',
+          deliveryType: 'express-pallet',
+          trackingAvailable: true,
+          insuranceIncluded: true,
+          description: `Express pallet delivery for ${(totalWeight/1000).toFixed(1)} tonne consignment`,
+          maxWeight: 10000,
+          restrictions: ['Requires forklift access', 'Priority scheduling', 'Pallet dimensions required']
+        });
+      }
+      
+      // If no services available due to weight restrictions
+      if (demoQuotes.length === 0) {
+        demoQuotes.push({
+          serviceId: 'demo-quote-required',
+          serviceName: 'Custom Quote Required',
+          carrierName: 'Freight Specialist',
+          price: 0,
+          priceExVat: 0,
+          vat: 0,
+          transitTime: 'Contact for quote',
+          collectionType: 'pickup',
+          deliveryType: 'custom',
+          trackingAvailable: true,
+          insuranceIncluded: true,
+          description: `Order exceeds standard limits (${totalWeight}kg) - custom freight quote required`,
+          maxWeight: 999999,
+          restrictions: ['Requires custom freight arrangement', 'Contact customer service']
+        });
+      }
       
       console.log(`📦 Returning weight-based marketplace demo quotes for ${totalWeight}kg package`);
       res.json({ quotes: demoQuotes, demoMode: true });
