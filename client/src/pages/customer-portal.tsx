@@ -565,9 +565,14 @@ export default function CustomerPortal() {
   }, [products, searchTerm, selectedCategory]);
 
   const otherProducts = useMemo(() => {
+    console.log('🔍 otherProducts calculation:', {
+      featuredProduct: featuredProduct?.name || 'none',
+      filteredProductsCount: filteredProducts.length,
+      featuredProductId
+    });
     if (!featuredProduct) return filteredProducts;
     return filteredProducts.filter(p => p.id !== featuredProduct.id);
-  }, [filteredProducts, featuredProduct]);
+  }, [filteredProducts, featuredProduct, featuredProductId]);
 
   const categories = useMemo(() => {
     const cats = new Set(products.map((p: Product) => p.category).filter(Boolean));
@@ -1375,6 +1380,11 @@ export default function CustomerPortal() {
 
         {/* All Products View - Shown when no featured product OR when "View All" is clicked */}
         {(!featuredProduct || showAllProducts) && (
+          console.log('🎯 Showing All Products View:', { 
+            featuredProduct: !!featuredProduct, 
+            showAllProducts, 
+            filteredProductsCount: filteredProducts.length 
+          }) || 
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
