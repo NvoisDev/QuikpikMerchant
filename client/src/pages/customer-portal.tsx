@@ -361,7 +361,7 @@ export default function CustomerPortal() {
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAllProducts, setShowAllProducts] = useState(false);
   
@@ -520,13 +520,18 @@ export default function CustomerPortal() {
   const { data: featuredProduct, isLoading: featuredLoading, refetch: refetchFeaturedProduct } = useQuery({
     queryKey: ['featured-product', featuredProductId],
     queryFn: async () => {
+      console.log(`🌟 Fetching featured product: ${featuredProductId}`);
       const response = await fetch(`/api/marketplace/products/${featuredProductId}`);
       if (!response.ok) throw new Error("Failed to fetch featured product");
-      return response.json();
+      const data = await response.json();
+      console.log(`✅ Featured product received:`, { id: data.id, name: data.name, status: data.status });
+      return data;
     },
     enabled: !!featuredProductId,
-    refetchInterval: enableAutoRefresh ? 30000 : false,
-    refetchIntervalInBackground: true
+    refetchInterval: false, // Disable auto-refresh
+    refetchIntervalInBackground: false,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000
   });
 
   // Fetch all products for the wholesaler with auto-refresh
@@ -570,7 +575,7 @@ export default function CustomerPortal() {
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCategory = selectedCategory === "all" || 
+      const matchesCategory = selectedCategory === "all" || selectedCategory === "All Categories" || 
         product.category === selectedCategory;
       
       const isActive = product.status === 'active';
@@ -1439,7 +1444,13 @@ export default function CustomerPortal() {
                 ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" 
                 : "space-y-4"
               }`}>
-                {filteredProducts.length === 0 ? (
+                {(() => {
+                  console.log('🛒 Product List Render:', {
+                    filteredCount: filteredProducts.length,
+                    showingProducts: filteredProducts.map(p => ({ id: p.id, name: p.name, status: p.status }))
+                  });
+                  return filteredProducts.length === 0;
+                })() ? (
                   <div className="col-span-full text-center py-12">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
