@@ -1883,8 +1883,7 @@ export default function CustomerPortal() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
-                            const newQuantity = Math.max(minQty, item.quantity - 1);
+                            const newQuantity = Math.max(1, item.quantity - 1);
                             if (newQuantity !== item.quantity) {
                               setCart(cart.map(cartItem => 
                                 cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
@@ -1893,7 +1892,7 @@ export default function CustomerPortal() {
                               ));
                             }
                           }}
-                          disabled={item.quantity <= (item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq)}
+                          disabled={item.quantity <= 1}
                           className="w-8 h-8 p-0"
                         >
                           <Minus className="w-3 h-3" />
@@ -1904,37 +1903,36 @@ export default function CustomerPortal() {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => {
-                              const newQuantity = parseInt(e.target.value) || 0;
-                              const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
-                              const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
-                              
-                              if (newQuantity >= minQty && newQuantity <= maxQty) {
-                                setCart(cart.map(cartItem => 
-                                  cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
-                                    ? { ...cartItem, quantity: newQuantity }
-                                    : cartItem
-                                ));
-                              }
+                              const inputValue = e.target.value;
+                              // Allow any input during typing - validation happens on blur
+                              const newQuantity = inputValue === '' ? 1 : (parseInt(inputValue) || item.quantity);
+                              setCart(cart.map(cartItem => 
+                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
+                                  ? { ...cartItem, quantity: newQuantity }
+                                  : cartItem
+                              ));
                             }}
                             onBlur={(e) => {
-                              const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
                               const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
-                              const newQuantity = parseInt(e.target.value) || minQty;
-                              const validQuantity = Math.min(Math.max(newQuantity, minQty), maxQty);
+                              const newQuantity = parseInt(e.target.value) || 1;
+                              
+                              // Only enforce stock limit, not MOQ in checkout
+                              const validQuantity = newQuantity > maxQty ? maxQty : (newQuantity < 1 ? 1 : newQuantity);
                               setCart(cart.map(cartItem => 
                                 cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                   ? { ...cartItem, quantity: validQuantity }
                                   : cartItem
                               ));
                             }}
-                            min={item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq}
+                            min={1}
                             max={item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock}
+                            placeholder={`1-${item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock}`}
                             className="h-8 text-center text-sm"
                           />
                           <div className="text-xs text-gray-500 mt-1">
                             {item.sellingType === "pallets" ? "pallets" : "units"}
                           </div>
-                          {/* Stock validation warning */}
+                          {/* Stock validation warning - only show for stock exceeded */}
                           {(() => {
                             const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
                             const minQty = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
@@ -1947,8 +1945,8 @@ export default function CustomerPortal() {
                               );
                             } else if (item.quantity < minQty) {
                               return (
-                                <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
-                                  ⚠️ Below minimum ({minQty} required)
+                                <div className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1 mt-1">
+                                  ℹ️ Below typical minimum ({minQty})
                                 </div>
                               );
                             }

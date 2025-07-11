@@ -174,7 +174,19 @@ The platform implements a customer-centric shipping model where customers contro
 
 This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
 
-## Recent Bug Fixes and Feature Implementations (July 10, 2025)
+## Recent Bug Fixes and Feature Implementations (July 11, 2025)
+
+### Complete Flexible Quantity Input System Implementation (July 11, 2025):
+- **Universal Free Quantity Entry**: Implemented flexible quantity input system allowing customers to type any number directly (e.g., 4000 units) without validation blocking during input
+- **Product Addition Modal**: Updated "Add to Cart" quantity editor to allow unrestricted typing with validation only on blur
+- **Cart Checkout Quantities**: Extended same flexibility to cart quantity editing in checkout page - customers can now type large quantities directly
+- **Validation Strategy**: Changed from restrictive real-time validation to blur-based validation that only enforces stock limits, not minimum order quantities
+- **MOQ Information Display**: Converted MOQ warnings from blocking red errors to informational blue notices stating "typical minimum order" but allowing any quantity
+- **Stock-Only Enforcement**: Only stock availability prevents quantity selection - minimum order quantities are now purely informational
+- **Enhanced User Experience**: Quantity inputs show placeholder format (e.g., "1-4000") and allow seamless typing of large numbers for bulk orders
+- **Weight Calculation Fix**: Resolved database field name mismatch by supporting both camelCase (`unitWeight`) and snake_case (`unit_weight`) formats for accurate weight display
+- **Minus Button Logic**: Updated minus buttons to only disable at quantity 1 instead of at MOQ, allowing customers to reduce quantities freely
+- **Cart Management**: Customers can now edit cart quantities to any positive number up to stock limit without MOQ restrictions during checkout
 
 ### Complete Shipping Integration Data Flow Fix (July 11, 2025):
 - **Critical Payment Intent Metadata Fix**: Resolved shipping information loss by adding `shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' })` to all payment intent creation endpoints
