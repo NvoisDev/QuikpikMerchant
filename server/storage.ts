@@ -366,68 +366,46 @@ export class DatabaseStorage implements IStorage {
     console.log(`📊 Orders query - wholesalerId: ${wholesalerId}, retailerId: ${retailerId}`);
     const startTime = Date.now();
     
-    // Single query to get orders with user data
-    let baseQuery = db
-      .select({
-        // Order fields
-        orderId: orders.id,
-        orderWholesalerId: orders.wholesalerId,
-        orderRetailerId: orders.retailerId,
-        orderTotal: orders.total,
-        orderTotalAmount: orders.totalAmount,
-        orderStatus: orders.status,
-        orderPaymentStatus: orders.paymentStatus,
-        orderCreatedAt: orders.createdAt,
-        orderUpdatedAt: orders.updatedAt,
-        orderDeliveryAddress: orders.deliveryAddress,
-        orderNotes: orders.notes,
-        orderShippingOrderId: orders.shippingOrderId,
-        orderShippingHash: orders.shippingHash,
-        orderShippingTotal: orders.shippingTotal,
-        orderShippingStatus: orders.shippingStatus,
-        orderFulfillmentType: orders.fulfillmentType,
-        orderDeliveryCarrier: orders.deliveryCarrier,
-        orderDeliveryCost: orders.deliveryCost,
-        orderEstimatedDeliveryDate: orders.estimatedDeliveryDate,
-        orderSubtotal: orders.subtotal,
-        orderPlatformFee: orders.platformFee,
-        // Retailer fields
-        retailerId: users.id,
-        retailerEmail: users.email,
-        retailerFirstName: users.firstName,
-        retailerLastName: users.lastName,
-        retailerPhoneNumber: users.phoneNumber,
-        retailerBusinessName: users.businessName,
-        // Wholesaler fields (from second join)
-        wholesalerId: sql<string>`w.id`.as('wholesaler_id'),
-        wholesalerEmail: sql<string>`w.email`.as('wholesaler_email'),
-        wholesalerFirstName: sql<string>`w.first_name`.as('wholesaler_first_name'),
-        wholesalerLastName: sql<string>`w.last_name`.as('wholesaler_last_name'),
-        wholesalerBusinessName: sql<string>`w.business_name`.as('wholesaler_business_name'),
-        wholesalerPreferredCurrency: sql<string>`w.preferred_currency`.as('wholesaler_preferred_currency'),
-      })
-      .from(orders)
-      .leftJoin(users, eq(orders.retailerId, users.id))
-      .leftJoin(sql`users w`, sql`orders.wholesaler_id = w.id`);
+    // Get orders first
+    let orderQuery = db
+      .select()
+      .from(orders);
 
     // Apply filters
     if (wholesalerId) {
-      baseQuery = baseQuery.where(eq(orders.wholesalerId, wholesalerId));
+      orderQuery = orderQuery.where(eq(orders.wholesalerId, wholesalerId));
     } else if (retailerId) {
-      baseQuery = baseQuery.where(eq(orders.retailerId, retailerId));
+      orderQuery = orderQuery.where(eq(orders.retailerId, retailerId));
     }
     
-    baseQuery = baseQuery.orderBy(desc(orders.createdAt));
-    
-    const orderResults = await baseQuery;
+    orderQuery = orderQuery.orderBy(desc(orders.createdAt));
+    const orderResults = await orderQuery;
+
     console.log(`📊 Orders base query took ${Date.now() - startTime}ms, found ${orderResults.length} orders`);
     
     if (orderResults.length === 0) {
       return [];
     }
+
+    // Get unique user IDs for batch fetching
+    const retailerIds = [...new Set(orderResults.map(o => o.retailerId))];
+    const wholesalerIds = [...new Set(orderResults.map(o => o.wholesalerId))];
+    
+    // Batch fetch users
+    const allUserIds = [...new Set([...retailerIds, ...wholesalerIds])];
+    const allUsers = await db
+      .select()
+      .from(users)
+      .where(sql`${users.id} IN (${sql.join(allUserIds.map(id => sql`${id}`), sql`, `)})`);
+    
+    // Create user lookup map
+    const userMap = allUsers.reduce((acc, user) => {
+      acc[user.id] = user;
+      return acc;
+    }, {} as Record<string, any>);
     
     // Get all order items in a single query
-    const orderIds = orderResults.map(o => o.orderId);
+    const orderIds = orderResults.map(o => o.id);
     const itemsResults = await db
       .select({
         orderItemId: orderItems.id,
@@ -471,46 +449,31 @@ export class DatabaseStorage implements IStorage {
     }, {} as Record<number, any[]>);
     
     // Transform results
-    const ordersWithItems = orderResults.map(row => ({
-      id: row.orderId,
-      wholesalerId: row.orderWholesalerId,
-      retailerId: row.orderRetailerId,
-      total: row.orderTotal,
-      totalAmount: row.orderTotalAmount,
-      status: row.orderStatus,
-      paymentStatus: row.orderPaymentStatus,
-      createdAt: row.orderCreatedAt,
-      updatedAt: row.orderUpdatedAt,
-      deliveryAddress: row.orderDeliveryAddress,
-      notes: row.orderNotes,
-      shippingOrderId: row.orderShippingOrderId,
-      shippingHash: row.orderShippingHash,
-      shippingTotal: row.orderShippingTotal,
-      shippingStatus: row.orderShippingStatus,
-      fulfillmentType: row.orderFulfillmentType,
-      deliveryCarrier: row.orderDeliveryCarrier,
-      deliveryCost: row.orderDeliveryCost,
-      estimatedDeliveryDate: row.orderEstimatedDeliveryDate,
-      subtotal: row.orderSubtotal,
-      platformFee: row.orderPlatformFee,
-      retailer: {
-        id: row.retailerId!,
-        email: row.retailerEmail,
-        firstName: row.retailerFirstName,
-        lastName: row.retailerLastName,
-        phoneNumber: row.retailerPhoneNumber,
-        businessName: row.retailerBusinessName,
-      },
-      wholesaler: {
-        id: row.wholesalerId!,
-        email: row.wholesalerEmail,
-        firstName: row.wholesalerFirstName,
-        lastName: row.wholesalerLastName,
-        businessName: row.wholesalerBusinessName,
-        preferredCurrency: row.wholesalerPreferredCurrency,
-      },
-      items: itemsByOrderId[row.orderId] || []
-    }));
+    const ordersWithItems = orderResults.map(order => {
+      const retailer = userMap[order.retailerId];
+      const wholesaler = userMap[order.wholesalerId];
+      
+      return {
+        ...order,
+        retailer: retailer ? {
+          id: retailer.id,
+          email: retailer.email,
+          firstName: retailer.firstName,
+          lastName: retailer.lastName,
+          phoneNumber: retailer.phoneNumber,
+          businessName: retailer.businessName,
+        } : null,
+        wholesaler: wholesaler ? {
+          id: wholesaler.id,
+          email: wholesaler.email,
+          firstName: wholesaler.firstName,
+          lastName: wholesaler.lastName,
+          businessName: wholesaler.businessName,
+          preferredCurrency: wholesaler.preferredCurrency,
+        } : null,
+        items: itemsByOrderId[order.id] || []
+      };
+    });
     
     console.log(`✅ Orders query complete in ${Date.now() - startTime}ms`);
     return ordersWithItems;
