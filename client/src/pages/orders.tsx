@@ -184,8 +184,8 @@ export default function Orders() {
       return response.json();
     },
     enabled: !!user,
-    staleTime: 10000, // 10 seconds
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // Auto-refresh every 60 seconds (reduced frequency)
     refetchOnWindowFocus: true,
     refetchOnMount: true,
   });
