@@ -6,12 +6,28 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
 }
 
-// Always use the Replit domain for OAuth redirect in Replit environment
-const redirectUri = process.env.REPLIT_DOMAINS 
-  ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/auth/google/callback`
-  : 'http://localhost:5000/api/auth/google/callback';
+// Flexible redirect URI system for different environments
+const getRedirectUri = () => {
+  // Priority order: explicit env var, replit domain, localhost
+  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
+    return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  }
+  
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/auth/google/callback`;
+  }
+  
+  return 'http://localhost:5000/api/auth/google/callback';
+};
 
+const redirectUri = getRedirectUri();
 console.log('Google OAuth redirect URI:', redirectUri);
+
+// Log helpful information for OAuth setup
+console.log('🔧 Google OAuth Setup Information:');
+console.log('📋 Add this redirect URI to your Google Cloud Console:');
+console.log(`   ${redirectUri}`);
+console.log('🌐 Google Cloud Console: https://console.cloud.google.com/apis/credentials');
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
