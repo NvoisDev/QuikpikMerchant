@@ -813,6 +813,32 @@ export default function Orders() {
 
                   <Separator />
                   
+                  {/* Order Items */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Order Items</h3>
+                    <div className="space-y-3">
+                      {selectedOrder.items.map((item: any) => (
+                        <div key={item.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{item.product.name}</h4>
+                              <div className="text-sm text-muted-foreground">
+                                Quantity: {item.quantity} | Unit Price: {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">
+                                {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
                   {/* Order Timeline */}
                   <div>
                     <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -934,32 +960,6 @@ export default function Orders() {
                       </div>
                     </>
                   )}
-                  
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold mb-2">Order Items</h3>
-                    <div className="space-y-3">
-                      {selectedOrder.items.map((item: any) => (
-                        <div key={item.id} className="border rounded-lg p-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{item.product.name}</h4>
-                              <div className="text-sm text-muted-foreground">
-                                Quantity: {item.quantity} | Unit Price: {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold">
-                                {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-
                 </div>
               </DialogContent>
             </Dialog>
