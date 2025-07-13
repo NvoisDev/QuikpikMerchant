@@ -1122,7 +1122,7 @@ export default function ProductManagement() {
                       negotiationEnabled: false,
                       minimumBidPrice: "",
                       status: "active",
-                      unitType: "units",
+                      unit: "units",
                       unitsPerPallet: "",
                       deliveryOptions: {
                         pickup: true,
@@ -2187,7 +2187,7 @@ export default function ProductManagement() {
                       negotiationEnabled: false,
                       minimumBidPrice: "",
                       status: "active",
-                      unitType: "units",
+                      unit: "units",
                       unitsPerPallet: "",
                       deliveryOptions: {
                         pickup: true,
