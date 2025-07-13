@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +47,7 @@ type TeamMemberFormData = z.infer<typeof teamMemberSchema>;
 function getSubscriptionLimit(tier: string): number {
   switch (tier) {
     case 'free': return 0;
-    case 'standard': return 1;
+    case 'standard': return 2;
     case 'premium': return 5;
     default: return 0;
   }
@@ -291,7 +291,7 @@ export default function TeamManagement() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>Role & Permissions</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -299,10 +299,31 @@ export default function TeamManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="member">
+                            <div className="flex flex-col py-1">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-gray-400" />
+                                <span className="font-medium">Member</span>
+                              </div>
+                              <span className="text-xs text-gray-500">Access only to areas you allow in Tab Permissions</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="admin">
+                            <div className="flex flex-col py-1">
+                              <div className="flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-blue-500" />
+                                <span className="font-medium">Admin</span>
+                              </div>
+                              <span className="text-xs text-gray-500">Full access to all unrestricted business areas</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="bg-blue-50 p-3 rounded-lg mt-2">
+                        <p className="text-xs text-blue-800">
+                          <strong>Tip:</strong> Use the Tab Permissions section below to control which business areas team members can access.
+                        </p>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -344,7 +365,7 @@ export default function TeamManagement() {
                 Current Plan: <span className="font-semibold capitalize">{currentTier}</span>
               </p>
               <p className="text-sm text-gray-600">
-                Team Members: {currentTeamCount} / {teamLimit === 0 ? "0" : teamLimit === 5 ? "5" : "1"}
+                Team Members: {currentTeamCount} / {teamLimit === -1 ? "unlimited" : teamLimit}
               </p>
             </div>
             {currentTier === 'free' && (
@@ -435,9 +456,15 @@ export default function TeamManagement() {
                       ) : (
                         <Shield className="h-4 w-4 text-gray-400" />
                       )}
-                      <Badge variant="outline">
-                        {member.role}
+                      <Badge variant={member.role === 'admin' ? 'default' : 'outline'} className={member.role === 'admin' ? 'bg-blue-500 text-white' : ''}>
+                        {member.role === 'admin' ? 'Admin' : 'Member'}
                       </Badge>
+                      {member.role === 'admin' && (
+                        <span className="text-xs text-blue-600 font-medium">Full Access</span>
+                      )}
+                      {member.role === 'member' && (
+                        <span className="text-xs text-gray-500">Limited Access</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {member.status === 'pending' && (

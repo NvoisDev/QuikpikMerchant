@@ -5976,6 +5976,10 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       const products = await storage.getProducts(user.id);
       const productCount = products.length;
 
+      // Get team member count for this user
+      const teamMembers = await storage.getTeamMembers(user.id);
+      const teamMemberCount = teamMembers.length;
+
       const subscriptionData = {
         subscriptionTier: user.subscriptionTier || 'free',
         subscriptionStatus: user.subscriptionStatus || 'inactive',
@@ -5985,6 +5989,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
         customerGroupLimit: getCustomerGroupLimit(user.subscriptionTier || 'free'),
         broadcastLimit: getBroadcastLimit(user.subscriptionTier || 'free'),
         customersPerGroupLimit: getCustomersPerGroupLimit(user.subscriptionTier || 'free'),
+        teamMemberCount: teamMemberCount,
+        teamMemberLimit: getTeamMemberLimit(user.subscriptionTier || 'free'),
         isTeamMember: req.user.isTeamMember || false,
         expiresAt: user.subscriptionEndsAt
       };
@@ -6140,6 +6146,15 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   }
 
+  function getTeamMemberLimit(tier: string): number {
+    switch (tier) {
+      case 'free': return 0; // No team members
+      case 'standard': return 2; // 2 team members
+      case 'premium': return 5; // 5 team members
+      default: return 0;
+    }
+  }
+
   const httpServer = createServer(app);
 
   // Stock Alert endpoints
@@ -6248,7 +6263,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       
       let limit = 0;
       switch (tier) {
-        case 'standard': limit = 1; break;
+        case 'standard': limit = 2; break;
         case 'premium': limit = 5; break;
       }
       

@@ -82,6 +82,7 @@ export default function SubscriptionSettings() {
         "Up to 2 customer groups",
         "5 broadcasts per month",
         "10 customers per group",
+        "No team members",
         "Basic WhatsApp integration",
         "Email support"
       ],
@@ -103,6 +104,8 @@ export default function SubscriptionSettings() {
         "Up to 5 customer groups",
         "25 broadcasts per month", 
         "50 customers per group",
+        "Up to 2 team members",
+        "Role-based permissions",
         "Advanced WhatsApp features",
         "Basic analytics",
         "Priority email support"
@@ -124,6 +127,9 @@ export default function SubscriptionSettings() {
         "Unlimited customer groups",
         "Unlimited broadcasts",
         "Unlimited customers per group",
+        "Up to 5 team members",
+        "Advanced role-based permissions",
+        "Team management dashboard",
         "Marketplace access (selling platform)",
         "Advanced WhatsApp & automation",
         "Advanced customer segmentation", 
@@ -287,7 +293,7 @@ export default function SubscriptionSettings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-800">Products Created</h4>
               <p className="text-2xl font-bold text-primary">
@@ -295,6 +301,15 @@ export default function SubscriptionSettings() {
               </p>
               <p className="text-sm text-gray-600">
                 of {subscription?.productLimit === -1 ? "unlimited" : subscription?.productLimit} allowed
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-800">Team Members</h4>
+              <p className="text-2xl font-bold text-primary">
+                {subscription?.teamMemberCount || 0}
+              </p>
+              <p className="text-sm text-gray-600">
+                of {subscription?.teamMemberLimit === -1 ? "unlimited" : subscription?.teamMemberLimit || 0} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">

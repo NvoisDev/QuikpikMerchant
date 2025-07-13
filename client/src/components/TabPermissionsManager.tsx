@@ -210,16 +210,36 @@ export default function TabPermissionsManager() {
         })}
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="text-sm font-medium text-gray-900 mb-2">Permission Summary</h4>
-        <div className="space-y-2 text-sm text-gray-600">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full" />
-            <span>Open Access: Team members can view and use these tabs</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-900 mb-2">Permission Summary</h4>
+          <div className="space-y-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full" />
+              <span>Open Access: All team members can access</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full" />
+              <span>Restricted: Only owners and admins can access</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full" />
-            <span>Restricted: Only business owners can access these tabs</span>
+        </div>
+        
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Role Hierarchy</h4>
+          <div className="space-y-1 text-sm text-blue-700">
+            <div className="flex items-center space-x-2">
+              <Shield className="w-3 h-3" />
+              <span><strong>Owner:</strong> Full platform access</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="w-3 h-3" />
+              <span><strong>Admin:</strong> Access to all unrestricted areas</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="w-3 h-3" />
+              <span><strong>Member:</strong> Access to allowed areas only</span>
+            </div>
           </div>
         </div>
       </div>
