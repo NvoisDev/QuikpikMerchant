@@ -79,9 +79,9 @@ const productFormSchema = z.object({
   unit: z.string().optional(),
   unitFormat: z.string().optional(),
   // New flexible unit system
-  packQuantity: z.number().optional(),
+  packQuantity: z.string().optional(),
   unitOfMeasure: z.string().optional(), 
-  unitSize: z.number().optional(),
+  unitSize: z.string().optional(),
   
   // Pallet/Unit selling options
   sellingFormat: z.enum(["units", "pallets", "both"]),
@@ -149,9 +149,9 @@ export default function ProductManagement() {
       unit: "units",
       unitFormat: "",
       // New flexible unit system defaults
-      packQuantity: undefined,
-      unitOfMeasure: undefined,
-      unitSize: undefined,
+      packQuantity: "",
+      unitOfMeasure: "",
+      unitSize: "",
       sellingFormat: "units",
       unitsPerPallet: "",
       palletPrice: "",
@@ -546,9 +546,9 @@ export default function ProductManagement() {
       unit: product.unit || "units",
       unitFormat: product.unitFormat || "none",
       // New flexible unit system
-      packQuantity: product.packQuantity || undefined,
-      unitOfMeasure: product.unitOfMeasure || undefined,
-      unitSize: product.unitSize || undefined,
+      packQuantity: product.packQuantity?.toString() || "",
+      unitOfMeasure: product.unitOfMeasure || "",
+      unitSize: product.unitSize?.toString() || "",
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
@@ -598,9 +598,9 @@ export default function ProductManagement() {
       unit: product.unit || "units",
       unitFormat: product.unitFormat || "none",
       // New flexible unit system
-      packQuantity: product.packQuantity || undefined,
-      unitOfMeasure: product.unitOfMeasure || undefined,
-      unitSize: product.unitSize || undefined,
+      packQuantity: product.packQuantity?.toString() || "",
+      unitOfMeasure: product.unitOfMeasure || "",
+      unitSize: product.unitSize?.toString() || "",
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       deliveryOptions: {
@@ -1475,7 +1475,7 @@ export default function ProductManagement() {
                                       type="number"
                                       placeholder="e.g., 24"
                                       {...field}
-                                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : "")}
+                                      onChange={(e) => field.onChange(e.target.value)}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1533,7 +1533,7 @@ export default function ProductManagement() {
                                       step="0.001"
                                       placeholder="e.g., 250"
                                       {...field}
-                                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : "")}
+                                      onChange={(e) => field.onChange(e.target.value)}
                                     />
                                   </FormControl>
                                   <FormMessage />
