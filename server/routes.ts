@@ -2688,31 +2688,7 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // Subscription endpoints
-  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const productCheck = await storage.checkProductLimit(userId);
-
-      res.json({
-        subscriptionTier: user.subscriptionTier || 'free',
-        subscriptionStatus: user.subscriptionStatus || 'inactive',
-        productLimit: user.productLimit || 3,
-        currentProducts: productCheck.currentCount,
-        subscriptionEndsAt: user.subscriptionEndsAt,
-        stripeSubscriptionId: user.stripeSubscriptionId
-      });
-    } catch (error) {
-      console.error("Error fetching subscription status:", error);
-      res.status(500).json({ message: "Failed to fetch subscription status" });
-    }
-  });
+  // Note: Subscription status endpoint is defined later in the file with correct product counting
 
   app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
     if (!stripe) {
