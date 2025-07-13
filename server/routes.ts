@@ -3681,6 +3681,35 @@ Write a professional, sales-focused description that highlights the key benefits
       const { campaignId, customerGroupId, customMessage } = req.body;
       console.log(`Campaign send request: userId=${targetUserId}, campaignId=${campaignId}, customerGroupId=${customerGroupId}`);
 
+      // Check broadcast limits based on subscription tier
+      const userAccount = await storage.getUser(targetUserId);
+      if (!userAccount) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const subscriptionTier = userAccount.subscriptionTier || "free";
+      const broadcastLimit = getBroadcastLimit(subscriptionTier);
+      
+      // Only check limits if not unlimited (premium)
+      if (broadcastLimit !== -1) {
+        // Get broadcast count for current month
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        const monthlyBroadcastCount = await storage.getBroadcastCountForPeriod(targetUserId, monthStart, monthEnd);
+        
+        if (monthlyBroadcastCount >= broadcastLimit) {
+          return res.status(403).json({ 
+            message: `Monthly broadcast limit reached! You've sent ${monthlyBroadcastCount}/${broadcastLimit} broadcasts this month on the ${subscriptionTier} plan.`,
+            error: "broadcast_limit_exceeded",
+            currentCount: monthlyBroadcastCount,
+            limit: broadcastLimit,
+            subscriptionTier
+          });
+        }
+      }
+
       const [type, id] = campaignId.split('_');
       const numericId = parseInt(id);
       console.log(`Campaign type: ${type}, numericId: ${numericId}`);

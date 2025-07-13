@@ -164,6 +164,7 @@ export interface IStorage {
     recipientsReached: number;
     avgOpenRate: number;
   }>;
+  getBroadcastCountForPeriod(wholesalerId: string, startDate: Date, endDate: Date): Promise<number>;
 
   // Stock Alert operations
   createStockAlert(alert: InsertStockAlert): Promise<StockAlert>;
@@ -1533,6 +1534,22 @@ export class DatabaseStorage implements IStorage {
       recipientsReached,
       avgOpenRate,
     };
+  }
+
+  async getBroadcastCountForPeriod(wholesalerId: string, startDate: Date, endDate: Date): Promise<number> {
+    const result = await db
+      .select({ count: count(broadcasts.id) })
+      .from(broadcasts)
+      .where(
+        and(
+          eq(broadcasts.wholesalerId, wholesalerId),
+          sql`${broadcasts.sentAt} >= ${startDate}`,
+          sql`${broadcasts.sentAt} <= ${endDate}`,
+          sql`${broadcasts.sentAt} IS NOT NULL` // Only count sent broadcasts
+        )
+      );
+
+    return Number(result[0]?.count) || 0;
   }
 
   // Message Template operations

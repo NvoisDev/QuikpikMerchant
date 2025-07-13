@@ -40,6 +40,8 @@ import {
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { Product, CustomerGroup } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -93,11 +95,13 @@ interface Campaign {
 export default function Campaigns() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { subscription, isLoading: subscriptionLoading } = useSubscription();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [isStockRefreshOpen, setIsStockRefreshOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
   const [editableMessage, setEditableMessage] = useState<string>("");
@@ -167,6 +171,12 @@ export default function Campaigns() {
         customerGroupId,
         customMessage: editableMessage || undefined, // Include edited message if exists
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Campaign send failed");
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -177,12 +187,23 @@ export default function Campaigns() {
         description: "Your marketing campaign has been sent successfully!",
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Campaign Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: async (error: any, variables) => {
+      // Handle broadcast limit exceeded error
+      if (error.message && error.message.includes("broadcast limit")) {
+        setIsSendOpen(false);
+        setIsUpgradeModalOpen(true);
+        toast({
+          title: "Broadcast Limit Reached",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Campaign Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -1037,6 +1058,14 @@ export default function Campaigns() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal 
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        feature="broadcast_limit"
+        currentTier={subscription?.tier || "free"}
+      />
     </div>
   );
 }
