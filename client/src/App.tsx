@@ -38,8 +38,25 @@ import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import AppLayout from "@/components/layout/app-layout";
 
-function Router() {
-  const [location] = useLocation();
+// Component for public routes that don't need authentication
+function PublicRoutes() {
+  return (
+    <Switch>
+      <Route path="/campaign/:id" component={CampaignPreview} />
+      <Route path="/marketplace/product/:id" component={ProductOrderPage} />
+      <Route path="/customer/:id" component={CustomerPortal} />
+      <Route path="/customer/payment-success" component={PaymentSuccess} />
+      <Route path="/team-invitation" component={TeamInvitation} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/login" component={Login} />
+      <Route path="/" component={LandingPage} />
+      <Route path="/landing" component={LandingPage} />
+    </Switch>
+  );
+}
+
+// Component for authenticated routes that need authentication
+function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
@@ -50,65 +67,57 @@ function Router() {
     );
   }
 
-  // Show login page only for /login route when not authenticated
-  const isPublicRoute = ['/login', '/campaign/', '/marketplace/product/', '/customer/'].some(route => location.includes(route));
-  
-  if (!isAuthenticated && location === '/login') {
+  if (!isAuthenticated) {
     return <Login />;
   }
 
   return (
-    <Switch>
-      {/* Public routes - accessible without authentication */}
-      <Route path="/campaign/:id" component={CampaignPreview} />
-      <Route path="/marketplace/product/:id" component={ProductOrderPage} />
-      <Route path="/customer/:id" component={CustomerPortal} />
-      <Route path="/customer/payment-success" component={PaymentSuccess} />
-      <Route path="/team-invitation" component={TeamInvitation} />
-      <Route path="/signup" component={Signup} />
-      
-      {!isAuthenticated ? (
+    <AppLayout>
+      <Route path="/marketplace" component={Marketplace} />
+      {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
         <>
-          <Route path="/" component={LandingPage} />
-          <Route path="/landing" component={LandingPage} />
+          <Route path="/" component={WholesalerDashboard} />
+          <Route path="/products" component={ProductManagement} />
+          <Route path="/customer-groups" component={CustomerGroups} />
+          <Route path="/orders" component={Orders} />
+          <Route path="/subscription" component={SubscriptionSettings} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/business-performance" component={BusinessPerformance} />
+          <Route path="/financials" component={Financials} />
+          <Route path="/financial-health" component={FinancialHealth} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/campaigns" component={Campaigns} />
+          {/* Legacy route redirect */}
+          <Route path="/broadcasts" component={Campaigns} />
+          <Route path="/message-templates" component={Campaigns} />
+          <Route path="/stock-alerts" component={StockAlerts} />
+          <Route path="/team-management" component={TeamManagement} />
+          <Route path="/help" component={Help} />
+          <Route path="/preview-store" component={CustomerPortal} />
         </>
       ) : (
-        <AppLayout>
-          <Route path="/marketplace" component={Marketplace} />
-          {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
-            <>
-              <Route path="/" component={WholesalerDashboard} />
-              <Route path="/products" component={ProductManagement} />
-              <Route path="/customer-groups" component={CustomerGroups} />
-              <Route path="/orders" component={Orders} />
-              <Route path="/subscription" component={SubscriptionSettings} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/business-performance" component={BusinessPerformance} />
-              <Route path="/financials" component={Financials} />
-              <Route path="/financial-health" component={FinancialHealth} />
-              <Route path="/settings" component={Settings} />
-              <Route path="/campaigns" component={Campaigns} />
-              {/* Legacy route redirect */}
-              <Route path="/broadcasts" component={Campaigns} />
-              <Route path="/message-templates" component={Campaigns} />
-              <Route path="/stock-alerts" component={StockAlerts} />
-              <Route path="/team-management" component={TeamManagement} />
-
-              <Route path="/help" component={Help} />
-              <Route path="/preview-store" component={CustomerPortal} />
-            </>
-          ) : (
-            <>
-              <Route path="/" component={RetailerInterface} />
-              <Route path="/orders" component={Orders} />
-              <Route path="/checkout" component={Checkout} />
-            </>
-          )}
-        </AppLayout>
+        <>
+          <Route path="/" component={RetailerInterface} />
+          <Route path="/orders" component={Orders} />
+          <Route path="/checkout" component={Checkout} />
+        </>
       )}
-      <Route component={NotFound} />
-    </Switch>
+    </AppLayout>
   );
+}
+
+function Router() {
+  const [location] = useLocation();
+  
+  // Check if current route is public (doesn't need authentication)
+  const isPublicRoute = ['/login', '/campaign/', '/marketplace/product/', '/customer/', '/team-invitation', '/signup'].some(route => location.includes(route));
+  
+  // Route to public or authenticated routes based on current path
+  if (isPublicRoute) {
+    return <PublicRoutes />;
+  } else {
+    return <AuthenticatedRoutes />;
+  }
 }
 
 function App() {
