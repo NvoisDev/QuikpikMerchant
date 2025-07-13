@@ -5973,7 +5973,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }
 
       // Get product count for this user
-      const products = await storage.getProductsByUser(user.id);
+      const products = await storage.getProducts(user.id);
       const productCount = products.length;
 
       const subscriptionData = {
