@@ -25,6 +25,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
+import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay } from "@shared/units";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -73,6 +74,10 @@ const productFormSchema = z.object({
   negotiationEnabled: z.boolean(),
   minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
+  
+  // Units and measurements
+  unit: z.string().optional(),
+  unitFormat: z.string().optional(),
   
   // Pallet/Unit selling options
   sellingFormat: z.enum(["units", "pallets", "both"]),
@@ -137,6 +142,8 @@ export default function ProductManagement() {
       negotiationEnabled: false,
       minimumBidPrice: "",
       status: "active",
+      unit: "units",
+      unitFormat: "",
       sellingFormat: "units",
       unitsPerPallet: "",
       palletPrice: "",
@@ -528,6 +535,8 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
+      unit: product.unit || "units",
+      unitFormat: product.unitFormat || "",
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
@@ -574,7 +583,9 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
-      unitType: product.unitType || "units",
+      unit: product.unit || "units",
+      unitFormat: product.unitFormat || "",
+      sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       deliveryOptions: {
         pickup: product.supportsPickup !== false,
@@ -664,10 +675,13 @@ export default function ProductManagement() {
         return;
       }
 
-      // Validate unit type
-      if (row.unitType && !['units', 'pallets'].includes(row.unitType)) {
-        errors.push(`Row ${rowNumber}: Unit type must be 'units' or 'pallets'`);
-        return;
+      // Validate unit (optional)
+      if (row.unit) {
+        const validUnits = UNITS.map(unit => unit.value);
+        if (!validUnits.includes(row.unit)) {
+          errors.push(`Row ${rowNumber}: Invalid unit '${row.unit}'. See template for valid units.`);
+          return;
+        }
       }
 
       // Validate status
@@ -692,6 +706,8 @@ export default function ProductManagement() {
         negotiationEnabled: row.negotiationEnabled === 'true',
         minimumBidPrice: row.minimumBidPrice || "",
         status: row.status || "active",
+        unit: row.unit || "units",
+        unitFormat: row.unitFormat || "",
         sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "",
         palletPrice: row.palletPrice || "",
@@ -736,6 +752,8 @@ export default function ProductManagement() {
             palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : null,
             palletMoq: product.palletMoq ? parseInt(product.palletMoq) : null,
             palletStock: product.palletStock ? parseInt(product.palletStock) : null,
+            unit: product.unit || "units",
+            unitFormat: product.unitFormat || "",
             unitWeight: product.unitWeight || null,
             palletWeight: product.palletWeight || null,
           };
@@ -774,29 +792,95 @@ export default function ProductManagement() {
   const downloadTemplate = () => {
     const template = [
       {
-        name: "Example Product",
-        description: "Product description",
-        price: "10.99",
-        promoPrice: "8.99",
-        promoActive: "true",
+        name: "Example Product 1",
+        description: "Premium Basmati Rice for wholesale",
+        price: "25.99",
+        promoPrice: "22.99",
+        promoActive: "false",
         currency: "GBP",
-        moq: "1",
-        stock: "100",
-        category: "Electronics",
+        moq: "10",
+        stock: "500",
+        category: "Groceries & Food",
         imageUrl: "",
         priceVisible: "true",
         negotiationEnabled: "false",
         minimumBidPrice: "",
         status: "active",
+        unit: "kg",
+        unitFormat: "25kg bags",
         sellingFormat: "units",
-        unitsPerPallet: "",
-        palletPrice: "",
-        palletMoq: "",
-        palletStock: "",
-        unitWeight: "0.5",
-        palletWeight: "25.0",
+        unitsPerPallet: "40",
+        palletPrice: "950.00",
+        palletMoq: "1",
+        palletStock: "5",
+        unitWeight: "25",
+        palletWeight: "1000",
         temperatureRequirement: "ambient",
-        contentCategory: "general",
+        contentCategory: "food",
+        specialHandling_fragile: "false",
+        specialHandling_perishable: "false",
+        specialHandling_hazardous: "false",
+        deliveryOptions_pickup: "true",
+        deliveryOptions_delivery: "true"
+      },
+      {
+        name: "Example Product 2",
+        description: "Premium olive oil bottles",
+        price: "8.50",
+        promoPrice: "",
+        promoActive: "false",
+        currency: "GBP",
+        moq: "12",
+        stock: "240",
+        category: "Groceries & Food",
+        imageUrl: "",
+        priceVisible: "true",
+        negotiationEnabled: "true",
+        minimumBidPrice: "7.00",
+        status: "active",
+        unit: "ml",
+        unitFormat: "12 x 500ml",
+        sellingFormat: "units",
+        unitsPerPallet: "120",
+        palletPrice: "850.00",
+        palletMoq: "1",
+        palletStock: "2",
+        unitWeight: "0.5",
+        palletWeight: "60",
+        temperatureRequirement: "ambient",
+        contentCategory: "food",
+        specialHandling_fragile: "false",
+        specialHandling_perishable: "false",
+        specialHandling_hazardous: "false",
+        deliveryOptions_pickup: "true",
+        deliveryOptions_delivery: "true"
+      },
+      {
+        name: "Example Product 3",
+        description: "Energy drink cans",
+        price: "1.25",
+        promoPrice: "1.10",
+        promoActive: "true",
+        currency: "GBP",
+        moq: "24",
+        stock: "1200",
+        category: "Beverages & Drinks",
+        imageUrl: "",
+        priceVisible: "true",
+        negotiationEnabled: "false",
+        minimumBidPrice: "",
+        status: "active",
+        unit: "cl",
+        unitFormat: "24 x 33cl",
+        sellingFormat: "units",
+        unitsPerPallet: "480",
+        palletPrice: "600.00",
+        palletMoq: "1",
+        palletStock: "3",
+        unitWeight: "0.35",
+        palletWeight: "168",
+        temperatureRequirement: "ambient",
+        contentCategory: "food",
         specialHandling_fragile: "false",
         specialHandling_perishable: "false",
         specialHandling_hazardous: "false",
@@ -810,7 +894,7 @@ export default function ProductManagement() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'product_template_with_shipping.csv';
+    a.download = 'product_template_with_units.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -919,7 +1003,7 @@ export default function ProductManagement() {
                         <h4 className="font-semibold">File Format Requirements:</h4>
                         <div className="text-sm text-gray-600 space-y-2">
                           <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unitType, unitsPerPallet, supportsPickup, supportsDelivery</p>
+                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, unitWeight, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
                           <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
                         </div>
                         <Button variant="link" onClick={downloadTemplate} className="p-0">
@@ -966,7 +1050,7 @@ export default function ProductManagement() {
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">MOQ</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Type</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
@@ -976,7 +1060,7 @@ export default function ProductManagement() {
                                 <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(parseFloat(product.price), product.currency)}</td>
                                 <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
                                 <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900">{product.unitType}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1287,6 +1371,76 @@ export default function ProductManagement() {
                           </FormItem>
                         )}
                       />
+
+                      {/* Units and Measurements Section */}
+                      <div className="space-y-4">
+                        <div>
+                          <FormLabel className="text-base">Units & Measurements</FormLabel>
+                          <div className="text-sm text-muted-foreground mb-3">
+                            Define how your product is measured and sold
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="unit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Unit of Measure</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="units">Units (pieces/items)</SelectItem>
+                                    {UNITS.map((unit) => (
+                                      <SelectItem key={unit.value} value={unit.value}>
+                                        {unit.label} ({unit.category})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  How your product is measured
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="unitFormat"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Unit Format</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select format or type custom" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="">None (single units)</SelectItem>
+                                    {COMMON_WHOLESALE_FORMATS.map((format) => (
+                                      <SelectItem key={format} value={format}>
+                                        {format}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Packaging format (e.g., "12 x 500ml", "25kg bags")
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField

@@ -220,6 +220,10 @@ export const products = pgTable("products", {
   palletMoq: integer("pallet_moq").default(1), // Minimum pallet order quantity
   palletStock: integer("pallet_stock").default(0), // Stock count in pallets
   
+  // Units and measurements
+  unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)
+  unitFormat: varchar("unit_format"), // Display format like "12 x 24g", "6 x 500ml", "24 pieces"
+  
   // Weight and dimensions for shipping
   unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per unit in kg
   palletWeight: decimal("pallet_weight", { precision: 10, scale: 3 }), // Weight per pallet in kg
