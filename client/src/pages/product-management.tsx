@@ -25,7 +25,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
-import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay } from "@shared/units";
+import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -78,6 +78,10 @@ const productFormSchema = z.object({
   // Units and measurements
   unit: z.string().optional(),
   unitFormat: z.string().optional(),
+  // New flexible unit system
+  packQuantity: z.number().optional(),
+  unitOfMeasure: z.string().optional(), 
+  unitSize: z.number().optional(),
   
   // Pallet/Unit selling options
   sellingFormat: z.enum(["units", "pallets", "both"]),
@@ -144,6 +148,10 @@ export default function ProductManagement() {
       status: "active",
       unit: "units",
       unitFormat: "",
+      // New flexible unit system defaults
+      packQuantity: undefined,
+      unitOfMeasure: undefined,
+      unitSize: undefined,
       sellingFormat: "units",
       unitsPerPallet: "",
       palletPrice: "",
@@ -537,6 +545,10 @@ export default function ProductManagement() {
       status: product.status,
       unit: product.unit || "units",
       unitFormat: product.unitFormat || "none",
+      // New flexible unit system
+      packQuantity: product.packQuantity || undefined,
+      unitOfMeasure: product.unitOfMeasure || undefined,
+      unitSize: product.unitSize || undefined,
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
@@ -585,6 +597,10 @@ export default function ProductManagement() {
       status: product.status,
       unit: product.unit || "units",
       unitFormat: product.unitFormat || "none",
+      // New flexible unit system
+      packQuantity: product.packQuantity || undefined,
+      unitOfMeasure: product.unitOfMeasure || undefined,
+      unitSize: product.unitSize || undefined,
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       deliveryOptions: {
@@ -1395,7 +1411,6 @@ export default function ProductManagement() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="units">Units (pieces/items)</SelectItem>
                                     {UNITS.map((unit) => (
                                       <SelectItem key={unit.value} value={unit.value}>
                                         {unit.label} ({unit.category})
@@ -1439,6 +1454,105 @@ export default function ProductManagement() {
                               </FormItem>
                             )}
                           />
+                        </div>
+                        
+                        {/* New Flexible Unit System */}
+                        <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
+                          <div className="flex items-center space-x-2">
+                            <Package className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-700">Flexible Unit Configuration</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="packQuantity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Quantity in Pack</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="e.g., 24"
+                                      {...field}
+                                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : "")}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Number per pack (optional)
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="unitOfMeasure"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Unit of Measure</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select unit" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {["Weight", "Volume", "Count", "Packaging"].map((category) => (
+                                        <div key={category}>
+                                          <div className="px-2 py-1 text-xs font-medium text-muted-foreground bg-muted">
+                                            {category}
+                                          </div>
+                                          {BASE_UNITS.filter(unit => unit.category === category).map((unit) => (
+                                            <SelectItem key={unit.value} value={unit.value}>
+                                              {unit.label}
+                                            </SelectItem>
+                                          ))}
+                                        </div>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Base unit (ml, g, pieces, etc.)
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="unitSize"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Size per Unit</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.001"
+                                      placeholder="e.g., 250"
+                                      {...field}
+                                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : "")}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Size/weight per unit
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div className="bg-blue-100 p-3 rounded-lg">
+                            <p className="text-sm text-blue-700">
+                              <strong>Example:</strong> For "24 x 250ml cans", enter: Quantity = 24, Unit = ml, Size = 250
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              This replaces the need for predefined formats and allows any combination
+                            </p>
+                          </div>
                         </div>
                       </div>
 

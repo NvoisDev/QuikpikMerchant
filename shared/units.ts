@@ -121,13 +121,40 @@ export const UNITS: UnitDefinition[] = [
   }
 ];
 
-// Common wholesale format patterns
+// Base units of measure for the flexible system
+export const BASE_UNITS = [
+  // Weight
+  { value: "kg", label: "kg", category: "Weight" },
+  { value: "g", label: "g", category: "Weight" },
+  { value: "tonnes", label: "tonnes", category: "Weight" },
+  
+  // Volume  
+  { value: "l", label: "L", category: "Volume" },
+  { value: "ml", label: "mL", category: "Volume" },
+  { value: "cl", label: "cL", category: "Volume" },
+  
+  // Count
+  { value: "pieces", label: "pieces", category: "Count" },
+  { value: "units", label: "units", category: "Count" },
+  { value: "pairs", label: "pairs", category: "Count" },
+  
+  // Packaging
+  { value: "boxes", label: "boxes", category: "Packaging" },
+  { value: "cases", label: "cases", category: "Packaging" },
+  { value: "cartons", label: "cartons", category: "Packaging" },
+  { value: "packs", label: "packs", category: "Packaging" },
+  { value: "bundles", label: "bundles", category: "Packaging" },
+  { value: "rolls", label: "rolls", category: "Packaging" }
+];
+
+// Common wholesale format patterns (kept for backward compatibility)
 export const COMMON_WHOLESALE_FORMATS = [
   "12 x 24g",
   "12 x 330ml", 
   "12 x 500ml",
   "24 x 330ml",
   "24 x 500ml",
+  "24 x 250ml", // Added the one you mentioned
   "6 x 2L",
   "12 x 1L",
   "6 x 750ml",

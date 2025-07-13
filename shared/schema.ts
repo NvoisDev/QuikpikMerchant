@@ -224,6 +224,11 @@ export const products = pgTable("products", {
   unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)
   unitFormat: varchar("unit_format"), // Display format like "12 x 24g", "6 x 500ml", "24 pieces"
   
+  // New flexible unit system
+  packQuantity: integer("pack_quantity"), // e.g., 24 (for "24 x 250ml")
+  unitOfMeasure: varchar("unit_of_measure", { length: 20 }), // e.g., "ml", "g", "pieces"
+  unitSize: decimal("unit_size", { precision: 10, scale: 3 }), // e.g., 250 (for "24 x 250ml")
+  
   // Weight and dimensions for shipping
   unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per unit in kg
   palletWeight: decimal("pallet_weight", { precision: 10, scale: 3 }), // Weight per pallet in kg

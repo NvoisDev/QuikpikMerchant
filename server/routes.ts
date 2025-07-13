@@ -555,6 +555,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { 
         price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
         unitWeight, palletWeight, lowStockThreshold, shelfLife,
+        // New flexible unit system fields
+        packQuantity, unitOfMeasure, unitSize,
         ...otherData 
       } = req.body;
       const productData = insertProductSchema.parse({
@@ -572,6 +574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         palletWeight: palletWeight ? palletWeight.toString() : null,
         lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50,
         shelfLife: shelfLife ? parseInt(shelfLife) : null,
+        // New flexible unit system fields
+        packQuantity: packQuantity ? parseInt(packQuantity) : null,
+        unitOfMeasure: unitOfMeasure || null,
+        unitSize: unitSize ? parseFloat(unitSize) : null,
         wholesalerId: targetUserId
       });
       const product = await storage.createProduct(productData);
@@ -630,6 +636,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { 
         price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
         unitWeight, palletWeight, lowStockThreshold, shelfLife,
+        // New flexible unit system fields
+        packQuantity, unitOfMeasure, unitSize,
         ...otherData 
       } = req.body;
       const convertedData = {
@@ -647,7 +655,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(unitWeight !== undefined && { unitWeight: unitWeight ? unitWeight.toString() : null }),
         ...(palletWeight !== undefined && { palletWeight: palletWeight ? palletWeight.toString() : null }),
         ...(lowStockThreshold !== undefined && { lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50 }),
-        ...(shelfLife !== undefined && { shelfLife: shelfLife ? parseInt(shelfLife) : null })
+        ...(shelfLife !== undefined && { shelfLife: shelfLife ? parseInt(shelfLife) : null }),
+        // New flexible unit system fields
+        ...(packQuantity !== undefined && { packQuantity: packQuantity ? parseInt(packQuantity) : null }),
+        ...(unitOfMeasure !== undefined && { unitOfMeasure: unitOfMeasure || null }),
+        ...(unitSize !== undefined && { unitSize: unitSize ? parseFloat(unitSize) : null })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
