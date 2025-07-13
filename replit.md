@@ -176,6 +176,13 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 13, 2025)
 
+### Customer Portal Authentication Independence Fix (July 13, 2025):
+- **Resolved Loading Issue**: Fixed critical issue where customer portal would keep loading indefinitely when wholesalers logged out of their dashboard
+- **Authentication Independence**: Customer portal now only uses authentication for preview mode (/preview-store), remaining completely public for regular customer access
+- **Conditional Auth Loading**: Modified customer portal to only fetch user data when in preview mode, preventing auth-related loading issues for public customers
+- **Improved User Experience**: Customers can now access store links without being affected by wholesaler authentication status changes
+- **Maintained Preview Functionality**: Preview mode still works correctly for authenticated wholesalers and team members
+
 ### Complete Delivery Address Formatting Fix (July 13, 2025):
 - **Comprehensive Address Display**: Fixed delivery address formatting in both Orders and Shipping Tracking pages to display complete address information instead of partial data
 - **Enhanced Address Parsing**: Updated formatAddress functions to handle comprehensive address objects with multiple field name variations (street/property/address1, town/city, county/state, postcode/zipCode/zip, etc.)

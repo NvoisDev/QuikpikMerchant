@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
@@ -319,11 +318,19 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
 export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
   const [location] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
 
   // Detect if this is preview mode (accessed via /preview-store)
   const isPreviewMode = location === '/preview-store';
+  
+  // Get authenticated user only for preview mode
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/user"],
+    enabled: isPreviewMode, // Only fetch user data in preview mode
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   
   // Use authenticated user's ID in preview mode, but if user is team member, use parent wholesaler ID
   // Handle cases where ID might be undefined or empty
