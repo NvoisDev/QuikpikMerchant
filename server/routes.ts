@@ -6297,6 +6297,35 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  // Update team member role
+  app.patch('/api/team-members/:id/role', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+      const { role } = req.body;
+      
+      if (!role || !['admin', 'member'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role. Must be 'admin' or 'member'" });
+      }
+      
+      // Get team member and verify ownership
+      const teamMembers = await storage.getTeamMembers(userId);
+      const teamMember = teamMembers.find(member => member.id === parseInt(id));
+      
+      if (!teamMember) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      // Update team member role
+      await storage.updateTeamMemberRole(parseInt(id), role);
+      
+      res.json({ message: "Team member role updated successfully" });
+    } catch (error) {
+      console.error("Error updating team member role:", error);
+      res.status(500).json({ message: "Failed to update team member role" });
+    }
+  });
+
   app.delete('/api/team-members/:id', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;

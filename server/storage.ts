@@ -181,6 +181,7 @@ export interface IStorage {
   createTeamMember(teamMember: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
   deleteTeamMember(id: number): Promise<void>;
+  updateTeamMemberRole(id: number, role: string): Promise<void>;
   getTeamMembersCount(wholesalerId: string): Promise<number>;
   
   // Tab permission operations
@@ -1930,6 +1931,13 @@ export class DatabaseStorage implements IStorage {
   async deleteTeamMember(id: number): Promise<void> {
     await db
       .delete(teamMembers)
+      .where(eq(teamMembers.id, id));
+  }
+
+  async updateTeamMemberRole(id: number, role: string): Promise<void> {
+    await db
+      .update(teamMembers)
+      .set({ role })
       .where(eq(teamMembers.id, id));
   }
 

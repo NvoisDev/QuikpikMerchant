@@ -30,7 +30,8 @@ import {
   Clock,
   Copy,
   ExternalLink,
-  Settings
+  Settings,
+  Edit
 } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
@@ -85,6 +86,8 @@ export default function TeamManagement() {
   const { subscription } = useSubscription();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedMemberForRoleEdit, setSelectedMemberForRoleEdit] = useState<TeamMember | null>(null);
+  const [isRoleEditOpen, setIsRoleEditOpen] = useState(false);
 
   const form = useForm<TeamMemberFormData>({
     resolver: zodResolver(teamMemberSchema),
@@ -150,6 +153,28 @@ export default function TeamManagement() {
     },
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ memberId, role }: { memberId: number; role: string }) => {
+      await apiRequest("PATCH", `/api/team-members/${memberId}/role`, { role });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Role updated",
+        description: "Team member role has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      setIsRoleEditOpen(false);
+      setSelectedMemberForRoleEdit(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resendInviteMutation = useMutation({
     mutationFn: async (memberId: number) => {
       const response = await apiRequest("POST", `/api/team-members/${memberId}/resend-invite`);
@@ -200,6 +225,20 @@ export default function TeamManagement() {
       title: "Invitation link copied",
       description: "You can now share this link directly with the team member.",
     });
+  };
+
+  const handleEditRole = (member: TeamMember) => {
+    setSelectedMemberForRoleEdit(member);
+    setIsRoleEditOpen(true);
+  };
+
+  const handleUpdateRole = (role: string) => {
+    if (selectedMemberForRoleEdit) {
+      updateRoleMutation.mutate({ 
+        memberId: selectedMemberForRoleEdit.id, 
+        role 
+      });
+    }
   };
 
   if (isLoading) {
@@ -491,6 +530,15 @@ export default function TeamManagement() {
                         </>
                       )}
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditRole(member)}
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit Role
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteMember(member.id)}
@@ -531,6 +579,78 @@ export default function TeamManagement() {
         currentUsage={currentTeamCount}
         limit={teamLimit}
       />
+
+      {/* Role Edit Dialog */}
+      <Dialog open={isRoleEditOpen} onOpenChange={setIsRoleEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-orange-600" />
+              Edit Team Member Role
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedMemberForRoleEdit && (
+              <>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <span className="text-emerald-700 font-semibold">
+                      {selectedMemberForRoleEdit.firstName?.charAt(0)}{selectedMemberForRoleEdit.lastName?.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {selectedMemberForRoleEdit.firstName} {selectedMemberForRoleEdit.lastName}
+                    </h3>
+                    <p className="text-sm text-gray-600">{selectedMemberForRoleEdit.email}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">Select the role for this team member:</p>
+                  
+                  <div className="space-y-2">
+                    <Button
+                      variant={selectedMemberForRoleEdit.role === 'admin' ? 'default' : 'outline'}
+                      className={`w-full justify-start ${selectedMemberForRoleEdit.role === 'admin' ? 'bg-blue-500 text-white' : 'text-blue-600 hover:bg-blue-50 border-blue-200'}`}
+                      onClick={() => handleUpdateRole('admin')}
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      <div className="text-left">
+                        <div className="font-medium">Admin</div>
+                        <div className="text-xs opacity-75">Full access to all features and settings</div>
+                      </div>
+                    </Button>
+                    
+                    <Button
+                      variant={selectedMemberForRoleEdit.role === 'member' ? 'default' : 'outline'}
+                      className={`w-full justify-start ${selectedMemberForRoleEdit.role === 'member' ? 'bg-gray-500 text-white' : 'text-gray-600 hover:bg-gray-50 border-gray-200'}`}
+                      onClick={() => handleUpdateRole('member')}
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      <div className="text-left">
+                        <div className="font-medium">Member</div>
+                        <div className="text-xs opacity-75">Limited access based on tab permissions</div>
+                      </div>
+                    </Button>
+                  </div>
+                  
+                  {updateRoleMutation.isPending && (
+                    <div className="text-center py-2">
+                      <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="h-4 w-4 animate-spin" />
+                        Updating role...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
