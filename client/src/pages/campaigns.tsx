@@ -686,6 +686,23 @@ export default function Campaigns() {
                   {campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)} sent
                 </span>
               </div>
+              {campaign.sentCampaigns.length > 0 && (
+                <div className="flex items-center text-xs text-gray-500 mt-2">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Last sent: {(() => {
+                    const latestSent = campaign.sentCampaigns
+                      .filter(c => c.sentAt)
+                      .sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
+                    return latestSent ? new Date(latestSent.sentAt!).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'Never';
+                  })()}
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {campaign.campaignType === 'single' ? (

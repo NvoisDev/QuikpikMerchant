@@ -174,6 +174,18 @@ The platform implements a customer-centric shipping model where customers contro
 
 This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
 
+## Recent Bug Fixes and Feature Implementations (July 13, 2025)
+
+### Enhanced Broadcast Campaigns with Last Sent Date Display (July 13, 2025):
+- **Last Sent Date Feature**: Added comprehensive last sent date display to broadcast campaign cards showing when campaigns were most recently sent to customers
+- **Smart Date Formatting**: Displays last sent date in user-friendly format (e.g., "13 Jul 2025, 16:23") with automatic sorting to show most recent campaign sends
+- **Visual Enhancement**: Added clock icon and subtle styling to clearly indicate last broadcast timing information
+- **Campaign History Tracking**: System now tracks and displays complete campaign sending history for better campaign management
+- **Backend Team Member Limits Fix**: Corrected Standard subscription team member limit from 1 to 2 members to match subscription tier specifications
+- **Role-Based Team Management Enhancement**: Enhanced TabPermissionsManager with comprehensive role hierarchy information, better visual indicators, and improved permission controls
+- **Enhanced Team Member Interface**: Added detailed role descriptions with icons in invite form, improved team member cards with role badges and access level indicators
+- **Professional Role Selection**: Enhanced invite modal with role-based tip section linking to Tab Permissions for better user understanding
+
 ## Recent Bug Fixes and Feature Implementations (July 11, 2025)
 
 ### Complete Order Management System Fix - Timeline and Fulfillment (July 11, 2025):
