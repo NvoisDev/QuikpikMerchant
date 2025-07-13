@@ -88,8 +88,20 @@ export default function ShippingTracking() {
     if (!address) return 'No delivery address provided';
     try {
       const parsed = JSON.parse(address);
-      if (parsed.street || parsed.town || parsed.postcode) {
-        return `${parsed.street || ''}, ${parsed.town || ''}, ${parsed.postcode || ''}`.replace(/^,\s*|,\s*$/g, '').replace(/,\s*,/g, ',');
+      if (typeof parsed === 'object' && parsed !== null) {
+        // Handle comprehensive address object
+        const addressParts = [
+          parsed.street || parsed.property || parsed.address1,
+          parsed.address2,
+          parsed.town || parsed.city,
+          parsed.county || parsed.state,
+          parsed.postcode || parsed.zipCode || parsed.zip,
+          parsed.country
+        ].filter(part => part && part.trim() !== '');
+        
+        if (addressParts.length > 0) {
+          return addressParts.join(', ');
+        }
       }
       return address;
     } catch {

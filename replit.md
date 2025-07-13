@@ -176,6 +176,13 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 13, 2025)
 
+### Complete Delivery Address Formatting Fix (July 13, 2025):
+- **Comprehensive Address Display**: Fixed delivery address formatting in both Orders and Shipping Tracking pages to display complete address information instead of partial data
+- **Enhanced Address Parsing**: Updated formatAddress functions to handle comprehensive address objects with multiple field name variations (street/property/address1, town/city, county/state, postcode/zipCode/zip, etc.)
+- **JSON Address Support**: Improved parsing of JSON-stored address data to extract and display all available address components (street, town, county, postcode, country)
+- **Unified Address Handling**: Both order details modal and shipping tracking now use consistent address formatting that shows full addresses instead of truncated information
+- **User Interface Enhancement**: Addresses now display in user-friendly format with proper comma separation and complete location information for better order management
+
 ### Enhanced Broadcast Campaigns with Last Sent Date Display (July 13, 2025):
 - **Last Sent Date Feature**: Added comprehensive last sent date display to broadcast campaign cards showing when campaigns were most recently sent to customers
 - **Smart Date Formatting**: Displays last sent date in user-friendly format (e.g., "13 Jul 2025, 16:23") with automatic sorting to show most recent campaign sends

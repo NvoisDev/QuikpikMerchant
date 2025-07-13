@@ -55,17 +55,20 @@ const formatAddress = (addressData?: string): string => {
   try {
     // Try to parse as JSON first
     const parsed = JSON.parse(addressData);
-    if (parsed.street || parsed.address) {
-      // Handle different address formats
-      const street = parsed.street || parsed.address || '';
-      const city = parsed.city || '';
-      const state = parsed.state || '';
-      const postalCode = parsed.postalCode || '';
-      const country = parsed.country || '';
+    if (typeof parsed === 'object' && parsed !== null) {
+      // Handle comprehensive address object with multiple possible field names
+      const addressParts = [
+        parsed.street || parsed.property || parsed.address1 || parsed.address,
+        parsed.address2,
+        parsed.town || parsed.city,
+        parsed.county || parsed.state,
+        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
+        parsed.country
+      ].filter(part => part && part.trim() !== '');
       
-      // Build formatted address
-      const parts = [street, city, state, postalCode, country].filter(part => part && part.trim());
-      return parts.join(', ');
+      if (addressParts.length > 0) {
+        return addressParts.join(', ');
+      }
     }
     return addressData;
   } catch {
