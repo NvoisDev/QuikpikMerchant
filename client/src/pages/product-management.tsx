@@ -536,7 +536,7 @@ export default function ProductManagement() {
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
       unit: product.unit || "units",
-      unitFormat: product.unitFormat || "",
+      unitFormat: product.unitFormat || "none",
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
@@ -584,7 +584,7 @@ export default function ProductManagement() {
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
       unit: product.unit || "units",
-      unitFormat: product.unitFormat || "",
+      unitFormat: product.unitFormat || "none",
       sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       deliveryOptions: {
@@ -707,7 +707,7 @@ export default function ProductManagement() {
         minimumBidPrice: row.minimumBidPrice || "",
         status: row.status || "active",
         unit: row.unit || "units",
-        unitFormat: row.unitFormat || "",
+        unitFormat: row.unitFormat || "none",
         sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "",
         palletPrice: row.palletPrice || "",
@@ -753,7 +753,7 @@ export default function ProductManagement() {
             palletMoq: product.palletMoq ? parseInt(product.palletMoq) : null,
             palletStock: product.palletStock ? parseInt(product.palletStock) : null,
             unit: product.unit || "units",
-            unitFormat: product.unitFormat || "",
+            unitFormat: product.unitFormat === "" ? "none" : (product.unitFormat || "none"),
             unitWeight: product.unitWeight || null,
             palletWeight: product.palletWeight || null,
           };
@@ -1424,7 +1424,7 @@ export default function ProductManagement() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="">None (single units)</SelectItem>
+                                    <SelectItem value="none">None (single units)</SelectItem>
                                     {COMMON_WHOLESALE_FORMATS.map((format) => (
                                       <SelectItem key={format} value={format}>
                                         {format}
