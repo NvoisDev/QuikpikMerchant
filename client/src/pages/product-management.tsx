@@ -76,24 +76,17 @@ const productFormSchema = z.object({
   minimumBidPrice: z.string().optional(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
   
-  // Units and measurements
-  unit: z.string().optional(),
-  unitFormat: z.string().optional(),
-  // New flexible unit system
+  // Flexible unit system
   packQuantity: z.string().optional(),
   unitOfMeasure: z.string().optional(), 
   unitSize: z.string().optional(),
   
-  // Pallet/Unit selling options
-  sellingFormat: z.enum(["units", "pallets", "both"]),
-  unitsPerPallet: z.string().optional(),
-  palletPrice: z.string().optional(),
-  palletMoq: z.string().optional(),
-  palletStock: z.string().optional(),
-  
-  // Weight and shipping requirements
+  // Weight and shipping requirements  
   unitWeight: z.string().optional(),
-  palletWeight: z.string().optional(),
+  totalPackageWeight: z.string().optional(),
+  
+  // Delivery exclusion
+  deliveryExcluded: z.boolean().optional(),
   temperatureRequirement: z.enum(["ambient", "chilled", "frozen"]).optional(),
   contentCategory: z.enum(["general", "food", "pharmaceuticals", "electronics", "textiles"]).optional(),
   specialHandling: z.object({
@@ -102,10 +95,7 @@ const productFormSchema = z.object({
     hazardous: z.boolean().optional(),
   }).optional(),
   
-  deliveryOptions: z.object({
-    pickup: z.boolean(),
-    delivery: z.boolean(),
-  }),
+
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -147,29 +137,19 @@ export default function ProductManagement() {
       negotiationEnabled: false,
       minimumBidPrice: "",
       status: "active",
-      unit: "units",
-      unitFormat: "",
-      // New flexible unit system defaults
+      // Flexible unit system defaults
       packQuantity: "",
       unitOfMeasure: "",
       unitSize: "",
-      sellingFormat: "units",
-      unitsPerPallet: "",
-      palletPrice: "",
-      palletMoq: "1",
-      palletStock: "0",
       unitWeight: "",
-      palletWeight: "",
+      totalPackageWeight: "",
+      deliveryExcluded: false,
       temperatureRequirement: "ambient",
       contentCategory: "general",
       specialHandling: {
         fragile: false,
         perishable: false,
         hazardous: false,
-      },
-      deliveryOptions: {
-        pickup: true,
-        delivery: true,
       },
     },
   });
@@ -544,24 +524,14 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
-      unit: product.unit || "units",
-      unitFormat: product.unitFormat || "none",
-      // New flexible unit system
+      // Flexible unit system
       packQuantity: product.packQuantity?.toString() || "",
       unitOfMeasure: product.unitOfMeasure || "",
       unitSize: product.unitSize?.toString() || "",
-      sellingFormat: product.sellingFormat || "units",
-      unitsPerPallet: product.unitsPerPallet?.toString() || "",
-      palletPrice: product.palletPrice?.toString() || "",
-      palletMoq: product.palletMoq?.toString() || "1",
-      palletStock: product.palletStock?.toString() || "0",
-      deliveryOptions: {
-        pickup: product.supportsPickup !== false,
-        delivery: product.supportsDelivery !== false,
-      },
       // Weight and shipping fields
       unitWeight: product.unitWeight?.toString() || "",
-      palletWeight: product.palletWeight?.toString() || "",
+      totalPackageWeight: product.totalPackageWeight?.toString() || "",
+      deliveryExcluded: product.deliveryExcluded || false,
       temperatureRequirement: product.temperatureRequirement || "ambient",
       contentCategory: product.contentCategory || "general",
       specialHandling: product.specialHandling || {},
@@ -596,21 +566,14 @@ export default function ProductManagement() {
       negotiationEnabled: product.negotiationEnabled,
       minimumBidPrice: product.minimumBidPrice || "",
       status: product.status,
-      unit: product.unit || "units",
-      unitFormat: product.unitFormat || "none",
-      // New flexible unit system
+      // Flexible unit system
       packQuantity: product.packQuantity?.toString() || "",
       unitOfMeasure: product.unitOfMeasure || "",
       unitSize: product.unitSize?.toString() || "",
-      sellingFormat: product.sellingFormat || "units",
-      unitsPerPallet: product.unitsPerPallet?.toString() || "",
-      deliveryOptions: {
-        pickup: product.supportsPickup !== false,
-        delivery: product.supportsDelivery !== false,
-      },
       // Weight and shipping fields
       unitWeight: product.unitWeight?.toString() || "",
-      palletWeight: product.palletWeight?.toString() || "",
+      totalPackageWeight: product.totalPackageWeight?.toString() || "",
+      deliveryExcluded: product.deliveryExcluded || false,
       temperatureRequirement: product.temperatureRequirement || "ambient",
       contentCategory: product.contentCategory || "general",
       specialHandling: product.specialHandling || {},
@@ -1389,72 +1352,13 @@ export default function ProductManagement() {
                         )}
                       />
 
-                      {/* Units and Measurements Section */}
+                      {/* Flexible Unit Configuration Section */}
                       <div className="space-y-4">
                         <div>
-                          <FormLabel className="text-base">Units & Measurements</FormLabel>
+                          <FormLabel className="text-base">Product Unit Configuration</FormLabel>
                           <div className="text-sm text-muted-foreground mb-3">
-                            Define how your product is measured and sold
+                            Configure how your product is packaged and measured for accurate shipping calculations
                           </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="unit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit of Measure</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select unit" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {UNITS.map((unit) => (
-                                      <SelectItem key={unit.value} value={unit.value}>
-                                        {unit.label} ({unit.category})
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                <div className="text-xs text-muted-foreground">
-                                  How your product is measured
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="unitFormat"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit Format</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select format or type custom" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="none">None (single units)</SelectItem>
-                                    {COMMON_WHOLESALE_FORMATS.map((format) => (
-                                      <SelectItem key={format} value={format}>
-                                        {format}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                <div className="text-xs text-muted-foreground">
-                                  Packaging format (e.g., "12 x 500ml", "25kg bags")
-                                </div>
-                              </FormItem>
-                            )}
-                          />
                         </div>
                         
                         {/* New Flexible Unit System */}
@@ -1583,23 +1487,23 @@ export default function ProductManagement() {
                         
                         <FormField
                           control={form.control}
-                          name="sellingFormat"
+                          name="deliveryExcluded"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Selling Format</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select selling format" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="units">Individual Units Only</SelectItem>
-                                  <SelectItem value="pallets">Pallets Only</SelectItem>
-                                  <SelectItem value="both">Both Units & Pallets</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <input
+                                  type="checkbox"
+                                  checked={field.value}
+                                  onChange={field.onChange}
+                                  className="mt-1"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Exclude from Delivery</FormLabel>
+                                <div className="text-sm text-muted-foreground">
+                                  Check if this product should only be available for pickup
+                                </div>
+                              </div>
                             </FormItem>
                           )}
                         />
@@ -1692,7 +1596,7 @@ export default function ProductManagement() {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="unitWeight"
@@ -1705,6 +1609,23 @@ export default function ProductManagement() {
                                 <FormMessage />
                                 <div className="text-xs text-muted-foreground">
                                   Weight per individual unit
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="totalPackageWeight"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Total Package Weight (kg)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" step="0.001" placeholder="Auto-calculated" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Complete package weight for shipping quotes
                                 </div>
                               </FormItem>
                             )}
@@ -1765,26 +1686,7 @@ export default function ProductManagement() {
                           />
                         </div>
                         
-                        {(form.watch("sellingFormat") === "pallets" || form.watch("sellingFormat") === "both") && (
-                          <div className="mt-4">
-                            <FormField
-                              control={form.control}
-                              name="palletWeight"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Pallet Weight (kg)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" step="0.001" placeholder="25.000" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-xs text-muted-foreground">
-                                    Total weight per complete pallet including packaging
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        )}
+
                         
                         <div>
                           <FormLabel className="text-sm font-medium">Special Handling Requirements</FormLabel>
@@ -1852,58 +1754,7 @@ export default function ProductManagement() {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <FormLabel className="text-base">Fulfillment Options</FormLabel>
-                          <div className="text-sm text-muted-foreground mb-3">
-                            Choose which delivery options customers can select
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="deliveryOptions.pickup"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Customer Pickup</FormLabel>
-                                  <div className="text-sm text-muted-foreground">
-                                    Customers can collect orders from your location
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="deliveryOptions.delivery"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Delivery Available</FormLabel>
-                                  <div className="text-sm text-muted-foreground">
-                                    Offer delivery through courier services
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
+
 
                       <div className="flex items-center justify-between">
                         <div className="space-y-4">

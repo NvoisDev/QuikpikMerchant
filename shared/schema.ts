@@ -180,6 +180,12 @@ export const users = pgTable("users", {
   enableTrackingNotifications: boolean("enable_tracking_notifications").default(true),
   sendDeliveryConfirmations: boolean("send_delivery_confirmations").default(true),
   
+  // Global Fulfillment Options
+  enablePickup: boolean("enable_pickup").default(true),
+  enableDelivery: boolean("enable_delivery").default(true),
+  pickupAddress: text("pickup_address"), // Address for customer pickup
+  pickupInstructions: text("pickup_instructions"), // Special pickup instructions
+  
   // Password field for team members
   passwordHash: varchar("password_hash"),
   
@@ -270,12 +276,8 @@ export const products = pgTable("products", {
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   lowStockThreshold: integer("low_stock_threshold").notNull().default(50), // Alert when stock falls below this number
   
-  // Pallet/Unit selling options
-  sellingFormat: varchar("selling_format").notNull().default("units"), // 'units', 'pallets', 'both'
-  unitsPerPallet: integer("units_per_pallet"), // How many units make up one pallet
-  palletPrice: decimal("pallet_price", { precision: 10, scale: 2 }), // Price per pallet (when selling pallets)
-  palletMoq: integer("pallet_moq").default(1), // Minimum pallet order quantity
-  palletStock: integer("pallet_stock").default(0), // Stock count in pallets
+  // Global fulfillment exclusion - if true, this product cannot be delivered (pickup only)
+  deliveryExcluded: boolean("delivery_excluded").default(false),
   
   // Units and measurements
   unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)
@@ -286,11 +288,10 @@ export const products = pgTable("products", {
   unitOfMeasure: varchar("unit_of_measure", { length: 20 }), // e.g., "ml", "g", "pieces"
   unitSize: decimal("unit_size", { precision: 10, scale: 3 }), // e.g., 250 (for "24 x 250ml")
   
-  // Weight and dimensions for shipping
-  unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per unit in kg
-  palletWeight: decimal("pallet_weight", { precision: 10, scale: 3 }), // Weight per pallet in kg
-  unitDimensions: jsonb("unit_dimensions").default({}), // {length: cm, width: cm, height: cm}
-  palletDimensions: jsonb("pallet_dimensions").default({}), // {length: cm, width: cm, height: cm}
+  // Weight and dimensions for shipping (based on flexible unit configuration)
+  unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per individual unit in kg
+  totalPackageWeight: decimal("total_package_weight", { precision: 10, scale: 3 }), // Total weight of full package (packQuantity * unitSize * unitWeight)
+  packageDimensions: jsonb("package_dimensions").default({}), // {length: cm, width: cm, height: cm} for the complete package
   
   // Temperature and special handling requirements
   temperatureRequirement: varchar("temperature_requirement").default("ambient"), // 'frozen', 'chilled', 'ambient'
@@ -298,10 +299,7 @@ export const products = pgTable("products", {
   shelfLife: integer("shelf_life"), // Days before expiry
   contentCategory: varchar("content_category").default("general"), // 'food', 'pharmaceuticals', 'electronics', 'textiles', 'general'
   
-  deliveryOptions: jsonb("delivery_options").default({
-    pickup: true,
-    delivery: true
-  }), // Which fulfillment options are available
+
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -754,19 +752,16 @@ export const insertProductSchema = createInsertSchema(products).omit({
   unitSize: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   price: z.union([z.string(), z.number()]).transform((val) => val.toString()),
   promoPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
-  palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+
   minimumBidPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
-  palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  totalPackageWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   // Fix integer fields to accept string inputs from frontend
-  packQuantity: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  packQuantity: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
   moq: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
   stock: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
-  unitsPerPallet: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
-  palletMoq: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 1),
-  palletStock: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 0),
-  lowStockThreshold: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 50),
-  shelfLife: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  lowStockThreshold: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : 50),
+  shelfLife: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
