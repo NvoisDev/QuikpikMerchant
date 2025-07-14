@@ -3525,6 +3525,7 @@ Write a professional, sales-focused description that highlights the key benefits
           title: `${broadcast.product.name} Promotion`,
           customMessage: broadcast.message,
           specialPrice: broadcast.specialPrice,
+          quantity: broadcast.quantity, // Add the quantity field
           promotionalOffers: (() => {
             try {
               return broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [];
