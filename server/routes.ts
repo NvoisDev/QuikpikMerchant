@@ -3625,7 +3625,7 @@ Write a professional, sales-focused description that highlights the key benefits
           totalRevenue: campaign.totalRevenue,
           customerGroup: campaign.customerGroup
         }))
-      }));
+      })));
 
       // Combine and sort by creation date
       const allCampaigns = [...broadcastCampaigns, ...templateCampaigns]
