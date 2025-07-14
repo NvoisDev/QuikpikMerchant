@@ -176,6 +176,14 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
+### Complete Promotional Pricing Display System Implementation (July 14, 2025):
+- **Campaign Cards Enhancement**: Added promotional price display showing original price crossed out next to promotional price (e.g., "£12.99 ~~£15.99~~ PROMO")
+- **Customer Portal Pricing**: Confirmed existing promotional pricing display works correctly in customer portal with green promotional price and crossed-out original price
+- **Payment Processing Fix**: Updated server-side payment processing to use promotional prices when active instead of regular prices
+- **Comprehensive Price Logic**: All pricing calculations now use effective price (promotional price if active, otherwise regular price) for accurate billing
+- **End-to-End Pricing**: Complete pricing system from campaign display → customer portal → payment processing → order creation uses promotional pricing consistently
+- **Visual Consistency**: Both single-product and multi-product campaigns now show promotional pricing with proper visual hierarchy and color coding
+
 ### Campaign Button Text Optimization (July 14, 2025):
 - **Compact Button Labels**: Shortened campaign action button text to improve interface fit and readability
 - **Consistent Send Button**: Standardized "Send" text instead of dynamic "Send/Resend" for cleaner appearance

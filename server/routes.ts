@@ -706,13 +706,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const itemTotal = parseFloat(product.price) * item.quantity;
+        // Use promotional price if active, otherwise regular price
+        const effectivePrice = product.promoActive && product.promoPrice 
+          ? parseFloat(product.promoPrice) 
+          : parseFloat(product.price);
+        
+        const itemTotal = effectivePrice * item.quantity;
         subtotal += itemTotal;
 
         orderItems.push({
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: product.price,
+          unitPrice: effectivePrice.toFixed(2),
           total: itemTotal.toFixed(2)
         });
       }
@@ -795,13 +800,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const itemTotal = parseFloat(product.price) * item.quantity;
+        // Use promotional price if active, otherwise regular price
+        const effectivePrice = product.promoActive && product.promoPrice 
+          ? parseFloat(product.promoPrice) 
+          : parseFloat(product.price);
+        
+        const itemTotal = effectivePrice * item.quantity;
         calculatedTotal += itemTotal;
 
         validatedItems.push({
           ...item,
           product,
-          unitPrice: product.price,
+          unitPrice: effectivePrice.toFixed(2),
           total: itemTotal.toFixed(2)
         });
       }
@@ -841,7 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             productId: item.product.id,
             productName: item.product.name,
             quantity: item.quantity,
-            unitPrice: parseFloat(item.product.price)
+            unitPrice: parseFloat(item.unitPrice)
           })))
         }
       });

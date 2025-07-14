@@ -1010,13 +1010,14 @@ export default function Campaigns() {
                   </div>
                   <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
                     <span className="text-gray-600">
-                      💰 {formatCurrency(Number(
-                        campaign.product?.promoActive && campaign.product?.promoPrice 
-                          ? campaign.product.promoPrice 
-                          : campaign.product?.price
-                      ) || 0)}
-                      {campaign.product?.promoActive && campaign.product?.promoPrice && (
-                        <span className="ml-1 text-xs text-red-600 font-medium">PROMO</span>
+                      💰 {campaign.product?.promoActive && campaign.product?.promoPrice ? (
+                        <span className="flex items-center space-x-1">
+                          <span className="text-red-600 font-semibold">{formatCurrency(Number(campaign.product.promoPrice))}</span>
+                          <span className="text-gray-400 line-through text-xs">{formatCurrency(Number(campaign.product.price))}</span>
+                          <span className="text-red-600 font-medium">PROMO</span>
+                        </span>
+                      ) : (
+                        <span>{formatCurrency(Number(campaign.product?.price) || 0)}</span>
                       )}
                     </span>
                     <span className="text-gray-600">
@@ -1050,16 +1051,20 @@ export default function Campaigns() {
                           <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>💰 {formatCurrency(Number(
-                            productItem.specialPrice || 
-                            (productItem.product?.promoActive && productItem.product?.promoPrice 
-                              ? productItem.product.promoPrice 
-                              : productItem.product?.price)
-                          ) || 0)}
-                          {(productItem.specialPrice || (productItem.product?.promoActive && productItem.product?.promoPrice)) && (
-                            <span className="ml-1 text-xs text-red-600 font-medium">
-                              {productItem.specialPrice ? 'SPECIAL' : 'PROMO'}
+                          <span>💰 {(productItem.specialPrice || (productItem.product?.promoActive && productItem.product?.promoPrice)) ? (
+                            <span className="flex items-center space-x-1">
+                              <span className="text-red-600 font-semibold">
+                                {formatCurrency(Number(productItem.specialPrice || productItem.product?.promoPrice) || 0)}
+                              </span>
+                              <span className="text-gray-400 line-through text-xs">
+                                {formatCurrency(Number(productItem.product?.price) || 0)}
+                              </span>
+                              <span className="text-red-600 font-medium">
+                                {productItem.specialPrice ? 'SPECIAL' : 'PROMO'}
+                              </span>
                             </span>
+                          ) : (
+                            <span>{formatCurrency(Number(productItem.product?.price) || 0)}</span>
                           )}
                           </span>
                           <span>📦 {formatNumber(productItem.quantity || 0)} qty</span>
