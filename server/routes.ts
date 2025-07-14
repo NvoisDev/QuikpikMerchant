@@ -3530,9 +3530,13 @@ Write a professional, sales-focused description that highlights the key benefits
           }, 0).toFixed(2);
         }
 
+        // Fetch fresh product data with current promotional offers
+        const currentProduct = await storage.getProduct(broadcast.product.id);
+        const productToUse = currentProduct || broadcast.product;
+
         return {
           id: `broadcast_${broadcast.id}`,
-          title: `${broadcast.product.name} Promotion`,
+          title: `${productToUse.name} Promotion`,
           customMessage: broadcast.message,
           specialPrice: broadcast.specialPrice,
           quantity: broadcast.quantity, // Add the quantity field
@@ -3550,15 +3554,8 @@ Write a professional, sales-focused description that highlights the key benefits
           status: broadcast.sentAt ? 'sent' : 'draft',
           createdAt: broadcast.createdAt,
           product: {
-            ...broadcast.product,
-            promotionalOffers: (() => {
-              try {
-                return broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [];
-              } catch (e) {
-                console.error('Error parsing promotional offers for product:', broadcast.id, e);
-                return [];
-              }
-            })()
+            ...productToUse,
+            // Use current product's promotional offers and pricing, not broadcast's cached ones
           },
           sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
             id: broadcast.id,
