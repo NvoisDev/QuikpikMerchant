@@ -15,6 +15,60 @@ import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
+// Promotional offer types
+export type PromotionalOfferType = 
+  | 'percentage_discount'    // 10% off
+  | 'fixed_amount_discount'  // £5 off
+  | 'bogo'                   // Buy one get one free
+  | 'buy_x_get_y_free'       // Buy 2 get 1 free, Buy 3 get 2 free, etc.
+  | 'bulk_discount'          // Tiered pricing: 10+ items = 5% off, 50+ items = 10% off
+  | 'fixed_price'            // Set fixed promotional price
+  | 'free_shipping'          // Free delivery on this product
+  | 'bundle_deal';           // Special price when bought with other products
+
+export interface PromotionalOffer {
+  id: string;
+  name: string;
+  type: PromotionalOfferType;
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  
+  // Discount values
+  discountPercentage?: number;  // For percentage_discount
+  discountAmount?: number;      // For fixed_amount_discount
+  fixedPrice?: number;          // For fixed_price
+  
+  // BOGO and bulk deal settings
+  buyQuantity?: number;         // Buy X
+  getQuantity?: number;         // Get Y free
+  minQuantity?: number;         // Minimum quantity to qualify
+  maxQuantity?: number;         // Maximum quantity this offer applies to
+  
+  // Bulk discount tiers
+  bulkTiers?: Array<{
+    minQuantity: number;
+    discountPercentage: number;
+    discountAmount?: number;
+  }>;
+  
+  // Bundle deal settings
+  bundleProducts?: number[];    // Product IDs that must be purchased together
+  bundlePrice?: number;         // Special price for the bundle
+  
+  // Usage limits
+  maxUses?: number;             // Total times this offer can be used
+  usesCount?: number;           // Current usage count
+  maxUsesPerCustomer?: number;  // Max uses per customer
+  
+  // Conditions
+  description?: string;         // Display description for customers
+  termsAndConditions?: string;  // Fine print
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Session storage table (required for auth)
 export const sessions = pgTable(
   "sessions",
@@ -200,6 +254,9 @@ export const products = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   promoPrice: decimal("promo_price", { precision: 10, scale: 2 }), // Optional promotional price
   promoActive: boolean("promo_active").default(false), // Whether the promo is currently active
+  
+  // Multiple promotional offers system
+  // promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
   currency: varchar("currency").default("GBP"), // ISO currency code
   moq: integer("moq").notNull().default(1), // minimum order quantity
   stock: integer("stock").notNull().default(0),

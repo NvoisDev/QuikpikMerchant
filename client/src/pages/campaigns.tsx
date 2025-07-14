@@ -98,10 +98,12 @@ export default function Campaigns() {
   const { subscription, isLoading: subscriptionLoading } = useSubscription();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [isStockRefreshOpen, setIsStockRefreshOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
   const [editableMessage, setEditableMessage] = useState<string>("");
@@ -157,6 +159,36 @@ export default function Campaigns() {
     onError: (error: any) => {
       toast({
         title: "Creation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit campaign mutation
+  const editCampaignMutation = useMutation({
+    mutationFn: async (data: CampaignFormData & { id: string }) => {
+      const campaignData = {
+        ...data,
+        products: data.campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
+      };
+      const response = await apiRequest("PUT", `/api/campaigns/${data.id}`, campaignData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      setIsEditOpen(false);
+      setEditingCampaign(null);
+      form.reset();
+      setSelectedProducts([]);
+      toast({
+        title: "Campaign Updated",
+        description: "Your marketing campaign has been updated successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -336,11 +368,50 @@ export default function Campaigns() {
   };
 
   const onSubmit = (data: CampaignFormData) => {
-    createCampaignMutation.mutate({
-      ...data,
-      campaignType,
-      products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
+    if (editingCampaign) {
+      editCampaignMutation.mutate({
+        ...data,
+        id: editingCampaign.id,
+        campaignType,
+        products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
+      });
+    } else {
+      createCampaignMutation.mutate({
+        ...data,
+        campaignType,
+        products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
+      });
+    }
+  };
+
+  // Function to open edit modal with campaign data
+  const handleEditCampaign = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    setCampaignType(campaign.campaignType);
+    
+    // Populate form with campaign data
+    form.reset({
+      title: campaign.title,
+      customMessage: campaign.customMessage || "",
+      includeContact: campaign.includeContact,
+      includePurchaseLink: campaign.includePurchaseLink,
+      campaignType: campaign.campaignType,
+      productId: campaign.campaignType === 'single' ? campaign.product?.id : undefined,
+      specialPrice: campaign.specialPrice || "",
     });
+
+    // Set up products for multi-product campaigns
+    if (campaign.campaignType === 'multi' && campaign.products) {
+      setSelectedProducts(campaign.products.map(p => ({
+        productId: p.productId,
+        quantity: p.quantity,
+        specialPrice: p.specialPrice || ''
+      })));
+    } else {
+      setSelectedProducts([]);
+    }
+
+    setIsEditOpen(true);
   };
 
   if (campaignsLoading) {
@@ -489,7 +560,7 @@ export default function Campaigns() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Broadcast Campaign</DialogTitle>
+              <DialogTitle>{editingCampaign ? 'Edit Campaign' : 'Create Broadcast Campaign'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -678,11 +749,18 @@ export default function Campaigns() {
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => {
+                    setIsCreateOpen(false);
+                    setIsEditOpen(false);
+                    setEditingCampaign(null);
+                  }}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createCampaignMutation.isPending}>
-                    {createCampaignMutation.isPending ? "Creating..." : "Create Campaign"}
+                  <Button type="submit" disabled={createCampaignMutation.isPending || editCampaignMutation.isPending}>
+                    {editingCampaign 
+                      ? (editCampaignMutation.isPending ? "Updating..." : "Update Campaign")
+                      : (createCampaignMutation.isPending ? "Creating..." : "Create Campaign")
+                    }
                   </Button>
                 </div>
               </form>
@@ -846,6 +924,15 @@ export default function Campaigns() {
                   >
                     <Eye className="h-4 w-4 mr-1" />
                     Preview
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleEditCampaign(campaign)}
+                    className="flex-1 min-w-0"
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    Edit
                   </Button>
                   <Button 
                     size="sm" 

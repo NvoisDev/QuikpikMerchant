@@ -158,6 +158,7 @@ export interface IStorage {
   // Broadcast operations
   getBroadcasts(wholesalerId: string): Promise<(Broadcast & { product: Product; customerGroup: CustomerGroup })[]>;
   createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
+  updateBroadcast(id: number, updates: Partial<InsertBroadcast>): Promise<Broadcast>;
   updateBroadcastStatus(id: number, status: string, sentAt?: Date, recipientCount?: number, messageId?: string, errorMessage?: string): Promise<Broadcast>;
   getBroadcastStats(wholesalerId: string): Promise<{
     totalBroadcasts: number;
@@ -1482,6 +1483,16 @@ export class DatabaseStorage implements IStorage {
     return newBroadcast;
   }
 
+  async updateBroadcast(id: number, updates: Partial<InsertBroadcast>): Promise<Broadcast> {
+    const [updatedBroadcast] = await db
+      .update(broadcasts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(broadcasts.id, id))
+      .returning();
+    
+    return updatedBroadcast;
+  }
+
   async updateBroadcastStatus(
     id: number, 
     status: string, 
@@ -1672,6 +1683,15 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the template
     await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
+  }
+
+  async deleteTemplateProducts(templateId: number): Promise<void> {
+    await db.delete(templateProducts).where(eq(templateProducts.templateId, templateId));
+  }
+
+  async createTemplateProduct(templateProduct: InsertTemplateProduct): Promise<TemplateProduct> {
+    const [newTemplateProduct] = await db.insert(templateProducts).values(templateProduct).returning();
+    return newTemplateProduct;
   }
 
   async createTemplateCampaign(campaign: InsertTemplateCampaign): Promise<TemplateCampaign> {

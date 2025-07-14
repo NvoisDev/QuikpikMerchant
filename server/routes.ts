@@ -3685,6 +3685,77 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Update campaign endpoint
+  app.put('/api/campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const campaignId = req.params.id;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
+
+      // Parse campaign ID to determine type
+      const [type, numericId] = campaignId.split('_');
+      const id = parseInt(numericId);
+
+      if (campaignType === 'single') {
+        if (type === 'broadcast') {
+          // Update broadcast
+          const updateData = {
+            ...campaignData,
+            specialPrice: specialPrice || null,
+            productId: productId,
+          };
+          
+          const updatedBroadcast = await storage.updateBroadcast(id, updateData);
+          if (!updatedBroadcast) {
+            return res.status(404).json({ message: "Campaign not found" });
+          }
+          
+          res.json(updatedBroadcast);
+        } else {
+          return res.status(404).json({ message: "Campaign not found" });
+        }
+      } else if (campaignType === 'multi') {
+        if (type === 'template') {
+          // Update template campaign
+          const updateData = {
+            ...campaignData,
+          };
+          
+          const updatedTemplate = await storage.updateMessageTemplate(id, updateData);
+          if (!updatedTemplate) {
+            return res.status(404).json({ message: "Campaign not found" });
+          }
+
+          // Update template products if provided
+          if (products && products.length > 0) {
+            // First delete existing template products
+            await storage.deleteTemplateProducts(id);
+            
+            // Then add new ones
+            for (const product of products) {
+              await storage.createTemplateProduct({
+                templateId: id,
+                productId: product.productId,
+                quantity: product.quantity,
+                specialPrice: product.specialPrice || null,
+              });
+            }
+          }
+          
+          res.json(updatedTemplate);
+        } else {
+          return res.status(404).json({ message: "Campaign not found" });
+        }
+      } else {
+        return res.status(400).json({ message: "Invalid campaign type" });
+      }
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      res.status(500).json({ message: "Failed to update campaign" });
+    }
+  });
+
   app.post('/api/campaigns/send', requireAuth, async (req: any, res) => {
     try {
       const user = req.user;
