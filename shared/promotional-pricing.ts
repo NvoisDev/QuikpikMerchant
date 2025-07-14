@@ -49,8 +49,26 @@ export class PromotionalPricingCalculator {
     let freeItems = 0;
     let totalQuantity = quantity;
 
-    // First, apply simple promo price if active
-    if (promoActive && promoPrice) {
+    // Check if we have active promotional offers first
+    const hasActivePromotionalOffers = promotionalOffers.some(offer => {
+      if (offer.isActive === false) return false;
+      
+      // Check date validity if provided
+      if (offer.startDate && offer.endDate) {
+        const now = new Date();
+        const start = new Date(offer.startDate);
+        const end = new Date(offer.endDate);
+        // Add a day to the end date to handle same-day offers
+        end.setDate(end.getDate() + 1);
+        if (now < start || now > end) return false;
+      }
+      
+      return true;
+    });
+
+    // If we have promotional offers, prioritize them over simple promo price
+    // Otherwise, apply simple promo price if active
+    if (!hasActivePromotionalOffers && promoActive && promoPrice) {
       effectivePrice = promoPrice;
       totalDiscount += (originalPrice - promoPrice) * quantity;
       appliedOffers.push(`Sale Price: ${promoPrice.toFixed(2)}`);
