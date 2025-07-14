@@ -3518,7 +3518,14 @@ Write a professional, sales-focused description that highlights the key benefits
           title: `${broadcast.product.name} Promotion`,
           customMessage: broadcast.message,
           specialPrice: broadcast.specialPrice,
-          promotionalOffers: broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [],
+          promotionalOffers: (() => {
+            try {
+              return broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [];
+            } catch (e) {
+              console.error('Error parsing promotional offers for broadcast:', broadcast.id, e);
+              return [];
+            }
+          })(),
           includeContact: true,
           includePurchaseLink: true,
           campaignType: 'single' as const,
@@ -3549,7 +3556,14 @@ Write a professional, sales-focused description that highlights the key benefits
         createdAt: template.createdAt,
         products: template.products.map(product => ({
           ...product,
-          promotionalOffers: product.promotionalOffers ? JSON.parse(product.promotionalOffers) : []
+          promotionalOffers: (() => {
+            try {
+              return product.promotionalOffers ? JSON.parse(product.promotionalOffers) : [];
+            } catch (e) {
+              console.error('Error parsing promotional offers for template product:', product.id, e);
+              return [];
+            }
+          })()
         })),
         sentCampaigns: template.campaigns.map(campaign => ({
           id: campaign.id,
