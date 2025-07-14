@@ -3558,11 +3558,19 @@ Write a professional, sales-focused description that highlights the key benefits
           ...product,
           promotionalOffers: (() => {
             try {
-              if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null') {
+              if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
                 return [];
               }
-              const parsed = JSON.parse(product.promotionalOffers);
-              return Array.isArray(parsed) ? parsed : [];
+              // Handle array objects directly
+              if (Array.isArray(product.promotionalOffers)) {
+                return product.promotionalOffers;
+              }
+              // Parse string JSON
+              if (typeof product.promotionalOffers === 'string') {
+                const parsed = JSON.parse(product.promotionalOffers);
+                return Array.isArray(parsed) ? parsed : [];
+              }
+              return [];
             } catch (e) {
               console.error('Error parsing promotional offers for template product:', product.id, 'Data:', product.promotionalOffers, e);
               return [];
@@ -3668,6 +3676,8 @@ Write a professional, sales-focused description that highlights the key benefits
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
+      
+      console.log('Campaign ID parsing:', { campaignId, type, numericId, id });
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid campaign ID format" });
