@@ -1215,6 +1215,14 @@ export class DatabaseStorage implements IStorage {
           pallet_weight: product.pallet_weight,
           promoPrice: product.promo_price,
           promoActive: product.promo_active,
+          promotionalOffers: (() => {
+            try {
+              return product.promotional_offers ? JSON.parse(product.promotional_offers) : [];
+            } catch (e) {
+              console.error('Error parsing promotional offers for product:', product.id, e);
+              return [];
+            }
+          })(),
           createdAt: product.created_at,
           updatedAt: product.updated_at,
           wholesaler: {

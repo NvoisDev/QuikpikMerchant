@@ -19,6 +19,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, M
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -104,6 +105,9 @@ interface Product {
   unit_weight?: string;
   total_package_weight?: string;
   
+  // Promotional offers
+  promotionalOffers?: PromotionalOffer[];
+  
   wholesaler: {
     id: string;
     businessName: string;
@@ -169,11 +173,15 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                 if (item.sellingType === "pallets") {
                   return parseFloat(item.product.palletPrice || "0") || 0;
                 } else {
-                  const promoPrice = item.product.promoActive && item.product.promoPrice 
-                    ? parseFloat(item.product.promoPrice) || 0
-                    : 0;
-                  const regularPrice = parseFloat(item.product.price) || 0;
-                  return promoPrice > 0 ? promoPrice : regularPrice;
+                  const basePrice = parseFloat(item.product.price) || 0;
+                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                    basePrice,
+                    item.quantity,
+                    item.product.promotionalOffers || [],
+                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                    item.product.promoActive
+                  );
+                  return pricing.effectivePrice;
                 }
               })()
             })),
@@ -575,6 +583,18 @@ export default function CustomerPortal() {
     gcTime: 10 * 60 * 1000 // Keep in cache for 10 minutes
   });
 
+  // Helper function to calculate promotional pricing for display
+  const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
+    const basePrice = parseFloat(product.price) || 0;
+    return PromotionalPricingCalculator.calculatePromotionalPricing(
+      basePrice,
+      quantity,
+      product.promotionalOffers || [],
+      product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+      product.promoActive
+    );
+  };
+
   // Memoized calculations
   const filteredProducts = useMemo(() => {
     console.log('🔍 filteredProducts calculation:', {
@@ -628,11 +648,15 @@ export default function CustomerPortal() {
       if (item.sellingType === "pallets") {
         price = parseFloat(item.product.palletPrice || "0") || 0;
       } else {
-        const promoPrice = item.product.promoActive && item.product.promoPrice 
-          ? parseFloat(item.product.promoPrice) || 0
-          : 0;
-        const regularPrice = parseFloat(item.product.price) || 0;
-        price = promoPrice > 0 ? promoPrice : regularPrice;
+        const basePrice = parseFloat(item.product.price) || 0;
+        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          basePrice,
+          item.quantity,
+          item.product.promotionalOffers || [],
+          item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+          item.product.promoActive
+        );
+        price = pricing.effectivePrice;
       }
       // Ensure we never add NaN values
       const itemTotal = (price || 0) * (item.quantity || 0);
@@ -973,25 +997,39 @@ export default function CustomerPortal() {
                       
                       {/* Price */}
                       <div className="border-t border-b py-6">
-                        {featuredProduct.promoActive && featuredProduct.promoPrice ? (
-                          <div>
-                            <div className="flex items-baseline gap-4 mb-2">
-                              <span className="text-4xl font-bold text-green-600">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.promoPrice).toFixed(2)}
-                              </span>
-                              <span className="text-2xl text-gray-400 line-through">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
-                              </span>
+                        {(() => {
+                          const pricing = calculatePromotionalPricing(featuredProduct);
+                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                          
+                          return hasDiscounts ? (
+                            <div>
+                              <div className="flex items-baseline gap-4 mb-2">
+                                <span className="text-4xl font-bold text-green-600">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
+                                </span>
+                                <span className="text-2xl text-gray-400 line-through">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="text-sm text-green-600 font-medium mb-2">
+                                Save {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.totalDiscount.toFixed(2)} ({Math.round(pricing.discountPercentage)}% off)
+                              </div>
+                              {pricing.appliedOffers.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {pricing.appliedOffers.map((offer, index) => (
+                                    <span key={index} className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">
+                                      🔥 {offer}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="text-sm text-green-600 font-medium">
-                              Save {getCurrencySymbol(wholesaler?.defaultCurrency)}{(parseFloat(featuredProduct.price) - parseFloat(featuredProduct.promoPrice)).toFixed(2)} ({Math.round((1 - parseFloat(featuredProduct.promoPrice) / parseFloat(featuredProduct.price)) * 100)}% off)
+                          ) : (
+                            <div className="text-4xl font-bold text-gray-900">
+                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="text-4xl font-bold text-gray-900">
-                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
-                          </div>
-                        )}
+                          );
+                        })()}
                         <div className="text-sm text-gray-500 mt-1">Price per unit</div>
                       </div>
                       
@@ -1215,23 +1253,37 @@ export default function CustomerPortal() {
                         
                         {/* Price */}
                         <div className="flex items-baseline gap-2">
-                          {product.promoActive && product.promoPrice ? (
-                            <>
-                              <span className="text-xl font-bold text-green-600">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                          {(() => {
+                            const pricing = calculatePromotionalPricing(product);
+                            const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                            
+                            return hasDiscounts ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xl font-bold text-green-600">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
+                                </span>
+                                <span className="text-sm text-gray-400 line-through">
+                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
+                                </span>
+                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                  SALE
+                                </span>
+                                {pricing.appliedOffers.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
+                                      <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                                        {offer}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xl font-bold text-gray-900">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
                               </span>
-                              <span className="text-sm text-gray-400 line-through">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                              </span>
-                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                                SALE
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-xl font-bold text-gray-900">
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                            </span>
-                          )}
+                            );
+                          })()}
                         </div>
                         
                         {/* Quick Stats */}
@@ -1318,20 +1370,34 @@ export default function CustomerPortal() {
                             {/* Price and Action Buttons */}
                             <div className="flex-shrink-0 text-right ml-4">
                               <div className="text-lg font-bold text-gray-900 mb-2">
-                                {product.promoActive && product.promoPrice ? (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-green-600">
-                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                                {(() => {
+                                  const pricing = calculatePromotionalPricing(product);
+                                  const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                                  
+                                  return hasDiscounts ? (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-green-600">
+                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
+                                      </span>
+                                      <span className="text-gray-500 line-through text-sm">
+                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
+                                      </span>
+                                      {pricing.appliedOffers.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
+                                            <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                                              {offer}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span>
+                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
                                     </span>
-                                    <span className="text-gray-500 line-through text-sm">
-                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span>
-                                    {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                  </span>
-                                )}
+                                  );
+                                })()}
                               </div>
                               
                               {/* Action Buttons */}
@@ -1595,20 +1661,34 @@ export default function CustomerPortal() {
                                 {/* Price and Action Buttons */}
                                 <div className="flex-shrink-0 text-right ml-4">
                                   <div className="text-lg font-bold text-gray-900 mb-2">
-                                    {product.promoActive && product.promoPrice ? (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-green-600">
-                                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.promoPrice).toFixed(2)}
+                                    {(() => {
+                                      const pricing = calculatePromotionalPricing(product);
+                                      const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                                      
+                                      return hasDiscounts ? (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-green-600">
+                                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
+                                          </span>
+                                          <span className="text-gray-500 line-through text-sm">
+                                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
+                                          </span>
+                                          {pricing.appliedOffers.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                              {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
+                                                <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                  {offer}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span>
+                                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
                                         </span>
-                                        <span className="text-gray-500 line-through text-sm">
-                                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <span>
-                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                      </span>
-                                    )}
+                                      );
+                                    })()}
                                   </div>
                                   
                                   {/* Action Buttons */}
