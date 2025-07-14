@@ -1142,7 +1142,7 @@ export default function Campaigns() {
                     className="flex-1 min-w-0"
                   >
                     <Send className="h-4 w-4 mr-1" />
-                    {campaign.sentCampaigns.length > 0 ? 'Resend' : 'Send'}
+                    Send
                   </Button>
                   <Button 
                     size="sm" 
@@ -1169,7 +1169,7 @@ export default function Campaigns() {
                     className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
                   >
                     <RefreshCw className="h-4 w-4 mr-1" />
-                    Stock Update
+                    Refresh
                   </Button>
                 )}
               </div>
