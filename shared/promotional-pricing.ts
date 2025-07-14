@@ -112,6 +112,16 @@ export class PromotionalPricingCalculator {
           }
           break;
 
+        case 'fixed_price':
+          // Set a fixed promotional price
+          const fixedPrice = offer.fixedPrice;
+          if (fixedPrice && fixedPrice < effectivePrice) {
+            totalDiscount += (effectivePrice - fixedPrice) * quantity;
+            effectivePrice = fixedPrice;
+            appliedOffers.push(`Fixed Price: £${fixedPrice}`);
+          }
+          break;
+
         case 'bogo':
           if (offer.buyQuantity && offer.getQuantity) {
             const sets = Math.floor(quantity / offer.buyQuantity);

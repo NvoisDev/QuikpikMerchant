@@ -3619,9 +3619,16 @@ Write a professional, sales-focused description that highlights the key benefits
                 if (Array.isArray(product.promotionalOffers)) {
                   return product.promotionalOffers;
                 }
-                // Parse string JSON
+                // Parse string JSON - handle double-escaped JSON
                 if (typeof product.promotionalOffers === 'string') {
-                  const parsed = JSON.parse(product.promotionalOffers);
+                  let dataToparse = product.promotionalOffers;
+                  
+                  // Handle double-escaped JSON strings
+                  if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
+                    dataToparse = dataToparse.slice(2, -2).replace(/\\"/g, '"');
+                  }
+                  
+                  const parsed = JSON.parse(dataToparse);
                   return Array.isArray(parsed) ? parsed : [];
                 }
                 return [];
