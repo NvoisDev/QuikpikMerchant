@@ -1274,7 +1274,7 @@ export default function CustomerPortal() {
                                 {pricing.appliedOffers.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
-                                      <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                                      <span key={index} className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-sm font-medium">
                                         {offer}
                                       </span>
                                     ))}
@@ -1388,7 +1388,7 @@ export default function CustomerPortal() {
                                       {pricing.appliedOffers.length > 0 && (
                                         <div className="flex flex-wrap gap-1">
                                           {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
-                                            <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                                            <span key={index} className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-sm font-medium">
                                               {offer}
                                             </span>
                                           ))}
