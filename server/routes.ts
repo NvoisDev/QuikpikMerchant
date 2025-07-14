@@ -3542,7 +3542,10 @@ Write a professional, sales-focused description that highlights the key benefits
           quantity: broadcast.quantity, // Add the quantity field
           promotionalOffers: (() => {
             try {
-              return broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [];
+              if (!broadcast.promotionalOffers || broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null') {
+                return [];
+              }
+              return JSON.parse(broadcast.promotionalOffers);
             } catch (e) {
               console.error('Error parsing promotional offers for broadcast:', broadcast.id, e);
               return [];

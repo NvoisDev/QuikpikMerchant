@@ -185,8 +185,10 @@ export default function Campaigns() {
   const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
 
   // Fetch campaigns (unified broadcasts and templates)
-  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+  const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
     queryKey: ["/api/campaigns"],
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Don't cache
   });
 
   // Fetch products for campaign creation
