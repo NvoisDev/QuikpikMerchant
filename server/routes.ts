@@ -3668,6 +3668,10 @@ Write a professional, sales-focused description that highlights the key benefits
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid campaign ID format" });
+      }
 
       if (campaignType === 'single') {
         if (type === 'broadcast') {
