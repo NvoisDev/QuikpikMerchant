@@ -551,33 +551,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Convert numeric fields from frontend to appropriate types
-      const { 
-        price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
-        unitWeight, palletWeight, lowStockThreshold, shelfLife,
-        // New flexible unit system fields
-        packQuantity, unitOfMeasure, unitSize,
-        ...otherData 
-      } = req.body;
+      // Let the schema handle all transformations
       const productData = insertProductSchema.parse({
-        ...otherData,
-        price: price.toString(),
-        promoPrice: promoPrice ? promoPrice.toString() : null,
-        moq: parseInt(moq),
-        stock: parseInt(stock),
-        minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null,
-        unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null,
-        palletPrice: palletPrice ? palletPrice.toString() : null,
-        palletMoq: palletMoq ? parseInt(palletMoq) : 1,
-        palletStock: palletStock ? parseInt(palletStock) : 0,
-        unitWeight: unitWeight ? unitWeight.toString() : null,
-        palletWeight: palletWeight ? palletWeight.toString() : null,
-        lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50,
-        shelfLife: shelfLife ? parseInt(shelfLife) : null,
-        // New flexible unit system fields
-        packQuantity: packQuantity ? parseInt(packQuantity) : null,
-        unitOfMeasure: unitOfMeasure || null,
-        unitSize: unitSize ? unitSize.toString() : null,
+        ...req.body,
         wholesalerId: targetUserId
       });
       const product = await storage.createProduct(productData);
@@ -632,36 +608,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Convert numeric fields from frontend to appropriate types
-      const { 
-        price, promoPrice, moq, stock, minimumBidPrice, unitsPerPallet, palletPrice, palletMoq, palletStock,
-        unitWeight, palletWeight, lowStockThreshold, shelfLife,
-        // New flexible unit system fields
-        packQuantity, unitOfMeasure, unitSize,
-        ...otherData 
-      } = req.body;
-      const convertedData = {
-        ...otherData,
-        ...(price !== undefined && { price: price.toString() }),
-        ...(promoPrice !== undefined && { promoPrice: promoPrice ? promoPrice.toString() : null }),
-        ...(moq !== undefined && { moq: parseInt(moq) }),
-        ...(stock !== undefined && { stock: parseInt(stock) }),
-        ...(minimumBidPrice !== undefined && { minimumBidPrice: minimumBidPrice ? minimumBidPrice.toString() : null }),
-        ...(unitsPerPallet !== undefined && { unitsPerPallet: unitsPerPallet ? parseInt(unitsPerPallet) : null }),
-        ...(palletPrice !== undefined && { palletPrice: palletPrice ? palletPrice.toString() : null }),
-        ...(palletMoq !== undefined && { palletMoq: palletMoq ? parseInt(palletMoq) : 1 }),
-        ...(palletStock !== undefined && { palletStock: palletStock ? parseInt(palletStock) : 0 }),
-        // Weight and shipping fields
-        ...(unitWeight !== undefined && { unitWeight: unitWeight ? unitWeight.toString() : null }),
-        ...(palletWeight !== undefined && { palletWeight: palletWeight ? palletWeight.toString() : null }),
-        ...(lowStockThreshold !== undefined && { lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 50 }),
-        ...(shelfLife !== undefined && { shelfLife: shelfLife ? parseInt(shelfLife) : null }),
-        // New flexible unit system fields
-        ...(packQuantity !== undefined && { packQuantity: packQuantity ? parseInt(packQuantity) : null }),
-        ...(unitOfMeasure !== undefined && { unitOfMeasure: unitOfMeasure || null }),
-        ...(unitSize !== undefined && { unitSize: unitSize ? unitSize.toString() : null })
-      };
-      const productData = insertProductSchema.partial().parse(convertedData);
+      // Let the schema handle all transformations
+      const productData = insertProductSchema.partial().parse(req.body);
       
       // Increment edit count and update the product
       const productDataWithEditCount = {
