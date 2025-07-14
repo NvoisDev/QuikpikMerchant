@@ -577,7 +577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // New flexible unit system fields
         packQuantity: packQuantity ? parseInt(packQuantity) : null,
         unitOfMeasure: unitOfMeasure || null,
-        unitSize: unitSize ? parseFloat(unitSize) : null,
+        unitSize: unitSize ? unitSize.toString() : null,
         wholesalerId: targetUserId
       });
       const product = await storage.createProduct(productData);
@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // New flexible unit system fields
         ...(packQuantity !== undefined && { packQuantity: packQuantity ? parseInt(packQuantity) : null }),
         ...(unitOfMeasure !== undefined && { unitOfMeasure: unitOfMeasure || null }),
-        ...(unitSize !== undefined && { unitSize: unitSize ? parseFloat(unitSize) : null })
+        ...(unitSize !== undefined && { unitSize: unitSize ? unitSize.toString() : null })
       };
       const productData = insertProductSchema.partial().parse(convertedData);
       
