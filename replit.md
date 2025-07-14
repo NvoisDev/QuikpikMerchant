@@ -176,6 +176,16 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
+### Complete Customer Notification System for Delivery-Excluded Products (July 14, 2025):
+- **Universal Pickup-Only Badges**: Added "🚚 Pickup Only" indicators to all product cards in customer portal for delivery-excluded items
+- **Quantity Editor Warnings**: Implemented comprehensive pickup location and supplier contact information in quantity editor modal
+- **Checkout-Level Notifications**: Added detailed notifications listing all delivery-excluded items with pickup coordination details during checkout
+- **Database Schema Fix**: Successfully added missing promotional_offers columns to broadcasts and template_products tables
+- **Campaign JSON Parsing Fix**: Enhanced JSON parsing with comprehensive error handling and validation for promotional offers data
+- **Test Data Configuration**: Set Apples product (ID: 20) as delivery-excluded for complete notification system testing
+- **Complete Customer Flow**: Full notification system from product browsing → cart management → checkout completion for pickup-only products
+- **Supplier Contact Integration**: Customer notifications include business phone number and pickup address for coordination
+
 ### Complete Flexible Unit System Implementation (July 14, 2025):
 - **Pallet Functionality Removal**: Successfully removed all pallet-related functionality (sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight) from product management
 - **Flexible Unit Configuration**: Implemented packQuantity, unitOfMeasure, and unitSize fields for comprehensive product packaging definition (e.g., "24 x 250ml", "12 x 1kg")

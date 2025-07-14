@@ -3558,9 +3558,13 @@ Write a professional, sales-focused description that highlights the key benefits
           ...product,
           promotionalOffers: (() => {
             try {
-              return product.promotionalOffers ? JSON.parse(product.promotionalOffers) : [];
+              if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null') {
+                return [];
+              }
+              const parsed = JSON.parse(product.promotionalOffers);
+              return Array.isArray(parsed) ? parsed : [];
             } catch (e) {
-              console.error('Error parsing promotional offers for template product:', product.id, e);
+              console.error('Error parsing promotional offers for template product:', product.id, 'Data:', product.promotionalOffers, e);
               return [];
             }
           })()
