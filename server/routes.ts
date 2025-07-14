@@ -3709,6 +3709,7 @@ Write a professional, sales-focused description that highlights the key benefits
             ...campaignData,
           };
           
+          console.log('Calling updateMessageTemplate with:', { id, updateData });
           const updatedTemplate = await storage.updateMessageTemplate(id, updateData);
           if (!updatedTemplate) {
             return res.status(404).json({ message: "Campaign not found" });
