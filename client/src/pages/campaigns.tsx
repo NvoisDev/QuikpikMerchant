@@ -636,7 +636,8 @@ export default function Campaigns() {
                 <p className="text-sm font-medium text-gray-600">Total Stock Value</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency((products || []).reduce((total: number, product: any) => {
-                    return total + ((Number(product.price) || 0) * (Number(product.stock) || 0));
+                    const pricing = calculatePromotionalPricing(product);
+                    return total + (pricing.effectivePrice * (Number(product.stock) || 0));
                   }, 0))}
                 </p>
               </div>
@@ -1034,13 +1035,16 @@ export default function Campaigns() {
                     </div>
                     <span className="text-xs text-gray-500">
                       Total: {formatCurrency(
-                        campaign.products?.reduce((sum: number, p: any) => 
-                          sum + (Number(
-                            p.specialPrice || 
-                            (p.product?.promoActive && p.product?.promoPrice 
-                              ? p.product.promoPrice 
-                              : p.product?.price)
-                          ) || 0) * (Number(p.quantity) || 0), 0) || 0
+                        campaign.products?.reduce((sum: number, p: any) => {
+                          if (p.specialPrice) {
+                            return sum + ((Number(p.specialPrice) || 0) * (Number(p.quantity) || 0));
+                          }
+                          if (p.product) {
+                            const pricing = calculatePromotionalPricing(p.product);
+                            return sum + (pricing.effectivePrice * (Number(p.quantity) || 0));
+                          }
+                          return sum;
+                        }, 0) || 0
                       )}
                     </span>
                   </div>
@@ -1051,21 +1055,40 @@ export default function Campaigns() {
                           <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>💰 {(productItem.specialPrice || (productItem.product?.promoActive && productItem.product?.promoPrice)) ? (
-                            <span className="flex items-center space-x-1">
-                              <span className="text-red-600 font-semibold">
-                                {formatCurrency(Number(productItem.specialPrice || productItem.product?.promoPrice) || 0)}
-                              </span>
-                              <span className="text-gray-400 line-through text-xs">
-                                {formatCurrency(Number(productItem.product?.price) || 0)}
-                              </span>
-                              <span className="text-red-600 font-medium">
-                                {productItem.specialPrice ? 'SPECIAL' : 'PROMO'}
-                              </span>
-                            </span>
-                          ) : (
-                            <span>{formatCurrency(Number(productItem.product?.price) || 0)}</span>
-                          )}
+                          <span>💰 {(() => {
+                            if (productItem.specialPrice) {
+                              return (
+                                <span className="flex items-center space-x-1">
+                                  <span className="text-red-600 font-semibold">
+                                    {formatCurrency(Number(productItem.specialPrice) || 0)}
+                                  </span>
+                                  <span className="text-gray-400 line-through text-xs">
+                                    {formatCurrency(Number(productItem.product?.price) || 0)}
+                                  </span>
+                                  <span className="text-red-600 font-medium">SPECIAL</span>
+                                </span>
+                              );
+                            }
+                            if (productItem.product) {
+                              const pricing = calculatePromotionalPricing(productItem.product);
+                              const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                              
+                              return hasDiscounts ? (
+                                <span className="flex items-center space-x-1">
+                                  <span className="text-red-600 font-semibold">
+                                    {formatCurrency(pricing.effectivePrice)}
+                                  </span>
+                                  <span className="text-gray-400 line-through text-xs">
+                                    {formatCurrency(pricing.originalPrice)}
+                                  </span>
+                                  <span className="text-red-600 font-medium">PROMO</span>
+                                </span>
+                              ) : (
+                                <span>{formatCurrency(pricing.originalPrice)}</span>
+                              );
+                            }
+                            return <span>£0.00</span>;
+                          })()}
                           </span>
                           <span>📦 {formatNumber(productItem.quantity || 0)} qty</span>
                         </div>
@@ -1084,12 +1107,16 @@ export default function Campaigns() {
                   <div>
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
-                      (Number(
-                        campaign.specialPrice ||
-                        (campaign.product?.promoActive && campaign.product?.promoPrice 
-                          ? campaign.product.promoPrice 
-                          : campaign.product?.price)
-                      ) || 0) * (Number(campaign.quantity) || Number(campaign.product?.stock) || 0)
+                      (() => {
+                        if (campaign.specialPrice) {
+                          return (Number(campaign.specialPrice) || 0) * (Number(campaign.quantity) || Number(campaign.product?.stock) || 0);
+                        }
+                        if (campaign.product) {
+                          const pricing = calculatePromotionalPricing(campaign.product);
+                          return pricing.effectivePrice * (Number(campaign.quantity) || Number(campaign.product.stock) || 0);
+                        }
+                        return 0;
+                      })()
                     )}</div>
                   </div>
                 </div>
@@ -1104,12 +1131,16 @@ export default function Campaigns() {
                   <div>
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
-                      campaign.products?.reduce((sum: number, p: any) => 
-                        sum + ((Number(
-                          p.product?.promoActive && p.product?.promoPrice 
-                            ? p.product.promoPrice 
-                            : p.product?.price
-                        ) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
+                      campaign.products?.reduce((sum: number, p: any) => {
+                        if (p.specialPrice) {
+                          return sum + ((Number(p.specialPrice) || 0) * (Number(p.product?.stock) || 0));
+                        }
+                        if (p.product) {
+                          const pricing = calculatePromotionalPricing(p.product);
+                          return sum + (pricing.effectivePrice * (Number(p.product.stock) || 0));
+                        }
+                        return sum;
+                      }, 0) || 0
                     )}</div>
                   </div>
                 </div>
