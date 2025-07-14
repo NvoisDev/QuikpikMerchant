@@ -1064,8 +1064,8 @@ export default function Campaigns() {
                             return sum + ((Number(p.specialPrice) || 0) * (Number(p.quantity) || 0));
                           }
                           if (p.product) {
-                            const pricing = calculatePromotionalPricing(p.product);
-                            return sum + (pricing.effectivePrice * (Number(p.quantity) || 0));
+                            const pricing = calculatePromotionalPricing(p.product, Number(p.quantity) || 1);
+                            return sum + pricing.totalCost;
                           }
                           return sum;
                         }, 0) || 0
@@ -1136,8 +1136,9 @@ export default function Campaigns() {
                           return (Number(campaign.specialPrice) || 0) * (Number(campaign.quantity) || Number(campaign.product?.stock) || 0);
                         }
                         if (campaign.product) {
-                          const pricing = calculatePromotionalPricing(campaign.product);
-                          return pricing.effectivePrice * (Number(campaign.quantity) || Number(campaign.product.stock) || 0);
+                          const quantity = Number(campaign.quantity) || Number(campaign.product.stock) || 0;
+                          const pricing = calculatePromotionalPricing(campaign.product, quantity);
+                          return pricing.totalCost;
                         }
                         return 0;
                       })()
@@ -1160,8 +1161,9 @@ export default function Campaigns() {
                           return sum + ((Number(p.specialPrice) || 0) * (Number(p.product?.stock) || 0));
                         }
                         if (p.product) {
-                          const pricing = calculatePromotionalPricing(p.product);
-                          return sum + (pricing.effectivePrice * (Number(p.product.stock) || 0));
+                          const quantity = Number(p.product.stock) || 0;
+                          const pricing = calculatePromotionalPricing(p.product, quantity);
+                          return sum + pricing.totalCost;
                         }
                         return sum;
                       }, 0) || 0
