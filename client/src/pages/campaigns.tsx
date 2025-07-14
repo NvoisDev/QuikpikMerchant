@@ -271,13 +271,16 @@ export default function Campaigns() {
     if (campaign.campaignType === 'single' && campaign.product) {
       message += `\n\n📦 Featured Product:\n${campaign.product.name}\n\n`;
       
-      // Use special price if provided, otherwise use regular price
-      const price = campaign.specialPrice || campaign.product.price;
+      // Use special price if provided, otherwise use promotional price if active, otherwise use regular price
+      const price = campaign.specialPrice || 
+                   (campaign.product.promoActive && campaign.product.promoPrice ? campaign.product.promoPrice : campaign.product.price);
       message += `💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
       
-      // Show special pricing indicator if special price is being used
+      // Show special pricing indicator if special price or promotional price is being used
       if (campaign.specialPrice && campaign.specialPrice !== campaign.product.price) {
         message += `🔥 Special Campaign Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
+      } else if (campaign.product.promoActive && campaign.product.promoPrice && campaign.product.promoPrice !== campaign.product.price) {
+        message += `🔥 Promotional Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
       }
       
       // Add negotiation information if enabled
@@ -297,7 +300,8 @@ export default function Campaigns() {
     } else if (campaign.campaignType === 'multi' && campaign.products) {
       message += `\n\n📦 Featured Products:\n`;
       campaign.products.forEach((item, index) => {
-        const price = item.specialPrice || item.product.price;
+        const price = item.specialPrice || 
+                     (item.product.promoActive && item.product.promoPrice ? item.product.promoPrice : item.product.price);
         message += `\n${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
         
@@ -734,7 +738,14 @@ export default function Campaigns() {
                   </div>
                   <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
                     <span className="text-gray-600">
-                      💰 {formatCurrency(Number(campaign.product?.price) || 0)}
+                      💰 {formatCurrency(Number(
+                        campaign.product?.promoActive && campaign.product?.promoPrice 
+                          ? campaign.product.promoPrice 
+                          : campaign.product?.price
+                      ) || 0)}
+                      {campaign.product?.promoActive && campaign.product?.promoPrice && (
+                        <span className="ml-1 text-xs text-red-600 font-medium">PROMO</span>
+                      )}
                     </span>
                     <span className="text-gray-600">
                       📦 {campaign.product?.stock || 0} in stock
@@ -751,7 +762,11 @@ export default function Campaigns() {
                     <span className="text-xs text-gray-500">
                       Total: {formatCurrency(
                         campaign.products?.reduce((sum: number, p: any) => 
-                          sum + (Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0), 0) || 0
+                          sum + (Number(
+                            p.product?.promoActive && p.product?.promoPrice 
+                              ? p.product.promoPrice 
+                              : p.product?.price
+                          ) || 0) * (Number(p.product?.stock) || 0), 0) || 0
                       )}
                     </span>
                   </div>
@@ -762,7 +777,15 @@ export default function Campaigns() {
                           <span className="truncate flex-1 font-medium text-gray-700">{productItem.product?.name}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>💰 {formatCurrency(Number(productItem.product?.price) || 0)}</span>
+                          <span>💰 {formatCurrency(Number(
+                            productItem.product?.promoActive && productItem.product?.promoPrice 
+                              ? productItem.product.promoPrice 
+                              : productItem.product?.price
+                          ) || 0)}
+                          {productItem.product?.promoActive && productItem.product?.promoPrice && (
+                            <span className="ml-1 text-xs text-red-600 font-medium">PROMO</span>
+                          )}
+                          </span>
                           <span>📦 {formatNumber(productItem.product?.stock || 0)} stock</span>
                         </div>
                       </div>
@@ -780,7 +803,11 @@ export default function Campaigns() {
                   <div>
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
-                      (Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0)
+                      (Number(
+                        campaign.product?.promoActive && campaign.product?.promoPrice 
+                          ? campaign.product.promoPrice 
+                          : campaign.product?.price
+                      ) || 0) * (Number(campaign.product?.stock) || 0)
                     )}</div>
                   </div>
                 </div>
@@ -796,7 +823,11 @@ export default function Campaigns() {
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
                       campaign.products?.reduce((sum: number, p: any) => 
-                        sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
+                        sum + ((Number(
+                          p.product?.promoActive && p.product?.promoPrice 
+                            ? p.product.promoPrice 
+                            : p.product?.price
+                        ) || 0) * (Number(p.product?.stock) || 0)), 0) || 0
                     )}</div>
                   </div>
                 </div>
