@@ -388,6 +388,7 @@ export default function Campaigns() {
   const handleEditCampaign = (campaign: Campaign) => {
     setEditingCampaign(campaign);
     setCampaignType(campaign.campaignType);
+    setIsEditOpen(true); // Important: Open the edit dialog
     
     // Populate form with campaign data
     form.reset({
@@ -410,8 +411,6 @@ export default function Campaigns() {
     } else {
       setSelectedProducts([]);
     }
-
-    setIsEditOpen(true);
   };
 
   if (campaignsLoading) {
@@ -551,19 +550,41 @@ export default function Campaigns() {
           <h1 className="text-2xl font-bold text-gray-900">Broadcast</h1>
           <p className="text-gray-600 mt-1">Send WhatsApp messages to promote products and boost sales</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Create Broadcast</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingCampaign ? 'Edit Campaign' : 'Create Broadcast Campaign'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Button 
+          className="flex items-center space-x-2"
+          onClick={() => {
+            setEditingCampaign(null);
+            setCampaignType('single');
+            form.reset({
+              title: "",
+              customMessage: "",
+              includeContact: true,
+              includePurchaseLink: true,
+              campaignType: 'single',
+            });
+            setSelectedProducts([{ productId: 0, quantity: 1 }]);
+            setIsCreateOpen(true);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Broadcast</span>
+        </Button>
+      </div>
+
+      {/* Unified Create/Edit Campaign Dialog */}
+      <Dialog open={isCreateOpen || isEditOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsCreateOpen(false);
+          setIsEditOpen(false);
+          setEditingCampaign(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingCampaign ? 'Edit Campaign' : 'Create Broadcast Campaign'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="title"
@@ -767,7 +788,6 @@ export default function Campaigns() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
 
       {/* Campaigns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
