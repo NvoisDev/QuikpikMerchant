@@ -992,10 +992,11 @@ export default function Campaigns() {
                       Total: {formatCurrency(
                         campaign.products?.reduce((sum: number, p: any) => 
                           sum + (Number(
-                            p.product?.promoActive && p.product?.promoPrice 
+                            p.specialPrice || 
+                            (p.product?.promoActive && p.product?.promoPrice 
                               ? p.product.promoPrice 
-                              : p.product?.price
-                          ) || 0) * (Number(p.product?.stock) || 0), 0) || 0
+                              : p.product?.price)
+                          ) || 0) * (Number(p.quantity) || 0), 0) || 0
                       )}
                     </span>
                   </div>
@@ -1007,15 +1008,18 @@ export default function Campaigns() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
                           <span>💰 {formatCurrency(Number(
-                            productItem.product?.promoActive && productItem.product?.promoPrice 
+                            productItem.specialPrice || 
+                            (productItem.product?.promoActive && productItem.product?.promoPrice 
                               ? productItem.product.promoPrice 
-                              : productItem.product?.price
+                              : productItem.product?.price)
                           ) || 0)}
-                          {productItem.product?.promoActive && productItem.product?.promoPrice && (
-                            <span className="ml-1 text-xs text-red-600 font-medium">PROMO</span>
+                          {(productItem.specialPrice || (productItem.product?.promoActive && productItem.product?.promoPrice)) && (
+                            <span className="ml-1 text-xs text-red-600 font-medium">
+                              {productItem.specialPrice ? 'SPECIAL' : 'PROMO'}
+                            </span>
                           )}
                           </span>
-                          <span>📦 {formatNumber(productItem.product?.stock || 0)} stock</span>
+                          <span>📦 {formatNumber(productItem.quantity || 0)} qty</span>
                         </div>
                       </div>
                     ))}
