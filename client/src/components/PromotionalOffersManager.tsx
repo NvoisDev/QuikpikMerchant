@@ -315,11 +315,20 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent the event from bubbling up to the parent form
     onSave(formData);
   };
 
   const updateFormData = (updates: Partial<PromotionalOffer>) => {
     setFormData(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent Enter key from submitting the parent form
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   const renderOfferSpecificFields = () => {
@@ -337,6 +346,7 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
                 step="0.1"
                 value={formData.discountPercentage || ''}
                 onChange={(e) => updateFormData({ discountPercentage: parseFloat(e.target.value) })}
+                onKeyDown={handleKeyDown}
                 placeholder="e.g., 20 for 20% off"
               />
             </div>
@@ -363,6 +373,7 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
                 step="0.01"
                 value={formData.discountAmount || ''}
                 onChange={(e) => updateFormData({ discountAmount: parseFloat(e.target.value) })}
+                onKeyDown={handleKeyDown}
                 placeholder="e.g., 5.00 for £5 off"
               />
             </div>
@@ -545,6 +556,7 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
             id="name"
             value={formData.name}
             onChange={(e) => updateFormData({ name: e.target.value })}
+            onKeyDown={handleKeyDown}
             placeholder="e.g., Summer Sale 20% Off"
           />
         </div>
@@ -584,6 +596,7 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
             type="datetime-local"
             value={formData.startDate ? new Date(formData.startDate).toISOString().slice(0, 16) : ''}
             onChange={(e) => updateFormData({ startDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+            onKeyDown={handleKeyDown}
           />
         </div>
         <div>
@@ -593,6 +606,7 @@ function OfferEditForm({ offer, productPrice, currency, onSave, onCancel }: Offe
             type="datetime-local"
             value={formData.endDate ? new Date(formData.endDate).toISOString().slice(0, 16) : ''}
             onChange={(e) => updateFormData({ endDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+            onKeyDown={handleKeyDown}
           />
         </div>
       </div>
