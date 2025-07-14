@@ -3542,12 +3542,13 @@ Write a professional, sales-focused description that highlights the key benefits
           quantity: broadcast.quantity, // Add the quantity field
           promotionalOffers: (() => {
             try {
-              if (!broadcast.promotionalOffers || broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null') {
+              if (!broadcast.promotionalOffers || broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null' || broadcast.promotionalOffers === '[]') {
                 return [];
               }
-              return JSON.parse(broadcast.promotionalOffers);
+              const parsed = JSON.parse(broadcast.promotionalOffers);
+              return Array.isArray(parsed) ? parsed : [];
             } catch (e) {
-              console.error('Error parsing promotional offers for broadcast:', broadcast.id, e);
+              console.error('Error parsing promotional offers for broadcast:', broadcast.id, 'Data:', broadcast.promotionalOffers, e);
               return [];
             }
           })(),
@@ -3572,8 +3573,8 @@ Write a professional, sales-focused description that highlights the key benefits
         };
       }));
 
-      // Convert message templates to unified campaign format
-      const templateCampaigns = templates.map(template => ({
+      // Convert message templates to unified campaign format with fresh product data
+      const templateCampaigns = await Promise.all(templates.map(async template => ({
         id: `template_${template.id}`,
         title: template.title,
         customMessage: template.customMessage,
@@ -3582,10 +3583,17 @@ Write a professional, sales-focused description that highlights the key benefits
         campaignType: 'multi' as const,
         status: template.campaigns.length > 0 ? 'sent' : 'draft',
         createdAt: template.createdAt,
-        products: template.products.map(product => ({
-          ...product,
-          product: {
-            ...product.product,
+        products: await Promise.all(template.products.map(async product => {
+          // Fetch fresh product data with current promotional offers
+          const currentProduct = await storage.getProduct(product.productId);
+          const productToUse = currentProduct || product.product;
+          
+          return {
+            ...product,
+            product: {
+              ...productToUse,
+              // Use current product's promotional offers, not template's cached ones
+            },
             promotionalOffers: (() => {
               try {
                 if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
@@ -3606,27 +3614,7 @@ Write a professional, sales-focused description that highlights the key benefits
                 return [];
               }
             })()
-          },
-          promotionalOffers: (() => {
-            try {
-              if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
-                return [];
-              }
-              // Handle array objects directly
-              if (Array.isArray(product.promotionalOffers)) {
-                return product.promotionalOffers;
-              }
-              // Parse string JSON
-              if (typeof product.promotionalOffers === 'string') {
-                const parsed = JSON.parse(product.promotionalOffers);
-                return Array.isArray(parsed) ? parsed : [];
-              }
-              return [];
-            } catch (e) {
-              console.error('Error parsing promotional offers for template product:', product.id, 'Data:', product.promotionalOffers, e);
-              return [];
-            }
-          })()
+          };
         })),
         sentCampaigns: template.campaigns.map(campaign => ({
           id: campaign.id,
