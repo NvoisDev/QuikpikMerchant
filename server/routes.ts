@@ -3673,6 +3673,15 @@ Write a professional, sales-focused description that highlights the key benefits
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
+      console.log('Campaign update request body:', { 
+        campaignType, 
+        productId, 
+        products: products ? products.length : 0, 
+        specialPrice, 
+        promotionalOffers, 
+        campaignData 
+      });
+
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
       const id = parseInt(numericId);
