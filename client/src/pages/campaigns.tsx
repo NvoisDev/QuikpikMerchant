@@ -42,7 +42,8 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
-import type { Product, CustomerGroup } from "@shared/schema";
+import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
+import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
   title: z.string().min(1, "Campaign title is required"),
@@ -53,11 +54,69 @@ const campaignFormSchema = z.object({
   // For single product campaigns
   productId: z.number().optional(),
   specialPrice: z.string().optional(),
+  promotionalOffers: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    isActive: z.boolean(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    discountPercentage: z.number().optional(),
+    discountAmount: z.number().optional(),
+    fixedPrice: z.number().optional(),
+    buyQuantity: z.number().optional(),
+    getQuantity: z.number().optional(),
+    minQuantity: z.number().optional(),
+    maxQuantity: z.number().optional(),
+    bulkTiers: z.array(z.object({
+      minQuantity: z.number(),
+      discountPercentage: z.number(),
+      discountAmount: z.number().optional(),
+    })).optional(),
+    bundleProducts: z.array(z.number()).optional(),
+    bundlePrice: z.number().optional(),
+    maxUses: z.number().optional(),
+    usesCount: z.number().optional(),
+    maxUsesPerCustomer: z.number().optional(),
+    description: z.string().optional(),
+    termsAndConditions: z.string().optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })).optional(),
   // For multi-product campaigns
   products: z.array(z.object({
     productId: z.number(),
     quantity: z.number().min(1),
     specialPrice: z.string().optional(),
+    promotionalOffers: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string(),
+      isActive: z.boolean(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      discountPercentage: z.number().optional(),
+      discountAmount: z.number().optional(),
+      fixedPrice: z.number().optional(),
+      buyQuantity: z.number().optional(),
+      getQuantity: z.number().optional(),
+      minQuantity: z.number().optional(),
+      maxQuantity: z.number().optional(),
+      bulkTiers: z.array(z.object({
+        minQuantity: z.number(),
+        discountPercentage: z.number(),
+        discountAmount: z.number().optional(),
+      })).optional(),
+      bundleProducts: z.array(z.number()).optional(),
+      bundlePrice: z.number().optional(),
+      maxUses: z.number().optional(),
+      usesCount: z.number().optional(),
+      maxUsesPerCustomer: z.number().optional(),
+      description: z.string().optional(),
+      termsAndConditions: z.string().optional(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })).optional(),
   })).optional(),
 });
 
@@ -105,9 +164,10 @@ export default function Campaigns() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string; promotionalOffers?: PromotionalOffer[]}>>([]);
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
+  const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
@@ -368,19 +428,20 @@ export default function Campaigns() {
   };
 
   const onSubmit = (data: CampaignFormData) => {
+    const payload = {
+      ...data,
+      campaignType,
+      promotionalOffers: campaignType === 'single' ? singleProductOffers : undefined,
+      products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
+    };
+
     if (editingCampaign) {
       editCampaignMutation.mutate({
-        ...data,
+        ...payload,
         id: editingCampaign.id,
-        campaignType,
-        products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
       });
     } else {
-      createCampaignMutation.mutate({
-        ...data,
-        campaignType,
-        products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
-      });
+      createCampaignMutation.mutate(payload);
     }
   };
 
@@ -401,12 +462,20 @@ export default function Campaigns() {
       specialPrice: campaign.specialPrice || "",
     });
 
+    // Set up promotional offers for single product campaigns
+    if (campaign.campaignType === 'single' && (campaign as any).promotionalOffers) {
+      setSingleProductOffers((campaign as any).promotionalOffers || []);
+    } else {
+      setSingleProductOffers([]);
+    }
+
     // Set up products for multi-product campaigns
     if (campaign.campaignType === 'multi' && campaign.products) {
       setSelectedProducts(campaign.products.map(p => ({
         productId: p.productId,
         quantity: p.quantity,
-        specialPrice: p.specialPrice || ''
+        specialPrice: p.specialPrice || '',
+        promotionalOffers: (p as any).promotionalOffers || []
       })));
     } else {
       setSelectedProducts([]);
@@ -674,6 +743,19 @@ export default function Campaigns() {
                           </FormItem>
                         )}
                       />
+                      
+                      {/* Promotional Offers Manager for Single Product */}
+                      {form.watch('productId') && (
+                        <PromotionalOffersManager
+                          offers={singleProductOffers}
+                          onOffersChange={setSingleProductOffers}
+                          productPrice={parseFloat(
+                            (products as Product[]).find(p => p.id === form.watch('productId'))?.price || '0'
+                          )}
+                          currency={user?.defaultCurrency || 'GBP'}
+                          className="mt-6"
+                        />
+                      )}
                     </TabsContent>
 
                     <TabsContent value="multi" className="space-y-4">
@@ -685,55 +767,72 @@ export default function Campaigns() {
                         </Button>
                       </div>
 
-                      {selectedProducts.map((item, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-5">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                            <Select 
-                              value={item.productId.toString()} 
-                              onValueChange={(value) => updateProduct(index, 'productId', parseInt(value))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select product" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(products as Product[]).map((product: Product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name} - {formatCurrency(parseFloat(product.price))}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                      {selectedProducts.map((item, index) => {
+                        const selectedProduct = (products as Product[]).find(p => p.id === item.productId);
+                        
+                        return (
+                          <div key={index} className="border rounded-lg p-4 space-y-4">
+                            <div className="grid grid-cols-12 gap-2 items-end">
+                              <div className="col-span-5">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                                <Select 
+                                  value={item.productId.toString()} 
+                                  onValueChange={(value) => updateProduct(index, 'productId', parseInt(value))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select product" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(products as Product[]).map((product: Product) => (
+                                      <SelectItem key={product.id} value={product.id.toString()}>
+                                        {product.name} - {formatCurrency(parseFloat(product.price))}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value))}
+                                />
+                              </div>
+                              <div className="col-span-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Special Price (Optional)</label>
+                                <Input
+                                  placeholder="Campaign price"
+                                  value={item.specialPrice || ''}
+                                  onChange={(e) => updateProduct(index, 'specialPrice', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-span-1">
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => removeProduct(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Promotional Offers for Multi-Product Campaign */}
+                            {selectedProduct && (
+                              <PromotionalOffersManager
+                                offers={item.promotionalOffers || []}
+                                onOffersChange={(offers) => updateProduct(index, 'promotionalOffers', offers)}
+                                productPrice={parseFloat(selectedProduct.price)}
+                                currency={user?.defaultCurrency || 'GBP'}
+                                className="mt-4"
+                              />
+                            )}
                           </div>
-                          <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value))}
-                            />
-                          </div>
-                          <div className="col-span-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Special Price (Optional)</label>
-                            <Input
-                              placeholder="Campaign price"
-                              value={item.specialPrice || ''}
-                              onChange={(e) => updateProduct(index, 'specialPrice', e.target.value)}
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => removeProduct(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </TabsContent>
                   </Tabs>
                 </div>

@@ -3570,6 +3570,7 @@ Write a professional, sales-focused description that highlights the key benefits
           title: `${broadcast.product.name} Promotion`,
           customMessage: broadcast.message,
           specialPrice: broadcast.specialPrice,
+          promotionalOffers: broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [],
           includeContact: true,
           includePurchaseLink: true,
           campaignType: 'single' as const,
@@ -3598,7 +3599,10 @@ Write a professional, sales-focused description that highlights the key benefits
         campaignType: 'multi' as const,
         status: template.campaigns.length > 0 ? 'sent' : 'draft',
         createdAt: template.createdAt,
-        products: template.products,
+        products: template.products.map(product => ({
+          ...product,
+          promotionalOffers: product.promotionalOffers ? JSON.parse(product.promotionalOffers) : []
+        })),
         sentCampaigns: template.campaigns.map(campaign => ({
           id: campaign.id,
           sentAt: campaign.sentAt,
@@ -3630,7 +3634,7 @@ Write a professional, sales-focused description that highlights the key benefits
       const user = req.user;
       // Use parent company data for team members
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
+      const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
         // Create a broadcast for single product
@@ -3640,6 +3644,7 @@ Write a professional, sales-focused description that highlights the key benefits
           customerGroupId: null, // Will be set when sending
           message: campaignData.customMessage || '',
           specialPrice: specialPrice || null,
+          promotionalOffers: promotionalOffers ? JSON.stringify(promotionalOffers) : null,
           status: 'draft',
           recipientCount: 0
         };
@@ -3666,7 +3671,8 @@ Write a professional, sales-focused description that highlights the key benefits
         const validatedProducts = products.map((p: any) => ({
           productId: p.productId,
           quantity: p.quantity,
-          specialPrice: p.specialPrice
+          specialPrice: p.specialPrice,
+          promotionalOffers: p.promotionalOffers ? JSON.stringify(p.promotionalOffers) : null
         }));
 
         const template = await storage.createMessageTemplate(templateData, validatedProducts);
@@ -3691,7 +3697,7 @@ Write a professional, sales-focused description that highlights the key benefits
       const user = req.user;
       const campaignId = req.params.id;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      const { campaignType, productId, products, specialPrice, ...campaignData } = req.body;
+      const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
 
       // Parse campaign ID to determine type
       const [type, numericId] = campaignId.split('_');
@@ -3704,6 +3710,7 @@ Write a professional, sales-focused description that highlights the key benefits
             ...campaignData,
             specialPrice: specialPrice || null,
             productId: productId,
+            promotionalOffers: promotionalOffers ? JSON.stringify(promotionalOffers) : null,
           };
           
           const updatedBroadcast = await storage.updateBroadcast(id, updateData);
@@ -3739,6 +3746,7 @@ Write a professional, sales-focused description that highlights the key benefits
                 productId: product.productId,
                 quantity: product.quantity,
                 specialPrice: product.specialPrice || null,
+                promotionalOffers: product.promotionalOffers ? JSON.stringify(product.promotionalOffers) : null,
               });
             }
           }

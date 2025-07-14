@@ -404,6 +404,10 @@ export const broadcasts = pgTable("broadcasts", {
   message: text("message").notNull(),
   customMessage: text("custom_message"),
   specialPrice: decimal("special_price", { precision: 10, scale: 2 }),
+  
+  // New promotional offers system
+  promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
+  
   status: varchar("status").notNull().default("pending"), // pending, sent, failed
   recipientCount: integer("recipient_count").notNull().default(0),
   sentAt: timestamp("sent_at"),
@@ -438,6 +442,10 @@ export const templateProducts = pgTable("template_products", {
   productId: integer("product_id").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(1), // Suggested quantity
   specialPrice: varchar("special_price"), // Optional special price for campaign
+  
+  // New promotional offers system for multi-product campaigns
+  promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
+  
   displayOrder: integer("display_order").default(0), // Order in template
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
