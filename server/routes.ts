@@ -3868,11 +3868,24 @@ Write a professional, sales-focused description that highlights the key benefits
         // Send single product broadcast with custom message if provided
         const messageToSend = customMessage || broadcast.message;
         console.log(`Broadcasting: userId=${targetUserId}, productId=${broadcast.product.id}, groupId=${customerGroupId}`);
+        
+        // Parse promotional offers from broadcast data
+        let promotionalOffers = [];
+        try {
+          if (broadcast.promotionalOffers) {
+            promotionalOffers = JSON.parse(broadcast.promotionalOffers);
+          }
+        } catch (e) {
+          console.error('Error parsing promotional offers:', e);
+          promotionalOffers = [];
+        }
+        
         const result = await whatsappService.sendProductBroadcast(
           targetUserId,
           broadcast.product.id, // Use the actual product ID
           customerGroupId,
-          messageToSend // Use custom message or original message
+          messageToSend, // Use custom message or original message
+          promotionalOffers // Pass promotional offers
         );
 
         if (result.success) {

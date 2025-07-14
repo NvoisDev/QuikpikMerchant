@@ -43,7 +43,8 @@ export class WhatsAppService {
     wholesalerId: string,
     productId: number,
     customerGroupId: number,
-    message?: string
+    message?: string,
+    promotionalOffers?: any[]
   ): Promise<{ success: boolean; messageId?: string; error?: string; recipientCount?: number }> {
     try {
       // Get product details
@@ -70,7 +71,7 @@ export class WhatsAppService {
       const recipientCount = members.length;
 
       // Use custom message if provided, otherwise generate default message
-      const productMessage = message || this.generateProductMessage(product, undefined, wholesaler);
+      const productMessage = message || this.generateProductMessage(product, undefined, wholesaler, promotionalOffers);
 
       // Check if Twilio WhatsApp is configured for this wholesaler
       console.log(`Checking Twilio config for ${wholesalerId}:`, {
@@ -263,7 +264,7 @@ export class WhatsAppService {
     return `phone_number_id_${phoneNumber.replace(/\D/g, '')}`;
   }
 
-  generateProductMessage(product: any, customMessage?: string, wholesaler?: any): string {
+  generateProductMessage(product: any, customMessage?: string, wholesaler?: any, promotionalOffers?: any[]): string {
     // Extract the first domain from REPLIT_DOMAINS which contains the main app URL
     const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
     const domain = replitDomains.split(',')[0].trim();
@@ -284,6 +285,9 @@ export class WhatsAppService {
     const negotiationInfo = product.negotiationEnabled ? 
       `\n💬 Price Negotiable - Request Custom Quote Available!${product.minimumBidPrice ? `\n💡 Minimum acceptable price: ${currencySymbol}${parseFloat(product.minimumBidPrice).toFixed(2)}` : ''}` : '';
     
+    // Generate promotional offers messaging
+    const promoMessaging = this.generatePromotionalOffersMessage(promotionalOffers || [], currencySymbol);
+    
     return `🛍️ ${product.name} Promotion
 
 📦 Featured Product:
@@ -292,7 +296,7 @@ ${imageNote}
 
 💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}${negotiationInfo}
 📦 MOQ: ${this.formatNumber(product.moq)} units
-📦 In Stock: ${this.formatNumber(product.stock)} packs available
+📦 In Stock: ${this.formatNumber(product.stock)} packs available${promoMessaging}
 
 🛒 Place Your Order Now:
 ${campaignUrl}
@@ -555,6 +559,7 @@ Update your inventory or restock soon.`;
   generateTemplateMessage(template: any, wholesaler: any, campaignUrl: string): string {
     const businessName = wholesaler.businessName || "Your Business";
     const phone = wholesaler.businessPhone || wholesaler.phoneNumber || "+1234567890";
+    const currencySymbol = wholesaler.defaultCurrency === 'GBP' ? '£' : wholesaler.defaultCurrency === 'EUR' ? '€' : '$';
 
     let message = `🛍️ *${template.title}*\n\n`;
     
@@ -570,7 +575,6 @@ Update your inventory or restock soon.`;
     
     template.products.forEach((item: any, index: number) => {
       const price = item.specialPrice || item.product.price;
-      const currencySymbol = wholesaler.defaultCurrency === 'GBP' ? '£' : wholesaler.defaultCurrency === 'EUR' ? '€' : '$';
       const hasImage = item.product.imageUrl && item.product.imageUrl.length > 0;
       const imageNote = hasImage ? " 📸" : "";
       
@@ -594,6 +598,12 @@ Update your inventory or restock soon.`;
       message += `   📦 MOQ: ${this.formatNumber(item.product.moq)} units\n`;
       message += `   📦 In Stock: ${this.formatNumber(item.product.stock)} packs available\n`;
       
+      // Add promotional offers for this product
+      const promoMessaging = this.generatePromotionalOffersMessage(item.promotionalOffers || [], currencySymbol);
+      if (promoMessaging) {
+        message += `   ${promoMessaging.replace(/\n/g, '\n   ')}\n`;
+      }
+      
       if (template.includePurchaseLink) {
         message += `   🛒 Order this: ${productUrl}\n`;
       }
@@ -613,6 +623,43 @@ Update your inventory or restock soon.`;
     message += `\n✨ _Powered by Quikpik Merchant_`;
 
     return message;
+  }
+
+  // Generate promotional offers messaging for WhatsApp
+  generatePromotionalOffersMessage(promotionalOffers: any[], currencySymbol: string): string {
+    if (!promotionalOffers || promotionalOffers.length === 0) {
+      return '';
+    }
+
+    let promoMessage = '\n\n🎉 *Special Offers:*';
+    
+    promotionalOffers.forEach((offer, index) => {
+      switch (offer.type) {
+        case 'percentage_discount':
+          promoMessage += `\n💥 ${offer.value}% OFF - Save big on your order!`;
+          break;
+        case 'fixed_discount':
+          promoMessage += `\n💥 ${currencySymbol}${offer.value} OFF - Instant savings!`;
+          break;
+        case 'bogo':
+          promoMessage += `\n🔥 Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
+          break;
+        case 'multi_buy':
+          promoMessage += `\n📦 Buy ${offer.quantity}+ and get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${currencySymbol}${offer.discountValue} OFF`} each!`;
+          break;
+        case 'bulk_tier':
+          promoMessage += `\n📊 Bulk Pricing: ${offer.quantity}+ units = ${currencySymbol}${offer.pricePerUnit} each!`;
+          break;
+        case 'free_shipping':
+          promoMessage += `\n🚚 FREE SHIPPING on orders over ${currencySymbol}${offer.minimumOrderValue}!`;
+          break;
+        case 'bundle_deal':
+          promoMessage += `\n🎁 Bundle Deal: Buy together and save ${offer.discountType === 'percentage' ? `${offer.discountValue}%` : `${currencySymbol}${offer.discountValue}`}!`;
+          break;
+      }
+    });
+
+    return promoMessage;
   }
 }
 
