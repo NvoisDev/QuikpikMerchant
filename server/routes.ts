@@ -3542,11 +3542,27 @@ Write a professional, sales-focused description that highlights the key benefits
           quantity: broadcast.quantity, // Add the quantity field
           promotionalOffers: (() => {
             try {
-              if (!broadcast.promotionalOffers || broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null' || broadcast.promotionalOffers === '[]') {
+              if (!broadcast.promotionalOffers) {
                 return [];
               }
-              const parsed = JSON.parse(broadcast.promotionalOffers);
-              return Array.isArray(parsed) ? parsed : [];
+              // Handle array objects directly
+              if (Array.isArray(broadcast.promotionalOffers)) {
+                return broadcast.promotionalOffers;
+              }
+              // Skip parsing for empty arrays or null strings
+              if (broadcast.promotionalOffers === '' || broadcast.promotionalOffers === 'null' || broadcast.promotionalOffers === '[]') {
+                return [];
+              }
+              // Parse string JSON
+              if (typeof broadcast.promotionalOffers === 'string') {
+                // Don't parse empty strings or arrays
+                if (broadcast.promotionalOffers.trim() === '' || broadcast.promotionalOffers === '[]') {
+                  return [];
+                }
+                const parsed = JSON.parse(broadcast.promotionalOffers);
+                return Array.isArray(parsed) ? parsed : [];
+              }
+              return [];
             } catch (e) {
               console.error('Error parsing promotional offers for broadcast:', broadcast.id, 'Data:', broadcast.promotionalOffers, e);
               return [];

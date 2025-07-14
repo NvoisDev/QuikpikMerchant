@@ -4,7 +4,7 @@
  */
 
 export interface PromotionalOffer {
-  type: 'percentage_discount' | 'fixed_discount' | 'bogo' | 'multi_buy' | 'bulk_tier' | 'free_shipping' | 'bundle_deal' | 'buy_x_get_y_free';
+  type: 'percentage_discount' | 'fixed_discount' | 'fixed_amount_discount' | 'bogo' | 'multi_buy' | 'bulk_tier' | 'free_shipping' | 'bundle_deal' | 'buy_x_get_y_free';
   value?: number;
   discountPercentage?: number; // Support database field name
   discountAmount?: number; // Support database field name
@@ -102,10 +102,13 @@ export class PromotionalPricingCalculator {
           break;
 
         case 'fixed_discount':
-          if (offer.value) {
-            effectivePrice = Math.max(0, effectivePrice - offer.value);
-            totalDiscount += offer.value * quantity;
-            appliedOffers.push(`${offer.value} OFF per unit`);
+        case 'fixed_amount_discount':
+          // Support both 'value' and 'discountAmount' field names
+          const fixedDiscount = offer.value || offer.discountAmount;
+          if (fixedDiscount) {
+            effectivePrice = Math.max(0, effectivePrice - fixedDiscount);
+            totalDiscount += fixedDiscount * quantity;
+            appliedOffers.push(`£${fixedDiscount} OFF per unit`);
           }
           break;
 
