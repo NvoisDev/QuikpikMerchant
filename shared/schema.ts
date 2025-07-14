@@ -402,6 +402,7 @@ export const broadcasts = pgTable("broadcasts", {
   message: text("message").notNull(),
   customMessage: text("custom_message"),
   specialPrice: decimal("special_price", { precision: 10, scale: 2 }),
+  quantity: integer("quantity").notNull().default(1), // Campaign-specific quantity
   
   // New promotional offers system
   promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),

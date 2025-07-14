@@ -55,6 +55,7 @@ const campaignFormSchema = z.object({
   campaignType: z.enum(['single', 'multi']),
   // For single product campaigns
   productId: z.number().optional(),
+  quantity: z.number().optional(),
   specialPrice: z.string().optional(),
   promotionalOffers: z.array(z.object({
     id: z.string(),
@@ -194,6 +195,7 @@ export default function Campaigns() {
       includeContact: true,
       includePurchaseLink: true,
       campaignType: 'single',
+      quantity: 1,
       products: [],
     },
   });
@@ -496,6 +498,7 @@ export default function Campaigns() {
       includePurchaseLink: campaign.includePurchaseLink,
       campaignType: campaign.campaignType,
       productId: campaign.campaignType === 'single' ? campaign.product?.id : undefined,
+      quantity: campaign.quantity || 1,
       specialPrice: campaign.specialPrice || "",
     });
 
@@ -755,6 +758,29 @@ export default function Campaigns() {
                       
                       <FormField
                         control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantity</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="e.g., 200"
+                                type="number"
+                                min="1"
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                            <p className="text-sm text-muted-foreground">
+                              Quantity available for this campaign
+                            </p>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
                         name="specialPrice"
                         render={({ field }) => (
                           <FormItem>
@@ -994,7 +1020,7 @@ export default function Campaigns() {
                       )}
                     </span>
                     <span className="text-gray-600">
-                      📦 {campaign.product?.stock || 0} in stock
+                      📦 {formatNumber(campaign.quantity || campaign.product?.stock || 0)} qty
                     </span>
                   </div>
                 </div>
@@ -1054,10 +1080,11 @@ export default function Campaigns() {
                     <span className="text-gray-500">Stock Value:</span>
                     <div className="font-medium text-lg">{formatCurrency(
                       (Number(
-                        campaign.product?.promoActive && campaign.product?.promoPrice 
+                        campaign.specialPrice ||
+                        (campaign.product?.promoActive && campaign.product?.promoPrice 
                           ? campaign.product.promoPrice 
-                          : campaign.product?.price
-                      ) || 0) * (Number(campaign.product?.stock) || 0)
+                          : campaign.product?.price)
+                      ) || 0) * (Number(campaign.quantity) || Number(campaign.product?.stock) || 0)
                     )}</div>
                   </div>
                 </div>

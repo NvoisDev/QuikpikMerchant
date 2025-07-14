@@ -3608,7 +3608,7 @@ Write a professional, sales-focused description that highlights the key benefits
       const user = req.user;
       // Use parent company data for team members
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
-      const { campaignType, productId, products, specialPrice, promotionalOffers, ...campaignData } = req.body;
+      const { campaignType, productId, products, specialPrice, quantity, promotionalOffers, ...campaignData } = req.body;
 
       if (campaignType === 'single') {
         // Create a broadcast for single product
@@ -3618,6 +3618,7 @@ Write a professional, sales-focused description that highlights the key benefits
           customerGroupId: null, // Will be set when sending
           message: campaignData.customMessage || '',
           specialPrice: specialPrice || null,
+          quantity: quantity || 1,
           promotionalOffers: promotionalOffers ? JSON.stringify(promotionalOffers) : null,
           status: 'draft',
           recipientCount: 0
@@ -3763,6 +3764,46 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("Error updating campaign:", error);
       res.status(500).json({ message: "Failed to update campaign" });
+    }
+  });
+
+  // Delete campaign endpoint
+  app.delete('/api/campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const campaignId = req.params.id;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      // Parse campaign ID to determine type
+      const [type, numericId] = campaignId.split('_');
+      const id = parseInt(numericId);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid campaign ID format" });
+      }
+
+      if (type === 'broadcast') {
+        // Delete broadcast
+        const deleted = await storage.deleteBroadcast(id, targetUserId);
+        if (!deleted) {
+          return res.status(404).json({ message: "Campaign not found" });
+        }
+        
+        res.json({ message: "Campaign deleted successfully" });
+      } else if (type === 'template') {
+        // Delete message template
+        const deleted = await storage.deleteMessageTemplate(id, targetUserId);
+        if (!deleted) {
+          return res.status(404).json({ message: "Campaign not found" });
+        }
+        
+        res.json({ message: "Campaign deleted successfully" });
+      } else {
+        return res.status(400).json({ message: "Invalid campaign type" });
+      }
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      res.status(500).json({ message: "Failed to delete campaign" });
     }
   });
 

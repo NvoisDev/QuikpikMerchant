@@ -159,6 +159,7 @@ export interface IStorage {
   getBroadcasts(wholesalerId: string): Promise<(Broadcast & { product: Product; customerGroup: CustomerGroup })[]>;
   createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
   updateBroadcast(id: number, updates: Partial<InsertBroadcast>): Promise<Broadcast>;
+  deleteBroadcast(id: number, wholesalerId: string): Promise<boolean>;
   updateBroadcastStatus(id: number, status: string, sentAt?: Date, recipientCount?: number, messageId?: string, errorMessage?: string): Promise<Broadcast>;
   getBroadcastStats(wholesalerId: string): Promise<{
     totalBroadcasts: number;
@@ -203,7 +204,7 @@ export interface IStorage {
   }) | undefined>;
   createMessageTemplate(template: InsertMessageTemplate, products: InsertTemplateProduct[]): Promise<MessageTemplate>;
   updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate>;
-  deleteMessageTemplate(id: number): Promise<void>;
+  deleteMessageTemplate(id: number, wholesalerId: string): Promise<boolean>;
   createTemplateCampaign(campaign: InsertTemplateCampaign): Promise<TemplateCampaign>;
   getTemplateCampaigns(wholesalerId: string): Promise<(TemplateCampaign & { 
     template: MessageTemplate;
@@ -1497,6 +1498,15 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedBroadcast;
+  }
+
+  async deleteBroadcast(id: number, wholesalerId: string): Promise<boolean> {
+    const deleteResult = await db
+      .delete(broadcasts)
+      .where(and(eq(broadcasts.id, id), eq(broadcasts.wholesalerId, wholesalerId)))
+      .returning();
+    
+    return deleteResult.length > 0;
   }
 
   async updateBroadcastStatus(
