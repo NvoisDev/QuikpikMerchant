@@ -45,6 +45,7 @@ import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
+import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -155,6 +156,17 @@ interface Campaign {
 }
 
 export default function Campaigns() {
+  // Helper function to calculate promotional pricing for products
+  const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
+    const basePrice = parseFloat(product.price) || 0;
+    return PromotionalPricingCalculator.calculatePromotionalPricing(
+      basePrice,
+      quantity,
+      product.promotionalOffers || [],
+      product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+      product.promoActive
+    );
+  };
   const { user } = useAuth();
   const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading } = useSubscription();
