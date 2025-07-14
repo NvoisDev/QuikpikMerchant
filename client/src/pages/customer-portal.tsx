@@ -930,9 +930,9 @@ export default function CustomerPortal() {
                 <div className="grid lg:grid-cols-2">
                   {/* Product Image */}
                   <div className="relative bg-white">
-                    {featuredProduct.imageUrl ? (
+                    {featuredProduct.imageUrl || (featuredProduct.images && featuredProduct.images.length > 0) ? (
                       <img 
-                        src={featuredProduct.imageUrl} 
+                        src={featuredProduct.imageUrl || featuredProduct.images[0]} 
                         alt={featuredProduct.name}
                         className="w-full h-80 lg:h-96 object-cover"
                       />
@@ -1212,9 +1212,9 @@ export default function CustomerPortal() {
                     <CardContent className="p-6">
                       {/* Product Image */}
                       <div className="mb-4">
-                        {product.imageUrl ? (
+                        {product.imageUrl || (product.images && product.images.length > 0) ? (
                           <img 
-                            src={product.imageUrl} 
+                            src={product.imageUrl || product.images[0]} 
                             alt={product.name}
                             className="w-full h-40 object-cover rounded-lg"
                           />
@@ -1314,9 +1314,9 @@ export default function CustomerPortal() {
                       <div className="flex items-center space-x-4">
                         {/* Product Image */}
                         <div className="flex-shrink-0">
-                          {product.imageUrl ? (
+                          {product.imageUrl || (product.images && product.images.length > 0) ? (
                             <img 
-                              src={product.imageUrl} 
+                              src={product.imageUrl || product.images[0]} 
                               alt={product.name}
                               className="w-16 h-16 object-cover rounded-lg border"
                             />
@@ -1527,9 +1527,9 @@ export default function CustomerPortal() {
                         <CardContent className="p-6">
                           {/* Product Image */}
                           <div className="mb-4">
-                            {product.imageUrl ? (
+                            {product.imageUrl || (product.images && product.images.length > 0) ? (
                               <img 
-                                src={product.imageUrl} 
+                                src={product.imageUrl || product.images[0]} 
                                 alt={product.name}
                                 className="w-full h-40 object-cover rounded-lg"
                               />
@@ -1615,9 +1615,9 @@ export default function CustomerPortal() {
                           <div className="flex items-center space-x-4">
                             {/* Product Image */}
                             <div className="flex-shrink-0">
-                              {product.imageUrl ? (
+                              {product.imageUrl || (product.images && product.images.length > 0) ? (
                                 <img 
-                                  src={product.imageUrl} 
+                                  src={product.imageUrl || product.images[0]} 
                                   alt={product.name}
                                   className="w-16 h-16 object-cover rounded-lg border"
                                 />
