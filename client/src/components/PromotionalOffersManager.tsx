@@ -169,7 +169,7 @@ export function PromotionalOffersManager({
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button type="button" size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Offer
             </Button>
@@ -184,6 +184,7 @@ export function PromotionalOffersManager({
                 return (
                   <Button
                     key={type}
+                    type="button"
                     variant="outline"
                     className="h-auto p-4 flex flex-col items-center justify-center text-center"
                     onClick={() => {
@@ -213,6 +214,7 @@ export function PromotionalOffersManager({
               Add special offers like discounts, BOGO deals, or bulk pricing to boost your campaign performance
             </p>
             <Button 
+              type="button"
               variant="outline" 
               onClick={() => setIsCreateOpen(true)}
               className="mt-2"
@@ -255,6 +257,7 @@ export function PromotionalOffersManager({
                         onCheckedChange={() => toggleOfferActive(offer.id)}
                       />
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => setEditingOffer(offer)}
@@ -262,6 +265,7 @@ export function PromotionalOffersManager({
                         <Edit3 className="h-4 w-4" />
                       </Button>
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => removeOffer(offer.id)}
