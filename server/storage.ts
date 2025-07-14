@@ -1691,7 +1691,17 @@ export class DatabaseStorage implements IStorage {
     return updatedTemplate;
   }
 
-  async deleteMessageTemplate(id: number): Promise<void> {
+  async deleteMessageTemplate(id: number, wholesalerId: string): Promise<boolean> {
+    // First verify the template belongs to the wholesaler
+    const [template] = await db
+      .select()
+      .from(messageTemplates)
+      .where(and(eq(messageTemplates.id, id), eq(messageTemplates.wholesalerId, wholesalerId)));
+    
+    if (!template) {
+      return false;
+    }
+    
     // Delete template products first (foreign key constraint)
     await db.delete(templateProducts).where(eq(templateProducts.templateId, id));
     
@@ -1700,6 +1710,8 @@ export class DatabaseStorage implements IStorage {
     
     // Delete the template
     await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
+    
+    return true;
   }
 
   async deleteTemplateProducts(templateId: number): Promise<void> {

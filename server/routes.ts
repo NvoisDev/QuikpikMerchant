@@ -3385,8 +3385,15 @@ Write a professional, sales-focused description that highlights the key benefits
 
   app.delete('/api/message-templates/:id', requireAuth, async (req: any, res) => {
     try {
+      const user = req.user;
       const templateId = parseInt(req.params.id);
-      await storage.deleteMessageTemplate(templateId);
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      
+      const deleted = await storage.deleteMessageTemplate(templateId, targetUserId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting message template:", error);
