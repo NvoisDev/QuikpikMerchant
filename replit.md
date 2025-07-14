@@ -176,6 +176,13 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
+### Customer Portal Image Quality Enhancement (July 14, 2025):
+- **Featured Product Image Display Fix**: Resolved pixelation issues by allowing product images to display at their natural resolution instead of forcing them into fixed-height containers
+- **Enhanced Image Quality**: Changed from `object-cover` to `object-contain` to preserve image aspect ratios and prevent quality degradation
+- **Natural Image Sizing**: Removed fixed height constraints (h-80 lg:h-96) and implemented responsive sizing with `max-w-md` and `h-auto` for better image display
+- **Improved Visual Experience**: Product images now maintain their original quality and proportions while being appropriately sized for the customer portal layout
+- **Promotional Pricing Font Enhancement**: Updated promotional offer text from `text-xs` to `text-sm` for better readability and visual consistency with main price display
+
 ### Complete Promotional Pricing Display System Implementation (July 14, 2025):
 - **Campaign Cards Enhancement**: Added promotional price display showing original price crossed out next to promotional price (e.g., "£12.99 ~~£15.99~~ PROMO")
 - **Customer Portal Pricing**: Confirmed existing promotional pricing display works correctly in customer portal with green promotional price and crossed-out original price

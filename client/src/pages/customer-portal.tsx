@@ -929,12 +929,12 @@ export default function CustomerPortal() {
               <CardContent className="p-0">
                 <div className="grid lg:grid-cols-2">
                   {/* Product Image */}
-                  <div className="relative bg-white">
+                  <div className="relative bg-white flex items-center justify-center">
                     {featuredProduct.imageUrl || (featuredProduct.images && featuredProduct.images.length > 0) ? (
                       <img 
                         src={featuredProduct.imageUrl || featuredProduct.images[0]} 
                         alt={featuredProduct.name}
-                        className="w-full h-80 lg:h-96 object-cover"
+                        className="w-full max-w-md h-auto object-contain"
                       />
                     ) : (
                       <div className="w-full h-80 lg:h-96 bg-gray-50 flex items-center justify-center">
