@@ -46,6 +46,7 @@ import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal"
 import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
+import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -398,6 +399,20 @@ export default function Campaigns() {
       return campaign.products?.some((productItem: any) => 
         productItem.promotionalOffers && productItem.promotionalOffers.length > 0
       ) || false;
+    }
+  }
+
+  const getAllPromotionalOffers = (campaign: Campaign): any[] => {
+    if (campaign.campaignType === 'single') {
+      return campaign.promotionalOffers || [];
+    } else {
+      const allOffers: any[] = [];
+      campaign.products?.forEach((productItem: any) => {
+        if (productItem.promotionalOffers) {
+          allOffers.push(...productItem.promotionalOffers);
+        }
+      });
+      return allOffers;
     }
   };
 
@@ -982,12 +997,16 @@ export default function Campaigns() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                            <span className="mr-1">{getCampaignOfferIndicators(getAllPromotionalOffers(campaign))}</span>
                             <Percent className="h-3 w-3 mr-1" />
                             Offers
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>This campaign has promotional offers configured</p>
+                          <div className="max-w-sm">
+                            <p className="font-medium mb-1">Promotional Offers Active:</p>
+                            <p className="text-sm">{formatPromotionalOffersWithEmojis(getAllPromotionalOffers(campaign), true)}</p>
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

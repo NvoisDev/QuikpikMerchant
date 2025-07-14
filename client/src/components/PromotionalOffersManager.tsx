@@ -24,6 +24,7 @@ import {
   Zap
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { getOfferTypeConfig, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import type { PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 interface PromotionalOffersManagerProps {
@@ -181,19 +182,23 @@ export function PromotionalOffersManager({
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(offerTypeConfigs).map(([type, config]) => {
                 const Icon = config.icon;
+                const emojiConfig = getOfferTypeConfig(type as PromotionalOfferType);
                 return (
                   <Button
                     key={type}
                     type="button"
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center justify-center text-center"
+                    className="h-auto p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50"
                     onClick={() => {
                       addOffer(type as PromotionalOfferType);
                       setIsCreateOpen(false);
                     }}
                   >
-                    <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center mb-2`}>
-                      <Icon className="h-4 w-4 text-white" />
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-2xl">{emojiConfig.emoji}</span>
+                      <div className={`h-6 w-6 rounded-full ${config.color} flex items-center justify-center`}>
+                        <Icon className="h-3 w-3 text-white" />
+                      </div>
                     </div>
                     <span className="font-medium text-sm">{config.name}</span>
                     <span className="text-xs text-gray-500 mt-1">{config.description}</span>
@@ -228,6 +233,7 @@ export function PromotionalOffersManager({
         <div className="space-y-3">
           {offers.map((offer) => {
             const config = offerTypeConfigs[offer.type];
+            const emojiConfig = getOfferTypeConfig(offer.type);
             const Icon = config.icon;
             
             return (
@@ -235,14 +241,20 @@ export function PromotionalOffersManager({
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center`}>
-                        <Icon className="h-4 w-4 text-white" />
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{emojiConfig.emoji}</span>
+                        <div className={`h-6 w-6 rounded-full ${config.color} flex items-center justify-center`}>
+                          <Icon className="h-3 w-3 text-white" />
+                        </div>
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
                           <h4 className="font-medium">{offer.name}</h4>
-                          <Badge variant={offer.isActive ? "default" : "secondary"}>
-                            {offer.isActive ? "Active" : "Inactive"}
+                          <Badge 
+                            variant={offer.isActive ? "default" : "secondary"}
+                            className={offer.isActive ? emojiConfig.color : ""}
+                          >
+                            {offer.isActive ? `${emojiConfig.emoji} Active` : "Inactive"}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">{getOfferDisplayValue(offer)}</p>
