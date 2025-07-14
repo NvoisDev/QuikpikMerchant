@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import twilio from "twilio";
 import { DirectWhatsAppService } from "./direct-whatsapp";
 import { formatPhoneToInternational } from "../shared/phone-utils";
+import { PromotionalPricingCalculator } from "../shared/promotional-pricing";
 
 // WhatsApp Service Factory - supports both Twilio and Direct API
 export class WhatsAppService {
@@ -37,6 +38,22 @@ export class WhatsAppService {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '0';
     return num.toLocaleString('en-US');
+  }
+
+  private calculatePromotionalPricing(
+    basePrice: number,
+    quantity: number = 1,
+    promotionalOffers: any[] = [],
+    promoPrice?: number,
+    promoActive?: boolean
+  ) {
+    return PromotionalPricingCalculator.calculatePromotionalPricing(
+      basePrice,
+      quantity,
+      promotionalOffers,
+      promoPrice,
+      promoActive
+    );
   }
 
   async sendProductBroadcast(
@@ -285,6 +302,16 @@ export class WhatsAppService {
     const negotiationInfo = product.negotiationEnabled ? 
       `\n💬 Price Negotiable - Request Custom Quote Available!${product.minimumBidPrice ? `\n💡 Minimum acceptable price: ${currencySymbol}${parseFloat(product.minimumBidPrice).toFixed(2)}` : ''}` : '';
     
+    // Calculate promotional pricing
+    const basePrice = parseFloat(product.price) || 0;
+    const promoPrice = product.promoPrice ? parseFloat(product.promoPrice) : undefined;
+    const pricing = this.calculatePromotionalPricing(basePrice, 1, promotionalOffers || [], promoPrice, product.promoActive);
+    
+    // Format price display with promotional pricing
+    const priceDisplay = pricing.effectivePrice < pricing.originalPrice 
+      ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ PROMO`
+      : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
+    
     // Generate promotional offers messaging
     const promoMessaging = this.generatePromotionalOffersMessage(promotionalOffers || [], currencySymbol);
     
@@ -294,7 +321,7 @@ export class WhatsAppService {
 ${product.name}
 ${imageNote}
 
-💰 Unit Price: ${currencySymbol}${parseFloat(product.price).toFixed(2)}${negotiationInfo}
+💰 Unit Price: ${priceDisplay}${negotiationInfo}
 📦 MOQ: ${this.formatNumber(product.moq)} units
 📦 In Stock: ${this.formatNumber(product.stock)} packs available${promoMessaging}
 
@@ -574,7 +601,6 @@ Update your inventory or restock soon.`;
     );
     
     template.products.forEach((item: any, index: number) => {
-      const price = item.specialPrice || item.product.price;
       const hasImage = item.product.imageUrl && item.product.imageUrl.length > 0;
       const imageNote = hasImage ? " 📸" : "";
       
@@ -584,8 +610,18 @@ Update your inventory or restock soon.`;
       const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
       const productUrl = `${baseUrl}/customer/${wholesaler.id}?featured=${item.product.id}`;
       
+      // Calculate promotional pricing for this product
+      const basePrice = item.specialPrice ? parseFloat(item.specialPrice) : parseFloat(item.product.price) || 0;
+      const promoPrice = item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined;
+      const pricing = this.calculatePromotionalPricing(basePrice, 1, item.promotionalOffers || [], promoPrice, item.product.promoActive);
+      
+      // Format price display with promotional pricing
+      const priceDisplay = pricing.effectivePrice < pricing.originalPrice 
+        ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ PROMO`
+        : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
+      
       message += `${index + 1}. ${item.product.name}${imageNote}\n`;
-      message += `   💰 Unit Price: ${currencySymbol}${parseFloat(price).toFixed(2)}\n`;
+      message += `   💰 Unit Price: ${priceDisplay}\n`;
       
       // Add negotiation information if enabled
       if (item.product.negotiationEnabled) {
@@ -636,12 +672,16 @@ Update your inventory or restock soon.`;
     promotionalOffers.forEach((offer, index) => {
       switch (offer.type) {
         case 'percentage_discount':
-          promoMessage += `\n💥 ${offer.value}% OFF - Save big on your order!`;
+          // Support both 'value' and 'discountPercentage' field names
+          const percentageDiscount = offer.value || offer.discountPercentage;
+          promoMessage += `\n💥 ${percentageDiscount}% OFF - Save big on your order!`;
           break;
         case 'fixed_discount':
-          promoMessage += `\n💥 ${currencySymbol}${offer.value} OFF - Instant savings!`;
+          const fixedDiscount = offer.value || offer.fixedAmount;
+          promoMessage += `\n💥 ${currencySymbol}${fixedDiscount} OFF - Instant savings!`;
           break;
         case 'bogo':
+        case 'buy_x_get_y_free':
           promoMessage += `\n🔥 Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
           break;
         case 'multi_buy':

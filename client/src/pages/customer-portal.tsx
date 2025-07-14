@@ -1003,12 +1003,15 @@ export default function CustomerPortal() {
                           
                           return hasDiscounts ? (
                             <div>
-                              <div className="flex items-baseline gap-4 mb-2">
+                              <div className="flex items-baseline gap-2 mb-2">
                                 <span className="text-4xl font-bold text-green-600">
                                   {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
                                 </span>
                                 <span className="text-2xl text-gray-400 line-through">
                                   {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
+                                </span>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-bold">
+                                  PROMO
                                 </span>
                               </div>
                               <div className="text-sm text-green-600 font-medium mb-2">
