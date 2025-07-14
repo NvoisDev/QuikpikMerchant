@@ -1873,7 +1873,14 @@ export default function ProductManagement() {
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                              <Badge variant="secondary" className="mt-1">{product.category}</Badge>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="secondary">{product.category}</Badge>
+                                {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+                                  <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                    {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
+                                  </Badge>
+                                )}
+                              </div>
                               {product.description && (
                                 <p className="text-gray-600 text-sm mt-2 max-w-md">{product.description}</p>
                               )}

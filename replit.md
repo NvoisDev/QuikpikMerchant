@@ -176,6 +176,15 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
+### Complete Product Size Display System Implementation (July 14, 2025):
+- **Wholesale Product Cards**: Added product size information (e.g., "12 x 250ml") to both grid and list views in product management dashboard
+- **Customer Portal Integration**: Implemented product size display across all customer portal views including featured products, grid view, and list view
+- **Flexible Unit System**: Enhanced display supports the new flexible unit configuration (packQuantity x unitSize + unitOfMeasure)
+- **Visual Design**: Product size information appears as blue badges with package icon for easy identification
+- **Comprehensive Coverage**: Size information displays in wholesale dashboard product cards, list view, customer portal featured section, grid view, and list view
+- **Test Data Setup**: Updated sample products with flexible unit data (24 x 250ml, 6 x 1L, 1 x 25kg, 10 x 500g) for complete system testing
+- **Legacy System Replacement**: Replaced old selling format tags with new flexible unit system in featured product section
+
 ### Complete Customer Notification System for Delivery-Excluded Products (July 14, 2025):
 - **Universal Pickup-Only Badges**: Added "🚚 Pickup Only" indicators to all product cards in customer portal for delivery-excluded items
 - **Quantity Editor Warnings**: Implemented comprehensive pickup location and supplier contact information in quantity editor modal

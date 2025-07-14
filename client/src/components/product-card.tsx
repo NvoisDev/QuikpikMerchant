@@ -167,6 +167,16 @@ export default function ProductCard({
 
   const currentStatusConfig = getStatusConfig(product.status);
 
+  // Format product size information
+  const formatProductSize = () => {
+    if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
+      return `${product.packQuantity} x ${product.unitSize}${product.unitOfMeasure}`;
+    }
+    return null;
+  };
+
+  const productSize = formatProductSize();
+
   const getStockStatus = () => {
     const threshold = product.lowStockThreshold || 50; // Default to 50 if not set
     if (product.stock === 0) {
@@ -285,6 +295,12 @@ export default function ProductCard({
             <div className="flex items-center gap-2 mt-1">
               {product.category && (
                 <p className="text-sm text-gray-500">{product.category}</p>
+              )}
+              {productSize && (
+                <>
+                  {product.category && <span className="text-gray-300">•</span>}
+                  <p className="text-sm text-blue-600 font-medium">{productSize}</p>
+                </>
               )}
             </div>
           </div>

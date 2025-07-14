@@ -952,26 +952,16 @@ export default function CustomerPortal() {
                               {featuredProduct.category}
                             </span>
                           )}
-                          {/* Selling Format Tags */}
-                          {featuredProduct.sellingFormat === "units" && (
+                          {/* Product Size Information */}
+                          {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                              📦 Units
+                              📦 {featuredProduct.packQuantity} x {featuredProduct.unitSize}{featuredProduct.unitOfMeasure}
                             </span>
                           )}
-                          {featuredProduct.sellingFormat === "pallets" && (
-                            <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                              📦 Pallets
+                          {featuredProduct.deliveryExcluded && (
+                            <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                              🚚 Pickup Only
                             </span>
-                          )}
-                          {featuredProduct.sellingFormat === "both" && (
-                            <>
-                              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                                📦 Units
-                              </span>
-                              <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                                📦 Pallets
-                              </span>
-                            </>
                           )}
                         </div>
                         {featuredProduct.description && (
