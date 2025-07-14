@@ -1877,7 +1877,7 @@ export default function ProductManagement() {
                                 <Badge variant="secondary">{product.category}</Badge>
                                 {product.packQuantity && product.unitSize && product.unitOfMeasure && (
                                   <Badge variant="outline" className="text-blue-600 border-blue-600">
-                                    {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
+                                    {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                   </Badge>
                                 )}
                               </div>

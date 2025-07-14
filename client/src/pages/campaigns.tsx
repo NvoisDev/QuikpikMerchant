@@ -324,6 +324,28 @@ export default function Campaigns() {
     },
   });
 
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const response = await apiRequest("DELETE", `/api/campaigns/${campaignId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      toast({
+        title: "Campaign Deleted",
+        description: "Campaign has been permanently removed",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const addProduct = () => {
     setSelectedProducts([...selectedProducts, { productId: 0, quantity: 1 }]);
   };
@@ -1094,6 +1116,19 @@ export default function Campaigns() {
                   >
                     <Send className="h-4 w-4 mr-1" />
                     {campaign.sentCampaigns.length > 0 ? 'Resend' : 'Send'}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete "${campaign.title}"? This action cannot be undone.`)) {
+                        deleteCampaignMutation.mutate(campaign.id);
+                      }
+                    }}
+                    className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    disabled={deleteCampaignMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
                 {campaign.sentCampaigns.length > 0 && (

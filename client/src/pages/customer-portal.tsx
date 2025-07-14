@@ -955,7 +955,7 @@ export default function CustomerPortal() {
                           {/* Product Size Information */}
                           {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                              📦 {featuredProduct.packQuantity} x {featuredProduct.unitSize}{featuredProduct.unitOfMeasure}
+                              📦 {featuredProduct.packQuantity} x {Math.round(parseFloat(featuredProduct.unitSize))}{featuredProduct.unitOfMeasure}
                             </span>
                           )}
                           {featuredProduct.deliveryExcluded && (
@@ -1208,7 +1208,7 @@ export default function CustomerPortal() {
                           {/* Flexible Unit Display */}
                           {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                              📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
+                              📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                             </span>
                           )}
                         </div>
@@ -1495,7 +1495,7 @@ export default function CustomerPortal() {
                               {/* Flexible Unit Display */}
                               {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                                 <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                  📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
+                                  📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                 </span>
                               )}
                             </div>
@@ -1583,7 +1583,7 @@ export default function CustomerPortal() {
                                     {/* Flexible Unit Display */}
                                     {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                                       <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                        📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
+                                        📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                       </span>
                                     )}
                                   </div>

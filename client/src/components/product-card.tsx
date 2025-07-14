@@ -170,7 +170,9 @@ export default function ProductCard({
   // Format product size information
   const formatProductSize = () => {
     if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
-      return `${product.packQuantity} x ${product.unitSize}${product.unitOfMeasure}`;
+      // Convert unitSize to whole number
+      const unitSize = Math.round(parseFloat(product.unitSize));
+      return `${product.packQuantity} x ${unitSize}${product.unitOfMeasure}`;
     }
     return null;
   };
@@ -292,15 +294,12 @@ export default function ProductCard({
             <h3 className="font-semibold text-gray-900 text-lg line-clamp-1">
               {product.name}
             </h3>
+            {productSize && (
+              <p className="text-sm text-blue-600 font-medium mt-1">{productSize}</p>
+            )}
             <div className="flex items-center gap-2 mt-1">
               {product.category && (
                 <p className="text-sm text-gray-500">{product.category}</p>
-              )}
-              {productSize && (
-                <>
-                  {product.category && <span className="text-gray-300">•</span>}
-                  <p className="text-sm text-blue-600 font-medium">{productSize}</p>
-                </>
               )}
             </div>
           </div>
