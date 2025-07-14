@@ -3727,11 +3727,22 @@ Write a professional, sales-focused description that highlights the key benefits
 
           // Update template products if provided
           if (products && products.length > 0) {
+            console.log('Products array for template update:', JSON.stringify(products, null, 2));
+            
             // First delete existing template products
             await storage.deleteTemplateProducts(id);
             
             // Then add new ones
             for (const product of products) {
+              console.log('Creating template product:', {
+                templateId: id,
+                productId: product.productId,
+                quantity: product.quantity,
+                specialPrice: product.specialPrice || null,
+                promotionalOffers: product.promotionalOffers,
+                promotionalOffersStringified: product.promotionalOffers ? JSON.stringify(product.promotionalOffers) : null,
+              });
+              
               await storage.createTemplateProduct({
                 templateId: id,
                 productId: product.productId,
