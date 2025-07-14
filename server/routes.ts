@@ -3549,7 +3549,17 @@ Write a professional, sales-focused description that highlights the key benefits
           campaignType: 'single' as const,
           status: broadcast.sentAt ? 'sent' : 'draft',
           createdAt: broadcast.createdAt,
-          product: broadcast.product,
+          product: {
+            ...broadcast.product,
+            promotionalOffers: (() => {
+              try {
+                return broadcast.promotionalOffers ? JSON.parse(broadcast.promotionalOffers) : [];
+              } catch (e) {
+                console.error('Error parsing promotional offers for product:', broadcast.id, e);
+                return [];
+              }
+            })()
+          },
           sentCampaigns: broadcast.sentAt ? [{ // Only include if actually sent
             id: broadcast.id,
             sentAt: broadcast.sentAt,
@@ -3574,6 +3584,29 @@ Write a professional, sales-focused description that highlights the key benefits
         createdAt: template.createdAt,
         products: template.products.map(product => ({
           ...product,
+          product: {
+            ...product.product,
+            promotionalOffers: (() => {
+              try {
+                if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
+                  return [];
+                }
+                // Handle array objects directly
+                if (Array.isArray(product.promotionalOffers)) {
+                  return product.promotionalOffers;
+                }
+                // Parse string JSON
+                if (typeof product.promotionalOffers === 'string') {
+                  const parsed = JSON.parse(product.promotionalOffers);
+                  return Array.isArray(parsed) ? parsed : [];
+                }
+                return [];
+              } catch (e) {
+                console.error('Error parsing promotional offers for template product:', product.id, 'Data:', product.promotionalOffers, e);
+                return [];
+              }
+            })()
+          },
           promotionalOffers: (() => {
             try {
               if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
