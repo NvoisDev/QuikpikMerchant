@@ -36,7 +36,9 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Tag,
+  Percent
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -346,6 +348,19 @@ export default function Campaigns() {
     }
     
     setSelectedProducts(updated);
+  };
+
+  // Helper function to check if a campaign has promotional offers
+  const hasPromotionalOffers = (campaign: Campaign) => {
+    if (campaign.campaignType === 'single') {
+      // Check if single product has promotional offers
+      return campaign.promotionalOffers && campaign.promotionalOffers.length > 0;
+    } else {
+      // Check if any products in multi-product campaign have promotional offers
+      return campaign.products?.some((productItem: any) => 
+        productItem.promotionalOffers && productItem.promotionalOffers.length > 0
+      ) || false;
+    }
   };
 
   const generatePreviewMessage = (campaign: Campaign) => {
@@ -900,9 +915,26 @@ export default function Campaigns() {
                 </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <Badge variant={campaign.campaignType === 'single' ? 'outline' : 'default'}>
-                  {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={campaign.campaignType === 'single' ? 'outline' : 'default'}>
+                    {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
+                  </Badge>
+                  {hasPromotionalOffers(campaign) && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                            <Percent className="h-3 w-3 mr-1" />
+                            Offers
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This campaign has promotional offers configured</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <span className="flex items-center text-gray-600">
                   <Send className="h-4 w-4 mr-1" />
                   {campaign.sentCampaigns.reduce((sum, c) => sum + c.recipientCount, 0)} sent
