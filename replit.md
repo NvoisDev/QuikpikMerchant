@@ -176,13 +176,16 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
-### Complete Promotional Pricing System Fix (July 14, 2025):
-- **Fixed Promotional Offers Date Range Issue**: Updated Oil campaign promotional offer dates from August 2025 (future) to July 1st - August 31st, 2025 (current period) to make discount active
-- **Enhanced Fixed Amount Discount Support**: Added support for both `fixed_discount` and `fixed_amount_discount` types in promotional pricing calculator
-- **Database Field Mapping Fix**: Updated calculator to use `discountAmount` field instead of `value` field for fixed discount amounts
-- **Robust JSON Parsing**: Enhanced JSON parsing logic to handle empty arrays, JSONB data types, and corrupted data gracefully
-- **Complete Pricing Data Flow**: Oil campaign should now display £10.00 ~~£12.50~~ PROMO (£12.50 original price minus £2.50 fixed discount)
-- **Database Cleanup**: Resolved double-escaped JSON data corruption and syntax errors preventing server startup
+### Complete Promotional Offers System with All Offer Types Support (July 14, 2025):
+- **Comprehensive Offer Type Support**: Added complete support for all promotional offer types including `fixed_price`, `buy_x_get_y_free`, `bulk_discount`, enhanced `bundle_deal`, and improved existing types
+- **Enhanced Interface Definition**: Expanded PromotionalOffer interface with comprehensive field support including `bulkTiers`, `bundlePrice`, `fixedPrice`, usage limits, and metadata fields
+- **Advanced Bulk Discount System**: Implemented tiered bulk discounts with multiple pricing strategies (percentage, fixed amount, or fixed price per tier)
+- **Improved Bundle Deal Logic**: Enhanced bundle deals to support fixed bundle pricing, percentage discounts, and fixed amount discounts
+- **Better Field Mapping**: Enhanced support for multiple field name variations (`value`/`discountPercentage`, `discountAmount`, etc.) for database compatibility
+- **Comprehensive Display Formatting**: Updated `formatPromotionalOffers` function to handle all offer types with proper display text and pricing information
+- **Enhanced JSON Parsing**: Improved double-escaped JSON data handling for malformed promotional offers data in database
+- **Fixed Card Campaign Support**: Added missing "fixed_price" offer type support that was preventing Card campaign promotional pricing from displaying
+- **Currency Formatting**: Added proper £ currency formatting throughout all promotional offer calculations and display text
 
 ### Customer Portal Image Quality Enhancement (July 14, 2025):
 - **Featured Product Image Display Fix**: Resolved pixelation issues by allowing product images to display at their natural resolution instead of forcing them into fixed-height containers

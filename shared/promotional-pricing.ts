@@ -4,20 +4,49 @@
  */
 
 export interface PromotionalOffer {
-  type: 'percentage_discount' | 'fixed_discount' | 'fixed_amount_discount' | 'bogo' | 'multi_buy' | 'bulk_tier' | 'free_shipping' | 'bundle_deal' | 'buy_x_get_y_free';
-  value?: number;
-  discountPercentage?: number; // Support database field name
-  discountAmount?: number; // Support database field name
-  buyQuantity?: number;
-  getQuantity?: number;
-  quantity?: number;
-  discountType?: 'percentage' | 'fixed';
-  discountValue?: number;
-  pricePerUnit?: number;
-  minimumOrderValue?: number;
+  type: 'percentage_discount' | 'fixed_discount' | 'fixed_amount_discount' | 'fixed_price' | 'bogo' | 'buy_x_get_y_free' | 'multi_buy' | 'bulk_tier' | 'bulk_discount' | 'free_shipping' | 'bundle_deal';
+  id?: string;
+  name?: string;
+  description?: string;
+  // Core fields
   isActive?: boolean;
   startDate?: string;
   endDate?: string;
+  // Percentage discount fields
+  value?: number;
+  discountPercentage?: number;
+  // Fixed discount fields
+  discountAmount?: number;
+  // Fixed price fields
+  fixedPrice?: number;
+  // BOGO/Buy X Get Y fields
+  buyQuantity?: number;
+  getQuantity?: number;
+  // Multi-buy fields
+  quantity?: number;
+  discountType?: 'percentage' | 'fixed';
+  discountValue?: number;
+  // Bulk tier fields
+  pricePerUnit?: number;
+  bulkTiers?: Array<{
+    minQuantity: number;
+    discountPercentage?: number;
+    discountAmount?: number;
+    pricePerUnit?: number;
+  }>;
+  // Free shipping fields
+  minimumOrderValue?: number;
+  // Bundle deal fields
+  bundleProducts?: number[];
+  bundlePrice?: number;
+  // Usage limits
+  maxUses?: number;
+  usesCount?: number;
+  maxUsesPerCustomer?: number;
+  // Metadata
+  createdAt?: string;
+  updatedAt?: string;
+  termsAndConditions?: string;
 }
 
 export interface PricingResult {
@@ -132,6 +161,16 @@ export class PromotionalPricingCalculator {
           }
           break;
 
+        case 'buy_x_get_y_free':
+          if (offer.buyQuantity && offer.getQuantity) {
+            const sets = Math.floor(quantity / offer.buyQuantity);
+            const freeUnits = sets * offer.getQuantity;
+            freeItems += freeUnits;
+            totalDiscount += freeUnits * effectivePrice;
+            appliedOffers.push(`Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE`);
+          }
+          break;
+
         case 'multi_buy':
           if (offer.quantity && quantity >= offer.quantity) {
             if (offer.discountType === 'percentage' && offer.discountValue) {
@@ -142,7 +181,7 @@ export class PromotionalPricingCalculator {
             } else if (offer.discountType === 'fixed' && offer.discountValue) {
               effectivePrice = Math.max(0, effectivePrice - offer.discountValue);
               totalDiscount += offer.discountValue * quantity;
-              appliedOffers.push(`${offer.discountValue} OFF each (Buy ${offer.quantity}+)`);
+              appliedOffers.push(`£${offer.discountValue} OFF each (Buy ${offer.quantity}+)`);
             }
           }
           break;
@@ -153,7 +192,34 @@ export class PromotionalPricingCalculator {
             if (newPrice < effectivePrice) {
               totalDiscount += (effectivePrice - newPrice) * quantity;
               effectivePrice = newPrice;
-              appliedOffers.push(`Bulk Price: ${newPrice.toFixed(2)} each (${offer.quantity}+ units)`);
+              appliedOffers.push(`Bulk Price: £${newPrice.toFixed(2)} each (${offer.quantity}+ units)`);
+            }
+          }
+          break;
+
+        case 'bulk_discount':
+          // Handle tiered bulk discounts
+          if (offer.bulkTiers && offer.bulkTiers.length > 0) {
+            // Find the applicable tier (highest quantity that doesn't exceed current quantity)
+            const applicableTier = offer.bulkTiers
+              .filter(tier => quantity >= tier.minQuantity)
+              .sort((a, b) => b.minQuantity - a.minQuantity)[0];
+            
+            if (applicableTier) {
+              if (applicableTier.pricePerUnit && applicableTier.pricePerUnit < effectivePrice) {
+                totalDiscount += (effectivePrice - applicableTier.pricePerUnit) * quantity;
+                effectivePrice = applicableTier.pricePerUnit;
+                appliedOffers.push(`Bulk Tier: £${applicableTier.pricePerUnit.toFixed(2)} each (${applicableTier.minQuantity}+ units)`);
+              } else if (applicableTier.discountPercentage) {
+                const discountAmount = effectivePrice * (applicableTier.discountPercentage / 100);
+                effectivePrice -= discountAmount;
+                totalDiscount += discountAmount * quantity;
+                appliedOffers.push(`Bulk Discount: ${applicableTier.discountPercentage}% OFF (${applicableTier.minQuantity}+ units)`);
+              } else if (applicableTier.discountAmount) {
+                effectivePrice = Math.max(0, effectivePrice - applicableTier.discountAmount);
+                totalDiscount += applicableTier.discountAmount * quantity;
+                appliedOffers.push(`Bulk Discount: £${applicableTier.discountAmount} OFF each (${applicableTier.minQuantity}+ units)`);
+              }
             }
           }
           break;
@@ -166,8 +232,12 @@ export class PromotionalPricingCalculator {
           break;
 
         case 'bundle_deal':
-          // Bundle deals would typically be handled at cart level
-          if (offer.discountType === 'percentage' && offer.discountValue) {
+          // Bundle deals can set a fixed bundle price or apply percentage/fixed discounts
+          if (offer.bundlePrice && offer.bundlePrice < effectivePrice) {
+            totalDiscount += (effectivePrice - offer.bundlePrice) * quantity;
+            effectivePrice = offer.bundlePrice;
+            appliedOffers.push(`Bundle Deal: £${offer.bundlePrice.toFixed(2)} each`);
+          } else if (offer.discountType === 'percentage' && offer.discountValue) {
             const discountAmount = effectivePrice * (offer.discountValue / 100);
             effectivePrice -= discountAmount;
             totalDiscount += discountAmount * quantity;
@@ -175,7 +245,7 @@ export class PromotionalPricingCalculator {
           } else if (offer.discountType === 'fixed' && offer.discountValue) {
             effectivePrice = Math.max(0, effectivePrice - offer.discountValue);
             totalDiscount += offer.discountValue * quantity;
-            appliedOffers.push(`Bundle Deal: ${offer.discountValue} OFF each`);
+            appliedOffers.push(`Bundle Deal: £${offer.discountValue} OFF each`);
           }
           break;
       }
@@ -217,21 +287,47 @@ export class PromotionalPricingCalculator {
     return offers.map(offer => {
       switch (offer.type) {
         case 'percentage_discount':
-          return `${offer.value}% OFF`;
+          const percentage = offer.value || offer.discountPercentage;
+          return `${percentage}% OFF`;
         case 'fixed_discount':
-          return `£${offer.value} OFF`;
+        case 'fixed_amount_discount':
+          const amount = offer.value || offer.discountAmount;
+          return `£${amount} OFF`;
+        case 'fixed_price':
+          return `Fixed Price: £${offer.fixedPrice}`;
         case 'bogo':
+          return `Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE`;
+        case 'buy_x_get_y_free':
           return `Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE`;
         case 'multi_buy':
           return `Buy ${offer.quantity}+ get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `£${offer.discountValue} OFF`}`;
         case 'bulk_tier':
           return `${offer.quantity}+ units = £${offer.pricePerUnit} each`;
+        case 'bulk_discount':
+          if (offer.bulkTiers && offer.bulkTiers.length > 0) {
+            const firstTier = offer.bulkTiers[0];
+            if (firstTier.pricePerUnit) {
+              return `Bulk Pricing from £${firstTier.pricePerUnit} each`;
+            } else if (firstTier.discountPercentage) {
+              return `Bulk Discount up to ${firstTier.discountPercentage}% OFF`;
+            } else if (firstTier.discountAmount) {
+              return `Bulk Discount up to £${firstTier.discountAmount} OFF each`;
+            }
+          }
+          return 'Bulk Discount';
         case 'free_shipping':
           return `Free Shipping on orders £${offer.minimumOrderValue}+`;
         case 'bundle_deal':
-          return `Bundle Deal: ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `£${offer.discountValue} OFF`}`;
+          if (offer.bundlePrice) {
+            return `Bundle Deal: £${offer.bundlePrice} each`;
+          } else if (offer.discountType === 'percentage' && offer.discountValue) {
+            return `Bundle Deal: ${offer.discountValue}% OFF`;
+          } else if (offer.discountType === 'fixed' && offer.discountValue) {
+            return `Bundle Deal: £${offer.discountValue} OFF`;
+          }
+          return 'Bundle Deal';
         default:
-          return 'Special Offer';
+          return offer.name || 'Special Offer';
       }
     });
   }
