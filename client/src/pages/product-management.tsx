@@ -77,13 +77,13 @@ const productFormSchema = z.object({
   status: z.enum(["active", "inactive", "out_of_stock"]),
   
   // Flexible unit system
-  packQuantity: z.string().optional(),
+  packQuantity: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   unitOfMeasure: z.string().optional(), 
-  unitSize: z.string().optional(),
+  unitSize: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Weight and shipping requirements  
-  unitWeight: z.string().optional(),
-  totalPackageWeight: z.string().optional(),
+  unitWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
+  totalPackageWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Delivery exclusion
   deliveryExcluded: z.boolean().optional(),
@@ -1509,83 +1509,7 @@ export default function ProductManagement() {
                         />
                       </div>
 
-                      {(form.watch("sellingFormat") === "pallets" || form.watch("sellingFormat") === "both") && (
-                        <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-                          <div className="font-medium text-sm">Pallet Configuration</div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="unitsPerPallet"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Units per Pallet</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" placeholder="e.g., 48" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-sm text-muted-foreground">
-                                    How many individual units are included in one pallet
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="palletPrice"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Price per Pallet ({user?.preferredCurrency || "GBP"})</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-sm text-muted-foreground">
-                                    Price for one complete pallet
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="palletMoq"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Minimum Pallet Order</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" placeholder="1" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-sm text-muted-foreground">
-                                    Minimum pallets per order
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name="palletStock"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Pallets in Stock</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" placeholder="0" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-sm text-muted-foreground">
-                                    Number of pallets available
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      )}
+
 
                       {/* Weight and Shipping Requirements Section */}
                       <div className="space-y-4 border rounded-lg p-4 bg-blue-50">

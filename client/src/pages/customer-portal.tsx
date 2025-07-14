@@ -91,13 +91,18 @@ interface Product {
   minimumBidPrice?: string;
   promoPrice?: string;
   promoActive?: boolean;
+  deliveryExcluded?: boolean; // New field for delivery exclusion
   
-  // Pallet/Unit selling options
-  sellingFormat: "units" | "pallets" | "both";
-  unitsPerPallet?: number;
-  palletPrice?: string;
-  palletMoq?: number;
-  palletStock?: number;
+  // Flexible unit system
+  packQuantity?: number;
+  unitOfMeasure?: string;
+  unitSize?: string;
+  unitWeight?: string;
+  totalPackageWeight?: string;
+  
+  // Weight fields for backward compatibility
+  unit_weight?: string;
+  total_package_weight?: string;
   
   wholesaler: {
     id: string;
@@ -106,6 +111,8 @@ interface Product {
     businessAddress?: string;
     profileImageUrl?: string;
     defaultCurrency?: string;
+    pickupAddress?: string;
+    pickupInstructions?: string;
   };
 }
 
@@ -1203,26 +1210,16 @@ export default function CustomerPortal() {
                               💬 Negotiable
                             </span>
                           )}
-                          {/* Selling Format Tags */}
-                          {product.sellingFormat === "units" && (
+                          {product.deliveryExcluded && (
+                            <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded-md text-xs font-medium">
+                              🚚 Pickup Only
+                            </span>
+                          )}
+                          {/* Flexible Unit Display */}
+                          {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                              📦 Units
+                              📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
                             </span>
-                          )}
-                          {product.sellingFormat === "pallets" && (
-                            <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                              📦 Pallets
-                            </span>
-                          )}
-                          {product.sellingFormat === "both" && (
-                            <>
-                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                📦 Units
-                              </span>
-                              <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                📦 Pallets
-                              </span>
-                            </>
                           )}
                         </div>
                         
@@ -1500,26 +1497,16 @@ export default function CustomerPortal() {
                                   💬 Negotiable
                                 </span>
                               )}
-                              {/* Selling Format Tags */}
-                              {product.sellingFormat === "units" && (
+                              {product.deliveryExcluded && (
+                                <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  🚚 Pickup Only
+                                </span>
+                              )}
+                              {/* Flexible Unit Display */}
+                              {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                                 <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                  📦 Units
+                                  📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
                                 </span>
-                              )}
-                              {product.sellingFormat === "pallets" && (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                  📦 Pallets
-                                </span>
-                              )}
-                              {product.sellingFormat === "both" && (
-                                <>
-                                  <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                    📦 Units
-                                  </span>
-                                  <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                    📦 Pallets
-                                  </span>
-                                </>
                               )}
                             </div>
                             
@@ -1596,6 +1583,17 @@ export default function CustomerPortal() {
                                     {product.negotiationEnabled && (
                                       <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
                                         💬 Negotiable
+                                      </span>
+                                    )}
+                                    {product.deliveryExcluded && (
+                                      <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded-md text-xs font-medium">
+                                        🚚 Pickup Only
+                                      </span>
+                                    )}
+                                    {/* Flexible Unit Display */}
+                                    {product.packQuantity && product.unitOfMeasure && product.unitSize && (
+                                      <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                        📦 {product.packQuantity} x {product.unitSize}{product.unitOfMeasure}
                                       </span>
                                     )}
                                   </div>
@@ -1750,6 +1748,47 @@ export default function CustomerPortal() {
                   </>
                 )}
               </div>
+              
+              {/* Delivery Exclusion Warning */}
+              {selectedProduct.deliveryExcluded && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <div className="bg-red-100 rounded-full p-1">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-red-800 text-sm">🚚 Pickup Only Product</h4>
+                      <p className="text-red-700 text-sm mt-1">
+                        This product requires pickup from the supplier location. Delivery is not available for this item.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {wholesaler?.pickupAddress && (
+                    <div className="bg-white rounded border border-red-200 p-3">
+                      <h5 className="font-medium text-gray-900 text-sm mb-2">📍 Pickup Location:</h5>
+                      <p className="text-gray-700 text-sm">{wholesaler.pickupAddress}</p>
+                      {wholesaler.pickupInstructions && (
+                        <div className="mt-2">
+                          <p className="font-medium text-gray-900 text-sm">Instructions:</p>
+                          <p className="text-gray-700 text-sm">{wholesaler.pickupInstructions}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {wholesaler?.businessPhone && (
+                    <div className="bg-white rounded border border-red-200 p-3">
+                      <h5 className="font-medium text-gray-900 text-sm mb-1">📞 Contact for Pickup:</h5>
+                      <p className="text-gray-700 text-sm">{wholesaler.businessPhone}</p>
+                    </div>
+                  )}
+                  
+                  <div className="text-xs text-red-600 bg-red-100 rounded p-2">
+                    💡 <strong>Next Steps:</strong> After placing your order, please contact the supplier to arrange pickup time and location.
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center space-x-3">
                 <Label>Quantity:</Label>
@@ -2137,6 +2176,62 @@ export default function CustomerPortal() {
                   </div>
                 </div>
               </div>
+
+              {/* Delivery Exclusion Alert for Cart Items */}
+              {(() => {
+                const deliveryExcludedItems = cart.filter(item => item.product.deliveryExcluded);
+                if (deliveryExcludedItems.length > 0) {
+                  return (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start space-x-2">
+                        <div className="bg-red-100 rounded-full p-1 mt-0.5">
+                          <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-red-800">🚚 Pickup Required for Some Items</h4>
+                          <p className="text-red-700 text-sm mt-1">
+                            The following {deliveryExcludedItems.length === 1 ? 'item requires' : 'items require'} pickup from the supplier location:
+                          </p>
+                          <ul className="mt-2 space-y-1">
+                            {deliveryExcludedItems.map((item, index) => (
+                              <li key={index} className="text-red-700 text-sm flex items-center space-x-2">
+                                <span className="w-1 h-1 bg-red-600 rounded-full"></span>
+                                <span className="font-medium">{item.product.name}</span>
+                                <span className="text-red-600">({item.quantity} {item.sellingType})</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      {wholesaler?.pickupAddress && (
+                        <div className="bg-white rounded border border-red-200 p-3">
+                          <h5 className="font-medium text-gray-900 text-sm mb-2">📍 Pickup Location:</h5>
+                          <p className="text-gray-700 text-sm">{wholesaler.pickupAddress}</p>
+                          {wholesaler.pickupInstructions && (
+                            <div className="mt-2">
+                              <p className="font-medium text-gray-900 text-sm">Instructions:</p>
+                              <p className="text-gray-700 text-sm">{wholesaler.pickupInstructions}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {wholesaler?.businessPhone && (
+                        <div className="bg-white rounded border border-red-200 p-3">
+                          <h5 className="font-medium text-gray-900 text-sm mb-1">📞 Contact for Pickup:</h5>
+                          <p className="text-gray-700 text-sm">{wholesaler.businessPhone}</p>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-red-600 bg-red-100 rounded p-2">
+                        💡 <strong>Important:</strong> After completing your order, please contact the supplier to arrange pickup time for these items. Other items in your order may still be eligible for delivery.
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Customer Information Form */}
               <div className="space-y-4">
