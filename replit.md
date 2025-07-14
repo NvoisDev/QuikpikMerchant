@@ -186,6 +186,9 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Enhanced JSON Parsing**: Improved double-escaped JSON data handling for malformed promotional offers data in database
 - **Fixed Card Campaign Support**: Added missing "fixed_price" offer type support that was preventing Card campaign promotional pricing from displaying
 - **Currency Formatting**: Added proper £ currency formatting throughout all promotional offer calculations and display text
+- **Enhanced WhatsApp Promotional Messaging**: Updated WhatsApp message templates to prominently display promotional pricing with eye-catching "🔥SPECIAL PROMOTION ALERT!🔥" headers when active promotions exist
+- **Comprehensive WhatsApp Offer Support**: Enhanced `generatePromotionalOffersMessage` to support all new offer types (fixed_price, bulk_discount, etc.) with prominent messaging like "SPECIAL PRICE", "AMAZING DEAL", "WHOLESALE PRICING"
+- **Customer Promotion Awareness**: WhatsApp messages now clearly highlight promotional pricing with strikethrough original prices, promotional badges, and detailed special offer descriptions to ensure customers are aware of active promotions
 
 ### Customer Portal Image Quality Enhancement (July 14, 2025):
 - **Featured Product Image Display Fix**: Resolved pixelation issues by allowing product images to display at their natural resolution instead of forcing them into fixed-height containers

@@ -308,16 +308,20 @@ export class WhatsAppService {
     const pricing = this.calculatePromotionalPricing(basePrice, 1, promotionalOffers || [], promoPrice, product.promoActive);
     
     // Format price display with promotional pricing
-    const priceDisplay = pricing.effectivePrice < pricing.originalPrice 
+    const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
+    const priceDisplay = hasPromotion 
       ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ PROMO`
       : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
     
     // Generate promotional offers messaging
     const promoMessaging = this.generatePromotionalOffersMessage(promotionalOffers || [], currencySymbol);
     
-    return `🛍️ ${product.name} Promotion
-
-📦 Featured Product:
+    // Create more prominent promotion header if there are active promotions
+    const promotionHeader = hasPromotion || promoMessaging 
+      ? `🔥 *SPECIAL PROMOTION ALERT!* 🔥\n\n📦 Featured Product:`
+      : `🛍️ ${product.name} Available\n\n📦 Featured Product:`;
+    
+    return `${promotionHeader}
 ${product.name}
 ${imageNote}
 
@@ -616,11 +620,12 @@ Update your inventory or restock soon.`;
       const pricing = this.calculatePromotionalPricing(basePrice, 1, item.promotionalOffers || [], promoPrice, item.product.promoActive);
       
       // Format price display with promotional pricing
-      const priceDisplay = pricing.effectivePrice < pricing.originalPrice 
-        ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ PROMO`
+      const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
+      const priceDisplay = hasPromotion 
+        ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ 🔥PROMO🔥`
         : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
       
-      message += `${index + 1}. ${item.product.name}${imageNote}\n`;
+      message += `${index + 1}. ${item.product.name}${imageNote}${hasPromotion ? ' 🔥' : ''}\n`;
       message += `   💰 Unit Price: ${priceDisplay}\n`;
       
       // Add negotiation information if enabled
@@ -667,7 +672,7 @@ Update your inventory or restock soon.`;
       return '';
     }
 
-    let promoMessage = '\n\n🎉 *Special Offers:*';
+    let promoMessage = '\n\n🎉 *SPECIAL OFFERS ACTIVE:*';
     
     promotionalOffers.forEach((offer, index) => {
       switch (offer.type) {
@@ -677,28 +682,57 @@ Update your inventory or restock soon.`;
           promoMessage += `\n💥 ${percentageDiscount}% OFF - Save big on your order!`;
           break;
         case 'fixed_discount':
-          const fixedDiscount = offer.value || offer.fixedAmount;
-          promoMessage += `\n💥 ${currencySymbol}${fixedDiscount} OFF - Instant savings!`;
+        case 'fixed_amount_discount':
+          const fixedDiscount = offer.value || offer.discountAmount;
+          promoMessage += `\n💥 ${currencySymbol}${fixedDiscount} OFF each unit - Instant savings!`;
+          break;
+        case 'fixed_price':
+          promoMessage += `\n🔥 SPECIAL PRICE: Only ${currencySymbol}${offer.fixedPrice} each!`;
           break;
         case 'bogo':
         case 'buy_x_get_y_free':
-          promoMessage += `\n🔥 Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
+          promoMessage += `\n🎁 AMAZING DEAL: Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
           break;
         case 'multi_buy':
-          promoMessage += `\n📦 Buy ${offer.quantity}+ and get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${currencySymbol}${offer.discountValue} OFF`} each!`;
+          promoMessage += `\n📦 BULK DISCOUNT: Buy ${offer.quantity}+ and get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${currencySymbol}${offer.discountValue} OFF`} each!`;
           break;
         case 'bulk_tier':
-          promoMessage += `\n📊 Bulk Pricing: ${offer.quantity}+ units = ${currencySymbol}${offer.pricePerUnit} each!`;
+          promoMessage += `\n📊 WHOLESALE PRICING: ${offer.quantity}+ units = ${currencySymbol}${offer.pricePerUnit} each!`;
+          break;
+        case 'bulk_discount':
+          if (offer.bulkTiers && offer.bulkTiers.length > 0) {
+            const firstTier = offer.bulkTiers[0];
+            if (firstTier.pricePerUnit) {
+              promoMessage += `\n📊 TIERED PRICING: Starting from ${currencySymbol}${firstTier.pricePerUnit} each!`;
+            } else if (firstTier.discountPercentage) {
+              promoMessage += `\n📊 BULK SAVINGS: Up to ${firstTier.discountPercentage}% OFF on bulk orders!`;
+            } else if (firstTier.discountAmount) {
+              promoMessage += `\n📊 BULK SAVINGS: Up to ${currencySymbol}${firstTier.discountAmount} OFF each!`;
+            }
+          }
           break;
         case 'free_shipping':
-          promoMessage += `\n🚚 FREE SHIPPING on orders over ${currencySymbol}${offer.minimumOrderValue}!`;
+          promoMessage += `\n🚚 FREE DELIVERY on orders over ${currencySymbol}${offer.minimumOrderValue}!`;
           break;
         case 'bundle_deal':
-          promoMessage += `\n🎁 Bundle Deal: Buy together and save ${offer.discountType === 'percentage' ? `${offer.discountValue}%` : `${currencySymbol}${offer.discountValue}`}!`;
+          if (offer.bundlePrice) {
+            promoMessage += `\n🎁 BUNDLE SPECIAL: ${currencySymbol}${offer.bundlePrice} each when bought together!`;
+          } else if (offer.discountType === 'percentage' && offer.discountValue) {
+            promoMessage += `\n🎁 BUNDLE DEAL: Save ${offer.discountValue}% when buying together!`;
+          } else if (offer.discountType === 'fixed' && offer.discountValue) {
+            promoMessage += `\n🎁 BUNDLE DEAL: Save ${currencySymbol}${offer.discountValue} each when buying together!`;
+          }
+          break;
+        default:
+          // Handle any other offer types with generic message
+          if (offer.name) {
+            promoMessage += `\n✨ ${offer.name} - Special offer available!`;
+          }
           break;
       }
     });
 
+    promoMessage += `\n⏰ *Limited time offer - Order now!*`;
     return promoMessage;
   }
 }
