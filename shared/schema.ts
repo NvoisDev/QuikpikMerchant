@@ -751,13 +751,22 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 }).extend({
   // Transform numeric fields that should accept numbers from frontend
-  unitSize: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  unitSize: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   price: z.union([z.string(), z.number()]).transform((val) => val.toString()),
-  promoPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
-  palletPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
-  minimumBidPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
-  unitWeight: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
-  palletWeight: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  promoPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  minimumBidPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  // Fix integer fields to accept string inputs from frontend
+  packQuantity: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  moq: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
+  stock: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
+  unitsPerPallet: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  palletMoq: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 1),
+  palletStock: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 0),
+  lowStockThreshold: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : 50),
+  shelfLife: z.union([z.string(), z.number()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
