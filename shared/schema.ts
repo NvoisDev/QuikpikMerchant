@@ -467,6 +467,57 @@ export const campaignOrders = pgTable("campaign_orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Promotion Analytics - Track pricing impact and performance
+export const promotionAnalytics = pgTable("promotion_analytics", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  productId: integer("product_id").notNull().references(() => products.id),
+  campaignId: varchar("campaign_id").notNull(), // References either broadcast.id or template.id
+  campaignType: varchar("campaign_type").notNull(), // 'single' | 'multi'
+  campaignTitle: varchar("campaign_title").notNull(),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
+  promotionalPrice: decimal("promotional_price", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).notNull(),
+  customerGroupId: integer("customer_group_id").references(() => customerGroups.id),
+  recipientCount: integer("recipient_count").default(0),
+  viewCount: integer("view_count").default(0), // How many customers viewed the promotion
+  clickCount: integer("click_count").default(0), // How many clicked the purchase link
+  orderCount: integer("order_count").default(0), // How many placed orders
+  unitsOrdered: integer("units_ordered").default(0), // Total units ordered through this promotion
+  revenueGenerated: decimal("revenue_generated", { precision: 12, scale: 2 }).default("0.00"),
+  potentialRevenue: decimal("potential_revenue", { precision: 12, scale: 2 }).default("0.00"), // Revenue if sold at original price
+  revenueLoss: decimal("revenue_loss", { precision: 12, scale: 2 }).default("0.00"), // Lost revenue due to discount
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0.00"), // orderCount / recipientCount
+  campaignSentAt: timestamp("campaign_sent_at"),
+  firstOrderAt: timestamp("first_order_at"),
+  lastOrderAt: timestamp("last_order_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Product Performance Summary - Aggregated analytics per product
+export const productPerformanceSummary = pgTable("product_performance_summary", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  productId: integer("product_id").notNull().references(() => products.id),
+  totalCampaigns: integer("total_campaigns").default(0),
+  activeCampaigns: integer("active_campaigns").default(0),
+  totalPromotionViews: integer("total_promotion_views").default(0),
+  totalPromotionOrders: integer("total_promotion_orders").default(0),
+  totalPromotionRevenue: decimal("total_promotion_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  totalRevenueLoss: decimal("total_revenue_loss", { precision: 12, scale: 2 }).default("0.00"),
+  averageDiscountPercentage: decimal("average_discount_percentage", { precision: 5, scale: 2 }).default("0.00"),
+  bestPerformingCampaignId: varchar("best_performing_campaign_id"),
+  bestConversionRate: decimal("best_conversion_rate", { precision: 5, scale: 2 }).default("0.00"),
+  regularPriceOrders: integer("regular_price_orders").default(0), // Orders at regular price (non-promotional)
+  regularPriceRevenue: decimal("regular_price_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  promotionEffectiveness: varchar("promotion_effectiveness").default("unknown"), // 'excellent' | 'good' | 'average' | 'poor' | 'unknown'
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Stock update notifications for campaign recipients
 export const stockUpdateNotifications = pgTable("stock_update_notifications", {
   id: serial("id").primaryKey(),
@@ -774,6 +825,23 @@ export const insertStockUpdateNotificationSchema = createInsertSchema(stockUpdat
 });
 export type InsertStockUpdateNotification = z.infer<typeof insertStockUpdateNotificationSchema>;
 export type StockUpdateNotification = typeof stockUpdateNotifications.$inferSelect;
+
+// Promotion Analytics types
+export const insertPromotionAnalyticsSchema = createInsertSchema(promotionAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPromotionAnalytics = z.infer<typeof insertPromotionAnalyticsSchema>;
+export type PromotionAnalytics = typeof promotionAnalytics.$inferSelect;
+
+export const insertProductPerformanceSummarySchema = createInsertSchema(productPerformanceSummary).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+export type InsertProductPerformanceSummary = z.infer<typeof insertProductPerformanceSummarySchema>;
+export type ProductPerformanceSummary = typeof productPerformanceSummary.$inferSelect;
 
 export const insertStockMovementSchema = createInsertSchema(stockMovements).omit({
   id: true,

@@ -8322,5 +8322,57 @@ The Quikpik Team
     }
   });
 
+  // Promotion Analytics Routes
+  app.get('/api/promotion-analytics/:productId', requireAuth, async (req: any, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const analytics = await storage.getPromotionAnalyticsByProduct(targetUserId, productId);
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error fetching promotion analytics:', error);
+      res.status(500).json({ error: 'Failed to fetch promotion analytics' });
+    }
+  });
+
+  app.get('/api/promotion-analytics/summary/:productId', requireAuth, async (req: any, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const summary = await storage.getProductPerformanceSummary(targetUserId, productId);
+      res.json(summary);
+    } catch (error) {
+      console.error('Error fetching product performance summary:', error);
+      res.status(500).json({ error: 'Failed to fetch product performance summary' });
+    }
+  });
+
+  app.get('/api/promotion-analytics/dashboard', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const dashboardData = await storage.getPromotionDashboard(targetUserId);
+      res.json(dashboardData);
+    } catch (error) {
+      console.error('Error fetching promotion dashboard:', error);
+      res.status(500).json({ error: 'Failed to fetch promotion dashboard data' });
+    }
+  });
+
+  app.post('/api/promotion-analytics/track', requireAuth, async (req: any, res) => {
+    try {
+      const { campaignId, productId, action, metadata } = req.body;
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      await storage.trackPromotionActivity(targetUserId, campaignId, productId, action, metadata);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking promotion activity:', error);
+      res.status(500).json({ error: 'Failed to track promotion activity' });
+    }
+  });
+
   return httpServer;
 }

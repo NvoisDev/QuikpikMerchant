@@ -22,6 +22,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
+import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -2065,96 +2066,101 @@ export default function ProductManagement() {
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product: any) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onDuplicate={handleDuplicate}
-                  onStatusChange={handleStatusChange}
-                />
+                <div key={product.id} className="space-y-3">
+                  <ProductCard
+                    product={product}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onDuplicate={handleDuplicate}
+                    onStatusChange={handleStatusChange}
+                  />
+                  <PromotionAnalytics productId={product.id} />
+                </div>
               ))}
             </div>
           ) : (
             <div className="space-y-4">
               {filteredProducts.map((product: any) => (
-                <Card key={product.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-6">
-                      <img 
-                        src={
-                          (product.images && product.images.length > 0) 
-                            ? product.images[0] 
-                            : product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"
-                        } 
-                        alt={product.name}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                            <Badge variant="secondary" className="mt-1">{product.category}</Badge>
-                            {product.description && (
-                              <p className="text-gray-600 text-sm mt-2 max-w-md">{product.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={product.status === "active" ? "default" : product.status === "inactive" ? "secondary" : "destructive"}>
-                              {product.status === "active" ? "Active" : product.status === "inactive" ? "Inactive" : "Out of Stock"}
-                            </Badge>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
-                              Edit
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700">
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-4 gap-4 mt-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Price:</span>
-                            <div className="font-semibold">
-                              {product.priceVisible ? (
-                                <div className="flex items-center gap-2">
-                                  {product.promoActive && product.promoPrice ? (
-                                    <>
-                                      <span className="text-green-600">
-                                        {formatCurrency(parseFloat(product.promoPrice), product.currency || "GBP")}
-                                      </span>
-                                      <span className="text-gray-500 line-through text-sm">
-                                        {formatCurrency(parseFloat(product.price), product.currency || "GBP")}
-                                      </span>
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                                        PROMO
-                                      </Badge>
-                                    </>
-                                  ) : (
-                                    formatCurrency(parseFloat(product.price), product.currency || "GBP")
-                                  )}
-                                </div>
-                              ) : "Hidden"}
+                <div key={product.id} className="space-y-3">
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center space-x-6">
+                        <img 
+                          src={
+                            (product.images && product.images.length > 0) 
+                              ? product.images[0] 
+                              : product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"
+                          } 
+                          alt={product.name}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+                              <Badge variant="secondary" className="mt-1">{product.category}</Badge>
+                              {product.description && (
+                                <p className="text-gray-600 text-sm mt-2 max-w-md">{product.description}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={product.status === "active" ? "default" : product.status === "inactive" ? "secondary" : "destructive"}>
+                                {product.status === "active" ? "Active" : product.status === "inactive" ? "Inactive" : "Out of Stock"}
+                              </Badge>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
+                                Edit
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700">
+                                Delete
+                              </Button>
                             </div>
                           </div>
-                          <div>
-                            <span className="text-gray-500">MOQ:</span>
-                            <div className="font-semibold">{formatNumber(product.moq)} units</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Stock:</span>
-                            <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                              {formatNumber(product.stock)} units
+                          <div className="grid grid-cols-4 gap-4 mt-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Price:</span>
+                              <div className="font-semibold">
+                                {product.priceVisible ? (
+                                  <div className="flex items-center gap-2">
+                                    {product.promoActive && product.promoPrice ? (
+                                      <>
+                                        <span className="text-green-600">
+                                          {formatCurrency(parseFloat(product.promoPrice), product.currency || "GBP")}
+                                        </span>
+                                        <span className="text-gray-500 line-through text-sm">
+                                          {formatCurrency(parseFloat(product.price), product.currency || "GBP")}
+                                        </span>
+                                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                          PROMO
+                                        </Badge>
+                                      </>
+                                    ) : (
+                                      formatCurrency(parseFloat(product.price), product.currency || "GBP")
+                                    )}
+                                  </div>
+                                ) : "Hidden"}
+                              </div>
                             </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Views:</span>
-                            <div className="font-semibold">142</div>
+                            <div>
+                              <span className="text-gray-500">MOQ:</span>
+                              <div className="font-semibold">{formatNumber(product.moq)} units</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Stock:</span>
+                              <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {formatNumber(product.stock)} units
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Views:</span>
+                              <div className="font-semibold">142</div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                  <PromotionAnalytics productId={product.id} />
+                </div>
               ))}
             </div>
           )}
