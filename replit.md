@@ -176,6 +176,16 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
+### Complete Promotional Offers Campaign Indicators Implementation (July 14, 2025):
+- **Campaign Card Visual Indicators**: Added purple "Offers" badges with percent icons to campaign cards that have promotional offers configured
+- **Smart Detection System**: Implemented comprehensive detection logic for both single-product and multi-product campaigns
+- **Tooltip Integration**: Added helpful tooltips explaining promotional offer indicators for better user experience
+- **Real-time Display**: Promotional offer indicators appear immediately when offers are configured and update automatically
+- **User Interface Enhancement**: Indicators positioned alongside existing campaign type badges for clean visual hierarchy
+- **Complete Bug Resolution**: Fixed critical promotional offers modal closing issue with comprehensive form event handling
+- **Technical Fixes**: Added type="button" attributes, form event bubbling prevention, and Enter key submission blocking
+- **Production Ready**: Full promotional offers system operational with visual indicators for campaign management
+
 ### Complete Product Size Display System Implementation (July 14, 2025):
 - **Wholesale Product Cards**: Added product size information (e.g., "12 x 250ml") to both grid and list views in product management dashboard
 - **Customer Portal Integration**: Implemented product size display across all customer portal views including featured products, grid view, and list view
