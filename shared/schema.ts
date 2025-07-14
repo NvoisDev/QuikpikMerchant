@@ -749,6 +749,15 @@ export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // Transform numeric fields that should accept numbers from frontend
+  unitSize: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  price: z.union([z.string(), z.number()]).transform((val) => val.toString()),
+  promoPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  palletPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  minimumBidPrice: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  unitWeight: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
+  palletWeight: z.union([z.string(), z.number()]).optional().transform((val) => val?.toString()),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
