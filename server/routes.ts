@@ -3704,9 +3704,10 @@ Write a professional, sales-focused description that highlights the key benefits
         }
       } else if (campaignType === 'multi') {
         if (type === 'template') {
-          // Update template campaign
+          // Update template campaign - exclude the string ID from updateData
+          const { id: excludedId, ...cleanCampaignData } = campaignData;
           const updateData = {
-            ...campaignData,
+            ...cleanCampaignData,
           };
           
           console.log('Calling updateMessageTemplate with:', { id, updateData });
