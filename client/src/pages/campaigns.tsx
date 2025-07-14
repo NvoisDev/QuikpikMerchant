@@ -1023,15 +1023,27 @@ export default function Campaigns() {
                   </div>
                   <div className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
                     <span className="text-gray-600">
-                      💰 {campaign.product?.promoActive && campaign.product?.promoPrice ? (
-                        <span className="flex items-center space-x-1">
-                          <span className="text-red-600 font-semibold">{formatCurrency(Number(campaign.product.promoPrice))}</span>
-                          <span className="text-gray-400 line-through text-xs">{formatCurrency(Number(campaign.product.price))}</span>
-                          <span className="text-red-600 font-medium">PROMO</span>
-                        </span>
-                      ) : (
-                        <span>{formatCurrency(Number(campaign.product?.price) || 0)}</span>
-                      )}
+                      💰 {(() => {
+                        if (campaign.product) {
+                          const pricing = calculatePromotionalPricing(campaign.product);
+                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                          
+                          return hasDiscounts ? (
+                            <span className="flex items-center space-x-1">
+                              <span className="text-red-600 font-semibold">
+                                {formatCurrency(pricing.effectivePrice)}
+                              </span>
+                              <span className="text-gray-400 line-through text-xs">
+                                {formatCurrency(pricing.originalPrice)}
+                              </span>
+                              <span className="text-red-600 font-medium">PROMO</span>
+                            </span>
+                          ) : (
+                            <span>{formatCurrency(pricing.originalPrice)}</span>
+                          );
+                        }
+                        return <span>£0.00</span>;
+                      })()}
                     </span>
                     <span className="text-gray-600">
                       📦 {formatNumber(campaign.quantity || campaign.product?.stock || 0)} qty

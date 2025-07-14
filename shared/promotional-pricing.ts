@@ -4,8 +4,10 @@
  */
 
 export interface PromotionalOffer {
-  type: 'percentage_discount' | 'fixed_discount' | 'bogo' | 'multi_buy' | 'bulk_tier' | 'free_shipping' | 'bundle_deal';
+  type: 'percentage_discount' | 'fixed_discount' | 'bogo' | 'multi_buy' | 'bulk_tier' | 'free_shipping' | 'bundle_deal' | 'buy_x_get_y_free';
   value?: number;
+  discountPercentage?: number; // Support database field name
+  discountAmount?: number; // Support database field name
   buyQuantity?: number;
   getQuantity?: number;
   quantity?: number;
@@ -13,6 +15,9 @@ export interface PromotionalOffer {
   discountValue?: number;
   pricePerUnit?: number;
   minimumOrderValue?: number;
+  isActive?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface PricingResult {
@@ -53,13 +58,28 @@ export class PromotionalPricingCalculator {
 
     // Apply promotional offers
     for (const offer of promotionalOffers) {
+      // Skip inactive offers or offers outside date range
+      if (offer.isActive === false) continue;
+      
+      // Check date validity if provided
+      if (offer.startDate && offer.endDate) {
+        const now = new Date();
+        const start = new Date(offer.startDate);
+        const end = new Date(offer.endDate);
+        // Add a day to the end date to handle same-day offers
+        end.setDate(end.getDate() + 1);
+        if (now < start || now > end) continue;
+      }
+      
       switch (offer.type) {
         case 'percentage_discount':
-          if (offer.value) {
-            const discountAmount = effectivePrice * (offer.value / 100);
+          // Support both 'value' and 'discountPercentage' field names
+          const percentageDiscount = offer.value || offer.discountPercentage;
+          if (percentageDiscount) {
+            const discountAmount = effectivePrice * (percentageDiscount / 100);
             effectivePrice -= discountAmount;
             totalDiscount += discountAmount * quantity;
-            appliedOffers.push(`${offer.value}% OFF`);
+            appliedOffers.push(`${percentageDiscount}% OFF`);
           }
           break;
 
