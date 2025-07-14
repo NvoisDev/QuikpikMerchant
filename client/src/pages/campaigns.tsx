@@ -1066,7 +1066,12 @@ export default function Campaigns() {
                             return sum + ((Number(p.specialPrice) || 0) * (Number(p.quantity) || 0));
                           }
                           if (p.product) {
-                            const pricing = calculatePromotionalPricing(p.product, Number(p.quantity) || 1);
+                            // Include promotional offers from the campaign product item
+                            const productWithOffers = {
+                              ...p.product,
+                              promotionalOffers: p.promotionalOffers || []
+                            };
+                            const pricing = calculatePromotionalPricing(productWithOffers, Number(p.quantity) || 1);
                             return sum + pricing.totalCost;
                           }
                           return sum;
@@ -1096,7 +1101,12 @@ export default function Campaigns() {
                               );
                             }
                             if (productItem.product) {
-                              const pricing = calculatePromotionalPricing(productItem.product);
+                              // Include promotional offers from the campaign product item
+                              const productWithOffers = {
+                                ...productItem.product,
+                                promotionalOffers: productItem.promotionalOffers || []
+                              };
+                              const pricing = calculatePromotionalPricing(productWithOffers);
                               const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                               
                               return hasDiscounts ? (
@@ -1164,7 +1174,12 @@ export default function Campaigns() {
                         }
                         if (p.product) {
                           const quantity = Number(p.product.stock) || 0;
-                          const pricing = calculatePromotionalPricing(p.product, quantity);
+                          // Include promotional offers from the campaign product item
+                          const productWithOffers = {
+                            ...p.product,
+                            promotionalOffers: p.promotionalOffers || []
+                          };
+                          const pricing = calculatePromotionalPricing(productWithOffers, quantity);
                           return sum + pricing.totalCost;
                         }
                         return sum;
