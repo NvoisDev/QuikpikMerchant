@@ -610,13 +610,8 @@ export default function Campaigns() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Stock Value</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency((campaigns as any[]).reduce((total: number, campaign: any) => {
-                    if (campaign.campaignType === 'single') {
-                      return total + ((Number(campaign.product?.price) || 0) * (Number(campaign.product?.stock) || 0));
-                    } else {
-                      return total + (campaign.products?.reduce((sum: number, p: any) => 
-                        sum + ((Number(p.product?.price) || 0) * (Number(p.product?.stock) || 0)), 0) || 0);
-                    }
+                  {formatCurrency((products || []).reduce((total: number, product: any) => {
+                    return total + ((Number(product.price) || 0) * (Number(product.stock) || 0));
                   }, 0))}
                 </p>
               </div>
