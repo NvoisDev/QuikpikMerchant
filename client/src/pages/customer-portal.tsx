@@ -451,12 +451,78 @@ export default function CustomerPortal() {
 
 
 
-  // Customer authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
+  // Customer authentication state with localStorage persistence
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      return stored ? JSON.parse(stored).isAuthenticated : false;
+    } catch {
+      return false;
+    }
+  });
+  
+  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      return stored ? JSON.parse(stored).customer : null;
+    } catch {
+      return null;
+    }
+  });
+  
   const [showHomePage, setShowHomePage] = useState(true);
-  const [showAuth, setShowAuth] = useState(false);
-  const [isGuestMode, setIsGuestMode] = useState(true); // Default to guest mode
+  const [showAuth, setShowAuth] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      return stored ? !JSON.parse(stored).isAuthenticated : true;
+    } catch {
+      return true;
+    }
+  });
+  
+  const [isGuestMode, setIsGuestMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      return stored ? !JSON.parse(stored).isAuthenticated : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Persist authentication state to localStorage
+  useEffect(() => {
+    if (wholesalerId) {
+      const authData = {
+        isAuthenticated,
+        customer: authenticatedCustomer,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify(authData));
+    }
+  }, [isAuthenticated, authenticatedCustomer, wholesalerId]);
+
+  // Clear expired authentication data on component mount
+  useEffect(() => {
+    if (wholesalerId) {
+      try {
+        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+        if (stored) {
+          const authData = JSON.parse(stored);
+          // Clear if older than 24 hours
+          if (Date.now() - authData.timestamp > 24 * 60 * 60 * 1000) {
+            localStorage.removeItem(`customer_auth_${wholesalerId}`);
+            setIsAuthenticated(false);
+            setAuthenticatedCustomer(null);
+            setShowAuth(true);
+            setIsGuestMode(true);
+          }
+        }
+      } catch {
+        // Clear corrupted data
+        localStorage.removeItem(`customer_auth_${wholesalerId}`);
+      }
+    }
+  }, [wholesalerId]);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -992,6 +1058,10 @@ export default function CustomerPortal() {
     setIsAuthenticated(true);
     setShowAuth(false);
     setIsGuestMode(false); // Disable guest mode when authenticated
+    
+    // The localStorage persistence is handled by the useEffect hooks above
+    // No need to manually set localStorage here
+    
     toast({
       title: "Welcome!",
       description: `Hello ${customer.name}, you're now logged in.`,
@@ -1122,9 +1192,12 @@ export default function CustomerPortal() {
                   </Button>
                   <Button
                     onClick={() => {
+                      // Clear localStorage
+                      localStorage.removeItem(`customer_auth_${wholesalerId}`);
                       setIsAuthenticated(false);
                       setAuthenticatedCustomer(null);
                       setShowAuth(true);
+                      setIsGuestMode(true);
                       toast({
                         title: "Logged out",
                         description: "You have been successfully logged out.",
@@ -1661,6 +1734,20 @@ export default function CustomerPortal() {
                           )}
                         </div>
                         
+                        {/* Sale Tag */}
+                        {(() => {
+                          const pricing = calculatePromotionalPricing(product);
+                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                          
+                          return hasDiscounts && !isGuestMode ? (
+                            <div className="mb-2">
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                SALE
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
+                        
                         {/* Price */}
                         <div className="flex items-baseline gap-2">
                           {(() => {
@@ -2060,6 +2147,15 @@ export default function CustomerPortal() {
                               })()}
                             </div>
                             
+                            {/* Sale Tag */}
+                            {product.promoActive && product.promoPrice && (
+                              <div className="mb-2">
+                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                  SALE
+                                </span>
+                              </div>
+                            )}
+                            
                             {/* Price */}
                             <div className="flex items-baseline gap-2">
                               {product.promoActive && product.promoPrice ? (
@@ -2069,9 +2165,6 @@ export default function CustomerPortal() {
                                   </span>
                                   <span className="text-sm text-gray-400 line-through">
                                     {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(product.price).toFixed(2)}
-                                  </span>
-                                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                                    SALE
                                   </span>
                                 </>
                               ) : (
@@ -2176,28 +2269,32 @@ export default function CustomerPortal() {
                                 
                                 {/* Price and Action Buttons */}
                                 <div className="flex-shrink-0 text-right ml-4">
+                                  {(() => {
+                                    const pricing = calculatePromotionalPricing(product);
+                                    const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                                    
+                                    return hasDiscounts ? (
+                                      <div className="mb-2">
+                                        <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                          SALE
+                                        </span>
+                                      </div>
+                                    ) : null;
+                                  })()}
+                                  
                                   <div className="text-lg font-bold text-gray-900 mb-2">
                                     {(() => {
                                       const pricing = calculatePromotionalPricing(product);
                                       const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                                       
                                       return hasDiscounts ? (
-                                        <div className="flex items-center gap-2 flex-wrap">
+                                        <div className="flex items-center gap-2 flex-wrap justify-end">
                                           <span className="text-green-600">
                                             {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
                                           </span>
                                           <span className="text-gray-500 line-through text-sm">
                                             {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
                                           </span>
-                                          {pricing.appliedOffers.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                              {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
-                                                <span key={index} className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
-                                                  {offer}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          )}
                                         </div>
                                       ) : (
                                         <span>

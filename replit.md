@@ -176,6 +176,14 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 15, 2025)
 
+### Complete Sale Price Tag Repositioning (July 15, 2025):
+- **Improved Visual Hierarchy**: Moved sale price tags from inline with pricing to above price displays for better visibility
+- **Universal Implementation**: Updated all product display modes (grid view, list view, "See All Products" section) to show sale price tags above pricing
+- **Enhanced Customer Experience**: Sale price tags now appear in prominent positions, making promotional pricing more noticeable to customers
+- **Consistent Design**: Maintained consistent tag styling and positioning across all customer portal product card views
+- **Right-Aligned Add to Cart Buttons**: Previously completed right-alignment of "Add to Cart" buttons in product cards for better visual balance
+- **Production Ready**: Sale price tag positioning improvements fully implemented and tested across all customer portal sections
+
 ### Complete Cross-Campaign Promotional Offer Tracking System (July 15, 2025):
 - **Existing Offer Detection**: Implemented comprehensive system to detect when products already have promotional offers configured
 - **Cross-Campaign Warnings**: Added amber warning alerts when selecting products with existing promotional offers in campaign creation
