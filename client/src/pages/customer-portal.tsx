@@ -2142,7 +2142,35 @@ export default function CustomerPortal() {
                             </>
                           ) : (
                             <>
-                              {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(item.product.price).toFixed(2)} per unit
+                              {(() => {
+                                const basePrice = parseFloat(item.product.price) || 0;
+                                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                                  basePrice,
+                                  item.quantity,
+                                  item.product.promotionalOffers || [],
+                                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                                  item.product.promoActive
+                                );
+                                
+                                if (pricing.effectivePrice < basePrice) {
+                                  return (
+                                    <>
+                                      <span className="text-green-600 font-medium">
+                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)} per unit
+                                      </span>
+                                      <span className="text-gray-400 line-through ml-1">
+                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{basePrice.toFixed(2)}
+                                      </span>
+                                    </>
+                                  );
+                                } else {
+                                  return (
+                                    <>
+                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{basePrice.toFixed(2)} per unit
+                                    </>
+                                  );
+                                }
+                              })()}
                             </>
                           )}
                         </div>
@@ -2291,28 +2319,45 @@ export default function CustomerPortal() {
                   
                   {/* Promotional Offers Summary */}
                   {cartStats.appliedPromotions && cartStats.appliedPromotions.length > 0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 my-3">
-                      <h4 className="font-medium text-green-800 flex items-center mb-2">
-                        🎉 <span className="ml-1">Active Promotional Offers</span>
-                      </h4>
-                      <div className="space-y-2">
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 my-3 shadow-sm">
+                      <div className="flex items-center mb-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white text-lg">🎉</span>
+                        </div>
+                        <h4 className="font-semibold text-green-800 text-base">Active Promotional Offers</h4>
+                      </div>
+                      <div className="space-y-3">
                         {cartStats.appliedPromotions.map((offer, index) => (
-                          <div key={index} className="flex items-center text-sm text-green-700">
-                            <div className="w-1.5 h-1.5 bg-green-600 rounded-full mr-2"></div>
-                            <span>{offer}</span>
+                          <div key={index} className="flex items-center text-sm bg-white rounded-lg px-3 py-2 border border-green-100">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
+                            <span className="text-green-700 font-medium">{offer}</span>
                           </div>
                         ))}
                         {cartStats.bogoffDetails && cartStats.bogoffDetails.length > 0 && (
                           cartStats.bogoffDetails.map((bogoff, index) => (
-                            <div key={`bogoff-${index}`} className="text-sm text-green-700 bg-green-100 rounded px-2 py-1">
-                              🎁 <strong>{bogoff.productName}:</strong> {bogoff.offerName} 
-                              <span className="text-green-600 font-medium"> (+{bogoff.freeItemsAdded} FREE items added to your order!)</span>
+                            <div key={`bogoff-${index}`} className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg px-3 py-2">
+                              <div className="flex items-start space-x-2">
+                                <span className="text-orange-500 text-lg mt-0.5">🎁</span>
+                                <div className="flex-1">
+                                  <div className="text-sm font-semibold text-orange-800">{bogoff.productName}</div>
+                                  <div className="text-sm text-orange-700">{bogoff.offerName}</div>
+                                  <div className="text-sm text-orange-600 font-medium bg-orange-100 rounded px-2 py-1 mt-1 inline-block">
+                                    +{bogoff.freeItemsAdded} FREE items added to your order!
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ))
                         )}
                         {cartStats.freeShippingApplied && (
-                          <div className="text-sm text-green-700 bg-green-100 rounded px-2 py-1">
-                            🚚 <strong>Free Shipping Applied!</strong> Delivery cost waived for this order.
+                          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg px-3 py-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-blue-500 text-lg">🚚</span>
+                              <div className="flex-1">
+                                <div className="text-sm font-semibold text-blue-800">Free Shipping Applied!</div>
+                                <div className="text-sm text-blue-700">Delivery cost waived for this order</div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
