@@ -441,12 +441,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     <Shield className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">
                   🛡️ Secure access for registered customers only
                 </h3>
-                <p className="text-sm text-gray-600 mb-1">
-                  Authentication required to access products and pricing
-                </p>
+                <div className="bg-blue-50 rounded-lg p-4 mb-2">
+                  <p className="text-sm text-blue-800 font-medium mb-2">
+                    How to get access:
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    If you are added by the wholesaler to their customer list, you will have access to browse products and see pricing.
+                  </p>
+                </div>
                 <p className="text-xs text-gray-500">
                   Your security matters to us!
                 </p>
