@@ -623,9 +623,10 @@ export default function CustomerGroups() {
 
   const onEditMember = (member: any) => {
     setEditingMember(member);
+    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim();
     editMemberForm.reset({
       phoneNumber: member.phoneNumber || "",
-      name: member.name || "",
+      name: fullName || "",
     });
     setIsEditMemberDialogOpen(true);
   };
