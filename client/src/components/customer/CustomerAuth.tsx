@@ -477,17 +477,24 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 )}
               </Button>
 
-              {onSkipAuth && (
-                <div className="text-center pt-4">
+              <div className="text-center pt-4 space-y-2">
+                {onSkipAuth && (
                   <Button 
                     variant="ghost" 
                     onClick={onSkipAuth}
-                    className="text-sm text-gray-500 hover:text-gray-700 rounded-xl"
+                    className="text-sm text-gray-500 hover:text-gray-700 rounded-xl block w-full"
                   >
                     Browse as guest 👀
                   </Button>
-                </div>
-              )}
+                )}
+                <Button 
+                  variant="ghost" 
+                  onClick={() => window.location.href = '/'}
+                  className="text-xs text-blue-500 hover:text-blue-700 rounded-xl block w-full"
+                >
+                  ← Back to Quikpik Home
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

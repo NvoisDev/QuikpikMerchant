@@ -45,6 +45,68 @@ const getCurrencySymbol = (currency = 'GBP'): string => {
   }
 };
 
+// Price display component that hides pricing for guests
+const PriceDisplay = ({ 
+  price, 
+  originalPrice, 
+  currency, 
+  isGuestMode, 
+  size = 'medium',
+  showStrikethrough = false 
+}: {
+  price: number;
+  originalPrice?: number;
+  currency?: string;
+  isGuestMode: boolean;
+  size?: 'small' | 'medium' | 'large';
+  showStrikethrough?: boolean;
+}) => {
+  if (isGuestMode) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`font-semibold text-gray-500 ${
+          size === 'small' ? 'text-sm' : 
+          size === 'large' ? 'text-xl' : 'text-base'
+        }`}>
+          Price available after login
+        </span>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="text-xs px-2 py-1 h-6"
+          onClick={() => window.location.reload()}
+        >
+          Sign In
+        </Button>
+      </div>
+    );
+  }
+
+  const currencySymbol = getCurrencySymbol(currency);
+  const hasDiscount = originalPrice && originalPrice > price;
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className={`font-bold ${
+        hasDiscount ? 'text-green-600' : 'text-gray-900'
+      } ${
+        size === 'small' ? 'text-sm' : 
+        size === 'large' ? 'text-xl' : 'text-base'
+      }`}>
+        {currencySymbol}{price.toFixed(2)}
+      </span>
+      {hasDiscount && showStrikethrough && (
+        <span className={`line-through text-gray-500 ${
+          size === 'small' ? 'text-xs' : 
+          size === 'large' ? 'text-lg' : 'text-sm'
+        }`}>
+          {currencySymbol}{originalPrice.toFixed(2)}
+        </span>
+      )}
+    </div>
+  );
+};
+
 // Loading skeleton components
 const ProductCardSkeleton = () => (
   <Card className="h-full">
@@ -377,6 +439,7 @@ export default function CustomerPortal() {
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showHomePage, setShowHomePage] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -921,6 +984,7 @@ export default function CustomerPortal() {
     setShowAuth(false);
     setIsAuthenticated(false);
     setAuthenticatedCustomer(null);
+    setIsGuestMode(true); // Enable guest mode with hidden pricing
   };
 
   const handleViewAllProducts = () => {
@@ -1187,6 +1251,22 @@ export default function CustomerPortal() {
                           const pricing = calculatePromotionalPricing(featuredProduct);
                           const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                           
+                          if (isGuestMode) {
+                            return (
+                              <div>
+                                <PriceDisplay 
+                                  price={pricing.effectivePrice}
+                                  originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
+                                  currency={wholesaler?.defaultCurrency}
+                                  isGuestMode={isGuestMode}
+                                  size="large"
+                                  showStrikethrough={true}
+                                />
+                                <div className="text-sm text-gray-500 mt-1">Price per unit</div>
+                              </div>
+                            );
+                          }
+                          
                           return hasDiscounts ? (
                             <div>
                               <div className="flex items-baseline gap-2 mb-2">
@@ -1219,27 +1299,29 @@ export default function CustomerPortal() {
                             </div>
                           );
                         })()}
-                        <div className="text-sm text-gray-500 mt-1">Price per unit</div>
+                        {!isGuestMode && <div className="text-sm text-gray-500 mt-1">Price per unit</div>}
                       </div>
                       
-                      {/* Product Stats */}
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">Minimum Order</div>
-                          <div className="text-xl font-semibold text-gray-900">
-                            {formatNumber(featuredProduct.moq)} units
+                      {/* Product Stats - Hidden for Guests */}
+                      {!isGuestMode && (
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">Minimum Order</div>
+                            <div className="text-xl font-semibold text-gray-900">
+                              {formatNumber(featuredProduct.moq)} units
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">In Stock</div>
+                            <div className="text-xl font-semibold text-gray-900">
+                              {formatNumber(featuredProduct.stock)} units
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">In Stock</div>
-                          <div className="text-xl font-semibold text-gray-900">
-                            {formatNumber(featuredProduct.stock)} units
-                          </div>
-                        </div>
-                      </div>
+                      )}
 
-                      {/* Negotiation Info */}
-                      {featuredProduct.negotiationEnabled && (
+                      {/* Negotiation Info - Hidden for Guests */}
+                      {!isGuestMode && featuredProduct.negotiationEnabled && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                           <div className="flex items-start gap-3">
                             <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -1258,29 +1340,50 @@ export default function CustomerPortal() {
                         </div>
                       )}
 
-                      {/* Action Buttons */}
-                      <div className="space-y-3">
-                        <Button
-                          onClick={() => openQuantityEditor(featuredProduct)}
-                          size="lg"
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
-                        >
-                          <Plus className="w-5 h-5 mr-3" />
-                          Add to Cart
-                        </Button>
-                        
-                        {featuredProduct.negotiationEnabled && (
-                          <Button 
-                            onClick={() => openNegotiation(featuredProduct)}
-                            variant="outline"
+                      {/* Action Buttons - Hidden for Guests */}
+                      {!isGuestMode && (
+                        <div className="space-y-3">
+                          <Button
+                            onClick={() => openQuantityEditor(featuredProduct)}
                             size="lg"
-                            className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold py-4 text-lg"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
                           >
-                            <Mail className="w-5 h-5 mr-3" />
-                            Request Custom Quote
+                            <Plus className="w-5 h-5 mr-3" />
+                            Add to Cart
                           </Button>
-                        )}
-                      </div>
+                          
+                          {featuredProduct.negotiationEnabled && (
+                            <Button 
+                              onClick={() => openNegotiation(featuredProduct)}
+                              variant="outline"
+                              size="lg"
+                              className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold py-4 text-lg"
+                            >
+                              <Mail className="w-5 h-5 mr-3" />
+                              Request Custom Quote
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Guest Call-to-Action */}
+                      {isGuestMode && (
+                        <div className="space-y-3">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                            <p className="text-blue-900 font-medium mb-2">Sign in to place orders</p>
+                            <p className="text-sm text-blue-700 mb-4">
+                              Create an account or log in to view pricing and place orders
+                            </p>
+                            <Button
+                              onClick={() => window.location.reload()}
+                              size="lg"
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 text-lg"
+                            >
+                              Sign In to Continue
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Supplier Info */}
                       <div className="border-t pt-6">
@@ -1466,50 +1569,60 @@ export default function CustomerPortal() {
                             const pricing = calculatePromotionalPricing(product);
                             const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                             
-                            return hasDiscounts ? (
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xl font-bold text-green-600">
-                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
-                                </span>
-                                <span className="text-sm text-gray-400 line-through">
-                                  {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
-                                </span>
-                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                                  SALE
-                                </span>
-                                {pricing.appliedOffers.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
-                                      <span key={index} className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-sm font-medium">
-                                        {offer}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-xl font-bold text-gray-900">
-                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
-                              </span>
+                            return (
+                              <PriceDisplay 
+                                price={pricing.effectivePrice}
+                                originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
+                                currency={wholesaler?.defaultCurrency}
+                                isGuestMode={isGuestMode}
+                                size="medium"
+                                showStrikethrough={true}
+                              />
                             );
                           })()}
                         </div>
                         
-                        {/* Quick Stats */}
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>MOQ: {formatNumber(product.moq)}</span>
-                          <span>Stock: {formatNumber(product.stock)}</span>
-                        </div>
+                        {/* Action Buttons - Hidden for Guests */}
+                        {!isGuestMode && (
+                          <div className="flex gap-2 mt-4">
+                            <Button 
+                              onClick={() => handleAddToCart(product)}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add to Cart
+                            </Button>
+                            {product.negotiationEnabled && (
+                              <Button 
+                                variant="outline" 
+                                onClick={() => handleNegotiation(product)}
+                                className="px-3 border-green-600 text-green-600 hover:bg-green-50 rounded-xl"
+                              >
+                                💬
+                              </Button>
+                            )}
+                          </div>
+                        )}
                         
-                        {/* Add to Cart Button */}
-                        <Button
-                          onClick={() => openQuantityEditor(product)}
-                          className="w-full bg-green-600 hover:bg-green-700 mt-4"
-                          size="sm"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add to Cart
-                        </Button>
+                        {/* Guest Call-to-Action */}
+                        {isGuestMode && (
+                          <div className="mt-4">
+                            <Button 
+                              onClick={() => window.location.reload()}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+                            >
+                              Sign in to place orders
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {/* Quick Stats */}
+                        {!isGuestMode && (
+                          <div className="flex justify-between text-sm text-gray-600 mt-3">
+                            <span>MOQ: {formatNumber(product.moq)}</span>
+                            <span>Stock: {formatNumber(product.stock)}</span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1603,88 +1716,90 @@ export default function CustomerPortal() {
                                   const pricing = calculatePromotionalPricing(product);
                                   const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                                   
-                                  return hasDiscounts ? (
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-green-600">
-                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
-                                      </span>
-                                      <span className="text-gray-500 line-through text-sm">
-                                        {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
-                                      </span>
-                                      {pricing.appliedOffers.length > 0 && (
-                                        <div className="flex flex-wrap gap-1">
-                                          {pricing.appliedOffers.slice(0, 1).map((offer, index) => (
-                                            <span key={index} className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-sm font-medium">
-                                              {offer}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span>
-                                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.originalPrice.toFixed(2)}
-                                    </span>
+                                  return (
+                                    <PriceDisplay 
+                                      price={pricing.effectivePrice}
+                                      originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
+                                      currency={wholesaler?.defaultCurrency}
+                                      isGuestMode={isGuestMode}
+                                      size="medium"
+                                      showStrikethrough={true}
+                                    />
                                   );
                                 })()}
                               </div>
                               
-                              {/* Action Buttons */}
-                              <div className="flex space-x-2">
-                                {product.negotiationEnabled ? (
-                                  <>
-                                    <Button 
-                                      onClick={() => openNegotiation(product)}
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                                    >
-                                      <Mail className="w-3 h-3 mr-1" />
-                                      Quote
-                                    </Button>
+                              {/* Action Buttons - Hidden for Guests */}
+                              {!isGuestMode && (
+                                <div className="flex space-x-2">
+                                  {product.negotiationEnabled ? (
+                                    <>
+                                      <Button 
+                                        onClick={() => openNegotiation(product)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                      >
+                                        <Mail className="w-3 h-3 mr-1" />
+                                        Quote
+                                      </Button>
+                                      <Button 
+                                        onClick={() => openQuantityEditor(product)}
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Add
+                                      </Button>
+                                    </>
+                                  ) : (
                                     <Button 
                                       onClick={() => openQuantityEditor(product)}
                                       size="sm"
                                       className="bg-green-600 hover:bg-green-700"
                                     >
                                       <Plus className="w-3 h-3 mr-1" />
-                                      Add
+                                      Add to Cart
                                     </Button>
-                                  </>
-                                ) : (
-                                  <Button 
-                                    onClick={() => openQuantityEditor(product)}
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Add to Cart
-                                  </Button>
-                                )}
-                              </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Guest Call-to-Action */}
+                              {isGuestMode && (
+                                <Button 
+                                  onClick={() => window.location.reload()}
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                  Sign In
+                                </Button>
+                              )}
                             </div>
                           </div>
                           
-                          {/* Product Stats */}
-                          <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
-                            <div>
-                              <span className="text-gray-500">MOQ:</span>
-                              <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Stock:</span>
-                              <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
-                                {formatNumber(product.stock)} units
+                          {/* Product Stats - Hidden for Guests */}
+                          {!isGuestMode && (
+                            <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                              <div>
+                                <span className="text-gray-500">MOQ:</span>
+                                <div className="font-medium text-gray-900">{formatNumber(product.moq)} units</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Stock:</span>
+                                <div className={`font-medium ${product.stock < 100 ? "text-red-600" : "text-green-600"}`}>
+                                  {formatNumber(product.stock)} units
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Supplier:</span>
+                                <div className="font-medium text-gray-900 truncate flex items-center">
+                                  <Store className="w-3 h-3 mr-1" />
+                                  {product.wholesaler.businessName}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <span className="text-gray-500">Supplier:</span>
-                              <div className="font-medium text-gray-900 truncate flex items-center">
-                                <Store className="w-3 h-3 mr-1" />
-                                {product.wholesaler.businessName}
-                              </div>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
