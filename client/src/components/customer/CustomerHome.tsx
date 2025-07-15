@@ -51,11 +51,11 @@ export function CustomerHome({
               {wholesaler?.businessName || "Wholesale Store"}
             </h1>
             <p className="text-gray-600">
-              {wholesaler?.storeTagline || "Premium wholesale products for your business"}
+              Premium wholesale products with Love
             </p>
             {customerData && (
-              <div className="mt-3 text-sm text-green-600">
-                Welcome back, {customerData.name}! 
+              <div className="mt-4 text-lg text-green-600 font-medium">
+                Welcome back, {customerData.name}!
               </div>
             )}
           </div>

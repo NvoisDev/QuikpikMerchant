@@ -430,10 +430,29 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           </p>
         </div>
 
-        {/* Authentication Card */}
+        {/* Unified Authentication Card */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl">
           <CardContent className="p-8">
             <div className="space-y-6">
+              {/* Security Notice Header */}
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  🛡️ Secure access for registered customers only
+                </h3>
+                <p className="text-sm text-gray-600 mb-1">
+                  Authentication required to access products and pricing
+                </p>
+                <p className="text-xs text-gray-500">
+                  Your security matters to us!
+                </p>
+              </div>
+
+              {/* Authentication Input */}
               <div className="space-y-3">
                 <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700 text-center block">
                   Last 4 digits of your phone number
@@ -480,24 +499,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             </div>
           </CardContent>
         </Card>
-
-        {/* Merged Security Notice */}
-        <div className="text-center mt-6 bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-100">
-          <div className="flex items-center justify-center mb-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Shield className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            🛡️ Secure access for registered customers only
-          </h3>
-          <p className="text-sm text-gray-600 mb-2">
-            Authentication required to access products and pricing
-          </p>
-          <p className="text-xs text-gray-500">
-            Your security matters to us!
-          </p>
-        </div>
         
         {/* Footer positioned higher */}
         <div className="mt-6">
