@@ -378,23 +378,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
               </div>
             </div>
             
-            <div className="mb-3">
-              <p className="text-lg font-semibold text-gray-700">
-                {welcomeMessage.greeting}
-              </p>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {welcomeMessage.title}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Customer Authentication
             </h1>
-            <p className="text-gray-600 text-lg mb-2">
-              {welcomeMessage.subtitle}
-            </p>
-            {welcomeMessage.businessHours && (
-              <p className="text-gray-500 text-sm mb-2 italic">
-                {welcomeMessage.businessHours}
-              </p>
-            )}
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-600 text-sm">
               Please enter your security code to continue
             </p>
           </div>
@@ -518,13 +505,31 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
         {/* Centered Content for Right Side */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white p-8">
-            <h2 className="text-4xl font-bold mb-4">
-              {wholesaler?.businessName || "Wholesale Store"}
-            </h2>
-            <p className="text-xl opacity-90">
-              Premium wholesale products with Love
-            </p>
+          <div className="text-center p-8 max-w-md">
+            <div className="mb-6">
+              <p className="text-2xl font-semibold text-gray-800 mb-2">
+                {welcomeMessage.greeting}
+              </p>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                {welcomeMessage.title}
+              </h2>
+              <p className="text-xl text-gray-700 mb-4">
+                {welcomeMessage.subtitle}
+              </p>
+              {welcomeMessage.businessHours && (
+                <p className="text-gray-600 text-lg italic mb-4">
+                  {welcomeMessage.businessHours}
+                </p>
+              )}
+            </div>
+            <div className="border-t border-gray-300 pt-4">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {wholesaler?.businessName || "Wholesale Store"}
+              </h3>
+              <p className="text-lg text-gray-700">
+                Premium wholesale products with care
+              </p>
+            </div>
           </div>
         </div>
       </div>
