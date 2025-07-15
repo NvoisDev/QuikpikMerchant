@@ -357,7 +357,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md mx-auto">
           {/* Wholesaler Logo/Initials Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <div className="mx-auto mb-6 relative">
               {wholesaler?.logoUrl ? (
                 <img 
@@ -378,12 +378,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
               </div>
             </div>
             
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Customer Authentication
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Please enter your security code to continue
-            </p>
+
           </div>
 
           {/* Unified Authentication Card */}
