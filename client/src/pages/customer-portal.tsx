@@ -1110,6 +1110,18 @@ export default function CustomerPortal() {
       onViewAllProducts={handleViewAllProducts}
       onViewFeaturedProduct={handleViewFeaturedProduct}
       customerData={authenticatedCustomer}
+      onLogout={() => {
+        // Clear localStorage
+        localStorage.removeItem(`customer_auth_${wholesalerId}`);
+        setIsAuthenticated(false);
+        setAuthenticatedCustomer(null);
+        setShowAuth(true);
+        setIsGuestMode(true);
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+      }}
     />;
   }
 

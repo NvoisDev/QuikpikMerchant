@@ -21,6 +21,7 @@ interface CustomerHomeProps {
   onViewAllProducts: () => void;
   onViewFeaturedProduct?: () => void;
   customerData?: any;
+  onLogout?: () => void;
 }
 
 const businessNameSchema = z.object({
@@ -32,7 +33,8 @@ export function CustomerHome({
   featuredProduct, 
   onViewAllProducts, 
   onViewFeaturedProduct,
-  customerData 
+  customerData,
+  onLogout
 }: CustomerHomeProps) {
   const [isEditBusinessNameOpen, setIsEditBusinessNameOpen] = useState(false);
   const { toast } = useToast();
@@ -99,24 +101,40 @@ export function CustomerHome({
       {/* Header */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Logo 
-                size="lg" 
-                variant="full" 
-                user={wholesaler}
-                className="mr-4"
-              />
+          <div className="flex items-center justify-between">
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <Logo 
+                  size="lg" 
+                  variant="full" 
+                  user={wholesaler}
+                  className="mr-4"
+                />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {wholesaler?.businessName || "Wholesale Store"}
+              </h1>
+              <p className="text-gray-600">
+                Premium wholesale products with Love
+              </p>
+              {customerData && (
+                <div className="mt-4 text-lg text-green-600 font-medium">
+                  Welcome back, {customerData.name}!
+                </div>
+              )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {wholesaler?.businessName || "Wholesale Store"}
-            </h1>
-            <p className="text-gray-600">
-              Premium wholesale products with Love
-            </p>
-            {customerData && (
-              <div className="mt-4 text-lg text-green-600 font-medium">
-                Welcome back, {customerData.name}!
+            
+            {/* Logout Button */}
+            {onLogout && (
+              <div className="absolute top-4 right-4">
+                <Button
+                  onClick={onLogout}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                  size="sm"
+                >
+                  Log out
+                </Button>
               </div>
             )}
           </div>
