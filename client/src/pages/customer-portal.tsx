@@ -20,6 +20,7 @@ import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
+import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -982,17 +983,35 @@ export default function CustomerPortal() {
                               {featuredProduct.category}
                             </span>
                           )}
-                          {/* Promotional Offers Badge for Featured Product */}
+                          {/* Promotional Offers Badges for Featured Product */}
                           {(() => {
+                            const badges = [];
+                            
+                            // Show specific offer badges for promotional offers
+                            if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers)) {
+                              featuredProduct.promotionalOffers.forEach((offer, index) => {
+                                if (offer.isActive) {
+                                  const config = getOfferTypeConfig(offer.type);
+                                  badges.push(
+                                    <span key={`featured-offer-${index}`} className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${config.color} animate-pulse`}>
+                                      {config.emoji} {config.label}
+                                    </span>
+                                  );
+                                }
+                              });
+                            }
+                            
+                            // Show general promotional badge if there are promotional prices but no specific badges
                             const pricing = calculatePromotionalPricing(featuredProduct);
-                            if (pricing.appliedOffers.length > 0) {
-                              return (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                            if (pricing.appliedOffers.length > 0 && badges.length === 0) {
+                              badges.push(
+                                <span key="featured-general-promo" className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
                                   🎁 SPECIAL OFFER!
                                 </span>
                               );
                             }
-                            return null;
+                            
+                            return badges;
                           })()}
                           {/* Product Size Information */}
                           {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
@@ -1264,17 +1283,35 @@ export default function CustomerPortal() {
                               🚚 Pickup Only
                             </span>
                           )}
-                          {/* Promotional Offers Badge */}
+                          {/* Promotional Offers Badges */}
                           {(() => {
                             const pricing = calculatePromotionalPricing(product);
-                            if (pricing.appliedOffers.length > 0) {
-                              return (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
+                            const badges = [];
+                            
+                            // Show special offer badges for non-price promotional offers
+                            if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
+                              product.promotionalOffers.forEach((offer, index) => {
+                                if (offer.isActive) {
+                                  const config = getOfferTypeConfig(offer.type);
+                                  badges.push(
+                                    <span key={`offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
+                                      {config.emoji} {config.label}
+                                    </span>
+                                  );
+                                }
+                              });
+                            }
+                            
+                            // Show general promotional badge if there are applied offers but no specific badges
+                            if (pricing.appliedOffers.length > 0 && badges.length === 0) {
+                              badges.push(
+                                <span key="general-promo" className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
                                   🎁 SPECIAL OFFER!
                                 </span>
                               );
                             }
-                            return null;
+                            
+                            return badges;
                           })()}
                           {/* Flexible Unit Display */}
                           {product.packQuantity && product.unitOfMeasure && product.unitSize && (
