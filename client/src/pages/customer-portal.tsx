@@ -2122,7 +2122,7 @@ export default function CustomerPortal() {
                       selectedProduct.promoPrice ? parseFloat(selectedProduct.promoPrice) : undefined,
                       selectedProduct.promoActive
                     );
-                    return pricing.totalPrice.toFixed(2);
+                    return (pricing.totalPrice || (pricing.effectivePrice * quantity) || (basePrice * quantity)).toFixed(2);
                   }
                 })()}
               </div>
