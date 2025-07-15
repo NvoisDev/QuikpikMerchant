@@ -1080,7 +1080,7 @@ export default function CustomerPortal() {
             </div>
             
             <div className="flex items-center space-x-3">
-              {/* Back to Sign In button for guests */}
+              {/* Contact Wholesaler button for guests */}
               {isGuestMode && (
                 <Button
                   onClick={() => window.location.reload()}
@@ -1088,7 +1088,7 @@ export default function CustomerPortal() {
                   className="border-blue-300 text-blue-600 hover:bg-blue-50"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Sign In
+                  Contact Wholesaler
                 </Button>
               )}
               
@@ -1153,6 +1153,39 @@ export default function CustomerPortal() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Guest Mode Notice */}
+        {isGuestMode && (
+          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Package className="w-4 h-4 text-blue-600" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                  Ready to Shop?
+                </h3>
+                <p className="text-blue-700 mb-4">
+                  To view pricing and place orders, you need to be added as a contact by the wholesaler first. 
+                  Once added, you'll be able to sign in and access all features including pricing, ordering, and delivery options.
+                </p>
+                <div className="flex items-center space-x-4">
+                  <Button
+                    onClick={() => window.location.reload()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Contact Wholesaler
+                  </Button>
+                  <div className="text-sm text-blue-600">
+                    <span className="font-medium">Need help?</span> Contact {wholesaler?.businessName} to get started
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Featured Product - Clean Modern Design */}
         {featuredProduct && (
           <div className="mb-12">
