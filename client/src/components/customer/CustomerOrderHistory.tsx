@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface CustomerOrderHistoryProps {
   customerId: string;
@@ -33,6 +36,15 @@ interface Order {
   deliveryCarrier: string;
   shippingTotal: string;
   shippingStatus: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  orderNotes?: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const getStatusColor = (status: string) => {
@@ -67,8 +79,178 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-const formatCurrency = (amount: string) => {
-  return `£${parseFloat(amount).toFixed(2)}`;
+const formatCurrency = (amount: string | number) => {
+  if (!amount || amount === "0" || isNaN(Number(amount))) {
+    return "£0.00";
+  }
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return `£${numAmount.toFixed(2)}`;
+};
+
+const OrderDetailsModal = ({ order }: { order: Order }) => {
+  return (
+    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center space-x-2">
+          <Package className="h-5 w-5" />
+          <span>Order Details - {order.orderNumber}</span>
+        </DialogTitle>
+      </DialogHeader>
+      
+      <div className="space-y-6">
+        {/* Order Summary */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-semibold text-lg">Order Summary</h3>
+              <p className="text-sm text-gray-600">From {order.wholesaler.businessName}</p>
+            </div>
+            <Badge className={getStatusColor(order.status)}>
+              {getStatusIcon(order.status)}
+              <span className="ml-1 capitalize">{order.status}</span>
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">Order Date:</span>
+              <p className="font-medium">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Payment Status:</span>
+              <p className="font-medium capitalize">{order.paymentStatus || 'Paid'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Items */}
+        <div>
+          <h3 className="font-semibold mb-3 flex items-center">
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Items Ordered
+          </h3>
+          <div className="space-y-2">
+            {order.items.map((item, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <h4 className="font-medium">{item.productName}</h4>
+                  <p className="text-sm text-gray-600">
+                    {item.quantity} units × {formatCurrency(item.unitPrice)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrency(item.total)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Customer Information */}
+        {(order.customerName || order.customerEmail || order.customerPhone) && (
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center">
+              <User className="h-4 w-4 mr-2" />
+              Customer Information
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              {order.customerName && (
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">{order.customerName}</span>
+                </div>
+              )}
+              {order.customerEmail && (
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">{order.customerEmail}</span>
+                </div>
+              )}
+              {order.customerPhone && (
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">{order.customerPhone}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Delivery Information */}
+        <div>
+          <h3 className="font-semibold mb-3 flex items-center">
+            <Truck className="h-4 w-4 mr-2" />
+            Delivery Information
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Fulfillment Type:</span>
+              <span className="font-medium capitalize">{order.fulfillmentType}</span>
+            </div>
+            {order.deliveryCarrier && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Delivery Carrier:</span>
+                <span className="font-medium">{order.deliveryCarrier}</span>
+              </div>
+            )}
+            {order.customerAddress && (
+              <div>
+                <span className="text-gray-600 text-sm">Delivery Address:</span>
+                <p className="font-medium text-sm mt-1">{order.customerAddress}</p>
+              </div>
+            )}
+            {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Shipping Status:</span>
+                <span className="font-medium capitalize">{order.shippingStatus}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Payment Information */}
+        <div>
+          <h3 className="font-semibold mb-3 flex items-center">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Payment Breakdown
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(order.subtotal)}</span>
+            </div>
+            {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>Shipping:</span>
+                <span>{formatCurrency(order.shippingTotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span>Platform Fee:</span>
+              <span>{formatCurrency(order.platformFee)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-base border-t pt-2">
+              <span>Total Paid:</span>
+              <span>{formatCurrency(order.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Notes */}
+        {order.orderNotes && (
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center">
+              <FileText className="h-4 w-4 mr-2" />
+              Order Notes
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm">{order.orderNotes}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </DialogContent>
+  );
 };
 
 export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) {
@@ -222,24 +404,37 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
                     </div>
                   </div>
 
-                  {/* Delivery Information */}
-                  {order.fulfillmentType && (
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <div className="flex items-center space-x-1">
-                        {order.fulfillmentType === 'delivery' ? (
-                          <Truck className="h-4 w-4" />
-                        ) : (
-                          <MapPin className="h-4 w-4" />
-                        )}
-                        <span className="capitalize">{order.fulfillmentType}</span>
-                      </div>
-                      {order.deliveryCarrier && (
+                  {/* Delivery Information and View Details Button */}
+                  <div className="flex items-center justify-between">
+                    {order.fulfillmentType && (
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-1">
-                          <span>via {order.deliveryCarrier}</span>
+                          {order.fulfillmentType === 'delivery' ? (
+                            <Truck className="h-4 w-4" />
+                          ) : (
+                            <MapPin className="h-4 w-4" />
+                          )}
+                          <span className="capitalize">{order.fulfillmentType}</span>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {order.deliveryCarrier && (
+                          <div className="flex items-center space-x-1">
+                            <span>via {order.deliveryCarrier}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* View Details Button */}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                          <Eye className="h-4 w-4" />
+                          <span>View Details</span>
+                        </Button>
+                      </DialogTrigger>
+                      <OrderDetailsModal order={order} />
+                    </Dialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>

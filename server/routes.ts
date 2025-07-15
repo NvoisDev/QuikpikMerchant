@@ -1917,24 +1917,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderNumber: `#${order.id}`,
         date: order.createdAt,
         status: order.status,
-        total: order.totalAmount,
-        platformFee: order.platformFee,
-        subtotal: order.subtotal,
+        total: order.totalAmount || order.total || "0",
+        platformFee: order.platformFee || "0",
+        subtotal: order.subtotal || "0",
         items: order.items.map(item => ({
           productName: item.product.name,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.total
+          unitPrice: item.unitPrice || "0",
+          total: item.total || "0"
         })),
         wholesaler: {
           businessName: order.wholesaler.businessName,
           firstName: order.wholesaler.firstName,
           lastName: order.wholesaler.lastName
         },
-        fulfillmentType: order.fulfillmentType,
-        deliveryCarrier: order.deliveryCarrier,
-        shippingTotal: order.shippingTotal,
-        shippingStatus: order.shippingStatus
+        fulfillmentType: order.fulfillmentType || "pickup",
+        deliveryCarrier: order.deliveryCarrier || "",
+        shippingTotal: order.shippingTotal || "0",
+        shippingStatus: order.shippingStatus || "pending",
+        // Add additional order details for "View Details" functionality
+        customerName: order.customerName || "",
+        customerEmail: order.customerEmail || "",
+        customerPhone: order.customerPhone || "",
+        customerAddress: order.customerAddress || "",
+        orderNotes: order.orderNotes || "",
+        paymentMethod: order.paymentMethod || "stripe",
+        paymentStatus: order.paymentStatus || "pending",
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
       }));
 
       res.json(formattedOrders);
