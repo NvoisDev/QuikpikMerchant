@@ -479,14 +479,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 </p>
               )}
             </div>
-            <div className="border-t border-gray-300 pt-4">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {wholesaler?.businessName || "Wholesale Store"}
-              </h3>
-              <p className="text-lg text-gray-700">
-                Premium wholesale products with care
-              </p>
-            </div>
+
           </div>
         </div>
       </div>
