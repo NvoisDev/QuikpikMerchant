@@ -102,6 +102,7 @@ export interface IStorage {
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
+  findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
   
   // Order item operations
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;

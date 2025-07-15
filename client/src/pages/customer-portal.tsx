@@ -354,7 +354,9 @@ export default function CustomerPortal() {
   // Handle cases where ID might be undefined or empty
   const getPreviewWholesalerId = () => {
     if (!isPreviewMode) {
-      return wholesalerIdParam || location.split('/customer/')[1]?.split('?')[0];
+      // Extract wholesaler ID from URL and remove any query parameters
+      const rawId = wholesalerIdParam || location.split('/customer/')[1];
+      return rawId ? rawId.split('?')[0] : undefined;
     }
     
     // In preview mode, use parent wholesaler ID for team members
