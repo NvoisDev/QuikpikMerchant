@@ -62,42 +62,24 @@ const PriceDisplay = ({
   showStrikethrough?: boolean;
 }) => {
   if (isGuestMode) {
-    const currencySymbol = getCurrencySymbol(currency);
-    const hasDiscount = originalPrice && originalPrice > price;
-    
     return (
       <div className="flex items-center gap-2">
-        <div className="relative inline-block">
-          {/* Heavily blurred price text */}
-          <div className={`font-bold text-gray-900 ${
+        <div className="bg-gray-100 px-3 py-2 rounded-lg border border-gray-200">
+          <span className={`font-medium text-gray-600 ${
             size === 'small' ? 'text-sm' : 
-            size === 'large' ? 'text-4xl' : 'text-xl'
+            size === 'large' ? 'text-lg' : 'text-base'
           }`}>
-            <span className="select-none guest-price-blur">
-              {currencySymbol}{price.toFixed(2)}
-            </span>
-            {hasDiscount && showStrikethrough && (
-              <span className={`line-through text-gray-500 ml-2 select-none guest-price-blur ${
-                size === 'small' ? 'text-xs' : 
-                size === 'large' ? 'text-2xl' : 'text-sm'
-              }`}>
-                {currencySymbol}{originalPrice.toFixed(2)}
-              </span>
-            )}
-          </div>
-          
-          {/* Overlay with Sign In button */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/90 to-white/90 backdrop-blur-sm flex items-center justify-center rounded border border-blue-200/50">
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="text-xs px-3 py-1 h-7 bg-white/95 shadow-sm border-blue-300 text-blue-700 hover:bg-blue-50 font-medium"
-              onClick={() => window.location.reload()}
-            >
-              Sign In to View Price
-            </Button>
-          </div>
+            Price available after sign in
+          </span>
         </div>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="text-xs px-3 py-1 h-7 bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 font-medium"
+          onClick={() => window.location.reload()}
+        >
+          Sign In
+        </Button>
       </div>
     );
   }
