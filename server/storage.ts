@@ -74,6 +74,7 @@ export interface IStorage {
   getProduct(id: number): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
+  updateProductPromotionalOffers(id: number, promotionalOffers: any[]): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
   
   // Order operations
@@ -348,6 +349,18 @@ export class DatabaseStorage implements IStorage {
     const [updatedProduct] = await db
       .update(products)
       .set({ ...product, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return updatedProduct;
+  }
+
+  async updateProductPromotionalOffers(id: number, promotionalOffers: any[]): Promise<Product> {
+    const [updatedProduct] = await db
+      .update(products)
+      .set({ 
+        promotionalOffers: JSON.stringify(promotionalOffers),
+        updatedAt: new Date() 
+      })
       .where(eq(products.id, id))
       .returning();
     return updatedProduct;

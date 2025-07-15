@@ -3951,6 +3951,16 @@ Write a professional, sales-focused description that highlights the key benefits
             result.recipientCount || 0,
             result.messageId
           );
+          
+          // Apply promotional offers to the actual product so they show in customer portal
+          if (promotionalOffers && promotionalOffers.length > 0) {
+            try {
+              await storage.updateProductPromotionalOffers(broadcast.product.id, promotionalOffers);
+              console.log(`Applied ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}`);
+            } catch (error) {
+              console.error('Error applying promotional offers to product:', error);
+            }
+          }
         }
 
         res.json({
@@ -3986,6 +3996,44 @@ Write a professional, sales-focused description that highlights the key benefits
         });
 
         const result = await whatsappService.sendTemplateMessage(template, members, campaignUrl, customMessage);
+        
+        // Apply promotional offers from template products to actual products
+        if (result.success && template.products) {
+          for (const templateProduct of template.products) {
+            try {
+              // Parse promotional offers from template product
+              let promotionalOffers = [];
+              if (templateProduct.promotionalOffers) {
+                try {
+                  let dataToparse = templateProduct.promotionalOffers;
+                  if (typeof dataToparse === 'string') {
+                    // Handle double-escaped JSON strings
+                    if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
+                      dataToparse = dataToparse.slice(2, -2).replace(/\\"/g, '"');
+                    }
+                    promotionalOffers = JSON.parse(dataToparse);
+                    if (!Array.isArray(promotionalOffers)) {
+                      promotionalOffers = [];
+                    }
+                  } else if (Array.isArray(dataToparse)) {
+                    promotionalOffers = dataToparse;
+                  }
+                } catch (e) {
+                  console.error('Error parsing promotional offers for template product:', templateProduct.productId, e);
+                  promotionalOffers = [];
+                }
+              }
+              
+              // Apply promotional offers to the actual product
+              if (promotionalOffers.length > 0) {
+                await storage.updateProductPromotionalOffers(templateProduct.productId, promotionalOffers);
+                console.log(`Applied ${promotionalOffers.length} promotional offers to product ${templateProduct.productId} from template campaign`);
+              }
+            } catch (error) {
+              console.error(`Error applying promotional offers to product ${templateProduct.productId}:`, error);
+            }
+          }
+        }
         
         res.json({
           success: result.success,
