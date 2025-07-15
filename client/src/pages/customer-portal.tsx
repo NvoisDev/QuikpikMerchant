@@ -62,22 +62,37 @@ const PriceDisplay = ({
   showStrikethrough?: boolean;
 }) => {
   if (isGuestMode) {
+    const currencySymbol = getCurrencySymbol(currency);
+    const hasDiscount = originalPrice && originalPrice > price;
+    
     return (
       <div className="flex items-center gap-2">
-        <span className={`font-semibold text-gray-500 ${
-          size === 'small' ? 'text-sm' : 
-          size === 'large' ? 'text-xl' : 'text-base'
-        }`}>
-          Price available after login
-        </span>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="text-xs px-2 py-1 h-6"
-          onClick={() => window.location.reload()}
-        >
-          Sign In
-        </Button>
+        <div className="relative">
+          <span className={`font-bold text-gray-900 ${
+            size === 'small' ? 'text-sm' : 
+            size === 'large' ? 'text-4xl' : 'text-xl'
+          }`}>
+            {currencySymbol}••••
+          </span>
+          {hasDiscount && showStrikethrough && (
+            <span className={`line-through text-gray-500 ml-2 ${
+              size === 'small' ? 'text-xs' : 
+              size === 'large' ? 'text-2xl' : 'text-sm'
+            }`}>
+              {currencySymbol}••••
+            </span>
+          )}
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-xs px-2 py-1 h-6 bg-white/90"
+              onClick={() => window.location.reload()}
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

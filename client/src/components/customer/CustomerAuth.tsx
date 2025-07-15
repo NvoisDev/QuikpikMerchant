@@ -487,13 +487,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     Browse as guest 👀
                   </Button>
                 )}
-                <Button 
-                  variant="ghost" 
-                  onClick={() => window.location.href = '/'}
-                  className="text-xs text-blue-500 hover:text-blue-700 rounded-xl block w-full"
-                >
-                  ← Back to Quikpik Home
-                </Button>
+
               </div>
             </div>
           </CardContent>
