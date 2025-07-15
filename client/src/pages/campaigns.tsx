@@ -189,139 +189,6 @@ const getAllPromotionalOffers = (campaign: Campaign): any[] => {
   }
 };
 
-// Smart color-coding utilities for campaigns
-const getCampaignStatusColor = (campaign: any) => {
-  const now = new Date();
-  const lastSent = campaign.sentCampaigns?.length > 0 
-    ? new Date(Math.max(...campaign.sentCampaigns.map((c: any) => new Date(c.sentAt || 0).getTime())))
-    : null;
-  
-  // Check if campaign has been sent recently (within last 24 hours)
-  const recentlySent = lastSent && (now.getTime() - lastSent.getTime()) < 24 * 60 * 60 * 1000;
-  
-  // Check if campaign has promotional offers
-  const hasOffers = hasPromotionalOffers(campaign);
-  
-  if (recentlySent) {
-    return {
-      variant: 'default' as const,
-      className: 'bg-green-100 text-green-800 border-green-200',
-      icon: CheckCircle,
-      label: 'Recently Sent'
-    };
-  }
-  
-  if (hasOffers && campaign.sentCampaigns?.length === 0) {
-    return {
-      variant: 'default' as const,
-      className: 'bg-orange-100 text-orange-800 border-orange-200',
-      icon: AlertTriangle,
-      label: 'Ready to Send'
-    };
-  }
-  
-  if (campaign.sentCampaigns?.length > 0) {
-    return {
-      variant: 'secondary' as const,
-      className: 'bg-blue-100 text-blue-800 border-blue-200',
-      icon: Send,
-      label: 'Sent'
-    };
-  }
-  
-  return {
-    variant: 'outline' as const,
-    className: 'bg-gray-100 text-gray-700 border-gray-300',
-    icon: Clock,
-    label: 'Draft'
-  };
-};
-
-const getOfferTypeColor = (offerType: string) => {
-  switch (offerType) {
-    case 'percentage_discount':
-      return {
-        className: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: Percent,
-        emoji: '💯'
-      };
-    case 'fixed_discount':
-    case 'fixed_amount_discount':
-      return {
-        className: 'bg-green-100 text-green-800 border-green-200',
-        icon: Tag,
-        emoji: '💰'
-      };
-    case 'bogo':
-    case 'buy_x_get_y_free':
-      return {
-        className: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: Gift,
-        emoji: '🎁'
-      };
-    case 'bulk_discount':
-    case 'bulk_tier':
-      return {
-        className: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-        icon: TrendingUp,
-        emoji: '📊'
-      };
-    case 'fixed_price':
-      return {
-        className: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-        icon: Target,
-        emoji: '🎯'
-      };
-    case 'bundle_deal':
-      return {
-        className: 'bg-pink-100 text-pink-800 border-pink-200',
-        icon: Package,
-        emoji: '📦'
-      };
-    case 'free_shipping':
-      return {
-        className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        icon: Zap,
-        emoji: '🚚'
-      };
-    default:
-      return {
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        icon: Star,
-        emoji: '⭐'
-      };
-  }
-};
-
-const getCampaignPerformanceColor = (campaign: any) => {
-  const totalSent = campaign.sentCampaigns?.reduce((sum: number, c: any) => sum + (c.recipientCount || 0), 0) || 0;
-  const totalClicks = campaign.sentCampaigns?.reduce((sum: number, c: any) => sum + (c.clickCount || 0), 0) || 0;
-  
-  if (totalSent === 0) return null;
-  
-  const clickRate = totalClicks / totalSent;
-  
-  if (clickRate > 0.1) { // High performance > 10%
-    return {
-      className: 'bg-green-50 border-green-200',
-      indicator: 'bg-green-400',
-      label: 'High Performance'
-    };
-  } else if (clickRate > 0.05) { // Medium performance 5-10%
-    return {
-      className: 'bg-yellow-50 border-yellow-200',
-      indicator: 'bg-yellow-400',
-      label: 'Medium Performance'
-    };
-  } else { // Low performance < 5%
-    return {
-      className: 'bg-red-50 border-red-200',
-      indicator: 'bg-red-400',
-      label: 'Low Performance'
-    };
-  }
-};
-
 export default function Campaigns() {
   // Helper function to calculate promotional pricing for products
   const calculatePromotionalPricing = (product: Product, quantity: number = 1) => {
@@ -1119,37 +986,15 @@ export default function Campaigns() {
 
       {/* Campaigns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign: Campaign) => {
-          const statusColor = getCampaignStatusColor(campaign);
-          const performanceColor = getCampaignPerformanceColor(campaign);
-          const StatusIcon = statusColor.icon;
-          
-          return (
-            <Card key={campaign.id} className={`hover:shadow-md transition-all duration-200 border-2 ${performanceColor?.className || 'border-gray-200'}`}>
-              {/* Performance Indicator */}
-              {performanceColor && (
-                <div className="relative">
-                  <div className={`absolute top-0 left-0 w-full h-1 ${performanceColor.indicator} rounded-t-lg`}></div>
-                </div>
-              )}
-              
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <CardTitle className="text-lg font-semibold truncate">{campaign.title}</CardTitle>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge className={`${statusColor.className} flex items-center gap-1`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {statusColor.label}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{performanceColor?.label || 'Campaign status'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+        {campaigns.map((campaign: Campaign) => (
+          <Card key={campaign.id} className="hover:shadow-md transition-all duration-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="text-lg font-semibold truncate">{campaign.title}</CardTitle>
+                <Badge variant={campaign.sentCampaigns.length > 0 ? 'default' : 'outline'}>
+                  {campaign.sentCampaigns.length > 0 ? 'Sent' : 'Draft'}
+                </Badge>
+              </div>
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={campaign.campaignType === 'single' ? 'outline' : 'default'} className="bg-slate-100 text-slate-700">
@@ -1157,59 +1002,13 @@ export default function Campaigns() {
                       {campaign.campaignType === 'single' ? '1 Product' : `${campaign.products?.length || 0} Products`}
                     </Badge>
                     
-                    {/* Smart Promotional Offers Badges */}
-                    {hasPromotionalOffers(campaign) && (() => {
-                      const allOffers = getAllPromotionalOffers(campaign);
-                      const activeOffers = allOffers.filter(offer => offer.isActive !== false);
-                      const offerTypes = [...new Set(activeOffers.map(offer => offer.type))];
-                      
-                      return (
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {offerTypes.slice(0, 2).map((offerType, index) => {
-                            const offerColor = getOfferTypeColor(offerType);
-                            const OfferIcon = offerColor.icon;
-                            
-                            return (
-                              <TooltipProvider key={index}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge className={`${offerColor.className} flex items-center gap-1 text-xs`}>
-                                      <OfferIcon className="h-3 w-3" />
-                                      <span>{offerColor.emoji}</span>
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="max-w-sm">
-                                      <p className="font-medium mb-1">{offerType.replace('_', ' ').toUpperCase()} Offer</p>
-                                      <p className="text-sm">{formatPromotionalOffersWithEmojis(activeOffers.filter(o => o.type === offerType), true)}</p>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })}
-                          
-                          {offerTypes.length > 2 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge className="bg-gray-100 text-gray-700 border-gray-300 flex items-center gap-1 text-xs">
-                                    <Star className="h-3 w-3" />
-                                    +{offerTypes.length - 2}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="max-w-sm">
-                                    <p className="font-medium mb-1">{offerTypes.length} Total Offer Types:</p>
-                                    <p className="text-sm">{formatPromotionalOffersWithEmojis(activeOffers, true)}</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {/* Promotional Offers Badge */}
+                    {hasPromotionalOffers(campaign) && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                        <Percent className="h-3 w-3 mr-1" />
+                        Offers
+                      </Badge>
+                    )}
                   </div>
                   <span className="flex items-center text-gray-600">
                     <Send className="h-4 w-4 mr-1" />
@@ -1472,8 +1271,7 @@ export default function Campaigns() {
               </div>
             </CardContent>
           </Card>
-            );
-          })}
+        ))}
       </div>
 
       {campaigns.length === 0 && (
