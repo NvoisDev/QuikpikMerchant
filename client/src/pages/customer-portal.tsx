@@ -61,31 +61,46 @@ const PriceDisplay = ({
   size?: 'small' | 'medium' | 'large';
   showStrikethrough?: boolean;
 }) => {
+  const currencySymbol = getCurrencySymbol(currency);
+  const hasDiscount = originalPrice && originalPrice > price;
+
   if (isGuestMode) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="bg-gray-100 px-3 py-2 rounded-lg border border-gray-200">
-          <span className={`font-medium text-gray-600 ${
+      <div className="relative">
+        {/* Blurred price display */}
+        <div className="blur-sm select-none pointer-events-none">
+          <span className={`font-bold text-gray-900 ${
             size === 'small' ? 'text-sm' : 
-            size === 'large' ? 'text-lg' : 'text-base'
+            size === 'large' ? 'text-xl' : 'text-base'
           }`}>
-            Price available after sign in
+            {currencySymbol}{price.toFixed(2)}
           </span>
+          {hasDiscount && showStrikethrough && (
+            <span className={`line-through text-gray-500 ml-2 ${
+              size === 'small' ? 'text-xs' : 
+              size === 'large' ? 'text-lg' : 'text-sm'
+            }`}>
+              {currencySymbol}{originalPrice.toFixed(2)}
+            </span>
+          )}
         </div>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="text-xs px-3 py-1 h-7 bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 font-medium"
-          onClick={() => window.location.reload()}
-        >
-          Sign In
-        </Button>
+        
+        {/* Overlay with contact message */}
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded">
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
+            <Button 
+              onClick={() => window.location.reload()}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
-
-  const currencySymbol = getCurrencySymbol(currency);
-  const hasDiscount = originalPrice && originalPrice > price;
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -1424,19 +1439,56 @@ export default function CustomerPortal() {
                       {/* Guest Call-to-Action */}
                       {isGuestMode && (
                         <div className="space-y-3">
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                            <p className="text-blue-900 font-medium mb-2">Sign in to place orders</p>
-                            <p className="text-sm text-blue-700 mb-4">
-                              Create an account or log in to view pricing and place orders
-                            </p>
-                            <Button
-                              onClick={() => window.location.reload()}
+                          <Button
+                            onClick={() => {
+                              toast({
+                                title: "Contact Wholesaler Required",
+                                description: "Please contact the wholesaler to be added as a customer before you can place orders.",
+                                action: (
+                                  <Button
+                                    onClick={() => window.location.reload()}
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    Contact Wholesaler
+                                  </Button>
+                                ),
+                                variant: "default",
+                              });
+                            }}
+                            size="lg"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
+                          >
+                            <Plus className="w-5 h-5 mr-3" />
+                            Add to Cart
+                          </Button>
+                          
+                          {featuredProduct.negotiationEnabled && (
+                            <Button 
+                              onClick={() => {
+                                toast({
+                                  title: "Contact Wholesaler Required",
+                                  description: "Please contact the wholesaler to be added as a customer before you can place orders.",
+                                  action: (
+                                    <Button
+                                      onClick={() => window.location.reload()}
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      Contact Wholesaler
+                                    </Button>
+                                  ),
+                                  variant: "default",
+                                });
+                              }}
+                              variant="outline"
                               size="lg"
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 text-lg"
+                              className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold py-4 text-lg"
                             >
-                              Sign In to Continue
+                              <Mail className="w-5 h-5 mr-3" />
+                              Request Custom Quote
                             </Button>
-                          </div>
+                          )}
                         </div>
                       )}
                       
@@ -1663,10 +1715,26 @@ export default function CustomerPortal() {
                         {isGuestMode && (
                           <div className="mt-4">
                             <Button 
-                              onClick={() => window.location.reload()}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+                              onClick={() => {
+                                toast({
+                                  title: "Contact Wholesaler Required",
+                                  description: "Please contact the wholesaler to be added as a customer before you can place orders.",
+                                  action: (
+                                    <Button
+                                      onClick={() => window.location.reload()}
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      Contact Wholesaler
+                                    </Button>
+                                  ),
+                                  variant: "default",
+                                });
+                              }}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl"
                             >
-                              Sign in to place orders
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add to Cart
                             </Button>
                           </div>
                         )}
@@ -1823,11 +1891,27 @@ export default function CustomerPortal() {
                               {/* Guest Call-to-Action */}
                               {isGuestMode && (
                                 <Button 
-                                  onClick={() => window.location.reload()}
+                                  onClick={() => {
+                                    toast({
+                                      title: "Contact Wholesaler Required",
+                                      description: "Please contact the wholesaler to be added as a customer before you can place orders.",
+                                      action: (
+                                        <Button
+                                          onClick={() => window.location.reload()}
+                                          size="sm"
+                                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                          Contact Wholesaler
+                                        </Button>
+                                      ),
+                                      variant: "default",
+                                    });
+                                  }}
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
                                 >
-                                  Sign In
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add to Cart
                                 </Button>
                               )}
                             </div>

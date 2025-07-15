@@ -180,11 +180,12 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Navigation Improvement**: Removed "Back to Quikpik Home" button from customer authentication page as requested
 - **Contact Wholesaler Button**: Added "Contact Wholesaler" button in customer portal header for easy navigation back to authentication
 - **Guest Mode Notice**: Added comprehensive notice section explaining contact requirement for shopping access
-- **Price Display System**: Implemented hidden pricing for guest users with "Price available after sign in" message and "Sign In" button
-- **Clean User Interface**: Guest users see consistent messaging across all product cards encouraging authentication
-- **Authentication Flow**: Maintained "Browse as guest" option for users who want to explore products without logging in
-- **Professional Design**: Price hiding implemented with clean gray background and user-friendly messaging
+- **Blurred Price Display System**: Implemented blurred pricing for guest users showing actual prices with blur effect and "Contact wholesaler" overlay
+- **Add-to-Cart Popup System**: Guest users clicking "Add to Cart" buttons now see "Contact Wholesaler Required" popup instead of cart functionality
+- **Consistent Guest Experience**: All product views (featured, grid, list) show blurred pricing and contact popup behavior
+- **Professional Design**: Price blurring implemented with overlay system and user-friendly messaging
 - **Contact Requirement Notice**: Clear explanation that wholesaler must add customer as contact before they can proceed to shop
+- **Authentication Flow**: Maintained "Browse as guest" option for users who want to explore products without logging in
 
 ### Dynamic Welcome Message Generator System Implementation (July 15, 2025):
 - **Time-Based Personalization**: Implemented comprehensive time-aware greeting system with different messages for morning (5-12), afternoon (12-17), evening (17-21), and late night (21-5)
