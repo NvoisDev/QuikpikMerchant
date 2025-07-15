@@ -3955,11 +3955,14 @@ Write a professional, sales-focused description that highlights the key benefits
           // Apply promotional offers to the actual product so they show in customer portal
           if (promotionalOffers && promotionalOffers.length > 0) {
             try {
+              console.log(`🎯 Applying ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}:`, promotionalOffers);
               await storage.updateProductPromotionalOffers(broadcast.product.id, promotionalOffers);
-              console.log(`Applied ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}`);
+              console.log(`✅ Applied ${promotionalOffers.length} promotional offers to product ${broadcast.product.id}`);
             } catch (error) {
-              console.error('Error applying promotional offers to product:', error);
+              console.error('❌ Error applying promotional offers to product:', error);
             }
+          } else {
+            console.log(`ℹ️ No promotional offers to apply for product ${broadcast.product.id}. Raw data:`, broadcast.promotionalOffers);
           }
         }
 
@@ -4026,8 +4029,11 @@ Write a professional, sales-focused description that highlights the key benefits
               
               // Apply promotional offers to the actual product
               if (promotionalOffers.length > 0) {
+                console.log(`🎯 Applying ${promotionalOffers.length} promotional offers to product ${templateProduct.productId}:`, promotionalOffers);
                 await storage.updateProductPromotionalOffers(templateProduct.productId, promotionalOffers);
-                console.log(`Applied ${promotionalOffers.length} promotional offers to product ${templateProduct.productId} from template campaign`);
+                console.log(`✅ Applied ${promotionalOffers.length} promotional offers to product ${templateProduct.productId} from template campaign`);
+              } else {
+                console.log(`ℹ️ No promotional offers to apply for product ${templateProduct.productId}. Raw data:`, templateProduct.promotionalOffers);
               }
             } catch (error) {
               console.error(`Error applying promotional offers to product ${templateProduct.productId}:`, error);

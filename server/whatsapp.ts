@@ -321,12 +321,17 @@ export class WhatsAppService {
       ? `🔥 *SPECIAL PROMOTION ALERT!* 🔥\n\n📦 Featured Product:`
       : `🛍️ ${product.name} Available\n\n📦 Featured Product:`;
     
+    // Format product size information
+    const productSize = product.packQuantity && product.unitSize && product.unitOfMeasure
+      ? `📏 Size: ${product.packQuantity} x ${product.unitSize}${product.unitOfMeasure}\n`
+      : '';
+    
     return `${promotionHeader}
 ${product.name}
 ${imageNote}
 
 💰 Unit Price: ${priceDisplay}${negotiationInfo}
-📦 MOQ: ${this.formatNumber(product.moq)} units
+${productSize}📦 MOQ: ${this.formatNumber(product.moq)} units
 📦 In Stock: ${this.formatNumber(product.stock)} packs available${promoMessaging}
 
 🛒 Place Your Order Now:
@@ -627,6 +632,11 @@ Update your inventory or restock soon.`;
       
       message += `${index + 1}. ${item.product.name}${imageNote}${hasPromotion ? ' 🔥' : ''}\n`;
       message += `   💰 Unit Price: ${priceDisplay}\n`;
+      
+      // Add product size information
+      if (item.product.packQuantity && item.product.unitSize && item.product.unitOfMeasure) {
+        message += `   📏 Size: ${item.product.packQuantity} x ${item.product.unitSize}${item.product.unitOfMeasure}\n`;
+      }
       
       // Add negotiation information if enabled
       if (item.product.negotiationEnabled) {
