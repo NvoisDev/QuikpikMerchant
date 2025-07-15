@@ -920,19 +920,7 @@ export default function ProductManagement() {
                   Preview Store
                 </Button>
                 
-                <Button 
-                  variant="outline" 
-                  className={alertsData?.count > 0 ? "border-red-500 text-red-600 hover:bg-red-50" : "border-gray-300 text-gray-600 hover:bg-gray-50"}
-                  onClick={() => window.location.href = '/stock-alerts'}
-                >
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  Stock Alerts
-                  {alertsData?.count > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
-                      {alertsData.count}
-                    </Badge>
-                  )}
-                </Button>
+
                 
                 <Button variant="outline" onClick={downloadTemplate}>
                   <Download className="mr-2 h-4 w-4" />
