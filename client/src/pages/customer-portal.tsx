@@ -441,7 +441,7 @@ export default function CustomerPortal() {
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showHomePage, setShowHomePage] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
-  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(true); // Default to guest mode
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -976,6 +976,7 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
+    setIsGuestMode(false); // Disable guest mode when authenticated
     toast({
       title: "Welcome!",
       description: `Hello ${customer.name}, you're now logged in.`,
@@ -1008,6 +1009,13 @@ export default function CustomerPortal() {
       setShowAuth(true);
     }
   }, [isAuthenticated, isPreviewMode]);
+
+  // Disable guest mode in preview mode
+  useEffect(() => {
+    if (isPreviewMode) {
+      setIsGuestMode(false);
+    }
+  }, [isPreviewMode]);
 
   // Show authentication screen
   if (showAuth && !isPreviewMode) {
