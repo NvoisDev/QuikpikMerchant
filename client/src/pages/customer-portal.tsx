@@ -772,6 +772,16 @@ export default function CustomerPortal() {
       return;
     }
     
+    // Calculate promotional pricing and check for BOGOFF offers
+    const basePrice = parseFloat(product.price) || 0;
+    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+      basePrice,
+      quantity,
+      product.promotionalOffers || [],
+      product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+      product.promoActive
+    );
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.product.id === product.id && item.sellingType === sellingType);
       if (existingItem) {
@@ -785,10 +795,19 @@ export default function CustomerPortal() {
     });
     
     const unitLabel = sellingType === "pallets" ? "pallets" : "units";
-    toast({
-      title: "Added to Cart",
-      description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
-    });
+    
+    // Enhanced toast message for BOGOFF offers
+    if (pricing.bogoffDetails && pricing.bogoffDetails.freeItemsAdded > 0) {
+      toast({
+        title: "🎁 BOGOFF Deal Applied!",
+        description: `${product.name} (${quantity} ${unitLabel}) added to your cart. You get ${pricing.bogoffDetails.freeItemsAdded} FREE items with this offer!`,
+      });
+    } else {
+      toast({
+        title: "Added to Cart",
+        description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
+      });
+    }
   }, [toast, isPreviewMode]);
 
   // Handle add to cart from quantity editor
@@ -979,6 +998,26 @@ export default function CustomerPortal() {
                               {featuredProduct.category}
                             </span>
                           )}
+                          {/* BOGOFF Offer Badge for Featured Product */}
+                          {(() => {
+                            const basePrice = parseFloat(featuredProduct.price) || 0;
+                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                              basePrice,
+                              featuredProduct.moq || 1,
+                              featuredProduct.promotionalOffers || [],
+                              featuredProduct.promoPrice ? parseFloat(featuredProduct.promoPrice) : undefined,
+                              featuredProduct.promoActive
+                            );
+                            
+                            if (pricing.bogoffDetails && pricing.bogoffDetails.freeItemsAdded > 0) {
+                              return (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                                  🎁 Buy {pricing.bogoffDetails.buyQuantity}, Get {pricing.bogoffDetails.getQuantity} FREE!
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                           {/* Product Size Information */}
                           {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -1249,6 +1288,26 @@ export default function CustomerPortal() {
                               🚚 Pickup Only
                             </span>
                           )}
+                          {/* BOGOFF Offer Badge */}
+                          {(() => {
+                            const basePrice = parseFloat(product.price) || 0;
+                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                              basePrice,
+                              product.moq || 1,
+                              product.promotionalOffers || [],
+                              product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+                              product.promoActive
+                            );
+                            
+                            if (pricing.bogoffDetails && pricing.bogoffDetails.freeItemsAdded > 0) {
+                              return (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
+                                  🎁 Buy {pricing.bogoffDetails.buyQuantity}, Get {pricing.bogoffDetails.getQuantity} FREE!
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                           {/* Flexible Unit Display */}
                           {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
@@ -1346,6 +1405,26 @@ export default function CustomerPortal() {
                                     💬 Negotiable
                                   </span>
                                 )}
+                                {/* BOGOFF Offer Badge for List View */}
+                                {(() => {
+                                  const basePrice = parseFloat(product.price) || 0;
+                                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                                    basePrice,
+                                    product.moq || 1,
+                                    product.promotionalOffers || [],
+                                    product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+                                    product.promoActive
+                                  );
+                                  
+                                  if (pricing.bogoffDetails && pricing.bogoffDetails.freeItemsAdded > 0) {
+                                    return (
+                                      <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
+                                        🎁 Buy {pricing.bogoffDetails.buyQuantity}, Get {pricing.bogoffDetails.getQuantity} FREE!
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                                 {/* Selling Format Tags */}
                                 {product.sellingFormat === "units" && (
                                   <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">

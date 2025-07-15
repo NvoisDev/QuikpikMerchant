@@ -58,6 +58,12 @@ export interface PricingResult {
   freeItems: number;
   totalQuantity: number;
   totalCost: number;
+  bogoffDetails?: {
+    buyQuantity: number;
+    getQuantity: number;
+    freeItemsAdded: number;
+    offerName: string;
+  };
 }
 
 export class PromotionalPricingCalculator {
@@ -254,6 +260,23 @@ export class PromotionalPricingCalculator {
     const totalCost = effectivePrice * quantity;
     const discountPercentage = originalPrice > 0 ? (totalDiscount / (originalPrice * quantity)) * 100 : 0;
 
+    // Check for BOGOFF details
+    let bogoffDetails = undefined;
+    for (const offer of promotionalOffers) {
+      if ((offer.type === 'bogo' || offer.type === 'buy_x_get_y_free') && offer.buyQuantity && offer.getQuantity) {
+        const sets = Math.floor(quantity / offer.buyQuantity);
+        if (sets > 0) {
+          bogoffDetails = {
+            buyQuantity: offer.buyQuantity,
+            getQuantity: offer.getQuantity,
+            freeItemsAdded: sets * offer.getQuantity,
+            offerName: offer.name || `Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE`
+          };
+          break; // Use the first applicable BOGOFF offer
+        }
+      }
+    }
+
     return {
       originalPrice,
       effectivePrice: Math.max(0, effectivePrice),
@@ -262,7 +285,8 @@ export class PromotionalPricingCalculator {
       appliedOffers,
       freeItems,
       totalQuantity: quantity + freeItems,
-      totalCost
+      totalCost,
+      bogoffDetails
     };
   }
 
