@@ -176,6 +176,17 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 15, 2025)
 
+### Customer Authentication System with Last 4 Digits Only (July 15, 2025):
+- **Simplified Authentication Interface**: Completely removed phone number input field, customers now only see clear message asking for last 4 digits
+- **Enhanced Security Model**: Created findCustomerByLastFourDigits storage method that searches all customers in wholesaler's groups by phone number endings
+- **URL Parameter Handling**: Fixed customer portal URL parsing to properly extract wholesaler ID when ?auth=required parameter is present
+- **Streamlined User Experience**: Authentication screen shows clear blue message "Please enter the last 4 digits of your phone number to access this store" with password-style 4-digit input
+- **Backend API Integration**: Updated /api/customer-auth/verify endpoint to accept only wholesalerId and lastFourDigits parameters
+- **Customer Link Distribution**: Wholesalers can now send authentication-required links (e.g., /customer/104871691614680693123?auth=required) via WhatsApp or other channels
+- **Production Ready**: Complete authentication system working without requiring customers to enter full phone numbers or create accounts
+
+## Recent Bug Fixes and Feature Implementations (July 15, 2025)
+
 ### Complete Promotional Offers Checkout Integration with Enhanced UI (July 15, 2025):
 - **Enhanced Cart Calculation Logic**: Implemented comprehensive promotional offers support in cart statistics including BOGOFF calculations, free shipping detection, and promotional pricing
 - **Promotional Offers Summary Section**: Added beautiful gradient-styled promotional offers summary in checkout with distinct color-coded sections for different offer types
