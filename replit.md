@@ -185,7 +185,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Professional Visual Design**: Enhanced promotional offers display with rounded corners, gradients, shadows, and proper iconography for better user experience
 - **Complete End-to-End Integration**: Full promotional system working from campaign configuration → product offers → customer portal badges → checkout calculations → payment processing
 - **Weight Calculation Fix**: Corrected Basmati Rice unit weight from unrealistic 10kg to accurate 1.5kg per unit (24 x 250ml package), reducing checkout weight from 200kg to 30kg for 20 units
-- **Add to Cart Modal Pricing Fix**: Fixed "Add to Cart" modal to display promotional pricing (e.g., "£14.39 ~~£15.99~~") when promotional offers are active, ensuring price consistency across all customer touchpoints
+- **Add to Cart Modal Pricing Fix**: Fixed "Add to Cart" modal to display promotional pricing (e.g., "£14.39 ~~£15.99~~") and calculate promotional totals (£287.80 instead of £319.80 for 20 units) when promotional offers are active, ensuring complete price consistency across all customer touchpoints
 
 ### Complete Promotional System Implementation - All Offer Types Support (July 15, 2025):
 - **Comprehensive Promotional Offers System**: Implemented support for ALL promotional offer types in customer portal with specific badges and pricing

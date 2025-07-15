@@ -2108,11 +2108,22 @@ export default function CustomerPortal() {
               
               <div className="text-lg font-semibold">
                 Total: {getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                  const unitPrice = selectedSellingType === "pallets" 
-                    ? parseFloat(selectedProduct.palletPrice || "0")
-                    : parseFloat(selectedProduct.price);
                   const quantity = parseFloat(editQuantity) || 0;
-                  return (unitPrice * quantity).toFixed(2);
+                  
+                  if (selectedSellingType === "pallets") {
+                    const unitPrice = parseFloat(selectedProduct.palletPrice || "0");
+                    return (unitPrice * quantity).toFixed(2);
+                  } else {
+                    const basePrice = parseFloat(selectedProduct.price) || 0;
+                    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                      basePrice,
+                      quantity,
+                      selectedProduct.promotionalOffers || [],
+                      selectedProduct.promoPrice ? parseFloat(selectedProduct.promoPrice) : undefined,
+                      selectedProduct.promoActive
+                    );
+                    return pricing.totalPrice.toFixed(2);
+                  }
                 })()}
               </div>
               
