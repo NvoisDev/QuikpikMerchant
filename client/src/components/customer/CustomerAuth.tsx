@@ -495,11 +495,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             Your security matters to us!
           </p>
         </div>
-      </div>
-      
-      {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0">
-        <Footer />
+        
+        {/* Footer positioned higher */}
+        <div className="mt-6">
+          <Footer />
+        </div>
       </div>
     </div>
   );
