@@ -1373,6 +1373,10 @@ export class DatabaseStorage implements IStorage {
           priceVisible: product.price_visible,
           negotiationEnabled: product.negotiation_enabled,
           minimumBidPrice: product.minimum_bid_price,
+          // Product size fields conversion
+          packQuantity: product.pack_quantity,
+          unitOfMeasure: product.unit_of_measure,
+          unitSize: product.unit_size,
           sellingFormat: product.selling_format,
           unitsPerPallet: product.units_per_pallet,
           palletPrice: product.pallet_price,
