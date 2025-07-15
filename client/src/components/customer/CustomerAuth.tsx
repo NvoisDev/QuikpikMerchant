@@ -470,38 +470,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
       {/* Right Side - Dynamic Background */}
       <div className={`hidden lg:block w-1/2 ${themeConfig.background} relative overflow-hidden transition-all duration-1000`}>
-        {/* Dynamic Background Elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Dynamic Floating Shapes */}
-          {themeConfig.shapes.map((shapeColor, index) => (
-            <div 
-              key={index}
-              className={`absolute w-8 h-8 md:w-12 md:h-12 ${shapeColor} rounded-full opacity-60 animate-bounce`}
-              style={{ 
-                animationDelay: `${index * 0.5}s`,
-                top: `${20 + index * 15}%`,
-                left: index % 2 === 0 ? `${10 + index * 5}%` : 'auto',
-                right: index % 2 === 1 ? `${10 + index * 5}%` : 'auto'
-              }}
-            />
-          ))}
-          
-          {/* Dynamic Cartoon Icons */}
-          {themeConfig.floatingIcons.map((icon, index) => (
-            <div 
-              key={icon}
-              className="absolute text-2xl md:text-4xl animate-pulse"
-              style={{ 
-                animationDelay: `${index * 0.7}s`,
-                top: `${15 + index * 20}%`,
-                left: index % 2 === 0 ? `${15 + index * 10}%` : 'auto',
-                right: index % 2 === 1 ? `${15 + index * 10}%` : 'auto'
-              }}
-            >
-              {icon}
-            </div>
-          ))}
-        </div>
+
 
         {/* Centered Content for Right Side */}
         <div className="absolute inset-0 flex items-center justify-center">
