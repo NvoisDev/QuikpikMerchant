@@ -16,6 +16,7 @@ import {
   stockAlerts,
   userBadges,
   onboardingMilestones,
+  smsVerificationCodes,
   type User,
   type UpsertUser,
   type Product,
@@ -55,6 +56,8 @@ import {
   type InsertUserBadge,
   type OnboardingMilestone,
   type InsertOnboardingMilestone,
+  type SMSVerificationCode,
+  type InsertSMSVerificationCode,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -104,6 +107,15 @@ export interface IStorage {
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
+  
+  // SMS verification operations
+  createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
+  getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined>;
+  getRecentSMSCodes(wholesalerId: string, customerId: string, minutes: number): Promise<SMSVerificationCode[]>;
+  getRecentSMSCodesByIP(ipAddress: string, minutes: number): Promise<SMSVerificationCode[]>;
+  markSMSCodeAsUsed(id: number): Promise<void>;
+  incrementSMSCodeAttempts(id: number): Promise<void>;
+  cleanupExpiredSMSCodes(): Promise<void>;
   
   // Order item operations
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
@@ -2886,6 +2898,88 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error tracking promotion activity:', error);
     }
+  }
+
+  // SMS verification operations
+  async createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode> {
+    console.log('Creating SMS verification code for customer:', data.customerId);
+    const [code] = await db.insert(smsVerificationCodes).values(data).returning();
+    return code;
+  }
+
+  async getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined> {
+    console.log('Getting SMS verification code:', { wholesalerId, customerId, code });
+    const [result] = await db
+      .select()
+      .from(smsVerificationCodes)
+      .where(
+        and(
+          eq(smsVerificationCodes.wholesalerId, wholesalerId),
+          eq(smsVerificationCodes.customerId, customerId),
+          eq(smsVerificationCodes.code, code),
+          eq(smsVerificationCodes.isUsed, false)
+        )
+      )
+      .limit(1);
+    return result;
+  }
+
+  async getRecentSMSCodes(wholesalerId: string, customerId: string, minutes: number): Promise<SMSVerificationCode[]> {
+    const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+    const results = await db
+      .select()
+      .from(smsVerificationCodes)
+      .where(
+        and(
+          eq(smsVerificationCodes.wholesalerId, wholesalerId),
+          eq(smsVerificationCodes.customerId, customerId),
+          sql`${smsVerificationCodes.createdAt} > ${cutoffTime}`
+        )
+      )
+      .orderBy(desc(smsVerificationCodes.createdAt));
+    return results;
+  }
+
+  async getRecentSMSCodesByIP(ipAddress: string, minutes: number): Promise<SMSVerificationCode[]> {
+    const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+    const results = await db
+      .select()
+      .from(smsVerificationCodes)
+      .where(
+        and(
+          eq(smsVerificationCodes.ipAddress, ipAddress),
+          sql`${smsVerificationCodes.createdAt} > ${cutoffTime}`
+        )
+      )
+      .orderBy(desc(smsVerificationCodes.createdAt));
+    return results;
+  }
+
+  async markSMSCodeAsUsed(id: number): Promise<void> {
+    console.log('Marking SMS code as used:', id);
+    await db
+      .update(smsVerificationCodes)
+      .set({ 
+        isUsed: true, 
+        usedAt: new Date() 
+      })
+      .where(eq(smsVerificationCodes.id, id));
+  }
+
+  async incrementSMSCodeAttempts(id: number): Promise<void> {
+    await db
+      .update(smsVerificationCodes)
+      .set({ 
+        attempts: sql`${smsVerificationCodes.attempts} + 1` 
+      })
+      .where(eq(smsVerificationCodes.id, id));
+  }
+
+  async cleanupExpiredSMSCodes(): Promise<void> {
+    const now = new Date();
+    await db
+      .delete(smsVerificationCodes)
+      .where(sql`${smsVerificationCodes.expiresAt} < ${now}`);
   }
 }
 

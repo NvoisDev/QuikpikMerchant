@@ -26,9 +26,15 @@ interface Wholesaler {
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
   const [lastFourDigits, setLastFourDigits] = useState("");
+  const [smsCode, setSmsCode] = useState("");
+  const [authStep, setAuthStep] = useState<'phone' | 'sms'>('phone');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSMSLoading, setIsSMSLoading] = useState(false);
   const [error, setError] = useState("");
+  const [smsExpiry, setSmsExpiry] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
+  const [showSMSOption, setShowSMSOption] = useState(false);
   const { toast } = useToast();
 
   // Fetch wholesaler data for personalization
@@ -49,6 +55,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       fetchWholesaler();
     }
   }, [wholesalerId]);
+
+  // Countdown timer for SMS expiry
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const handleLogin = async () => {
     if (!lastFourDigits) {
@@ -86,18 +100,133 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         onAuthSuccess(data.customer);
       } else {
         setError(data.error || "Authentication failed. Please check your details.");
+        // Show SMS verification option after failed login
+        setShowSMSOption(true);
       }
     } catch (error) {
       console.error('Authentication error:', error);
+      setError("Connection error. Please try again.");
+      setShowSMSOption(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestSMS = async () => {
+    if (!lastFourDigits) {
+      setError("Please enter the last 4 digits of your phone number first");
+      return;
+    }
+
+    if (lastFourDigits.length !== 4) {
+      setError("Please enter exactly 4 digits");
+      return;
+    }
+
+    setIsSMSLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('/api/customer-auth/request-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          wholesalerId,
+          lastFourDigits: lastFourDigits.trim()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "SMS Sent!",
+          description: "A verification code has been sent to your phone.",
+        });
+        setAuthStep('sms');
+        setCountdown(300); // 5 minutes
+        setSmsExpiry(Date.now() + 300000); // 5 minutes
+      } else {
+        setError(data.error || "Failed to send SMS code. Please try again.");
+      }
+    } catch (error) {
+      console.error('SMS request error:', error);
+      setError("Connection error. Please try again.");
+    } finally {
+      setIsSMSLoading(false);
+    }
+  };
+
+  const handleSMSVerification = async () => {
+    if (!smsCode) {
+      setError("Please enter the verification code");
+      return;
+    }
+
+    if (smsCode.length !== 6) {
+      setError("Please enter the complete 6-digit code");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('/api/customer-auth/verify-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          wholesalerId,
+          lastFourDigits: lastFourDigits.trim(),
+          smsCode: smsCode.trim()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Verification Successful!",
+          description: `Welcome ${data.customer.name}, you're now securely logged in.`,
+        });
+        onAuthSuccess(data.customer);
+      } else {
+        setError(data.error || "Invalid verification code. Please try again.");
+      }
+    } catch (error) {
+      console.error('SMS verification error:', error);
       setError("Connection error. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleBackToPhone = () => {
+    setAuthStep('phone');
+    setSmsCode("");
+    setCountdown(0);
+    setSmsExpiry(null);
+    setError("");
+  };
+
   const handleLastFourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4); // Only digits, max 4
     setLastFourDigits(value);
+  };
+
+  const handleSMSCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6); // Only digits, max 6
+    setSmsCode(value);
+  };
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Helper function to generate initials from business name
@@ -400,48 +529,160 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </p>
                 </div>
 
-                {/* Authentication Input */}
-                <div className="space-y-4">
-                  <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
-                    Last 4 digits of your phone number
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="lastFour"
-                      type="password"
-                      placeholder="••••"
-                      value={lastFourDigits}
-                      onChange={handleLastFourChange}
-                      maxLength={4}
-                      className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
-                    />
-                    <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
-                  </div>
-                </div>
+                {/* Step 1: Phone Number Verification */}
+                {authStep === 'phone' && (
+                  <>
+                    <div className="space-y-4">
+                      <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
+                        Last 4 digits of your phone number
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="lastFour"
+                          type="password"
+                          placeholder="••••"
+                          value={lastFourDigits}
+                          onChange={handleLastFourChange}
+                          maxLength={4}
+                          className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
+                        />
+                        <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
+                      </div>
+                    </div>
 
-                {error && (
-                  <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
-                    <AlertDescription className="text-center">{error}</AlertDescription>
-                  </Alert>
+                    {error && (
+                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
+                        <AlertDescription className="text-center">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={handleLogin} 
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                        disabled={isLoading || lastFourDigits.length !== 4}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                            Verifying your access...
+                          </>
+                        ) : (
+                          <>
+                            <span>Enter Store</span>
+                            <span className="ml-2 text-xl">🚀</span>
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Enhanced Security Option */}
+                      {showSMSOption && (
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-3">Need extra security?</p>
+                          <Button 
+                            variant="outline"
+                            onClick={handleRequestSMS}
+                            className="w-full bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 text-blue-700 font-semibold h-12 rounded-2xl hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-300 disabled:opacity-50"
+                            disabled={isSMSLoading || lastFourDigits.length !== 4}
+                          >
+                            {isSMSLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Sending SMS...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="mr-2 h-4 w-4" />
+                                Verify with SMS
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
 
-                <Button 
-                  onClick={handleLogin} 
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                  disabled={isLoading || lastFourDigits.length !== 4}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                      Verifying your access...
-                    </>
-                  ) : (
-                    <>
-                      <span>Enter Store</span>
-                      <span className="ml-2 text-xl">🚀</span>
-                    </>
-                  )}
-                </Button>
+                {/* Step 2: SMS Verification */}
+                {authStep === 'sms' && (
+                  <>
+                    <div className="text-center mb-6">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                        📱 SMS Verification
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Enter the 6-digit code sent to your phone
+                      </p>
+                      {countdown > 0 && (
+                        <p className="text-xs text-blue-600 mt-2">
+                          Code expires in {formatCountdown(countdown)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          placeholder="123456"
+                          value={smsCode}
+                          onChange={handleSMSCodeChange}
+                          maxLength={6}
+                          className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
+                        />
+                        <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
+                        <AlertDescription className="text-center">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={handleSMSVerification}
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                        disabled={isLoading || smsCode.length !== 6}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                            Verifying code...
+                          </>
+                        ) : (
+                          <>
+                            <span>Verify & Enter</span>
+                            <span className="ml-2 text-xl">✅</span>
+                          </>
+                        )}
+                      </Button>
+
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="outline"
+                          onClick={handleBackToPhone}
+                          className="flex-1 bg-gray-50 border-2 border-gray-200 text-gray-700 font-semibold h-12 rounded-2xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-300"
+                        >
+                          Back
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={handleRequestSMS}
+                          className="flex-1 bg-blue-50 border-2 border-blue-200 text-blue-700 font-semibold h-12 rounded-2xl hover:bg-blue-100 hover:border-blue-300 transition-all duration-300 disabled:opacity-50"
+                          disabled={isSMSLoading || countdown > 240} // Allow resend after 1 minute
+                        >
+                          {isSMSLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Resend SMS"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
               </div>
             </CardContent>

@@ -15,6 +15,7 @@ import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
+import { SMSService } from "./sms-service";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -1896,6 +1897,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Customer authentication error:", error);
       res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
+  // SMS verification routes for enhanced security
+  app.post("/api/customer-auth/request-sms", async (req, res) => {
+    try {
+      const { wholesalerId, lastFourDigits } = req.body;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+
+      if (!wholesalerId || !lastFourDigits) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Check if SMS service is configured
+      if (!SMSService.isConfigured()) {
+        return res.status(503).json({ error: "SMS service not configured" });
+      }
+
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Invalid credentials or customer not found" });
+      }
+
+      // Rate limiting: Check recent SMS codes for this customer (max 3 per 15 minutes)
+      const recentCodes = await storage.getRecentSMSCodes(wholesalerId, customer.id, 15);
+      if (recentCodes.length >= 3) {
+        return res.status(429).json({ 
+          error: "Too many SMS requests. Please wait 15 minutes before requesting another code." 
+        });
+      }
+
+      // Rate limiting: Check recent SMS codes by IP (max 5 per 15 minutes)
+      const recentCodesByIP = await storage.getRecentSMSCodesByIP(ipAddress, 15);
+      if (recentCodesByIP.length >= 5) {
+        return res.status(429).json({ 
+          error: "Too many SMS requests from this location. Please wait 15 minutes." 
+        });
+      }
+
+      // Generate verification code
+      const verificationCode = SMSService.generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      // Get wholesaler info for SMS message
+      const wholesaler = await storage.getWholesalerProfile(wholesalerId);
+      const businessName = wholesaler?.businessName || "Quikpik";
+
+      // Send SMS
+      const smsSent = await SMSService.sendSMSCode(customer.phone, verificationCode, businessName);
+      
+      if (!smsSent) {
+        return res.status(500).json({ error: "Failed to send SMS code" });
+      }
+
+      // Store verification code in database
+      await storage.createSMSVerificationCode({
+        customerId: customer.id,
+        wholesalerId: wholesalerId,
+        code: verificationCode,
+        phoneNumber: customer.phone,
+        expiresAt,
+        ipAddress: ipAddress
+      });
+
+      res.json({ 
+        success: true, 
+        message: "SMS verification code sent successfully",
+        expiresIn: 300 // 5 minutes in seconds
+      });
+    } catch (error) {
+      console.error("SMS request error:", error);
+      res.status(500).json({ error: "Failed to send SMS code" });
+    }
+  });
+
+  app.post("/api/customer-auth/verify-sms", async (req, res) => {
+    try {
+      const { wholesalerId, lastFourDigits, smsCode } = req.body;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+
+      if (!wholesalerId || !lastFourDigits || !smsCode) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Invalid credentials or customer not found" });
+      }
+
+      // Clean up expired codes
+      await storage.cleanupExpiredSMSCodes();
+
+      // Get SMS verification code
+      const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
+      
+      if (!verificationRecord) {
+        return res.status(401).json({ error: "Invalid or expired verification code" });
+      }
+
+      // Check if code is expired
+      if (new Date() > verificationRecord.expiresAt) {
+        return res.status(401).json({ error: "Verification code has expired" });
+      }
+
+      // Check if code was already used
+      if (verificationRecord.isUsed) {
+        return res.status(401).json({ error: "Verification code has already been used" });
+      }
+
+      // Check attempt limit (max 5 attempts per code)
+      if (verificationRecord.attempts >= 5) {
+        return res.status(401).json({ error: "Too many verification attempts. Please request a new code." });
+      }
+
+      // Mark code as used
+      await storage.markSMSCodeAsUsed(verificationRecord.id);
+
+      res.json({ 
+        success: true, 
+        message: "SMS verification successful",
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName
+        }
+      });
+    } catch (error) {
+      console.error("SMS verification error:", error);
+      res.status(500).json({ error: "SMS verification failed" });
     }
   });
 

@@ -70,6 +70,32 @@ export interface PromotionalOffer {
   updatedAt: string;
 }
 
+// SMS verification codes table
+export const smsVerificationCodes = pgTable(
+  "sms_verification_codes",
+  {
+    id: serial("id").primaryKey(),
+    customerId: varchar("customer_id", { length: 255 }).notNull(),
+    wholesalerId: varchar("wholesaler_id", { length: 255 }).notNull(),
+    code: varchar("code", { length: 6 }).notNull(),
+    phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    attempts: integer("attempts").default(0).notNull(),
+    isUsed: boolean("is_used").default(false).notNull(),
+  },
+  (table) => {
+    return {
+      customerIdIdx: index("sms_codes_customer_id_idx").on(table.customerId),
+      wholesalerIdIdx: index("sms_codes_wholesaler_id_idx").on(table.wholesalerId),
+      codeIdx: index("sms_codes_code_idx").on(table.code),
+      createdAtIdx: index("sms_codes_created_at_idx").on(table.createdAt),
+    };
+  }
+);
+
 // Session storage table (required for auth)
 export const sessions = pgTable(
   "sessions",
@@ -872,6 +898,14 @@ export const insertStockMovementSchema = createInsertSchema(stockMovements).omit
 });
 export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
 export type StockMovement = typeof stockMovements.$inferSelect;
+
+// SMS Verification Codes schema
+export const insertSMSVerificationCodeSchema = createInsertSchema(smsVerificationCodes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSMSVerificationCode = z.infer<typeof insertSMSVerificationCodeSchema>;
+export type SMSVerificationCode = typeof smsVerificationCodes.$inferSelect;
 
 // Team Management Schema Types
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
