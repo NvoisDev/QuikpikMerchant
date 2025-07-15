@@ -34,7 +34,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [smsExpiry, setSmsExpiry] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
-  const [showSMSOption, setShowSMSOption] = useState(false);
   const { toast } = useToast();
 
   // Fetch wholesaler data for personalization
@@ -79,6 +78,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     setError("");
 
     try {
+      // First verify the customer exists with these last 4 digits
       const response = await fetch('/api/customer-auth/verify', {
         method: 'POST',
         headers: {
@@ -93,20 +93,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       const data = await response.json();
 
       if (response.ok) {
-        toast({
-          title: "Welcome!",
-          description: `Hello ${data.customer.name}, you're now logged in.`,
-        });
-        onAuthSuccess(data.customer);
+        // Customer found, now require SMS verification
+        setAuthStep('sms');
+        // Automatically request SMS code
+        await handleRequestSMS();
       } else {
-        setError(data.error || "Authentication failed. Please check your details.");
-        // Show SMS verification option after failed login
-        setShowSMSOption(true);
+        setError(data.error || "Customer not found. Please check the last 4 digits of your phone number.");
       }
     } catch (error) {
       console.error('Authentication error:', error);
       setError("Connection error. Please try again.");
-      setShowSMSOption(true);
     } finally {
       setIsLoading(false);
     }
@@ -145,15 +141,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           title: "SMS Sent!",
           description: "A verification code has been sent to your phone.",
         });
-        setAuthStep('sms');
         setCountdown(300); // 5 minutes
         setSmsExpiry(Date.now() + 300000); // 5 minutes
       } else {
         setError(data.error || "Failed to send SMS code. Please try again.");
+        // If SMS fails, go back to phone step
+        setAuthStep('phone');
       }
     } catch (error) {
       console.error('SMS request error:', error);
       setError("Connection error. Please try again.");
+      setAuthStep('phone');
     } finally {
       setIsSMSLoading(false);
     }
@@ -518,14 +516,15 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </h3>
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 mb-3 border border-blue-100">
                     <p className="text-sm text-blue-900 font-semibold mb-3">
-                      How to get access:
+                      Secure Two-Step Authentication:
                     </p>
                     <p className="text-sm text-blue-800 leading-relaxed">
-                      If you are added by the wholesaler to their customer list, you will have access to browse products and see pricing.
+                      1. Enter your last 4 digits<br/>
+                      2. Verify with SMS code (mandatory for security)
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 font-medium">
-                    Your security matters to us!
+                    SMS verification is required for all customers
                   </p>
                 </div>
 
@@ -569,36 +568,18 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                           </>
                         ) : (
                           <>
-                            <span>Enter Store</span>
-                            <span className="ml-2 text-xl">🚀</span>
+                            <span>Continue to SMS Verification</span>
+                            <span className="ml-2 text-xl">📱</span>
                           </>
                         )}
                       </Button>
 
-                      {/* Enhanced Security Option */}
-                      {showSMSOption && (
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-3">Need extra security?</p>
-                          <Button 
-                            variant="outline"
-                            onClick={handleRequestSMS}
-                            className="w-full bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 text-blue-700 font-semibold h-12 rounded-2xl hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-300 disabled:opacity-50"
-                            disabled={isSMSLoading || lastFourDigits.length !== 4}
-                          >
-                            {isSMSLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Sending SMS...
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="mr-2 h-4 w-4" />
-                                Verify with SMS
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 flex items-center justify-center">
+                          <Shield className="mr-1 h-3 w-3" />
+                          SMS verification is required for security
+                        </p>
+                      </div>
                     </div>
                   </>
                 )}
@@ -612,6 +593,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       </h4>
                       <p className="text-sm text-gray-600">
                         Enter the 6-digit code sent to your phone
+                      </p>
+                      <div className="flex items-center justify-center space-x-2 my-4">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      </div>
+                      <p className="text-xs text-gray-600 font-medium">
+                        Step 2 of 2: SMS Code Verification
                       </p>
                       {countdown > 0 && (
                         <p className="text-xs text-blue-600 mt-2">
