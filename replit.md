@@ -177,12 +177,15 @@ This approach gives customers control over delivery speed and cost while ensurin
 ## Recent Bug Fixes and Feature Implementations (July 15, 2025)
 
 ### Complete Product Size Display in Customer Portal and Checkout (July 15, 2025):
-- **Enhanced Checkout Modal**: Added product size information display in checkout modal showing units like "📦 24 x 250ml" below product names
+- **Enhanced Checkout Modal**: Added product size information display in checkout modal showing units like "📦 24 x 250g" below product names
 - **Universal Product Size Display**: Product size information now displays across all customer portal product views (featured products, grid view, list view)
 - **Consistent Size Format**: All product cards show size as "📦 [quantity] x [unitSize][unitOfMeasure]" using blue badges for easy identification
-- **Improved Customer Experience**: Customers can now clearly see product package contents (e.g., "Basmati Rice" with "📦 24 x 250ml") in both browsing and checkout
+- **Improved Customer Experience**: Customers can now clearly see product package contents (e.g., "Basmati Rice" with "📦 24 x 250g") in both browsing and checkout
 - **Checkout Enhancement**: Size information positioned between product name and pricing for better clarity during order placement
 - **Complete Coverage**: Product size badges appear in featured product section, grid view, list view, and checkout modal for comprehensive product information
+- **Database Implementation**: Updated all products with proper size information (packQuantity, unitSize, unitOfMeasure) with corrected units
+- **API Field Mapping**: Fixed getMarketplaceProducts to properly map snake_case database fields to camelCase frontend fields
+- **Production Ready**: Complete product size display system operational and verified working across all customer portal views
 
 ### Complete Sale Price Tag Repositioning (July 15, 2025):
 - **Improved Visual Hierarchy**: Moved sale price tags from inline with pricing to above price displays for better visibility
