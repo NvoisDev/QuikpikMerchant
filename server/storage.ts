@@ -731,23 +731,23 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
       
-      // Find all customers in this wholesaler's groups
-      const customers = await db
-        .select({
-          id: customerGroupMembers.id,
-          name: customerGroupMembers.firstName,
-          email: customerGroupMembers.email,
-          phone: customerGroupMembers.phone,
-          groupId: customerGroupMembers.groupId,
-          groupName: customerGroups.name,
-        })
-        .from(customerGroupMembers)
-        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-        .where(eq(customerGroups.wholesalerId, wholesalerId));
+      // Find all customers in this wholesaler's groups using raw SQL to avoid ORM issues
+      const customers = await db.execute(sql`
+        SELECT 
+          cgm.id,
+          cgm.first_name as name,
+          cgm.email,
+          cgm.phone,
+          cgm.group_id as "groupId",
+          cg.name as "groupName"
+        FROM customer_group_members cgm
+        INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+        WHERE cg.wholesaler_id = ${wholesalerId}
+      `);
       
       // Find customer whose phone number ends with the provided last 4 digits
-      const matchingCustomer = customers.find(customer => {
-        const phoneLastFour = customer.phone.slice(-4);
+      const matchingCustomer = customers.rows.find((customer: any) => {
+        const phoneLastFour = customer.phone?.slice(-4);
         return phoneLastFour === lastFourDigits;
       });
       
