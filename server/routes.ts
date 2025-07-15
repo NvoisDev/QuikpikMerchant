@@ -3971,6 +3971,7 @@ Write a professional, sales-focused description that highlights the key benefits
           message: result.success ? `Broadcast sent to ${result.recipientCount || 0} customers` : result.error
         });
       } else if (type === 'template') {
+        console.log(`🔍 Processing template campaign ${numericId}...`);
         // Send multi-product template
         const template = await storage.getMessageTemplate(numericId);
         if (!template) {
@@ -3998,33 +3999,57 @@ Write a professional, sales-focused description that highlights the key benefits
           totalRevenue: '0'
         });
 
+        console.log(`📤 Sending template message to ${members.length} members...`);
         const result = await whatsappService.sendTemplateMessage(template, members, campaignUrl, customMessage);
+        console.log(`📤 WhatsApp result:`, { success: result.success, error: result.error });
+        console.log(`📤 Template products count:`, template.products?.length || 0);
         
         // Apply promotional offers from template products to actual products
         if (result.success && template.products) {
+          console.log(`🎯 Starting promotional offers application for ${template.products.length} products...`);
           for (const templateProduct of template.products) {
             try {
               // Parse promotional offers from template product
               let promotionalOffers = [];
+              console.log(`📋 Raw promotional offers data for product ${templateProduct.productId}:`, templateProduct.promotionalOffers);
+              
               if (templateProduct.promotionalOffers) {
                 try {
                   let dataToparse = templateProduct.promotionalOffers;
+                  console.log(`📋 Initial data type: ${typeof dataToparse}, value:`, dataToparse);
+                  
                   if (typeof dataToparse === 'string') {
-                    // Handle double-escaped JSON strings
-                    if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
-                      dataToparse = dataToparse.slice(2, -2).replace(/\\"/g, '"');
+                    // Handle triple-escaped JSON strings like """[{...}]"""
+                    if (dataToparse.startsWith('"""') && dataToparse.endsWith('"""')) {
+                      console.log('📋 Detected triple-escaped JSON, fixing...');
+                      dataToparse = dataToparse.slice(3, -3).replace(/\\"/g, '"');
+                      console.log('📋 After triple-escape fix:', dataToparse);
                     }
+                    // Handle double-escaped JSON strings
+                    else if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
+                      console.log('📋 Detected double-escaped JSON, fixing...');
+                      dataToparse = dataToparse.slice(2, -2).replace(/\\"/g, '"');
+                      console.log('📋 After double-escape fix:', dataToparse);
+                    }
+                    
                     promotionalOffers = JSON.parse(dataToparse);
+                    console.log(`📋 Successfully parsed promotional offers:`, promotionalOffers);
+                    
                     if (!Array.isArray(promotionalOffers)) {
+                      console.log('📋 Warning: Parsed data is not an array, converting to empty array');
                       promotionalOffers = [];
                     }
                   } else if (Array.isArray(dataToparse)) {
                     promotionalOffers = dataToparse;
+                    console.log('📋 Data is already an array:', promotionalOffers);
                   }
                 } catch (e) {
-                  console.error('Error parsing promotional offers for template product:', templateProduct.productId, e);
+                  console.error('❌ Error parsing promotional offers for template product:', templateProduct.productId, e);
+                  console.error('❌ Failed data was:', templateProduct.promotionalOffers);
                   promotionalOffers = [];
                 }
+              } else {
+                console.log(`📋 No promotional offers data for product ${templateProduct.productId}`);
               }
               
               // Apply promotional offers to the actual product

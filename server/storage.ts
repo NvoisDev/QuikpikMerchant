@@ -355,14 +355,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProductPromotionalOffers(id: number, promotionalOffers: any[]): Promise<Product> {
+    // Get current product to calculate promotional pricing
+    const currentProduct = await this.getProduct(id);
+    if (!currentProduct) {
+      throw new Error('Product not found');
+    }
+
+    console.log(`📊 Calculating promotional pricing for product ${id} with ${promotionalOffers.length} offers:`, promotionalOffers);
+
+    // Calculate promotional pricing using the imported calculator
+    const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
+    const basePrice = parseFloat(currentProduct.price.toString()) || 0;
+    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+      basePrice,
+      1, // quantity of 1 for base calculation
+      promotionalOffers,
+      currentProduct.promoPrice ? parseFloat(currentProduct.promoPrice.toString()) : undefined,
+      currentProduct.promoActive
+    );
+
+    console.log(`💰 Promotional pricing calculated: original=${pricing.originalPrice}, effective=${pricing.effectivePrice}, hasPromo=${pricing.effectivePrice < pricing.originalPrice}`);
+
+    // Apply promotional pricing if there's a difference
+    const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
+    const promoPrice = hasPromotion ? pricing.effectivePrice : null;
+
     const [updatedProduct] = await db
       .update(products)
       .set({ 
-        promotionalOffers: JSON.stringify(promotionalOffers),
+        promoActive: hasPromotion,
+        promoPrice: promoPrice,
         updatedAt: new Date() 
       })
       .where(eq(products.id, id))
       .returning();
+
+    console.log(`✅ Updated product ${id}: promoActive=${hasPromotion}, promoPrice=${promoPrice}`);
     return updatedProduct;
   }
 
