@@ -643,7 +643,8 @@ export default function CustomerPortal() {
   }, [products]);
 
   const cartStats = useMemo(() => {
-    let totalItems = 0;
+    let totalItems = 0; // For display - only user-selected quantities
+    let totalPromotionalItems = 0; // For calculations - includes free items
     let subtotal = 0;
     let appliedPromotions: string[] = [];
     let freeShippingApplied = false;
@@ -657,6 +658,7 @@ export default function CustomerPortal() {
       if (item.sellingType === "pallets") {
         itemPrice = parseFloat(item.product.palletPrice || "0") || 0;
         totalItems += itemQuantity;
+        totalPromotionalItems += itemQuantity;
         subtotal += itemPrice * itemQuantity;
       } else {
         const basePrice = parseFloat(item.product.price) || 0;
@@ -670,7 +672,8 @@ export default function CustomerPortal() {
         
         // Use effective price and total quantity (includes free items from BOGOFF)
         itemPrice = pricing.effectivePrice;
-        totalItems += pricing.totalQuantity; // This includes free items
+        totalItems += item.quantity; // Only user-selected quantity for display
+        totalPromotionalItems += pricing.totalQuantity; // Includes free items for calculations
         subtotal += pricing.totalCost;
         
         // Track applied promotions
@@ -714,7 +717,8 @@ export default function CustomerPortal() {
     
     // Ensure values are never NaN
     return { 
-      totalItems: isNaN(totalItems) ? 0 : totalItems,
+      totalItems: isNaN(totalItems) ? 0 : totalItems, // Display count - user selections only
+      totalPromotionalItems: isNaN(totalPromotionalItems) ? 0 : totalPromotionalItems, // Calculation count - includes free items
       subtotal: isNaN(subtotal) ? 0 : subtotal,
       shippingCost: isNaN(shippingCost) ? 0 : shippingCost,
       totalValue: isNaN(totalValue) ? 0 : totalValue,
