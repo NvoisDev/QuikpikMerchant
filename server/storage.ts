@@ -736,7 +736,9 @@ export class DatabaseStorage implements IStorage {
       const customers = await db.execute(sql`
         SELECT 
           cgm.id,
-          u.first_name as name,
+          u.first_name,
+          u.last_name,
+          COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
           u.email,
           u.phone_number as phone,
           cgm.group_id as "groupId",
