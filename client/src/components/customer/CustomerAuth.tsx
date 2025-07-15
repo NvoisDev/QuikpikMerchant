@@ -352,162 +352,180 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const themeConfig = getThemeConfig();
 
   return (
-    <div className={`min-h-screen ${themeConfig.background} flex items-center justify-center p-4 relative overflow-hidden transition-all duration-1000`}>
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Dynamic Floating Shapes */}
-        {themeConfig.shapes.map((shapeColor, index) => (
-          <div 
-            key={index}
-            className={`absolute w-8 h-8 md:w-12 md:h-12 ${shapeColor} rounded-full opacity-60 animate-bounce`}
-            style={{ 
-              animationDelay: `${index * 0.5}s`,
-              top: `${20 + index * 15}%`,
-              left: index % 2 === 0 ? `${10 + index * 5}%` : 'auto',
-              right: index % 2 === 1 ? `${10 + index * 5}%` : 'auto'
-            }}
-          />
-        ))}
-        
-        {/* Dynamic Cartoon Icons */}
-        {themeConfig.floatingIcons.map((icon, index) => (
-          <div 
-            key={icon}
-            className="absolute text-2xl md:text-4xl animate-pulse"
-            style={{ 
-              animationDelay: `${index * 0.7}s`,
-              top: `${15 + index * 20}%`,
-              left: index % 2 === 0 ? `${15 + index * 10}%` : 'auto',
-              right: index % 2 === 1 ? `${15 + index * 10}%` : 'auto'
-            }}
-          >
-            {icon}
-          </div>
-        ))}
-      </div>
-
-      <div className="w-full max-w-md mx-auto relative z-10">
-        {/* Wholesaler Logo/Initials Header */}
-        <div className="text-center mb-8">
-          <div className="mx-auto mb-6 relative">
-            {wholesaler?.logoUrl ? (
-              <img 
-                src={wholesaler.logoUrl} 
-                alt={wholesaler.businessName}
-                className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-white shadow-lg"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-4 border-white shadow-lg">
-                <span className="text-2xl font-bold text-white">
-                  {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
-                </span>
+    <div className="min-h-screen flex">
+      {/* Left Side - White Background with Authentication Form */}
+      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-4 lg:p-8">
+        <div className="w-full max-w-md mx-auto">
+          {/* Wholesaler Logo/Initials Header */}
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-6 relative">
+              {wholesaler?.logoUrl ? (
+                <img 
+                  src={wholesaler.logoUrl} 
+                  alt={wholesaler.businessName}
+                  className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-gray-200 shadow-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-4 border-gray-200 shadow-lg">
+                  <span className="text-2xl font-bold text-white">
+                    {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
+                  </span>
+                </div>
+              )}
+              {/* Cute decoration around logo */}
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-md">
+                <span className="text-lg">✨</span>
               </div>
-            )}
-            {/* Cute decoration around logo */}
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-md">
-              <span className="text-lg">✨</span>
             </div>
-          </div>
-          
-          <div className="mb-3">
-            <p className="text-lg font-semibold text-gray-700">
-              {welcomeMessage.greeting}
+            
+            <div className="mb-3">
+              <p className="text-lg font-semibold text-gray-700">
+                {welcomeMessage.greeting}
+              </p>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {welcomeMessage.title}
+            </h1>
+            <p className="text-gray-600 text-lg mb-2">
+              {welcomeMessage.subtitle}
+            </p>
+            {welcomeMessage.businessHours && (
+              <p className="text-gray-500 text-sm mb-2 italic">
+                {welcomeMessage.businessHours}
+              </p>
+            )}
+            <p className="text-gray-500 text-sm">
+              Please enter your security code to continue
             </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {welcomeMessage.title}
-          </h1>
-          <p className="text-gray-600 text-lg mb-2">
-            {welcomeMessage.subtitle}
-          </p>
-          {welcomeMessage.businessHours && (
-            <p className="text-gray-500 text-sm mb-2 italic">
-              {welcomeMessage.businessHours}
-            </p>
-          )}
-          <p className="text-gray-500 text-sm">
-            Please enter your security code to continue
-          </p>
-        </div>
 
-        {/* Unified Authentication Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl">
-          <CardContent className="p-8">
-            <div className="space-y-6">
-              {/* Security Notice Header */}
-              <div className="text-center mb-6">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-blue-600" />
+          {/* Unified Authentication Card */}
+          <Card className="bg-white border shadow-xl rounded-2xl">
+            <CardContent className="p-8">
+              <div className="space-y-6">
+                {/* Security Notice Header */}
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                    🛡️ Secure access for registered customers only
+                  </h3>
+                  <div className="bg-blue-50 rounded-lg p-4 mb-2">
+                    <p className="text-sm text-blue-800 font-medium mb-2">
+                      How to get access:
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      If you are added by the wholesaler to their customer list, you will have access to browse products and see pricing.
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Your security matters to us!
+                  </p>
+                </div>
+
+                {/* Authentication Input */}
+                <div className="space-y-3">
+                  <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700 text-center block">
+                    Last 4 digits of your phone number
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="lastFour"
+                      type="password"
+                      placeholder="••••"
+                      value={lastFourDigits}
+                      onChange={handleLastFourChange}
+                      maxLength={4}
+                      className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 transition-all duration-300"
+                    />
+                    {/* Cute input decoration */}
+                    <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">
-                  🛡️ Secure access for registered customers only
-                </h3>
-                <div className="bg-blue-50 rounded-lg p-4 mb-2">
-                  <p className="text-sm text-blue-800 font-medium mb-2">
-                    How to get access:
-                  </p>
-                  <p className="text-sm text-blue-700">
-                    If you are added by the wholesaler to their customer list, you will have access to browse products and see pricing.
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Your security matters to us!
-                </p>
-              </div>
 
-              {/* Authentication Input */}
-              <div className="space-y-3">
-                <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700 text-center block">
-                  Last 4 digits of your phone number
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="lastFour"
-                    type="password"
-                    placeholder="••••"
-                    value={lastFourDigits}
-                    onChange={handleLastFourChange}
-                    maxLength={4}
-                    className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 transition-all duration-300"
-                  />
-                  {/* Cute input decoration */}
-                  <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
-                </div>
-              </div>
-
-              {error && (
-                <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
-                  <AlertDescription className="text-center">{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button 
-                onClick={handleLogin} 
-                className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white h-14 rounded-2xl font-semibold text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
-                disabled={isLoading || lastFourDigits.length !== 4}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                    Verifying your access...
-                  </>
-                ) : (
-                  <>
-                    <span>Enter Store</span>
-                    <span className="ml-2 text-xl">🚀</span>
-                  </>
+                {error && (
+                  <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
+                    <AlertDescription className="text-center">{error}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
 
+                <Button 
+                  onClick={handleLogin} 
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white h-14 rounded-2xl font-semibold text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+                  disabled={isLoading || lastFourDigits.length !== 4}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      Verifying your access...
+                    </>
+                  ) : (
+                    <>
+                      <span>Enter Store</span>
+                      <span className="ml-2 text-xl">🚀</span>
+                    </>
+                  )}
+                </Button>
+
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Footer positioned higher */}
+          <div className="mt-6">
+            <Footer />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Dynamic Background */}
+      <div className={`hidden lg:block w-1/2 ${themeConfig.background} relative overflow-hidden transition-all duration-1000`}>
+        {/* Dynamic Background Elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Dynamic Floating Shapes */}
+          {themeConfig.shapes.map((shapeColor, index) => (
+            <div 
+              key={index}
+              className={`absolute w-8 h-8 md:w-12 md:h-12 ${shapeColor} rounded-full opacity-60 animate-bounce`}
+              style={{ 
+                animationDelay: `${index * 0.5}s`,
+                top: `${20 + index * 15}%`,
+                left: index % 2 === 0 ? `${10 + index * 5}%` : 'auto',
+                right: index % 2 === 1 ? `${10 + index * 5}%` : 'auto'
+              }}
+            />
+          ))}
+          
+          {/* Dynamic Cartoon Icons */}
+          {themeConfig.floatingIcons.map((icon, index) => (
+            <div 
+              key={icon}
+              className="absolute text-2xl md:text-4xl animate-pulse"
+              style={{ 
+                animationDelay: `${index * 0.7}s`,
+                top: `${15 + index * 20}%`,
+                left: index % 2 === 0 ? `${15 + index * 10}%` : 'auto',
+                right: index % 2 === 1 ? `${15 + index * 10}%` : 'auto'
+              }}
+            >
+              {icon}
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Footer positioned higher */}
-        <div className="mt-6">
-          <Footer />
+          ))}
+        </div>
+
+        {/* Centered Content for Right Side */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white p-8">
+            <h2 className="text-4xl font-bold mb-4">
+              {wholesaler?.businessName || "Wholesale Store"}
+            </h2>
+            <p className="text-xl opacity-90">
+              Premium wholesale products with Love
+            </p>
+          </div>
         </div>
       </div>
     </div>
