@@ -734,15 +734,15 @@ export class DatabaseStorage implements IStorage {
       // Find all customers in this wholesaler's groups
       const customers = await db
         .select({
-          id: customerGroupsMembers.id,
-          name: customerGroupsMembers.firstName,
-          email: customerGroupsMembers.email,
-          phone: customerGroupsMembers.phone,
-          groupId: customerGroupsMembers.groupId,
+          id: customerGroupMembers.id,
+          name: customerGroupMembers.firstName,
+          email: customerGroupMembers.email,
+          phone: customerGroupMembers.phone,
+          groupId: customerGroupMembers.groupId,
           groupName: customerGroups.name,
         })
-        .from(customerGroupsMembers)
-        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .from(customerGroupMembers)
+        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
         .where(eq(customerGroups.wholesalerId, wholesalerId));
       
       // Find customer whose phone number ends with the provided last 4 digits
