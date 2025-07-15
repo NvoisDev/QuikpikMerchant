@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Package, ArrowRight, Phone, Mail, MapPin } from "lucide-react";
+import Logo from "@/components/ui/logo";
 
 interface CustomerHomeProps {
   wholesaler: any;
@@ -47,6 +48,14 @@ export function CustomerHome({
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center">
+            <div className="flex items-center justify-center mb-4">
+              <Logo 
+                size="lg" 
+                variant="full" 
+                user={wholesaler}
+                className="mr-4"
+              />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {wholesaler?.businessName || "Wholesale Store"}
             </h1>
