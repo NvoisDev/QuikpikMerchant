@@ -1938,7 +1938,33 @@ export default function CustomerPortal() {
                   <>
                     <p>Minimum order: {selectedProduct.moq} units</p>
                     <p>Available stock: {formatNumber(selectedProduct.stock)} units</p>
-                    <p>Price per unit: {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(selectedProduct.price).toFixed(2)}</p>
+                    <p>
+                      Price per unit: {(() => {
+                        const basePrice = parseFloat(selectedProduct.price) || 0;
+                        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                          basePrice,
+                          parseFloat(editQuantity) || 1,
+                          selectedProduct.promotionalOffers || [],
+                          selectedProduct.promoPrice ? parseFloat(selectedProduct.promoPrice) : undefined,
+                          selectedProduct.promoActive
+                        );
+                        
+                        if (pricing.effectivePrice < basePrice) {
+                          return (
+                            <>
+                              <span className="text-green-600 font-medium">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{pricing.effectivePrice.toFixed(2)}
+                              </span>
+                              <span className="text-gray-400 line-through ml-1 text-sm">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{basePrice.toFixed(2)}
+                              </span>
+                            </>
+                          );
+                        } else {
+                          return `${getCurrencySymbol(wholesaler?.defaultCurrency)}${basePrice.toFixed(2)}`;
+                        }
+                      })()}
+                    </p>
                   </>
                 )}
               </div>
