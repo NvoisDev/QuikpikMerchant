@@ -1682,10 +1682,10 @@ export default function CustomerPortal() {
                         
                         {/* Action Buttons - Hidden for Guests */}
                         {!isGuestMode && (
-                          <div className="flex gap-2 mt-4">
+                          <div className="flex justify-end gap-2 mt-4">
                             <Button 
                               onClick={() => handleAddToCart(product)}
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
                             >
                               <Plus className="w-4 h-4 mr-1" />
                               Add to Cart
@@ -1704,7 +1704,7 @@ export default function CustomerPortal() {
                         
                         {/* Guest Call-to-Action */}
                         {isGuestMode && (
-                          <div className="mt-4">
+                          <div className="flex justify-end mt-4">
                             <Button 
                               onClick={() => {
                                 toast({
@@ -1722,7 +1722,7 @@ export default function CustomerPortal() {
                                   variant: "default",
                                 });
                               }}
-                              className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
                             >
                               <Plus className="w-4 h-4 mr-1" />
                               Add to Cart
@@ -2088,14 +2088,16 @@ export default function CustomerPortal() {
                             </div>
                             
                             {/* Add to Cart Button */}
-                            <Button
-                              onClick={() => openQuantityEditor(product)}
-                              className="w-full bg-green-600 hover:bg-green-700 mt-4"
-                              size="sm"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add to Cart
-                            </Button>
+                            <div className="flex justify-end mt-4">
+                              <Button
+                                onClick={() => openQuantityEditor(product)}
+                                className="bg-green-600 hover:bg-green-700"
+                                size="sm"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add to Cart
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
