@@ -456,30 +456,63 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
       {/* Right Side - Dynamic Background */}
       <div className={`hidden lg:block w-1/2 ${themeConfig.background} relative overflow-hidden transition-all duration-1000`}>
+        {/* Floating Icons */}
+        {themeConfig.floatingIcons.map((icon, index) => (
+          <div
+            key={index}
+            className={`absolute text-4xl animate-bounce opacity-20 hover:opacity-40 transition-opacity duration-300`}
+            style={{
+              left: `${15 + (index * 18)}%`,
+              top: `${20 + (index * 12)}%`,
+              animationDelay: `${index * 0.5}s`,
+              animationDuration: `${3 + (index * 0.5)}s`
+            }}
+          >
+            {icon}
+          </div>
+        ))}
 
+        {/* Floating Geometric Shapes */}
+        {themeConfig.shapes.map((shapeClass, index) => (
+          <div
+            key={index}
+            className={`absolute w-16 h-16 ${shapeClass} rounded-full opacity-10 animate-pulse`}
+            style={{
+              right: `${10 + (index * 15)}%`,
+              top: `${15 + (index * 20)}%`,
+              animationDelay: `${index * 0.8}s`,
+              animationDuration: `${2 + (index * 0.3)}s`
+            }}
+          />
+        ))}
+
+        {/* Bouncing Elements */}
+        <div className="absolute top-10 right-10 w-8 h-8 bg-yellow-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-20 left-10 w-6 h-6 bg-green-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 left-1/4 w-4 h-4 bg-blue-400 rounded-full animate-bounce opacity-30" style={{ animationDelay: '1.5s' }} />
 
         {/* Centered Content for Right Side */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center p-8 max-w-md">
+          <div className="text-center p-8 max-w-md transform hover:scale-105 transition-transform duration-300">
             <div className="mb-6">
-              <p className="text-2xl font-semibold text-gray-800 mb-2">
+              <p className="text-2xl font-semibold text-gray-800 mb-2 animate-pulse">
                 {welcomeMessage.greeting}
               </p>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 transform hover:scale-110 transition-transform duration-300">
                 {welcomeMessage.title}
               </h2>
               <p className="text-xl text-gray-700 mb-4">
                 {welcomeMessage.subtitle}
               </p>
               {welcomeMessage.businessHours && (
-                <p className="text-gray-600 text-lg italic mb-4">
+                <p className="text-gray-600 text-lg italic mb-4 animate-pulse">
                   {welcomeMessage.businessHours}
                 </p>
               )}
             </div>
 
             <div className="border-t border-gray-300 pt-4">
-              <p className="text-lg text-gray-700">
+              <p className="text-lg text-gray-700 animate-pulse">
                 Premium wholesale products with care
               </p>
             </div>
