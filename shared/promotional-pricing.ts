@@ -101,9 +101,9 @@ export class PromotionalPricingCalculator {
       return true;
     });
 
-    // ONLY apply promo price if there are active promotional offers
-    // Special prices should only be applied when there are actual promotional offers configured
-    if (hasActivePromotionalOffers && promoActive && promoPrice) {
+    // Apply promotional price if active, regardless of whether there are additional promotional offers
+    // This allows campaign special prices to work independently of promotional offers
+    if (promoActive && promoPrice) {
       effectivePrice = promoPrice;
       totalDiscount += (originalPrice - promoPrice) * quantity;
       appliedOffers.push(`Sale Price: £${promoPrice.toFixed(2)}`);
