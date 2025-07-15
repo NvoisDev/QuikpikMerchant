@@ -162,6 +162,33 @@ interface Campaign {
   }>;
 }
 
+// Helper functions for promotional offers
+const hasPromotionalOffers = (campaign: Campaign) => {
+  if (campaign.campaignType === 'single') {
+    // Check if single product has promotional offers
+    return campaign.promotionalOffers && campaign.promotionalOffers.length > 0;
+  } else {
+    // Check if any products in multi-product campaign have promotional offers
+    return campaign.products?.some((productItem: any) => 
+      productItem.promotionalOffers && productItem.promotionalOffers.length > 0
+    ) || false;
+  }
+};
+
+const getAllPromotionalOffers = (campaign: Campaign): any[] => {
+  if (campaign.campaignType === 'single') {
+    return campaign.promotionalOffers || [];
+  } else {
+    const allOffers: any[] = [];
+    campaign.products?.forEach((productItem: any) => {
+      if (productItem.promotionalOffers) {
+        allOffers.push(...productItem.promotionalOffers);
+      }
+    });
+    return allOffers;
+  }
+};
+
 // Smart color-coding utilities for campaigns
 const getCampaignStatusColor = (campaign: any) => {
   const now = new Date();
@@ -528,32 +555,7 @@ export default function Campaigns() {
     setSelectedProducts(updated);
   };
 
-  // Helper function to check if a campaign has promotional offers
-  const hasPromotionalOffers = (campaign: Campaign) => {
-    if (campaign.campaignType === 'single') {
-      // Check if single product has promotional offers
-      return campaign.promotionalOffers && campaign.promotionalOffers.length > 0;
-    } else {
-      // Check if any products in multi-product campaign have promotional offers
-      return campaign.products?.some((productItem: any) => 
-        productItem.promotionalOffers && productItem.promotionalOffers.length > 0
-      ) || false;
-    }
-  }
 
-  const getAllPromotionalOffers = (campaign: Campaign): any[] => {
-    if (campaign.campaignType === 'single') {
-      return campaign.promotionalOffers || [];
-    } else {
-      const allOffers: any[] = [];
-      campaign.products?.forEach((productItem: any) => {
-        if (productItem.promotionalOffers) {
-          allOffers.push(...productItem.promotionalOffers);
-        }
-      });
-      return allOffers;
-    }
-  };
 
   const generatePreviewMessage = (campaign: Campaign) => {
     const businessName = user?.businessName || "Your Business";
