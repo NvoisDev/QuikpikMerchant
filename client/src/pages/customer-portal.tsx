@@ -987,8 +987,8 @@ export default function CustomerPortal() {
                           {(() => {
                             const badges = [];
                             
-                            // Show specific offer badges for promotional offers
-                            if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers)) {
+                            // Show specific offer badges for promotional offers (only if promo is active)
+                            if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers) && featuredProduct.promoActive) {
                               featuredProduct.promotionalOffers.forEach((offer, index) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
@@ -1285,30 +1285,20 @@ export default function CustomerPortal() {
                           )}
                           {/* Promotional Offers Badges */}
                           {(() => {
-                            const pricing = calculatePromotionalPricing(product);
                             const badges = [];
                             
-                            // Show special offer badges for non-price promotional offers
-                            if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
+                            // Only show badges if product has promotional offers AND they're active
+                            if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
                               product.promotionalOffers.forEach((offer, index) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
                                   badges.push(
-                                    <span key={`offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
+                                    <span key={`grid-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
                                       {config.emoji} {config.label}
                                     </span>
                                   );
                                 }
                               });
-                            }
-                            
-                            // Show general promotional badge if there are applied offers but no specific badges
-                            if (pricing.appliedOffers.length > 0 && badges.length === 0) {
-                              badges.push(
-                                <span key="general-promo" className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                  🎁 SPECIAL OFFER!
-                                </span>
-                              );
                             }
                             
                             return badges;
@@ -1410,17 +1400,25 @@ export default function CustomerPortal() {
                                     💬 Negotiable
                                   </span>
                                 )}
-                                {/* Promotional Offers Badge for List View */}
+                                {/* Promotional Offers Badges for List View */}
                                 {(() => {
-                                  const pricing = calculatePromotionalPricing(product);
-                                  if (pricing.appliedOffers.length > 0) {
-                                    return (
-                                      <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                        🎁 SPECIAL OFFER!
-                                      </span>
-                                    );
+                                  const badges = [];
+                                  
+                                  // Only show badges if product has promotional offers AND they're active
+                                  if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
+                                    product.promotionalOffers.forEach((offer, index) => {
+                                      if (offer.isActive) {
+                                        const config = getOfferTypeConfig(offer.type);
+                                        badges.push(
+                                          <span key={`list-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
+                                            {config.emoji} {config.label}
+                                          </span>
+                                        );
+                                      }
+                                    });
                                   }
-                                  return null;
+                                  
+                                  return badges;
                                 })()}
                                 {/* Selling Format Tags */}
                                 {product.sellingFormat === "units" && (
