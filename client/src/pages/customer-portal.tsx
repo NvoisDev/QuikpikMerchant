@@ -971,6 +971,9 @@ export default function CustomerPortal() {
                         </h1>
                         {/* Product Tags */}
                         <div className="flex flex-wrap gap-3 mb-4">
+                          <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold">
+                            ⭐ FEATURED
+                          </span>
                           {featuredProduct.category && (
                             <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
                               {featuredProduct.category}
