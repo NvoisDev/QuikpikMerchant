@@ -787,26 +787,11 @@ export default function CustomerPortal() {
     
     const unitLabel = sellingType === "pallets" ? "pallets" : "units";
     
-    // Enhanced toast message for BOGOFF offers (demo version)
-    if ((product.name === "Baby Rice" || product.name === "Basmati Rice") && product.promoActive) {
-      const freeItems = product.name === "Baby Rice" ? Math.floor(quantity / 2) : Math.floor(quantity / 3);
-      if (freeItems > 0) {
-        toast({
-          title: "🎁 BOGOFF Deal Applied!",
-          description: `${product.name} (${quantity} ${unitLabel}) added to your cart. You get ${freeItems} FREE items with this offer!`,
-        });
-      } else {
-        toast({
-          title: "Added to Cart",
-          description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
-        });
-      }
-    } else {
-      toast({
-        title: "Added to Cart",
-        description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
-      });
-    }
+    // Standard toast message for all products
+    toast({
+      title: "Added to Cart",
+      description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
+    });
   }, [toast, isPreviewMode]);
 
   // Handle add to cart from quantity editor
@@ -997,20 +982,13 @@ export default function CustomerPortal() {
                               {featuredProduct.category}
                             </span>
                           )}
-                          {/* BOGOFF Offer Badge for Featured Product - Demo Version */}
+                          {/* Promotional Offers Badge for Featured Product */}
                           {(() => {
-                            // For demonstration purposes, show BOGOFF badge on promotional featured products
-                            if (featuredProduct.name === "Baby Rice" && featuredProduct.promoActive) {
+                            const pricing = calculatePromotionalPricing(featuredProduct);
+                            if (pricing.appliedOffers.length > 0) {
                               return (
                                 <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                                  🎁 Buy 2, Get 1 FREE!
-                                </span>
-                              );
-                            }
-                            if (featuredProduct.name === "Basmati Rice" && featuredProduct.promoActive) {
-                              return (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                                  🎁 Buy 3, Get 1 FREE!
+                                  🎁 SPECIAL OFFER!
                                 </span>
                               );
                             }
@@ -1286,21 +1264,13 @@ export default function CustomerPortal() {
                               🚚 Pickup Only
                             </span>
                           )}
-                          {/* BOGOFF Offer Badge - Demo Version */}
+                          {/* Promotional Offers Badge */}
                           {(() => {
-                            // For demonstration purposes, show BOGOFF badge on Baby Rice product
-                            if (product.name === "Baby Rice" && product.promoActive) {
+                            const pricing = calculatePromotionalPricing(product);
+                            if (pricing.appliedOffers.length > 0) {
                               return (
                                 <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                  🎁 Buy 2, Get 1 FREE!
-                                </span>
-                              );
-                            }
-                            // Show BOGOFF badge on Basmati Rice as well
-                            if (product.name === "Basmati Rice" && product.promoActive) {
-                              return (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                  🎁 Buy 3, Get 1 FREE!
+                                  🎁 SPECIAL OFFER!
                                 </span>
                               );
                             }
@@ -1403,20 +1373,13 @@ export default function CustomerPortal() {
                                     💬 Negotiable
                                   </span>
                                 )}
-                                {/* BOGOFF Offer Badge for List View - Demo Version */}
+                                {/* Promotional Offers Badge for List View */}
                                 {(() => {
-                                  // For demonstration purposes, show BOGOFF badge on promotional products
-                                  if (product.name === "Baby Rice" && product.promoActive) {
+                                  const pricing = calculatePromotionalPricing(product);
+                                  if (pricing.appliedOffers.length > 0) {
                                     return (
                                       <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                        🎁 Buy 2, Get 1 FREE!
-                                      </span>
-                                    );
-                                  }
-                                  if (product.name === "Basmati Rice" && product.promoActive) {
-                                    return (
-                                      <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse">
-                                        🎁 Buy 3, Get 1 FREE!
+                                        🎁 SPECIAL OFFER!
                                       </span>
                                     );
                                   }

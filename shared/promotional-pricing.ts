@@ -101,12 +101,12 @@ export class PromotionalPricingCalculator {
       return true;
     });
 
-    // If we have promotional offers, prioritize them over simple promo price
-    // Otherwise, apply simple promo price if active
-    if (!hasActivePromotionalOffers && promoActive && promoPrice) {
+    // ONLY apply promo price if there are active promotional offers
+    // Special prices should only be applied when there are actual promotional offers configured
+    if (hasActivePromotionalOffers && promoActive && promoPrice) {
       effectivePrice = promoPrice;
       totalDiscount += (originalPrice - promoPrice) * quantity;
-      appliedOffers.push(`Sale Price: ${promoPrice.toFixed(2)}`);
+      appliedOffers.push(`Sale Price: £${promoPrice.toFixed(2)}`);
     }
 
     // Apply promotional offers
