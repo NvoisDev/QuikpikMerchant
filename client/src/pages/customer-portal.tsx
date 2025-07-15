@@ -998,12 +998,7 @@ export default function CustomerPortal() {
     });
   };
 
-  const handleSkipAuth = () => {
-    setShowAuth(false);
-    setIsAuthenticated(false);
-    setAuthenticatedCustomer(null);
-    setIsGuestMode(true); // Enable guest mode with hidden pricing
-  };
+  // Authentication is now required - no guest mode allowed;
 
   const handleViewAllProducts = () => {
     setShowHomePage(false);
@@ -1015,12 +1010,9 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
-  // Check for authentication requirement
+  // Authentication is now always required (no guest mode)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const authRequired = urlParams.get('auth') === 'required';
-    
-    if (authRequired && !isAuthenticated && !isPreviewMode) {
+    if (!isAuthenticated && !isPreviewMode) {
       setShowAuth(true);
     }
   }, [isAuthenticated, isPreviewMode]);
@@ -1036,8 +1028,7 @@ export default function CustomerPortal() {
   if (showAuth && !isPreviewMode) {
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
-      onAuthSuccess={handleAuthSuccess} 
-      onSkipAuth={handleSkipAuth}
+      onAuthSuccess={handleAuthSuccess}
     />;
   }
 

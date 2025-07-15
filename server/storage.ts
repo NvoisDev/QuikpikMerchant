@@ -735,13 +735,14 @@ export class DatabaseStorage implements IStorage {
       const customers = await db.execute(sql`
         SELECT 
           cgm.id,
-          cgm.first_name as name,
-          cgm.email,
-          cgm.phone,
+          u.first_name as name,
+          u.email,
+          u.phone_number as phone,
           cgm.group_id as "groupId",
           cg.name as "groupName"
         FROM customer_group_members cgm
         INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+        INNER JOIN users u ON cgm.customer_id = u.id
         WHERE cg.wholesaler_id = ${wholesalerId}
       `);
       

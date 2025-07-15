@@ -478,16 +478,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
               </Button>
 
               <div className="text-center pt-4 space-y-2">
-                {onSkipAuth && (
-                  <Button 
-                    variant="ghost" 
-                    onClick={onSkipAuth}
-                    className="text-sm text-gray-500 hover:text-gray-700 rounded-xl block w-full"
-                  >
-                    Browse as guest 👀
-                  </Button>
-                )}
-
+                <p className="text-xs text-gray-500">
+                  Authentication required to access products and pricing
+                </p>
               </div>
             </div>
           </CardContent>

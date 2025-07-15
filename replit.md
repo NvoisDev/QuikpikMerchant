@@ -200,11 +200,11 @@ This approach gives customers control over delivery speed and cost while ensurin
 ### Customer Authentication System with Last 4 Digits Only (July 15, 2025):
 - **Simplified Authentication Interface**: Completely removed phone number input field, customers now only see clear message asking for last 4 digits
 - **Enhanced Security Model**: Created findCustomerByLastFourDigits storage method that searches all customers in wholesaler's groups by phone number endings
-- **URL Parameter Handling**: Fixed customer portal URL parsing to properly extract wholesaler ID when ?auth=required parameter is present
+- **Database Query Fix**: Fixed Drizzle ORM authentication query using raw SQL to properly join customer_group_members with users table for phone number lookup
 - **Streamlined User Experience**: Authentication screen shows clear blue message "Please enter the last 4 digits of your phone number to access this store" with password-style 4-digit input
 - **Backend API Integration**: Updated /api/customer-auth/verify endpoint to accept only wholesalerId and lastFourDigits parameters
-- **Customer Link Distribution**: Wholesalers can now send authentication-required links (e.g., /customer/104871691614680693123?auth=required) via WhatsApp or other channels
-- **Production Ready**: Complete authentication system working without requiring customers to enter full phone numbers or create accounts
+- **Removed Guest Access**: Eliminated "Browse as guest" option to force authentication requirement for all customers
+- **Production Ready**: Complete authentication system working without requiring customers to enter full phone numbers or create accounts - tested successfully with 9550 digits
 
 ## Recent Bug Fixes and Feature Implementations (July 15, 2025)
 
