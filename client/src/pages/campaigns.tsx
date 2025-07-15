@@ -201,6 +201,26 @@ export default function Campaigns() {
       product.promoActive
     );
   };
+
+  // Helper function to check if product has existing promotional offers
+  const getProductExistingOffers = (productId: number) => {
+    const product = (products as Product[])?.find(p => p.id === productId);
+    if (!product) return { hasOffers: false, offers: [], campaigns: [] };
+    
+    const hasOffers = product.promotionalOffers && product.promotionalOffers.length > 0;
+    const offers = product.promotionalOffers || [];
+    
+    // Find campaigns that might be using this product
+    const relatedCampaigns = (campaigns as Campaign[])?.filter(campaign => {
+      if (campaign.campaignType === 'single') {
+        return campaign.product?.id === productId;
+      } else {
+        return campaign.products?.some(p => p.productId === productId);
+      }
+    }) || [];
+    
+    return { hasOffers, offers, campaigns: relatedCampaigns };
+  };
   const { user } = useAuth();
   const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading } = useSubscription();
@@ -408,12 +428,15 @@ export default function Campaigns() {
     const updated = [...selectedProducts];
     
     if (field === 'productId') {
-      // When product is selected, set quantity to stock amount
+      // When product is selected, set quantity to stock amount and populate existing offers
       const selectedProduct = (products as Product[]).find(p => p.id === parseInt(value));
+      const existingOffers = getProductExistingOffers(parseInt(value));
+      
       updated[index] = { 
         ...updated[index], 
         [field]: value,
-        quantity: selectedProduct?.stock || 1
+        quantity: selectedProduct?.stock || 1,
+        promotionalOffers: existingOffers.offers || []
       };
     } else {
       updated[index] = { ...updated[index], [field]: value };
@@ -775,7 +798,14 @@ export default function Campaigns() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Select Product</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                            <Select onValueChange={(value) => {
+                              const productId = parseInt(value);
+                              field.onChange(productId);
+                              
+                              // Populate existing promotional offers when product is selected
+                              const existingOffers = getProductExistingOffers(productId);
+                              setSingleProductOffers(existingOffers.offers || []);
+                            }}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Choose a product to promote" />
@@ -790,6 +820,48 @@ export default function Campaigns() {
                               </SelectContent>
                             </Select>
                             <FormMessage />
+                            
+                            {/* Cross-campaign promotional offer warning */}
+                            {form.watch('productId') && (() => {
+                              const selectedProductId = form.watch('productId');
+                              const existingOffers = getProductExistingOffers(selectedProductId);
+                              
+                              if (existingOffers.hasOffers) {
+                                return (
+                                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div className="flex items-start space-x-2">
+                                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                                      <div>
+                                        <p className="text-sm font-medium text-amber-800">
+                                          Existing Promotional Offers Detected
+                                        </p>
+                                        <p className="text-sm text-amber-700 mt-1">
+                                          This product already has promotional offers configured. Any changes you make here will update the product's promotional pricing across all campaigns.
+                                        </p>
+                                        <div className="mt-2">
+                                          <p className="text-xs text-amber-600">Current offers:</p>
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {existingOffers.offers.map((offer: any, index: number) => (
+                                              <Badge key={index} variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                                                {offer.type === 'percentage_discount' && `${offer.discountPercentage}% off`}
+                                                {offer.type === 'fixed_amount_discount' && `£${offer.discountAmount} off`}
+                                                {offer.type === 'fixed_price' && `£${offer.fixedPrice} fixed`}
+                                                {offer.type === 'bogo' && 'Buy 1 Get 1'}
+                                                {offer.type === 'buy_x_get_y_free' && `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`}
+                                                {offer.type === 'bulk_discount' && 'Bulk Discount'}
+                                                {offer.type === 'free_shipping' && 'Free Shipping'}
+                                                {offer.type === 'bundle_deal' && 'Bundle Deal'}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </FormItem>
                         )}
                       />
@@ -915,6 +987,47 @@ export default function Campaigns() {
                                 </Button>
                               </div>
                             </div>
+                            
+                            {/* Cross-campaign promotional offer warning for multi-product */}
+                            {item.productId > 0 && (() => {
+                              const existingOffers = getProductExistingOffers(item.productId);
+                              
+                              if (existingOffers.hasOffers) {
+                                return (
+                                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div className="flex items-start space-x-2">
+                                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                                      <div>
+                                        <p className="text-sm font-medium text-amber-800">
+                                          Existing Promotional Offers Detected
+                                        </p>
+                                        <p className="text-sm text-amber-700 mt-1">
+                                          This product already has promotional offers configured. Any changes you make here will update the product's promotional pricing across all campaigns.
+                                        </p>
+                                        <div className="mt-2">
+                                          <p className="text-xs text-amber-600">Current offers:</p>
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {existingOffers.offers.map((offer: any, index: number) => (
+                                              <Badge key={index} variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                                                {offer.type === 'percentage_discount' && `${offer.discountPercentage}% off`}
+                                                {offer.type === 'fixed_amount_discount' && `£${offer.discountAmount} off`}
+                                                {offer.type === 'fixed_price' && `£${offer.fixedPrice} fixed`}
+                                                {offer.type === 'bogo' && 'Buy 1 Get 1'}
+                                                {offer.type === 'buy_x_get_y_free' && `Buy ${offer.buyQuantity} Get ${offer.getQuantity} Free`}
+                                                {offer.type === 'bulk_discount' && 'Bulk Discount'}
+                                                {offer.type === 'free_shipping' && 'Free Shipping'}
+                                                {offer.type === 'bundle_deal' && 'Bundle Deal'}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                             
                             {/* Promotional Offers for Multi-Product Campaign */}
                             {selectedProduct && (
