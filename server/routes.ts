@@ -1869,14 +1869,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer authentication routes
   app.post("/api/customer-auth/verify", async (req, res) => {
     try {
-      const { wholesalerId, phoneNumber, lastFourDigits } = req.body;
+      const { wholesalerId, lastFourDigits } = req.body;
 
-      if (!wholesalerId || !phoneNumber || !lastFourDigits) {
+      if (!wholesalerId || !lastFourDigits) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Find customer in any of the wholesaler's groups
-      const customer = await storage.findCustomerByPhoneAndWholesaler(wholesalerId, phoneNumber, lastFourDigits);
+      // Find customer in any of the wholesaler's groups by last 4 digits only
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
       
       if (!customer) {
         return res.status(401).json({ error: "Invalid credentials or customer not found" });

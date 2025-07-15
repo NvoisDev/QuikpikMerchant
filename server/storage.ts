@@ -725,6 +725,51 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Customer authentication using last 4 digits only
+  async findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any> {
+    try {
+      console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
+      
+      // Find all customers in this wholesaler's groups
+      const customers = await db
+        .select({
+          id: customerGroupsMembers.id,
+          name: customerGroupsMembers.firstName,
+          email: customerGroupsMembers.email,
+          phone: customerGroupsMembers.phone,
+          groupId: customerGroupsMembers.groupId,
+          groupName: customerGroups.name,
+        })
+        .from(customerGroupsMembers)
+        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .where(eq(customerGroups.wholesalerId, wholesalerId));
+      
+      // Find customer whose phone number ends with the provided last 4 digits
+      const matchingCustomer = customers.find(customer => {
+        const phoneLastFour = customer.phone.slice(-4);
+        return phoneLastFour === lastFourDigits;
+      });
+      
+      if (!matchingCustomer) {
+        console.log(`No customer found with last 4 digits: ${lastFourDigits}`);
+        return null;
+      }
+      
+      console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone})`);
+      return {
+        id: matchingCustomer.id,
+        name: matchingCustomer.name,
+        email: matchingCustomer.email,
+        phone: matchingCustomer.phone,
+        groupId: matchingCustomer.groupId,
+        groupName: matchingCustomer.groupName
+      };
+    } catch (error) {
+      console.error("Error finding customer by last 4 digits:", error);
+      return null;
+    }
+  }
+
   private formatPhoneToInternational(phone: string): string {
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, '');

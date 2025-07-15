@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Phone, Shield } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomerAuthProps {
@@ -14,20 +14,19 @@ interface CustomerAuthProps {
 }
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
 
   const handleLogin = async () => {
-    if (!phoneNumber || !lastFourDigits) {
-      setError("Please enter both your phone number and last 4 digits");
+    if (!lastFourDigits) {
+      setError("Please enter the last 4 digits of your phone number");
       return;
     }
 
     if (lastFourDigits.length !== 4) {
-      setError("Last 4 digits must be exactly 4 numbers");
+      setError("Please enter exactly 4 digits");
       return;
     }
 
@@ -42,7 +41,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         },
         body: JSON.stringify({
           wholesalerId,
-          phoneNumber: phoneNumber.trim(),
           lastFourDigits: lastFourDigits.trim()
         }),
       });
@@ -66,11 +64,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ''); // Only digits
-    setPhoneNumber(value);
-  };
-
   const handleLastFourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4); // Only digits, max 4
     setLastFourDigits(value);
@@ -89,32 +82,22 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="Enter your phone number"
-                value={phoneNumber}
-                onChange={handlePhoneChange}
-                className="pl-10"
-                maxLength={15}
-              />
-            </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-800 text-center">
+              Please enter the last 4 digits of your phone number to access this store
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lastFour">Last 4 Digits Verification</Label>
+            <Label htmlFor="lastFour" className="text-center block">Last 4 Digits of Your Phone Number</Label>
             <Input
               id="lastFour"
               type="password"
-              placeholder="Last 4 digits of your phone"
+              placeholder="****"
               value={lastFourDigits}
               onChange={handleLastFourChange}
               maxLength={4}
-              className="text-center text-lg tracking-widest"
+              className="text-center text-xl tracking-widest font-mono"
             />
           </div>
 
@@ -127,7 +110,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           <Button 
             onClick={handleLogin} 
             className="w-full bg-green-600 hover:bg-green-700"
-            disabled={isLoading || !phoneNumber || lastFourDigits.length !== 4}
+            disabled={isLoading || lastFourDigits.length !== 4}
           >
             {isLoading ? (
               <>
