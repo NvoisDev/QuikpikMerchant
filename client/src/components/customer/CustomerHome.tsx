@@ -1,8 +1,18 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Package, ArrowRight, Phone, Mail, MapPin } from "lucide-react";
+import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X } from "lucide-react";
 import Logo from "@/components/ui/logo";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface CustomerHomeProps {
   wholesaler: any;
@@ -12,6 +22,10 @@ interface CustomerHomeProps {
   customerData?: any;
 }
 
+const businessNameSchema = z.object({
+  businessName: z.string().min(1, "Business name is required").max(100, "Business name too long"),
+});
+
 export function CustomerHome({ 
   wholesaler, 
   featuredProduct, 
@@ -19,6 +33,43 @@ export function CustomerHome({
   onViewFeaturedProduct,
   customerData 
 }: CustomerHomeProps) {
+  const [isEditBusinessNameOpen, setIsEditBusinessNameOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const businessNameForm = useForm<z.infer<typeof businessNameSchema>>({
+    resolver: zodResolver(businessNameSchema),
+    defaultValues: {
+      businessName: wholesaler?.businessName || "",
+    },
+  });
+
+  const updateBusinessNameMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof businessNameSchema>) => {
+      const response = await apiRequest("PATCH", "/api/settings", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Business name updated successfully",
+      });
+      setIsEditBusinessNameOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/wholesaler"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update business name",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onUpdateBusinessName = (data: z.infer<typeof businessNameSchema>) => {
+    updateBusinessNameMutation.mutate(data);
+  };
   
   const getCurrencySymbol = (currency?: string) => {
     switch (currency) {

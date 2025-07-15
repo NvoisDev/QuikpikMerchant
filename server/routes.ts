@@ -1964,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update customer phone number in group
+  // Update customer information in group
   app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
@@ -1974,10 +1974,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
-      const { phoneNumber } = req.body;
+      const { phoneNumber, name } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      if (!name) {
+        return res.status(400).json({ message: "Customer name is required" });
       }
 
       // Verify group ownership using parent company data
@@ -1988,16 +1992,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Update customer phone number
-      await storage.updateCustomerPhone(customerId, phoneNumber);
+      // Update customer information
+      await storage.updateCustomerInfo(customerId, phoneNumber, name);
       
       res.json({
         success: true,
-        message: "Customer phone number updated successfully"
+        message: "Customer information updated successfully"
       });
     } catch (error) {
-      console.error("Error updating customer phone number:", error);
-      res.status(500).json({ message: "Failed to update customer phone number" });
+      console.error("Error updating customer information:", error);
+      res.status(500).json({ message: "Failed to update customer information" });
     }
   });
 

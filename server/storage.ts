@@ -100,6 +100,7 @@ export interface IStorage {
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
+  updateCustomerInfo(customerId: string, phoneNumber: string, name: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
@@ -971,6 +972,22 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({ phoneNumber })
+      .where(eq(users.id, customerId));
+  }
+
+  async updateCustomerInfo(customerId: string, phoneNumber: string, name: string): Promise<void> {
+    // Split the name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    await db
+      .update(users)
+      .set({ 
+        phoneNumber,
+        firstName,
+        lastName
+      })
       .where(eq(users.id, customerId));
   }
 

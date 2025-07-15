@@ -48,6 +48,7 @@ const editMemberFormSchema = z.object({
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
+  name: z.string().min(1, "Customer name is required"),
 });
 
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
@@ -153,6 +154,7 @@ export default function CustomerGroups() {
     resolver: zodResolver(editMemberFormSchema),
     defaultValues: {
       phoneNumber: "",
+      name: "",
     },
   });
 
@@ -287,9 +289,10 @@ export default function CustomerGroups() {
   });
 
   const editMemberMutation = useMutation({
-    mutationFn: async ({ groupId, customerId, phoneNumber }: { groupId: number; customerId: string; phoneNumber: string }) => {
+    mutationFn: async ({ groupId, customerId, phoneNumber, name }: { groupId: number; customerId: string; phoneNumber: string; name: string }) => {
       const response = await apiRequest("PATCH", `/api/customer-groups/${groupId}/members/${customerId}`, {
-        phoneNumber
+        phoneNumber,
+        name
       });
       return response.json();
     },
@@ -298,7 +301,7 @@ export default function CustomerGroups() {
       queryClient.invalidateQueries({ queryKey: ["/api/customer-groups", selectedGroup?.id, "members"] });
       toast({
         title: "Success",
-        description: "Customer phone number updated successfully",
+        description: "Customer information updated successfully",
       });
       setIsEditMemberDialogOpen(false);
       setEditingMember(null);
@@ -307,7 +310,7 @@ export default function CustomerGroups() {
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update customer phone number",
+        description: error.message || "Failed to update customer information",
         variant: "destructive",
       });
     },
@@ -622,6 +625,7 @@ export default function CustomerGroups() {
     setEditingMember(member);
     editMemberForm.reset({
       phoneNumber: member.phoneNumber || "",
+      name: member.name || "",
     });
     setIsEditMemberDialogOpen(true);
   };
@@ -632,6 +636,7 @@ export default function CustomerGroups() {
       groupId: selectedGroup.id,
       customerId: editingMember.id,
       phoneNumber: data.phoneNumber,
+      name: data.name,
     });
   };
 
@@ -1464,13 +1469,30 @@ Mike Johnson, 07444 555666`}
       <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Customer Phone Number</DialogTitle>
+            <DialogTitle>Edit Customer Information</DialogTitle>
             <DialogDescription>
-              Update the phone number for {editingMember?.firstName} {editingMember?.lastName || ''}
+              Update the contact information for {editingMember?.firstName} {editingMember?.lastName || ''}
             </DialogDescription>
           </DialogHeader>
           <Form {...editMemberForm}>
             <form onSubmit={editMemberForm.handleSubmit(onSaveEditMember)} className="space-y-4">
+              <FormField
+                control={editMemberForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter customer name" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <FormField
                 control={editMemberForm.control}
                 name="phoneNumber"
@@ -1504,7 +1526,7 @@ Mike Johnson, 07444 555666`}
                   type="submit" 
                   disabled={editMemberMutation.isPending}
                 >
-                  {editMemberMutation.isPending ? "Updating..." : "Update Phone Number"}
+                  {editMemberMutation.isPending ? "Updating..." : "Update Customer Information"}
                 </Button>
               </div>
             </form>
