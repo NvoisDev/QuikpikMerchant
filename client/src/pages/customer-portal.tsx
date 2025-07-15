@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -1014,6 +1014,38 @@ export default function CustomerPortal() {
             </div>
             
             <div className="flex items-center space-x-3">
+              {/* Home and Logout buttons for authenticated customers */}
+              {isAuthenticated && !isPreviewMode && (
+                <>
+                  <Button
+                    onClick={() => {
+                      setShowHomePage(true);
+                      setShowAllProducts(false);
+                    }}
+                    variant="outline"
+                    className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Home
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsAuthenticated(false);
+                      setAuthenticatedCustomer(null);
+                      setShowAuth(true);
+                      toast({
+                        title: "Logged out",
+                        description: "You have been successfully logged out.",
+                      });
+                    }}
+                    variant="outline"
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Log out
+                  </Button>
+                </>
+              )}
+              
               <Button
                 onClick={handleShare}
                 variant="outline"
