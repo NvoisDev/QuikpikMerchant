@@ -480,6 +480,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
               )}
             </div>
 
+            <div className="border-t border-gray-300 pt-4">
+              <p className="text-lg text-gray-700">
+                Premium wholesale products with care
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
