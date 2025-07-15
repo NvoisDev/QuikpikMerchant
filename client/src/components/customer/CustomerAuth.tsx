@@ -372,10 +372,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </span>
                 </div>
               )}
-              {/* Cute decoration around logo */}
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-lg">✨</span>
-              </div>
+
             </div>
             
 
