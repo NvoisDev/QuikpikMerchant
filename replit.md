@@ -187,6 +187,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Weight Calculation Fix**: Corrected Basmati Rice unit weight from unrealistic 10kg to accurate 1.5kg per unit (24 x 250ml package), reducing checkout weight from 200kg to 30kg for 20 units
 - **Add to Cart Modal Pricing Fix**: Fixed "Add to Cart" modal to display promotional pricing (e.g., "£14.39 ~~£15.99~~") and calculate promotional totals (£287.80 instead of £319.80 for 20 units) when promotional offers are active, ensuring complete price consistency across all customer touchpoints
 - **Universal Promotional Pricing**: Verified comprehensive promotional pricing implementation across ALL product displays (featured products, grid view, list view, cart calculations, add to cart modal) supporting ALL promotional offer types (percentage discounts, fixed discounts, BOGOFF, bulk pricing, free shipping, bundle deals) with consistent pricing calculations and visual indicators
+- **Cart Quantity Display Fix**: Fixed cart button showing "Cart (02200)" instead of "Cart (220)" by separating display count from promotional calculation count - cart now shows only user-selected quantities without including free promotional items, while maintaining accurate promotional calculations for checkout
 
 ### Complete Promotional System Implementation - All Offer Types Support (July 15, 2025):
 - **Comprehensive Promotional Offers System**: Implemented support for ALL promotional offer types in customer portal with specific badges and pricing

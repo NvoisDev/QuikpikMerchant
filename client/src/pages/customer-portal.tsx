@@ -960,7 +960,7 @@ export default function CustomerPortal() {
                   disabled={cart.length === 0}
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Cart ({cartStats.totalItems})
+                  Cart ({Math.abs(parseInt(cartStats.totalItems)) || 0})
                   {cartStats.totalItems > 0 && (
                     <Badge className="ml-2 bg-green-800">
                       {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
