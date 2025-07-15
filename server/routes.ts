@@ -1866,6 +1866,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer authentication routes
+  app.post("/api/customer-auth/verify", async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber, lastFourDigits } = req.body;
+
+      if (!wholesalerId || !phoneNumber || !lastFourDigits) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Find customer in any of the wholesaler's groups
+      const customer = await storage.findCustomerByPhoneAndWholesaler(wholesalerId, phoneNumber, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Invalid credentials or customer not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName
+        }
+      });
+    } catch (error) {
+      console.error("Customer authentication error:", error);
+      res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
   // Get group members
   app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {

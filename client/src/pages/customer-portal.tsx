@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
+import { CustomerAuth } from "@/components/customer/CustomerAuth";
+import { CustomerHome } from "@/components/customer/CustomerHome";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
@@ -368,6 +370,19 @@ export default function CustomerPortal() {
 
 
 
+  // Customer authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
+  const [showHomePage, setShowHomePage] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
+
+  // State management
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [showAllProducts, setShowAllProducts] = useState(false);
+
   // Early return if no wholesaler ID
   if (!wholesalerId) {
     return (
@@ -380,13 +395,6 @@ export default function CustomerPortal() {
       </div>
     );
   }
-
-  // State management
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [showAllProducts, setShowAllProducts] = useState(false);
   
   // Auto-refresh state - enable polling after orders
   const [enableAutoRefresh, setEnableAutoRefresh] = useState(false);
@@ -895,6 +903,63 @@ export default function CustomerPortal() {
       customerPhone: customerData.phone
     });
   };
+
+  // Authentication handlers
+  const handleAuthSuccess = (customer: any) => {
+    setAuthenticatedCustomer(customer);
+    setIsAuthenticated(true);
+    setShowAuth(false);
+    toast({
+      title: "Welcome!",
+      description: `Hello ${customer.name}, you're now logged in.`,
+    });
+  };
+
+  const handleSkipAuth = () => {
+    setShowAuth(false);
+    setIsAuthenticated(false);
+    setAuthenticatedCustomer(null);
+  };
+
+  const handleViewAllProducts = () => {
+    setShowHomePage(false);
+    setShowAllProducts(true);
+  };
+
+  const handleViewFeaturedProduct = () => {
+    setShowHomePage(false);
+    setShowAllProducts(false);
+  };
+
+  // Check for authentication requirement
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authRequired = urlParams.get('auth') === 'required';
+    
+    if (authRequired && !isAuthenticated && !isPreviewMode) {
+      setShowAuth(true);
+    }
+  }, [isAuthenticated, isPreviewMode]);
+
+  // Show authentication screen
+  if (showAuth && !isPreviewMode) {
+    return <CustomerAuth 
+      wholesalerId={wholesalerId} 
+      onAuthSuccess={handleAuthSuccess} 
+      onSkipAuth={handleSkipAuth}
+    />;
+  }
+
+  // Show home page
+  if (showHomePage && !showAllProducts && !isPreviewMode) {
+    return <CustomerHome 
+      wholesaler={wholesaler}
+      featuredProduct={featuredProduct}
+      onViewAllProducts={handleViewAllProducts}
+      onViewFeaturedProduct={handleViewFeaturedProduct}
+      customerData={authenticatedCustomer}
+    />;
+  }
 
   // Early loading state
   if (featuredProductId && featuredLoading) {

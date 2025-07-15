@@ -50,6 +50,7 @@ import {
   tabPermissions,
   type TabPermission,
   type InsertTabPermission,
+  customerGroupMembers,
   type UserBadge,
   type InsertUserBadge,
   type OnboardingMilestone,
@@ -100,6 +101,7 @@ export interface IStorage {
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
+  findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   
   // Order item operations
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
@@ -664,6 +666,85 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return updatedOrder;
+  }
+
+  // Customer authentication
+  async findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any> {
+    try {
+      console.log(`Finding customer with phone: ${phoneNumber}, last 4: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
+      
+      // Format phone number to international format for consistent comparison
+      const formattedPhone = this.formatPhoneToInternational(phoneNumber);
+      
+      // Verify the last 4 digits match
+      const phoneLastFour = formattedPhone.slice(-4);
+      if (phoneLastFour !== lastFourDigits) {
+        console.log(`Last 4 digits don't match: expected ${phoneLastFour}, got ${lastFourDigits}`);
+        return null;
+      }
+      
+      // Find customer in any of the wholesaler's groups
+      const customers = await db
+        .select({
+          id: customerGroupsMembers.id,
+          name: customerGroupsMembers.firstName,
+          email: customerGroupsMembers.email,
+          phone: customerGroupsMembers.phone,
+          groupId: customerGroupsMembers.groupId,
+          groupName: customerGroups.name,
+        })
+        .from(customerGroupsMembers)
+        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .where(
+          and(
+            eq(customerGroups.wholesalerId, wholesalerId),
+            eq(customerGroupsMembers.phone, formattedPhone)
+          )
+        )
+        .limit(1);
+      
+      if (customers.length === 0) {
+        console.log(`No customer found with phone ${formattedPhone} for wholesaler ${wholesalerId}`);
+        return null;
+      }
+      
+      const customer = customers[0];
+      console.log(`Customer found:`, customer);
+      
+      return {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        groupId: customer.groupId,
+        groupName: customer.groupName
+      };
+    } catch (error) {
+      console.error("Error finding customer by phone and wholesaler:", error);
+      return null;
+    }
+  }
+
+  private formatPhoneToInternational(phone: string): string {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // If it starts with 0 and looks like a UK number, convert to +44
+    if (cleaned.startsWith('0') && cleaned.length === 11) {
+      return '+44' + cleaned.slice(1);
+    }
+    
+    // If it doesn't start with +, assume it needs +44 (UK)
+    if (!cleaned.startsWith('44') && !phone.startsWith('+')) {
+      return '+44' + cleaned;
+    }
+    
+    // If it starts with 44, add the +
+    if (cleaned.startsWith('44') && !phone.startsWith('+')) {
+      return '+' + cleaned;
+    }
+    
+    return phone.startsWith('+') ? phone : '+' + cleaned;
   }
 
   // Customer group operations
