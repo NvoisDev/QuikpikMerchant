@@ -643,11 +643,21 @@ export default function CustomerPortal() {
   }, [products]);
 
   const cartStats = useMemo(() => {
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = cart.reduce((sum, item) => {
-      let price = 0;
+    let totalItems = 0;
+    let subtotal = 0;
+    let appliedPromotions: string[] = [];
+    let freeShippingApplied = false;
+    let bogoffDetails: any[] = [];
+
+    // Calculate each item with full promotional support
+    cart.forEach(item => {
+      let itemPrice = 0;
+      let itemQuantity = item.quantity;
+      
       if (item.sellingType === "pallets") {
-        price = parseFloat(item.product.palletPrice || "0") || 0;
+        itemPrice = parseFloat(item.product.palletPrice || "0") || 0;
+        totalItems += itemQuantity;
+        subtotal += itemPrice * itemQuantity;
       } else {
         const basePrice = parseFloat(item.product.price) || 0;
         const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
@@ -657,26 +667,60 @@ export default function CustomerPortal() {
           item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
           item.product.promoActive
         );
-        price = pricing.effectivePrice;
+        
+        // Use effective price and total quantity (includes free items from BOGOFF)
+        itemPrice = pricing.effectivePrice;
+        totalItems += pricing.totalQuantity; // This includes free items
+        subtotal += pricing.totalCost;
+        
+        // Track applied promotions
+        if (pricing.appliedOffers.length > 0) {
+          appliedPromotions.push(...pricing.appliedOffers);
+        }
+        
+        // Track BOGOFF details
+        if (pricing.bogoffDetails) {
+          bogoffDetails.push({
+            productName: item.product.name,
+            ...pricing.bogoffDetails
+          });
+        }
+        
+        // Check for free shipping offers
+        if (item.product.promotionalOffers?.some(offer => 
+          offer.type === 'free_shipping' && 
+          offer.minimumOrderValue && 
+          subtotal >= offer.minimumOrderValue
+        )) {
+          freeShippingApplied = true;
+        }
       }
-      // Ensure we never add NaN values
-      const itemTotal = (price || 0) * (item.quantity || 0);
-      return sum + (isNaN(itemTotal) ? 0 : itemTotal);
-    }, 0);
+    });
     
-    // Add shipping cost if delivery is selected
-    const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-      ? customerData.selectedShippingService.price || 0 
-      : 0;
+    // Calculate shipping cost (consider free shipping promotions)
+    let shippingCost = 0;
+    if (customerData.shippingOption === 'delivery' && customerData.selectedShippingService) {
+      if (freeShippingApplied) {
+        shippingCost = 0;
+        if (!appliedPromotions.includes('Free Shipping')) {
+          appliedPromotions.push('Free Shipping');
+        }
+      } else {
+        shippingCost = customerData.selectedShippingService.price || 0;
+      }
+    }
       
     const totalValue = subtotal + shippingCost;
     
-    // Ensure totalValue is never NaN
+    // Ensure values are never NaN
     return { 
-      totalItems, 
+      totalItems: isNaN(totalItems) ? 0 : totalItems,
       subtotal: isNaN(subtotal) ? 0 : subtotal,
       shippingCost: isNaN(shippingCost) ? 0 : shippingCost,
-      totalValue: isNaN(totalValue) ? 0 : totalValue 
+      totalValue: isNaN(totalValue) ? 0 : totalValue,
+      appliedPromotions,
+      freeShippingApplied,
+      bogoffDetails
     };
   }, [cart, customerData.shippingOption, customerData.selectedShippingService]);
 
@@ -2205,10 +2249,21 @@ export default function CustomerPortal() {
                       <div className="text-right flex items-center space-x-2">
                         <span className="font-semibold">
                           {getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                            const price = item.sellingType === "pallets" 
-                              ? parseFloat(item.product.palletPrice || "0")
-                              : parseFloat(item.product.price);
-                            return (price * item.quantity).toFixed(2);
+                            if (item.sellingType === "pallets") {
+                              const price = parseFloat(item.product.palletPrice || "0");
+                              return (price * item.quantity).toFixed(2);
+                            } else {
+                              // Use promotional pricing for units
+                              const basePrice = parseFloat(item.product.price) || 0;
+                              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                                basePrice,
+                                item.quantity,
+                                item.product.promotionalOffers || [],
+                                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                                item.product.promoActive
+                              );
+                              return pricing.totalCost.toFixed(2);
+                            }
                           })()}
                         </span>
                         <Button
@@ -2233,6 +2288,36 @@ export default function CustomerPortal() {
                     <span>Subtotal:</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.subtotal.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Promotional Offers Summary */}
+                  {cartStats.appliedPromotions && cartStats.appliedPromotions.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 my-3">
+                      <h4 className="font-medium text-green-800 flex items-center mb-2">
+                        🎉 <span className="ml-1">Active Promotional Offers</span>
+                      </h4>
+                      <div className="space-y-2">
+                        {cartStats.appliedPromotions.map((offer, index) => (
+                          <div key={index} className="flex items-center text-sm text-green-700">
+                            <div className="w-1.5 h-1.5 bg-green-600 rounded-full mr-2"></div>
+                            <span>{offer}</span>
+                          </div>
+                        ))}
+                        {cartStats.bogoffDetails && cartStats.bogoffDetails.length > 0 && (
+                          cartStats.bogoffDetails.map((bogoff, index) => (
+                            <div key={`bogoff-${index}`} className="text-sm text-green-700 bg-green-100 rounded px-2 py-1">
+                              🎁 <strong>{bogoff.productName}:</strong> {bogoff.offerName} 
+                              <span className="text-green-600 font-medium"> (+{bogoff.freeItemsAdded} FREE items added to your order!)</span>
+                            </div>
+                          ))
+                        )}
+                        {cartStats.freeShippingApplied && (
+                          <div className="text-sm text-green-700 bg-green-100 rounded px-2 py-1">
+                            🚚 <strong>Free Shipping Applied!</strong> Delivery cost waived for this order.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Weight Information */}
                   <div className="flex justify-between text-sm text-gray-600">
