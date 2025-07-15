@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,40 @@ interface CustomerAuthProps {
   onSkipAuth?: () => void;
 }
 
+interface Wholesaler {
+  id: string;
+  businessName: string;
+  logoType?: string;
+  logoUrl?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const { toast } = useToast();
+
+  // Fetch wholesaler data for personalization
+  useEffect(() => {
+    const fetchWholesaler = async () => {
+      try {
+        const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setWholesaler(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch wholesaler data:', error);
+      }
+    };
+
+    if (wholesalerId) {
+      fetchWholesaler();
+    }
+  }, [wholesalerId]);
 
   const handleLogin = async () => {
     if (!lastFourDigits) {
@@ -71,120 +100,135 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     setLastFourDigits(value);
   };
 
+  // Helper function to generate initials from business name
+  const getInitials = (businessName: string) => {
+    return businessName
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        {/* Left Side - Authentication Form */}
-        <div className="max-w-md mx-auto lg:mx-0">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome back!</h1>
-            <p className="text-gray-600">
-              Access your wholesale products and manage orders with Quikpik
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Cartoon Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Floating Shapes */}
+        <div className="absolute top-20 left-20 w-12 h-12 bg-yellow-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '0s' }}></div>
+        <div className="absolute top-40 right-32 w-8 h-8 bg-pink-300 rounded-full opacity-50 animate-bounce" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-32 left-16 w-6 h-6 bg-purple-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-20 right-20 w-10 h-10 bg-green-300 rounded-full opacity-50 animate-bounce" style={{ animationDelay: '3s' }}></div>
+        
+        {/* Cute Cartoon Icons */}
+        <div className="absolute top-16 right-16 text-4xl animate-pulse" style={{ animationDelay: '1s' }}>🛒</div>
+        <div className="absolute bottom-40 left-32 text-3xl animate-pulse" style={{ animationDelay: '2s' }}>📦</div>
+        <div className="absolute top-1/2 left-10 text-2xl animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</div>
+        <div className="absolute top-32 left-1/2 text-3xl animate-pulse" style={{ animationDelay: '3s' }}>🎉</div>
+        <div className="absolute bottom-16 right-1/2 text-2xl animate-pulse" style={{ animationDelay: '1.5s' }}>💎</div>
+      </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700">
-                Last 4 digits of phone number
-              </Label>
-              <Input
-                id="lastFour"
-                type="password"
-                placeholder="****"
-                value={lastFourDigits}
-                onChange={handleLastFourChange}
-                maxLength={4}
-                className="text-center text-xl tracking-widest font-mono h-12 border-gray-300 rounded-xl"
+      <div className="w-full max-w-md mx-auto relative z-10">
+        {/* Wholesaler Logo/Initials Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto mb-6 relative">
+            {wholesaler?.logoUrl ? (
+              <img 
+                src={wholesaler.logoUrl} 
+                alt={wholesaler.businessName}
+                className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-white shadow-lg"
               />
-            </div>
-
-            {error && (
-              <Alert variant="destructive" className="rounded-xl">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button 
-              onClick={handleLogin} 
-              className="w-full bg-black hover:bg-gray-800 text-white h-12 rounded-xl font-medium"
-              disabled={isLoading || lastFourDigits.length !== 4}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Login"
-              )}
-            </Button>
-
-            <div className="text-center text-sm text-gray-500 mt-6">
-              or continue with
-            </div>
-
-            <div className="flex justify-center space-x-4 mt-4">
-              <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors">
-                <span className="text-white text-lg">Q</span>
-              </div>
-            </div>
-
-            {onSkipAuth && (
-              <div className="text-center mt-6">
-                <Button 
-                  variant="ghost" 
-                  onClick={onSkipAuth}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Continue as guest
-                </Button>
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-4 border-white shadow-lg">
+                <span className="text-2xl font-bold text-white">
+                  {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
+                </span>
               </div>
             )}
+            {/* Cute decoration around logo */}
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-md">
+              <span className="text-lg">✨</span>
+            </div>
           </div>
+          
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome to {wholesaler?.businessName || 'Our Store'}!
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Please enter your security code to continue
+          </p>
         </div>
 
-        {/* Right Side - Illustration */}
-        <div className="hidden lg:flex items-center justify-center">
-          <div className="relative">
-            {/* Background Circle */}
-            <div className="w-96 h-96 bg-gradient-to-br from-green-100 to-blue-100 rounded-full flex items-center justify-center relative overflow-hidden">
-              {/* Main Character - Shopping Person */}
-              <div className="relative z-10">
-                <div className="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center mb-4">
-                  <ShoppingCart className="w-16 h-16 text-white" />
+        {/* Authentication Card */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl">
+          <CardContent className="p-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700 text-center block">
+                  Last 4 digits of your phone number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="lastFour"
+                    type="password"
+                    placeholder="••••"
+                    value={lastFourDigits}
+                    onChange={handleLastFourChange}
+                    maxLength={4}
+                    className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 transition-all duration-300"
+                  />
+                  {/* Cute input decoration */}
+                  <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
                 </div>
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-800">Quikpik Store</h3>
-                  <p className="text-sm text-gray-600">Easy wholesale ordering</p>
+              </div>
+
+              {error && (
+                <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
+                  <AlertDescription className="text-center">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button 
+                onClick={handleLogin} 
+                className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white h-14 rounded-2xl font-semibold text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+                disabled={isLoading || lastFourDigits.length !== 4}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                    Verifying your access...
+                  </>
+                ) : (
+                  <>
+                    <span>Enter Store</span>
+                    <span className="ml-2 text-xl">🚀</span>
+                  </>
+                )}
+              </Button>
+
+              {onSkipAuth && (
+                <div className="text-center pt-4">
+                  <Button 
+                    variant="ghost" 
+                    onClick={onSkipAuth}
+                    className="text-sm text-gray-500 hover:text-gray-700 rounded-xl"
+                  >
+                    Browse as guest 👀
+                  </Button>
                 </div>
-              </div>
-              
-              {/* Floating Elements */}
-              <div className="absolute top-8 left-8 w-8 h-8 bg-green-400 rounded transform rotate-45"></div>
-              <div className="absolute top-16 right-12 w-6 h-6 bg-blue-400 rounded-full"></div>
-              <div className="absolute bottom-16 left-16 w-4 h-4 bg-yellow-400 rounded-full"></div>
-              <div className="absolute bottom-8 right-8 w-6 h-6 bg-purple-400 rounded transform rotate-12"></div>
-              
-              {/* Product Icons */}
-              <div className="absolute top-20 left-20">
-                <Package className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="absolute bottom-20 right-20">
-                <Star className="w-5 h-5 text-yellow-500" />
-              </div>
+              )}
             </div>
-            
-            {/* Bottom Text */}
-            <div className="text-center mt-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Streamline your wholesale business
-              </h2>
-              <p className="text-gray-600">
-                with Quikpik's platform
-              </p>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+
+        {/* Cute Bottom Message */}
+        <div className="text-center mt-6 bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-100">
+          <p className="text-sm text-gray-600">
+            🛡️ Secure access for registered customers only
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Your security matters to us!
+          </p>
         </div>
       </div>
       
