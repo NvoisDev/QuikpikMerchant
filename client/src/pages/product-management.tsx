@@ -920,8 +920,6 @@ export default function ProductManagement() {
                   Preview Store
                 </Button>
                 
-
-                
                 <Button variant="outline" onClick={downloadTemplate}>
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
