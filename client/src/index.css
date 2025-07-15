@@ -46,6 +46,16 @@
   box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.2);
 }
 
+/* Guest price blur effect */
+.guest-price-blur {
+  filter: blur(6px);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
 
 
 @layer base {

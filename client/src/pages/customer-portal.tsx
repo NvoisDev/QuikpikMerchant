@@ -68,16 +68,16 @@ const PriceDisplay = ({
     return (
       <div className="flex items-center gap-2">
         <div className="relative inline-block">
-          {/* Actual price text that will be blurred */}
+          {/* Heavily blurred price text */}
           <div className={`font-bold text-gray-900 ${
             size === 'small' ? 'text-sm' : 
             size === 'large' ? 'text-4xl' : 'text-xl'
           }`}>
-            <span className="filter blur-sm select-none">
+            <span className="select-none guest-price-blur">
               {currencySymbol}{price.toFixed(2)}
             </span>
             {hasDiscount && showStrikethrough && (
-              <span className={`line-through text-gray-500 ml-2 filter blur-sm select-none ${
+              <span className={`line-through text-gray-500 ml-2 select-none guest-price-blur ${
                 size === 'small' ? 'text-xs' : 
                 size === 'large' ? 'text-2xl' : 'text-sm'
               }`}>
@@ -87,14 +87,14 @@ const PriceDisplay = ({
           </div>
           
           {/* Overlay with Sign In button */}
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/90 to-white/90 backdrop-blur-sm flex items-center justify-center rounded border border-blue-200/50">
             <Button 
               size="sm" 
               variant="outline" 
-              className="text-xs px-3 py-1 h-7 bg-white/95 shadow-sm border-blue-200 text-blue-600 hover:bg-blue-50"
+              className="text-xs px-3 py-1 h-7 bg-white/95 shadow-sm border-blue-300 text-blue-700 hover:bg-blue-50 font-medium"
               onClick={() => window.location.reload()}
             >
-              Sign In to View
+              Sign In to View Price
             </Button>
           </div>
         </div>
