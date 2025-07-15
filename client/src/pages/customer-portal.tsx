@@ -2038,6 +2038,26 @@ export default function CustomerPortal() {
                                   📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                 </span>
                               )}
+                              {/* Promotional Offers Badges for Grid View */}
+                              {(() => {
+                                const badges = [];
+                                
+                                // Show specific offer badges for promotional offers
+                                if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
+                                  product.promotionalOffers.forEach((offer, index) => {
+                                    if (offer.isActive) {
+                                      const config = getOfferTypeConfig(offer.type);
+                                      badges.push(
+                                        <span key={`grid-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-medium ${config.color}`}>
+                                          {config.emoji} {config.label}
+                                        </span>
+                                      );
+                                    }
+                                  });
+                                }
+                                
+                                return badges;
+                              })()}
                             </div>
                             
                             {/* Price */}
@@ -2126,6 +2146,26 @@ export default function CustomerPortal() {
                                         📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                       </span>
                                     )}
+                                    {/* Promotional Offers Badges for List View */}
+                                    {(() => {
+                                      const badges = [];
+                                      
+                                      // Show specific offer badges for promotional offers
+                                      if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
+                                        product.promotionalOffers.forEach((offer, index) => {
+                                          if (offer.isActive) {
+                                            const config = getOfferTypeConfig(offer.type);
+                                            badges.push(
+                                              <span key={`list-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-medium ${config.color}`}>
+                                                {config.emoji} {config.label}
+                                              </span>
+                                            );
+                                          }
+                                        });
+                                      }
+                                      
+                                      return badges;
+                                    })()}
                                   </div>
                                   {product.description && (
                                     <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>

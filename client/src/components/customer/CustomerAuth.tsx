@@ -477,21 +477,24 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 )}
               </Button>
 
-              <div className="text-center pt-4 space-y-2">
-                <p className="text-xs text-gray-500">
-                  Authentication required to access products and pricing
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Cute Bottom Message */}
-        <div className="text-center mt-6 bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-100">
-          <p className="text-sm text-gray-600">
+        {/* Merged Security Notice */}
+        <div className="text-center mt-6 bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-100">
+          <div className="flex items-center justify-center mb-3">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <Shield className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
             🛡️ Secure access for registered customers only
+          </h3>
+          <p className="text-sm text-gray-600 mb-2">
+            Authentication required to access products and pricing
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500">
             Your security matters to us!
           </p>
         </div>

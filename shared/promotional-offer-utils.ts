@@ -38,6 +38,12 @@ export const offerTypeEmojiMap: Record<PromotionalOfferType, OfferTypeConfig> = 
     color: "bg-orange-100 text-orange-800 border-orange-200",
     description: "Buy X items, get Y free"
   },
+  multi_buy: {
+    emoji: "📊",
+    label: "Multi Buy",
+    color: "bg-teal-100 text-teal-800 border-teal-200",
+    description: "Volume discount for multiple purchases"
+  },
   bulk_discount: {
     emoji: "📦",
     label: "Bulk Deal",
