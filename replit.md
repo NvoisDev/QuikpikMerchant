@@ -174,6 +174,19 @@ The platform implements a customer-centric shipping model where customers contro
 
 This approach gives customers control over delivery speed and cost while ensuring wholesalers focus on product pricing rather than shipping logistics.
 
+## Recent Bug Fixes and Feature Implementations (July 15, 2025)
+
+### Complete Promotional Campaign Integration System (July 15, 2025):
+- **Critical Campaign Sending Fix**: Resolved the issue where promotional offers were configured in campaigns but not applied to actual products when campaigns were sent
+- **Product Promotional Offers Application**: Added `updateProductPromotionalOffers` storage method to apply promotional offers directly to products from campaigns
+- **Single Product Campaign Integration**: Enhanced single-product broadcast sending to automatically apply promotional offers to the targeted product
+- **Multi-Product Template Integration**: Enhanced multi-product template sending to apply promotional offers from template products to actual products
+- **Featured Product Label**: Added prominent "⭐ FEATURED" yellow badge to featured products in customer portal
+- **Complete Promotional Pricing Flow**: Full integration from campaign configuration → campaign sending → product promotional offers → customer portal display
+- **All Promotional Offer Types Support**: System now supports BOGOFF, percentage discounts, fixed discounts, bulk pricing, bundle deals, and more
+- **Real-time Promotional Display**: Promotional pricing appears immediately in customer portal after campaign is sent
+- **WhatsApp Promotional Messaging**: Promotional offers are included in WhatsApp messages sent to customers with campaign details
+
 ## Recent Bug Fixes and Feature Implementations (July 14, 2025)
 
 ### Complete Promotional Offers System with All Offer Types Support (July 14, 2025):
