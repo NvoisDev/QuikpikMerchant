@@ -1883,26 +1883,16 @@ export default function CustomerPortal() {
                                   
                                   return badges;
                                 })()}
-                                {/* Selling Format Tags */}
-                                {product.sellingFormat === "units" && (
+                                {/* Product Size Information */}
+                                {product.packQuantity && product.unitOfMeasure && product.unitSize && (
                                   <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                    📦 Units
+                                    📦 {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
                                   </span>
                                 )}
-                                {product.sellingFormat === "pallets" && (
-                                  <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                    📦 Pallets
+                                {product.deliveryExcluded && (
+                                  <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    🚚 Pickup Only
                                   </span>
-                                )}
-                                {product.sellingFormat === "both" && (
-                                  <>
-                                    <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                      📦 Units
-                                    </span>
-                                    <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                      📦 Pallets
-                                    </span>
-                                  </>
                                 )}
                               </div>
                               {product.description && (
