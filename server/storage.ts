@@ -735,7 +735,8 @@ export class DatabaseStorage implements IStorage {
       // Find all customers in this wholesaler's groups using raw SQL to avoid ORM issues
       const customers = await db.execute(sql`
         SELECT 
-          cgm.id,
+          u.id as customer_id,
+          cgm.id as member_id,
           u.first_name,
           u.last_name,
           COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
@@ -749,20 +750,52 @@ export class DatabaseStorage implements IStorage {
         WHERE cg.wholesaler_id = ${wholesalerId}
       `);
       
-      // Find customer whose phone number ends with the provided last 4 digits
-      const matchingCustomer = customers.rows.find((customer: any) => {
+      // Find all customers whose phone number ends with the provided last 4 digits
+      const matchingCustomers = customers.rows.filter((customer: any) => {
         const phoneLastFour = customer.phone?.slice(-4);
         return phoneLastFour === lastFourDigits;
       });
+
+      console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits}`);
       
-      if (!matchingCustomer) {
+      if (matchingCustomers.length === 0) {
         console.log(`No customer found with last 4 digits: ${lastFourDigits}`);
         return null;
       }
+
+      // If multiple customers have the same last 4 digits, prioritize the one with the most orders
+      let matchingCustomer = matchingCustomers[0];
+      if (matchingCustomers.length > 1) {
+        console.log(`Multiple customers found with last 4 digits: ${lastFourDigits}, checking order counts...`);
+        
+        // Get order counts for each matching customer
+        const customerOrderCounts = await Promise.all(
+          matchingCustomers.map(async (customer: any) => {
+            const orderCount = await db.execute(sql`
+              SELECT COUNT(*) as count
+              FROM orders
+              WHERE retailer_id = ${customer.customer_id}
+            `);
+            const count = parseInt(orderCount.rows[0]?.count || '0');
+            console.log(`Customer ${customer.name} (${customer.customer_id}): ${count} orders`);
+            return {
+              customer,
+              orderCount: count
+            };
+          })
+        );
+        
+        // Sort by order count (descending) and pick the one with most orders
+        customerOrderCounts.sort((a, b) => b.orderCount - a.orderCount);
+        matchingCustomer = customerOrderCounts[0].customer;
+        
+        console.log(`Selected customer with most orders: ${matchingCustomer.name} (${customerOrderCounts[0].orderCount} orders)`);
+      }
+
       
       console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone})`);
       return {
-        id: matchingCustomer.id,
+        id: matchingCustomer.customer_id, // Use the actual user ID, not the member ID
         name: matchingCustomer.name,
         email: matchingCustomer.email,
         phone: matchingCustomer.phone,
