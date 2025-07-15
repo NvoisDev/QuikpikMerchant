@@ -2019,7 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
-      const { phoneNumber, name } = req.body;
+      const { phoneNumber, name, email } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
@@ -2038,7 +2038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update customer information
-      await storage.updateCustomerInfo(customerId, phoneNumber, name);
+      await storage.updateCustomerInfo(customerId, phoneNumber, name, email);
       
       res.json({
         success: true,

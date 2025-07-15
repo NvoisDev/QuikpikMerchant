@@ -49,6 +49,7 @@ const editMemberFormSchema = z.object({
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   name: z.string().min(1, "Customer name is required"),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
@@ -155,6 +156,7 @@ export default function CustomerGroups() {
     defaultValues: {
       phoneNumber: "",
       name: "",
+      email: "",
     },
   });
 
@@ -289,10 +291,11 @@ export default function CustomerGroups() {
   });
 
   const editMemberMutation = useMutation({
-    mutationFn: async ({ groupId, customerId, phoneNumber, name }: { groupId: number; customerId: string; phoneNumber: string; name: string }) => {
+    mutationFn: async ({ groupId, customerId, phoneNumber, name, email }: { groupId: number; customerId: string; phoneNumber: string; name: string; email?: string }) => {
       const response = await apiRequest("PATCH", `/api/customer-groups/${groupId}/members/${customerId}`, {
         phoneNumber,
-        name
+        name,
+        email
       });
       return response.json();
     },
@@ -627,6 +630,7 @@ export default function CustomerGroups() {
     editMemberForm.reset({
       phoneNumber: member.phoneNumber || "",
       name: fullName || "",
+      email: member.email || "",
     });
     setIsEditMemberDialogOpen(true);
   };
@@ -638,6 +642,7 @@ export default function CustomerGroups() {
       customerId: editingMember.id,
       phoneNumber: data.phoneNumber,
       name: data.name,
+      email: data.email,
     });
   };
 
@@ -1503,6 +1508,24 @@ Mike Johnson, 07444 555666`}
                     <FormControl>
                       <Input 
                         placeholder="e.g., +44 7123 456789" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editMemberForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="customer@example.com" 
+                        type="email"
                         {...field}
                       />
                     </FormControl>
