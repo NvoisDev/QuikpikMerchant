@@ -184,6 +184,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Free Shipping Integration**: Automatic free shipping detection and application with blue gradient notification when qualified
 - **Professional Visual Design**: Enhanced promotional offers display with rounded corners, gradients, shadows, and proper iconography for better user experience
 - **Complete End-to-End Integration**: Full promotional system working from campaign configuration → product offers → customer portal badges → checkout calculations → payment processing
+- **Weight Calculation Fix**: Corrected Basmati Rice unit weight from unrealistic 10kg to accurate 1.5kg per unit (24 x 250ml package), reducing checkout weight from 200kg to 30kg for 20 units
 
 ### Complete Promotional System Implementation - All Offer Types Support (July 15, 2025):
 - **Comprehensive Promotional Offers System**: Implemented support for ALL promotional offer types in customer portal with specific badges and pricing
