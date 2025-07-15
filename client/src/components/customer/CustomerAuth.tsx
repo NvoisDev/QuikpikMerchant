@@ -379,31 +379,30 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           </div>
 
           {/* Unified Authentication Card */}
-          <Card className="bg-white border shadow-xl rounded-2xl">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
             <CardContent className="p-8">
               <div className="space-y-6">
                 {/* Security Notice Header */}
                 <div className="text-center mb-6">
-
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">
                     🛡️ Secure access for registered customers only
                   </h3>
-                  <div className="bg-blue-50 rounded-lg p-4 mb-2">
-                    <p className="text-sm text-blue-800 font-medium mb-2">
+                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 mb-3 border border-blue-100">
+                    <p className="text-sm text-blue-900 font-semibold mb-3">
                       How to get access:
                     </p>
-                    <p className="text-sm text-blue-700">
+                    <p className="text-sm text-blue-800 leading-relaxed">
                       If you are added by the wholesaler to their customer list, you will have access to browse products and see pricing.
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-600 font-medium">
                     Your security matters to us!
                   </p>
                 </div>
 
                 {/* Authentication Input */}
-                <div className="space-y-3">
-                  <Label htmlFor="lastFour" className="text-sm font-medium text-gray-700 text-center block">
+                <div className="space-y-4">
+                  <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
                     Last 4 digits of your phone number
                   </Label>
                   <div className="relative">
@@ -414,9 +413,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       value={lastFourDigits}
                       onChange={handleLastFourChange}
                       maxLength={4}
-                      className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 transition-all duration-300"
+                      className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
                     />
-                    {/* Cute input decoration */}
                     <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
                   </div>
                 </div>
@@ -429,7 +427,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
                 <Button 
                   onClick={handleLogin} 
-                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white h-14 rounded-2xl font-semibold text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                   disabled={isLoading || lastFourDigits.length !== 4}
                 >
                   {isLoading ? (
