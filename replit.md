@@ -176,6 +176,17 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 15, 2025)
 
+### Critical Customer Addition Bug Fix - Phone Number Field Mismatch (July 15, 2025):
+- **Database Field Bug Resolved**: Fixed critical bug in `getUserByPhone` method that was searching in `businessPhone` field instead of `phoneNumber` field
+- **Customer Duplication Issue Fixed**: Resolved issue where adding new customers to groups would duplicate existing business owner information instead of creating new customer records
+- **Correct Database Schema Usage**: Updated customer lookup to use proper `users.phoneNumber` field for customer phone number searches
+- **Phone Number Normalization**: Maintained proper phone number format handling (UK format 07507659550 → international format +447507659550)
+- **Customer Group Management**: Fixed customer addition workflow to properly create new customer records with correct contact information
+- **Authentication Integration**: Verified customer authentication now works correctly with newly added customers using last 4 digits
+- **Database Cleanup**: Removed duplicate customer entries that were created with business owner information
+- **Test Data Verification**: Created test customer with phone ending in 3779 to verify complete authentication flow functionality
+- **Production Ready**: Customer group management system now properly handles new customer additions without information duplication
+
 ### Complete Customer Authentication Fix for Duplicate Last 4 Digits (July 15, 2025):
 - **Critical Authentication Issue Resolved**: Fixed authentication system where customers with same last 4 digits were getting wrong customer profile and order history
 - **Smart Customer Prioritization**: Updated findCustomerByLastFourDigits to prioritize customers with the most orders when multiple customers have identical last 4 digits

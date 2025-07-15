@@ -956,9 +956,9 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(
         or(
-          eq(users.businessPhone, phoneNumber),
-          eq(users.businessPhone, normalizedPhone),
-          eq(users.businessPhone, internationalPhone)
+          eq(users.phoneNumber, phoneNumber),
+          eq(users.phoneNumber, normalizedPhone),
+          eq(users.phoneNumber, internationalPhone)
         )
       );
     return user;
