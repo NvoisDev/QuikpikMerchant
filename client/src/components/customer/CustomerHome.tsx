@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CustomerOrderHistory } from "./CustomerOrderHistory";
 
 interface CustomerHomeProps {
   wholesaler: any;
@@ -260,6 +261,13 @@ export function CustomerHome({
             Browse All Products
           </Button>
         </div>
+
+        {/* Customer Order History */}
+        {customerData && (
+          <div className="mb-6">
+            <CustomerOrderHistory customerId={customerData.id} />
+          </div>
+        )}
 
         {/* Contact Information */}
         <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">

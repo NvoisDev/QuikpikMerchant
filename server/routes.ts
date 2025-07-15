@@ -1899,6 +1899,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get customer order history
+  app.get('/api/customer-orders/:customerId', async (req, res) => {
+    try {
+      const customerId = req.params.customerId;
+      
+      if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+      }
+
+      // Get orders for this customer
+      const orders = await storage.getOrders(undefined, customerId);
+      
+      // Format orders for customer portal display
+      const formattedOrders = orders.map(order => ({
+        id: order.id,
+        orderNumber: `#${order.id}`,
+        date: order.createdAt,
+        status: order.status,
+        total: order.totalAmount,
+        platformFee: order.platformFee,
+        subtotal: order.subtotal,
+        items: order.items.map(item => ({
+          productName: item.product.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total
+        })),
+        wholesaler: {
+          businessName: order.wholesaler.businessName,
+          firstName: order.wholesaler.firstName,
+          lastName: order.wholesaler.lastName
+        },
+        fulfillmentType: order.fulfillmentType,
+        deliveryCarrier: order.deliveryCarrier,
+        shippingTotal: order.shippingTotal,
+        shippingStatus: order.shippingStatus
+      }));
+
+      res.json(formattedOrders);
+    } catch (error) {
+      console.error("Error fetching customer orders:", error);
+      res.status(500).json({ error: "Failed to fetch order history" });
+    }
+  });
+
   // Get group members
   app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
