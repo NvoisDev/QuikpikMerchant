@@ -1942,7 +1942,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerAddress: order.customerAddress || "",
         orderNotes: order.orderNotes || "",
         paymentMethod: order.paymentMethod || "stripe",
-        paymentStatus: order.paymentStatus || "pending",
+        // Fix payment status logic: if order status is paid or fulfilled, payment is paid
+        paymentStatus: (order.status === "paid" || order.status === "fulfilled") ? "paid" : "pending",
         createdAt: order.createdAt,
         updatedAt: order.updatedAt
       }));
