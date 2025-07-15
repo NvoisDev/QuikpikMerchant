@@ -653,7 +653,7 @@ export default function CustomerPortal() {
     // Calculate each item with full promotional support
     cart.forEach(item => {
       let itemPrice = 0;
-      let itemQuantity = item.quantity;
+      const itemQuantity = Number(item.quantity) || 0; // Ensure numeric
       
       if (item.sellingType === "pallets") {
         itemPrice = parseFloat(item.product.palletPrice || "0") || 0;
@@ -664,7 +664,7 @@ export default function CustomerPortal() {
         const basePrice = parseFloat(item.product.price) || 0;
         const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
           basePrice,
-          item.quantity,
+          itemQuantity,
           item.product.promotionalOffers || [],
           item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
           item.product.promoActive
@@ -672,9 +672,11 @@ export default function CustomerPortal() {
         
         // Use effective price and total quantity (includes free items from BOGOFF)
         itemPrice = pricing.effectivePrice;
-        totalItems += item.quantity; // Only user-selected quantity for display
+        totalItems += itemQuantity; // Only user-selected quantity for display
         totalPromotionalItems += pricing.totalQuantity; // Includes free items for calculations
         subtotal += pricing.totalCost;
+        
+        console.log(`Cart item ${item.product.name}: quantity=${itemQuantity}, totalItems=${totalItems}, totalPromotionalItems=${totalPromotionalItems}`);
         
         // Track applied promotions
         if (pricing.appliedOffers.length > 0) {
@@ -960,7 +962,7 @@ export default function CustomerPortal() {
                   disabled={cart.length === 0}
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Cart ({Math.abs(parseInt(cartStats.totalItems)) || 0})
+                  Cart ({cartStats.totalItems})
                   {cartStats.totalItems > 0 && (
                     <Badge className="ml-2 bg-green-800">
                       {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
