@@ -2658,6 +2658,14 @@ export default function CustomerPortal() {
                     <div key={`${item.product.id}-${item.sellingType}`} className="flex justify-between items-center py-2">
                       <div className="flex-1">
                         <span className="font-medium">{item.product.name}</span>
+                        {/* Product Size Information */}
+                        {(item.product.packQuantity && item.product.unitSize && item.product.unitOfMeasure) && (
+                          <div className="text-sm text-blue-600 font-medium mt-1">
+                            <span className="inline-flex items-center bg-blue-100 px-2 py-1 rounded-full">
+                              📦 {item.product.packQuantity} x {item.product.unitSize}{item.product.unitOfMeasure}
+                            </span>
+                          </div>
+                        )}
                         <div className="text-sm text-gray-500">
                           {item.sellingType === "pallets" ? (
                             <>
