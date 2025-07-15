@@ -310,13 +310,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         return {
           background: 'bg-gradient-to-br from-purple-50 via-gold-50 to-white',
           floatingIcons: ['🎊', '🎉', '✨', '🥳', '🎆'],
-          shapes: ['bg-purple-300', 'bg-gold-300', 'bg-pink-300', 'bg-blue-300']
+          shapes: ['bg-purple-300', 'bg-gold-300', 'bg-green-300', 'bg-blue-300']
         };
       } else if (specialOccasion.greeting.includes('Friday')) {
         return {
           background: 'bg-gradient-to-br from-orange-50 via-yellow-50 to-white',
           floatingIcons: ['🎉', '🍕', '🎵', '🌟', '😄'],
-          shapes: ['bg-orange-300', 'bg-yellow-300', 'bg-pink-300', 'bg-purple-300']
+          shapes: ['bg-orange-300', 'bg-yellow-300', 'bg-green-300', 'bg-purple-300']
         };
       }
     }
@@ -326,7 +326,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       return {
         background: 'bg-gradient-to-br from-yellow-50 via-orange-50 to-white',
         floatingIcons: ['☕', '🌅', '🥐', '📰', '⚡'],
-        shapes: ['bg-yellow-300', 'bg-orange-300', 'bg-pink-300', 'bg-red-300']
+        shapes: ['bg-yellow-300', 'bg-orange-300', 'bg-green-300', 'bg-red-300']
       };
     } else if (hour >= 12 && hour < 17) {
       return {
@@ -336,9 +336,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       };
     } else if (hour >= 17 && hour < 21) {
       return {
-        background: 'bg-gradient-to-br from-purple-50 via-pink-50 to-white',
+        background: 'bg-gradient-to-br from-purple-50 via-green-50 to-white',
         floatingIcons: ['🌆', '🍽️', '🏠', '📱', '✨'],
-        shapes: ['bg-purple-300', 'bg-pink-300', 'bg-indigo-300', 'bg-blue-300']
+        shapes: ['bg-purple-300', 'bg-green-300', 'bg-indigo-300', 'bg-blue-300']
       };
     } else {
       return {
