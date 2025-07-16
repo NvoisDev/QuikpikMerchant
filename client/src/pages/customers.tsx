@@ -40,7 +40,10 @@ import {
   Contact,
   UserCheck,
   X,
-  Eye
+  Eye,
+  Smartphone,
+  ContactRound,
+  Check
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -144,8 +147,11 @@ export default function Customers() {
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
+  const [isImportContactsDialogOpen, setIsImportContactsDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<any[]>([]);
+  const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
   
   // Address book state
   const [searchQuery, setSearchQuery] = useState('');
@@ -438,6 +444,74 @@ export default function Customers() {
     editGroupMutation.mutate({ groupId: selectedGroup.id, data });
   };
 
+  // Contact import functionality
+  const handleImportContacts = async () => {
+    try {
+      // Check if Contacts API is supported
+      if ('contacts' in navigator && 'ContactsManager' in window) {
+        const props = ['name', 'tel'];
+        const opts = { multiple: true };
+        
+        // @ts-ignore - Contacts API is experimental
+        const contacts = await navigator.contacts.select(props, opts);
+        setDeviceContacts(contacts.map((contact: any) => ({
+          id: Math.random().toString(36).substr(2, 9),
+          name: contact.name?.[0] || 'Unknown',
+          phoneNumber: contact.tel?.[0] || '',
+        })));
+      } else {
+        // Fallback for unsupported browsers
+        toast({
+          title: "Contact Import Not Supported",
+          description: "Your browser doesn't support contact import. Please add customers manually.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Contact Access Denied",
+        description: "Unable to access contacts. Please add customers manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSelectContact = (contact: any) => {
+    const isSelected = selectedContacts.find(c => c.id === contact.id);
+    if (isSelected) {
+      setSelectedContacts(selectedContacts.filter(c => c.id !== contact.id));
+    } else {
+      setSelectedContacts([...selectedContacts, contact]);
+    }
+  };
+
+  const handleImportSelectedContacts = () => {
+    if (!selectedGroup || selectedContacts.length === 0) return;
+    
+    // Import selected contacts one by one
+    selectedContacts.forEach(contact => {
+      if (contact.phoneNumber) {
+        addMemberMutation.mutate({ 
+          groupId: selectedGroup.id, 
+          data: {
+            name: contact.name,
+            phoneNumber: contact.phoneNumber,
+            email: ''
+          }
+        });
+      }
+    });
+    
+    setSelectedContacts([]);
+    setDeviceContacts([]);
+    setIsImportContactsDialogOpen(false);
+    
+    toast({
+      title: "Contacts Imported",
+      description: `Successfully imported ${selectedContacts.length} contacts to ${selectedGroup.name}`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -570,17 +644,31 @@ export default function Customers() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedGroup(group);
-                          setIsAddMemberDialogOpen(true);
-                        }}
-                      >
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Add Member
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            setIsAddMemberDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Add Member
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            setIsImportContactsDialogOpen(true);
+                          }}
+                          title="Import from Contacts"
+                          className="px-2"
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <div className="flex items-center space-x-2">
                         <Button
                           variant="ghost"
@@ -1296,6 +1384,148 @@ export default function Customers() {
             <Button variant="outline" onClick={() => setIsViewCustomerOrdersDialogOpen(false)}>
               Close
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Contacts Dialog */}
+      <Dialog open={isImportContactsDialogOpen} onOpenChange={setIsImportContactsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Smartphone className="h-5 w-5" />
+              <span>Import Contacts to {selectedGroup?.name}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Import customers from your phone's contact list quickly and easily.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {deviceContacts.length === 0 ? (
+              <div className="text-center py-8">
+                <ContactRound className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Import from Your Contacts
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Access your phone's contact list to quickly add customers without typing.
+                </p>
+                <div className="space-y-3">
+                  <Button onClick={handleImportContacts} className="w-full">
+                    <Smartphone className="mr-2 h-4 w-4" />
+                    Access Phone Contacts
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-gray-500">Or</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Paste Contact List</Label>
+                    <Textarea
+                      placeholder="Paste contacts here, one per line:&#10;John Smith, +447123456789&#10;Jane Doe, +447987654321&#10;Bob Wilson, +447555123456"
+                      rows={4}
+                      className="text-sm"
+                      onChange={(e) => {
+                        const text = e.target.value;
+                        const lines = text.split('\n').filter(line => line.trim());
+                        const contacts = lines.map((line, index) => {
+                          const parts = line.split(',').map(p => p.trim());
+                          return {
+                            id: `paste_${index}`,
+                            name: parts[0] || `Contact ${index + 1}`,
+                            phoneNumber: parts[1] || ''
+                          };
+                        }).filter(contact => contact.phoneNumber);
+                        setDeviceContacts(contacts);
+                      }}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Format: Name, Phone Number (one per line)
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Mobile Tip:</strong> Copy contacts from your WhatsApp, phone contacts, or any contact list and paste them above for quick import.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium">
+                    Select Contacts ({selectedContacts.length} selected)
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedContacts.length === deviceContacts.length) {
+                        setSelectedContacts([]);
+                      } else {
+                        setSelectedContacts(deviceContacts);
+                      }
+                    }}
+                  >
+                    {selectedContacts.length === deviceContacts.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                </div>
+                
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {deviceContacts.map((contact) => {
+                    const isSelected = selectedContacts.find(c => c.id === contact.id);
+                    return (
+                      <div
+                        key={contact.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                          isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleSelectContact(contact)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                            isSelected ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {isSelected ? <Check className="h-4 w-4" /> : contact.name[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium">{contact.name}</p>
+                            <p className="text-sm text-gray-600">{contact.phoneNumber}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="flex justify-end space-x-2 mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsImportContactsDialogOpen(false);
+                      setDeviceContacts([]);
+                      setSelectedContacts([]);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleImportSelectedContacts}
+                    disabled={selectedContacts.length === 0}
+                  >
+                    Import {selectedContacts.length} Contact{selectedContacts.length !== 1 ? 's' : ''}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
