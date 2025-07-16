@@ -38,7 +38,8 @@ import {
   TrendingUp,
   Activity,
   Contact,
-  UserCheck
+  UserCheck,
+  X
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -55,6 +56,7 @@ const addMemberFormSchema = z.object({
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   name: z.string().min(1, "Customer name is required"),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
 const bulkAddFormSchema = z.object({
@@ -141,6 +143,7 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [isAddToGroupDialogOpen, setIsAddToGroupDialogOpen] = useState(false);
+  const [isViewMembersDialogOpen, setIsViewMembersDialogOpen] = useState(false);
   const [selectedGroupForCustomer, setSelectedGroupForCustomer] = useState<number | null>(null);
 
   // Forms
@@ -151,7 +154,7 @@ export default function Customers() {
 
   const addMemberForm = useForm<AddMemberFormData>({
     resolver: zodResolver(addMemberFormSchema),
-    defaultValues: { phoneNumber: "", name: "" },
+    defaultValues: { phoneNumber: "", name: "", email: "" },
   });
 
   const bulkAddForm = useForm<BulkAddFormData>({
@@ -182,7 +185,13 @@ export default function Customers() {
 
   const { data: groupMembers = [] } = useQuery({
     queryKey: ['/api/customer-groups', selectedGroup?.id, 'members'],
-    enabled: !!selectedGroup?.id,
+    enabled: !!selectedGroup?.id && isViewMembersDialogOpen,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Query for customer orders
+  const { data: customerOrders = [] } = useQuery({
+    queryKey: ['/api/orders'],
     staleTime: 2 * 60 * 1000,
   });
 
@@ -280,6 +289,23 @@ export default function Customers() {
     },
   });
 
+  const removeFromGroupMutation = useMutation({
+    mutationFn: ({ groupId, customerId }: { groupId: number; customerId: string }) =>
+      apiRequest(`/api/customer-groups/${groupId}/members/${customerId}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: "Success", description: "Customer removed from group successfully!" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove customer from group",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -339,6 +365,15 @@ export default function Customers() {
     addCustomerToGroupMutation.mutate({ groupId: data.groupId, customerId: selectedCustomer.id });
   };
 
+  const handleRemoveFromGroup = (customerId: string, groupId: number) => {
+    removeFromGroupMutation.mutate({ groupId, customerId });
+  };
+
+  const handleViewMembers = (group: CustomerGroup) => {
+    setSelectedGroup(group);
+    setIsViewMembersDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -349,7 +384,7 @@ export default function Customers() {
       </div>
 
       <Tabs defaultValue="groups" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="groups" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span>Customer Groups</span>
@@ -357,6 +392,10 @@ export default function Customers() {
           <TabsTrigger value="address-book" className="flex items-center space-x-2">
             <Contact className="h-4 w-4" />
             <span>Address Book</span>
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center space-x-2">
+            <ShoppingBag className="h-4 w-4" />
+            <span>Customer Orders</span>
           </TabsTrigger>
         </TabsList>
 
@@ -635,7 +674,7 @@ export default function Customers() {
                           
                           {customer.groupNames.length > 0 && (
                             <div className="flex items-center space-x-2">
-                              {customer.groupNames.map((groupName, index) => (
+                              {[...new Set(customer.groupNames)].map((groupName, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {groupName}
                                 </Badge>
@@ -691,6 +730,119 @@ export default function Customers() {
             </div>
           )}
         </TabsContent>
+
+        {/* Customer Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Customer Orders</h3>
+              <p className="text-gray-600">View all orders organized by customer</p>
+            </div>
+          </div>
+
+          {isLoadingCustomers ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {customers.filter(customer => customer.totalOrders > 0).map((customer) => {
+                const customerOrdersList = customerOrders.filter(order => 
+                  order.retailerId === customer.id
+                );
+                
+                return (
+                  <Card key={customer.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="p-6 border-b bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                                {customer.firstName.charAt(0)}{customer.lastName?.charAt(0) || ''}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="text-lg font-semibold">
+                                {customer.firstName} {customer.lastName}
+                              </h4>
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <div className="flex items-center space-x-1">
+                                  <Phone className="h-4 w-4" />
+                                  <span>{customer.phoneNumber}</span>
+                                </div>
+                                {customer.email && (
+                                  <div className="flex items-center space-x-1">
+                                    <Mail className="h-4 w-4" />
+                                    <span>{customer.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <ShoppingBag className="h-4 w-4 text-blue-500" />
+                                <span className="font-medium">{customer.totalOrders} orders</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <DollarSign className="h-4 w-4 text-green-500" />
+                                <span className="font-medium">{formatCurrency(customer.totalSpent)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {customerOrdersList.length > 0 && (
+                        <div className="p-6">
+                          <h5 className="font-medium mb-4">Recent Orders</h5>
+                          <div className="space-y-3">
+                            {customerOrdersList.slice(0, 5).map((order) => (
+                              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                  <Badge variant={order.status === 'fulfilled' ? 'default' : 'secondary'}>
+                                    Order #{order.id}
+                                  </Badge>
+                                  <span className="text-sm text-gray-600">
+                                    {formatDate(new Date(order.createdAt))}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                  <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                                  <Badge variant={
+                                    order.status === 'fulfilled' ? 'default' : 
+                                    order.status === 'confirmed' ? 'secondary' : 'outline'
+                                  }>
+                                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {customerOrdersList.length > 5 && (
+                            <p className="text-sm text-gray-500 mt-3">
+                              And {customerOrdersList.length - 5} more orders...
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              
+              {customers.filter(customer => customer.totalOrders > 0).length === 0 && (
+                <div className="text-center py-12">
+                  <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Customer Orders</h3>
+                  <p className="text-gray-600">No customers have placed orders yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Add Member Dialog */}
@@ -725,6 +877,19 @@ export default function Customers() {
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., +447123456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addMemberForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., customer@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -848,15 +1013,31 @@ export default function Customers() {
               />
               {selectedCustomer?.groupNames.length > 0 && (
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700 font-medium mb-1">
+                  <p className="text-sm text-blue-700 font-medium mb-2">
                     Currently in groups:
                   </p>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedCustomer.groupNames.map((groupName, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {groupName}
-                      </Badge>
-                    ))}
+                  <div className="flex flex-wrap gap-2">
+                    {[...new Set(selectedCustomer.groupNames)].map((groupName, index) => {
+                      const groupId = customerGroups.find(g => g.name === groupName)?.id;
+                      return (
+                        <div key={index} className="flex items-center space-x-1 bg-white rounded-full px-3 py-1 border">
+                          <Badge variant="outline" className="text-xs border-0 px-0">
+                            {groupName}
+                          </Badge>
+                          {groupId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-red-100"
+                              onClick={() => handleRemoveFromGroup(selectedCustomer.id, groupId)}
+                              title="Remove from group"
+                            >
+                              <X className="h-3 w-3 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
