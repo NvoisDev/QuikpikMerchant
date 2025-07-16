@@ -176,6 +176,18 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 16, 2025)
 
+### Complete Dual Fee Payment Structure Implementation - PRODUCTION READY (July 16, 2025):
+- **Updated Payment Structure**: Successfully implemented new 2.5% dual fee structure - both wholesalers and customers pay 2.5% each
+- **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 2.5% transaction fee
+- **Wholesaler Receives**: Wholesalers now receive 97.5% of product value instead of 95% (improvement for wholesalers)
+- **Customer Transparency**: Added clear transaction fee display in checkout showing "Transaction Fee (2.5%)" as separate line item
+- **Payment Button Update**: Updated payment button to show total amount including transaction fee for customer clarity
+- **API Response Enhancement**: Payment intent creation now returns detailed fee breakdown including totalAmount, transactionFee, platformFee, totalAmountWithFee, and wholesalerReceives
+- **Metadata Storage**: Enhanced payment intent metadata to include both platform_fee and transaction_fee fields for proper tracking
+- **Fee Calculation**: Platform collects 2.5% from product total, customers pay additional 2.5% transaction fee
+- **Connect Account Integration**: Both regular payment intents and Stripe Connect payment intents now properly handle new fee structure
+- **Production Ready**: Complete end-to-end implementation with customer checkout showing transparent fee breakdown and proper payment processing
+
 ### Complete SMS Verification System Implementation - PRODUCTION READY (July 16, 2025):
 - **Mandatory SMS Verification**: Successfully implemented two-step customer authentication requiring both last 4 digits AND SMS verification code
 - **Twilio Integration**: Configured Twilio SMS service with verified UK phone number (+447400482099) for production SMS delivery

@@ -357,7 +357,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           
           toast({
             title: "Payment Successful!",
-            description: `Order #${orderResult.orderId} created successfully. ${orderResult.platformFeeCollected ? '5% platform fee collected.' : 'Order processed via direct payment.'}`,
+            description: `Order #${orderResult.orderId} created successfully. Transaction fee applied as shown on receipt.`,
           });
           onSuccess();
         } catch (orderError: any) {
@@ -391,7 +391,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           <ShieldCheck className="w-4 h-4" />
           <span className="font-semibold">Secure Payment Processing</span>
         </div>
-        <p>Your payment is processed securely through Stripe. A 5% platform fee is included in the total.</p>
+        <p>Your payment is processed securely through Stripe. A 2.5% transaction fee is included in the total.</p>
       </div>
 
       <Button
@@ -405,7 +405,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             <span>Processing Payment...</span>
           </div>
         ) : (
-          `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${totalAmount.toFixed(2)}`
+          `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${(totalAmount + (totalAmount * 0.025)).toFixed(2)}`
         )}
       </Button>
     </form>
@@ -2985,10 +2985,14 @@ export default function CustomerPortal() {
                       <span className="text-green-600">FREE</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Transaction Fee (2.5%):</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue * 0.025).toFixed(2)}</span>
+                  </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
-                    <span>Total:</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
+                    <span>Total Amount:</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue + (cartStats.totalValue * 0.025)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

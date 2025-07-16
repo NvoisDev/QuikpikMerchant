@@ -723,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const platformFee = subtotal * 0.05; // 5% platform fee
+      const platformFee = subtotal * 0.025; // 2.5% platform fee
       const total = subtotal + platformFee;
 
       // Get wholesaler from first product
@@ -817,9 +817,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate platform fee (5%)
-      const platformFee = calculatedTotal * 0.05;
-      const totalAmountWithFee = calculatedTotal + platformFee;
+      // Calculate platform fee (2.5%) and transaction fee (2.5%)
+      const platformFee = calculatedTotal * 0.025;
+      const transactionFee = calculatedTotal * 0.025;
+      const totalAmountWithFee = calculatedTotal + transactionFee;
 
       // Get first product's wholesaler for Stripe Connect account
       const firstProduct = validatedItems[0].product;
@@ -833,11 +834,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Stripe payment intent with Connect account and platform fee
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(calculatedTotal * 100), // Original amount without platform fee
+        amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
         currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
-        application_fee_amount: Math.round(platformFee * 100), // 5% platform fee collected by platform
+        application_fee_amount: Math.round(platformFee * 100), // 2.5% platform fee collected by platform
         transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
+          destination: wholesaler.stripeAccountId, // Wholesaler receives 97.5% of product total
         },
         metadata: {
           customerName,
@@ -846,6 +847,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerAddress: JSON.stringify(customerAddress),
           totalAmount: calculatedTotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
+          transactionFee: transactionFee.toFixed(2),
+          totalAmountWithFee: totalAmountWithFee.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
           items: JSON.stringify(validatedItems.map(item => ({
@@ -859,9 +862,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        totalAmount: calculatedTotal.toFixed(2), // Customer pays base amount
-        platformFee: platformFee.toFixed(2),
-        wholesalerReceives: (calculatedTotal - platformFee).toFixed(2) // 95% to wholesaler
+        totalAmount: calculatedTotal.toFixed(2), // Product subtotal
+        transactionFee: transactionFee.toFixed(2), // Customer pays 2.5% transaction fee
+        platformFee: platformFee.toFixed(2), // Platform collects 2.5% platform fee
+        totalAmountWithFee: totalAmountWithFee.toFixed(2), // Total customer payment
+        wholesalerReceives: (calculatedTotal - platformFee).toFixed(2) // 97.5% to wholesaler
       });
 
     } catch (error) {
@@ -4887,8 +4892,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: 'Wholesaler not found' });
       }
 
-      // Calculate platform fee (5%) using validated amount
-      const platformFee = (validatedTotalAmount * 0.05).toFixed(2);
+      // Calculate platform fee (2.5%) and transaction fee (2.5%)
+      const platformFee = (validatedTotalAmount * 0.025).toFixed(2);
+      const transactionFee = (validatedTotalAmount * 0.025).toFixed(2);
+      const totalAmountWithFee = validatedTotalAmount + parseFloat(transactionFee);
       const wholesalerAmount = (validatedTotalAmount - parseFloat(platformFee)).toFixed(2);
 
       // Create payment intent with Stripe Connect (application fee)
@@ -4901,13 +4908,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Try creating payment intent with Stripe Connect if available
       if (wholesaler.stripeAccountId) {
         try {
-          // Create payment intent with Stripe Connect and 5% platform fee
+          // Create payment intent with Stripe Connect and 2.5% platform fee
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(validatedTotalAmount * 100), // Convert to cents
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
-            application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 5% platform fee in cents
+            application_fee_amount: Math.round(parseFloat(platformFee) * 100), // 2.5% platform fee in cents
             transfer_data: {
-              destination: wholesaler.stripeAccountId, // Wholesaler receives 95%
+              destination: wholesaler.stripeAccountId, // Wholesaler receives 97.5%
             },
             metadata: {
               orderType: 'customer_portal',
@@ -4924,6 +4931,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               }),
               totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
+              transactionFee: transactionFee,
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
               connectAccountUsed: 'true',
               shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
@@ -4937,7 +4946,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           
           // Fallback to regular payment intent for demo/test purposes
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(validatedTotalAmount * 100), // Convert to cents
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
             metadata: {
               orderType: 'customer_portal',
@@ -4954,6 +4963,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               }),
               totalAmount: validatedTotalAmount.toString(),
               platformFee: platformFee,
+              transactionFee: transactionFee,
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
               connectAccountUsed: 'false',
               shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
@@ -4966,7 +4977,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       } else {
         // Create regular payment intent when no Connect account
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(validatedTotalAmount * 100), // Convert to cents
+          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
           currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
           metadata: {
             orderType: 'customer_portal',
@@ -4983,6 +4994,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             }),
             totalAmount: validatedTotalAmount.toString(),
             platformFee: platformFee,
+            transactionFee: transactionFee,
+            totalAmountWithFee: totalAmountWithFee.toFixed(2),
             connectAccountUsed: 'false',
             shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
             items: JSON.stringify(items.map(item => ({
@@ -4995,7 +5008,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        platformFee: platformFee 
+        totalAmount: validatedTotalAmount.toFixed(2), // Product subtotal
+        transactionFee: transactionFee, // Customer pays 2.5% transaction fee
+        platformFee: platformFee, // Platform collects 2.5% platform fee
+        totalAmountWithFee: totalAmountWithFee.toFixed(2), // Total customer payment
+        wholesalerReceives: wholesalerAmount // 97.5% to wholesaler
       });
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
