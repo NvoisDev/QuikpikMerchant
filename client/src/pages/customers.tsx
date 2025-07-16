@@ -189,6 +189,9 @@ export default function Customers() {
     queryKey: ['/api/customer-groups', selectedGroup?.id, 'members'],
     enabled: !!selectedGroup?.id && isViewMembersDialogOpen,
     staleTime: 2 * 60 * 1000,
+    onSuccess: (data) => {
+      console.log('Group members data received:', data);
+    },
   });
 
   // Query for customer orders
@@ -374,6 +377,11 @@ export default function Customers() {
   const handleViewMembers = (group: CustomerGroup) => {
     setSelectedGroup(group);
     setIsViewMembersDialogOpen(true);
+  };
+
+  const handleViewCustomerOrders = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsViewCustomerOrdersDialogOpen(true);
   };
 
   return (
@@ -711,6 +719,14 @@ export default function Customers() {
                         </div>
                         
                         <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewCustomerOrders(customer)}
+                            title="View All Orders"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1080,12 +1096,16 @@ export default function Customers() {
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
-                          {member.name?.charAt(0) || '?'}
+                          {(member.firstName || member.name)?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">{member.name}</p>
-                        <p className="text-xs text-gray-500">{member.phoneNumber}</p>
+                        <p className="font-medium text-sm">
+                          {member.firstName && member.lastName 
+                            ? `${member.firstName} ${member.lastName}` 
+                            : member.name || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-gray-500">{member.phoneNumber || member.phone_number}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -1104,7 +1124,7 @@ export default function Customers() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemoveFromGroup(member.customerId || member.id, selectedGroup?.id!)}
+                        onClick={() => handleRemoveFromGroup(member.id || member.customerId, selectedGroup?.id!)}
                         title="Remove Member"
                         className="hover:bg-red-100"
                       >
@@ -1124,6 +1144,33 @@ export default function Customers() {
           
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setIsViewMembersDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Order History Dialog */}
+      <Dialog open={isViewCustomerOrdersDialogOpen} onOpenChange={setIsViewCustomerOrdersDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName} - Order History` : 'Order History'}
+            </DialogTitle>
+            <DialogDescription>
+              Complete order history for this customer
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCustomer && (
+            <CustomerOrderHistory 
+              customerId={selectedCustomer.id}
+              customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`}
+            />
+          )}
+          
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsViewCustomerOrdersDialogOpen(false)}>
               Close
             </Button>
           </div>
