@@ -1094,8 +1094,24 @@ export default function CustomerPortal() {
     }
   }, [isPreviewMode]);
 
+  // Debug logging
+  console.log('🔍 CustomerPortal render state:', {
+    showAuth,
+    isPreviewMode,
+    isAuthenticated,
+    showHomePage,
+    showAllProducts,
+    wholesalerId,
+    wholesalerLoading,
+    wholesalerError,
+    productsLoading,
+    productsError,
+    productsCount: products.length
+  });
+
   // Show authentication screen
   if (showAuth && !isPreviewMode) {
+    console.log('🔐 Showing authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
