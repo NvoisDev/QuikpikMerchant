@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
@@ -279,9 +279,24 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           setClientSecret(data.clientSecret);
         } catch (error: any) {
           console.error("Error creating payment intent:", error);
+          
+          // Enhanced error handling for payment intent creation
+          let errorMessage = "Unable to initialize payment. Please try again.";
+          let errorTitle = "Payment Setup Failed";
+          
+          if (error.response?.status === 400) {
+            errorMessage = "Invalid payment details. Please check your order and try again.";
+          } else if (error.response?.status === 429) {
+            errorMessage = "Too many payment attempts. Please wait a moment and try again.";
+          } else if (error.response?.status >= 500) {
+            errorMessage = "Payment service temporarily unavailable. Please try again later.";
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
           toast({
-            title: "Payment Error",
-            description: error.message || "Unable to initialize payment. Please try again.",
+            title: errorTitle,
+            description: errorMessage,
             variant: "destructive",
           });
         } finally {
@@ -321,6 +336,15 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -342,10 +366,51 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
       });
 
       if (error) {
+        // Enhanced payment failure handling with detailed error messages
+        let errorMessage = "Payment failed. Please try again.";
+        let errorTitle = "Payment Failed";
+        
+        // Handle specific error types
+        if (error.type === 'card_error') {
+          switch (error.code) {
+            case 'card_declined':
+              errorMessage = "Your card was declined. Please try a different payment method or contact your bank.";
+              break;
+            case 'insufficient_funds':
+              errorMessage = "Insufficient funds. Please check your account balance or try a different card.";
+              break;
+            case 'expired_card':
+              errorMessage = "Your card has expired. Please use a different payment method.";
+              break;
+            case 'incorrect_cvc':
+              errorMessage = "The security code (CVC) is incorrect. Please check and try again.";
+              break;
+            case 'processing_error':
+              errorMessage = "Payment processing error. Please try again in a few moments.";
+              break;
+            default:
+              errorMessage = error.message || "Card payment failed. Please check your card details.";
+          }
+        } else if (error.type === 'validation_error') {
+          errorMessage = "Invalid payment details. Please check your information and try again.";
+        } else if (error.type === 'api_error') {
+          errorMessage = "Payment service temporarily unavailable. Please try again later.";
+        } else {
+          errorMessage = error.message || "An unexpected payment error occurred. Please try again.";
+        }
+        
+        // Show both toast notification and dialog popup
         toast({
-          title: "Payment Failed",
-          description: error.message,
+          title: errorTitle,
+          description: errorMessage,
           variant: "destructive",
+        });
+        
+        // Show prominent dialog popup for payment failure
+        setPaymentFailureDialog({
+          isOpen: true,
+          title: errorTitle,
+          message: errorMessage
         });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment succeeded, now create the order
@@ -362,17 +427,46 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           onSuccess();
         } catch (orderError: any) {
           console.error('Error creating order:', orderError);
+          
+          // Enhanced error handling for order creation after successful payment
+          let errorMessage = "Payment completed but order creation failed. Please contact support with your payment confirmation.";
+          let errorTitle = "Order Creation Failed";
+          
+          if (orderError.response?.status === 400) {
+            errorMessage = "Payment completed but order details are invalid. Please contact support immediately.";
+          } else if (orderError.response?.status === 409) {
+            errorMessage = "Payment completed but order already exists. Please check your order history.";
+          } else if (orderError.response?.status >= 500) {
+            errorMessage = "Payment completed but our order system is temporarily unavailable. Please contact support.";
+          } else if (orderError.message) {
+            errorMessage = `Payment completed but order creation failed: ${orderError.message}. Please contact support.`;
+          }
+          
           toast({
-            title: "Payment Successful",
-            description: "Payment completed but order creation failed. Please contact support.",
+            title: errorTitle,
+            description: errorMessage,
             variant: "destructive",
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unexpected payment error:', error);
+      
+      // Enhanced error handling for unexpected payment errors
+      let errorMessage = "An unexpected error occurred during payment. Please try again.";
+      let errorTitle = "Payment Error";
+      
+      if (error.name === 'NetworkError') {
+        errorMessage = "Network connection failed. Please check your internet connection and try again.";
+      } else if (error.name === 'TimeoutError') {
+        errorMessage = "Payment request timed out. Please try again.";
+      } else if (error.message) {
+        errorMessage = `Payment error: ${error.message}. Please try again.`;
+      }
+      
       toast({
-        title: "Payment Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -381,34 +475,59 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 border rounded-lg">
-        <PaymentElement />
-      </div>
-      
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-        <div className="flex items-center space-x-2 mb-2">
-          <ShieldCheck className="w-4 h-4" />
-          <span className="font-semibold">Secure Payment Processing</span>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="p-4 border rounded-lg">
+          <PaymentElement />
         </div>
-        <p>Your payment is processed securely through Stripe. A 2.5% transaction fee is included in the total.</p>
-      </div>
-
-      <Button
-        type="submit"
-        disabled={!stripe || isProcessing}
-        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
-      >
-        {isProcessing ? (
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>Processing Payment...</span>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="flex items-center space-x-2 mb-2">
+            <ShieldCheck className="w-4 h-4" />
+            <span className="font-semibold">Secure Payment Processing</span>
           </div>
-        ) : (
-          `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${(totalAmount + (totalAmount * 0.025)).toFixed(2)}`
-        )}
-      </Button>
-    </form>
+          <p>Your payment is processed securely through Stripe. A 2.5% transaction fee is included in the total.</p>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={!stripe || isProcessing}
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+        >
+          {isProcessing ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Processing Payment...</span>
+            </div>
+          ) : (
+            `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${(totalAmount + (totalAmount * 0.025)).toFixed(2)}`
+          )}
+        </Button>
+      </form>
+
+      {/* Payment Failure Dialog */}
+      <Dialog open={paymentFailureDialog.isOpen} onOpenChange={(open) => setPaymentFailureDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center space-x-2">
+              <CreditCard className="w-5 h-5" />
+              <span>{paymentFailureDialog.title}</span>
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 mt-2">
+              {paymentFailureDialog.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button 
+              onClick={() => setPaymentFailureDialog(prev => ({ ...prev, isOpen: false }))}
+              className="w-full bg-red-600 hover:bg-red-700 text-white"
+            >
+              Try Again
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
