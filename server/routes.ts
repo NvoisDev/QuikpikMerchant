@@ -1949,6 +1949,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send SMS
       const smsSent = await SMSService.sendSMSCode(customer.phone, verificationCode, businessName);
       
+      console.log(`SMS Service Result: ${smsSent ? 'SUCCESS' : 'FAILED'}`);
+      
       if (!smsSent) {
         return res.status(500).json({ error: "Failed to send SMS code" });
       }
