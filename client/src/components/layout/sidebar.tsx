@@ -22,7 +22,9 @@ import {
   FileText,
   Crown,
   AlertTriangle,
-  Truck
+  Truck,
+  Book,
+  Contact
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -32,6 +34,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Customer Groups", href: "/customer-groups", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
+  { name: "Customer Address Book", href: "/customers", icon: Contact, tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   { name: "Team Management", href: "/team-management", icon: Crown, tabName: "team-management" },

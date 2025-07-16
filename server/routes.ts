@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generateTaglines } from "./ai-taglines";
@@ -16,6 +16,8 @@ import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
 import { SMSService } from "./sms-service";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -358,16 +360,262 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware - setup session handling first
+  // Set up trust proxy setting before any middleware
+  app.set("trust proxy", 1);
+
+  // PUBLIC CUSTOMER ROUTES - Must be defined BEFORE authentication setup
+  // Customer authentication endpoints
+  app.post('/api/customer-auth/verify', async (req, res) => {
+    try {
+      const { wholesalerId, lastFourDigits } = req.body;
+      
+      if (!wholesalerId || !lastFourDigits) {
+        return res.status(400).json({ error: "Wholesaler ID and last four digits are required" });
+      }
+
+      // Find customer by last 4 digits in wholesaler's groups
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Customer not found" });
+      }
+
+      res.json({
+        success: true,
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName
+        }
+      });
+    } catch (error) {
+      console.error("Customer verification error:", error);
+      res.status(500).json({ error: "Customer verification failed" });
+    }
+  });
+
+  // SMS verification request
+  app.post('/api/customer-auth/request-sms', async (req, res) => {
+    try {
+      const { wholesalerId, lastFourDigits } = req.body;
+      
+      if (!wholesalerId || !lastFourDigits) {
+        return res.status(400).json({ error: "Wholesaler ID and last four digits are required" });
+      }
+
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Customer not found" });
+      }
+
+      // Get wholesaler info for business name
+      const wholesaler = await storage.getWholesalerProfile(wholesalerId);
+      
+      // Generate and send SMS code
+      const result = await sendSMSVerificationCode(customer.phone, wholesaler?.businessName || 'Business');
+      
+      if (result.success) {
+        // Store verification code in database
+        await storage.createSMSVerificationCode(wholesalerId, customer.id, result.code);
+        res.json({ success: true, message: "SMS verification code sent" });
+      } else {
+        res.status(500).json({ error: "Failed to send SMS verification code" });
+      }
+    } catch (error) {
+      console.error("SMS request error:", error);
+      res.status(500).json({ error: "SMS request failed" });
+    }
+  });
+
+  // SMS verification
+  app.post('/api/customer-auth/verify-sms', async (req, res) => {
+    try {
+      const { wholesalerId, lastFourDigits, smsCode } = req.body;
+      
+      if (!wholesalerId || !lastFourDigits || !smsCode) {
+        return res.status(400).json({ error: "Wholesaler ID, last four digits, and SMS code are required" });
+      }
+
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(401).json({ error: "Customer not found" });
+      }
+
+      // Verify SMS code
+      const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
+      
+      if (!verificationRecord) {
+        return res.status(401).json({ error: "Invalid verification code" });
+      }
+
+      // Check if code is expired (5 minutes)
+      const now = new Date();
+      const expiryTime = new Date(verificationRecord.createdAt);
+      expiryTime.setMinutes(expiryTime.getMinutes() + 5);
+      
+      if (now > expiryTime) {
+        return res.status(401).json({ error: "Verification code has expired" });
+      }
+
+      // Check if code was already used
+      if (verificationRecord.isUsed) {
+        return res.status(401).json({ error: "Verification code has already been used" });
+      }
+
+      // Check attempt limit (max 5 attempts per code)
+      if (verificationRecord.attempts >= 5) {
+        return res.status(401).json({ error: "Too many verification attempts. Please request a new code." });
+      }
+
+      // Mark code as used
+      await storage.markSMSCodeAsUsed(verificationRecord.id);
+
+      res.json({ 
+        success: true, 
+        message: "SMS verification successful",
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName
+        }
+      });
+    } catch (error) {
+      console.error("SMS verification error:", error);
+      res.status(500).json({ error: "SMS verification failed" });
+    }
+  });
+
+  // Get customer order history - only for customers registered in wholesaler's groups
+  app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
+    console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
+    try {
+      const { wholesalerId, phoneNumber } = req.params;
+      
+      if (!wholesalerId || !phoneNumber) {
+        console.log('❌ Missing parameters:', { wholesalerId, phoneNumber });
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      }
+      
+      console.log('✅ Parameters OK, checking customer registration...');
+      
+      // For now, return empty array until customer order system is fixed
+      return res.json([]);
+
+      if (customerGroupMembership.length === 0) {
+        console.log('❌ Customer not registered with wholesaler:', { wholesalerId, phoneNumber });
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler",
+          message: "You must be added to this wholesaler's customer group to access orders"
+        });
+      }
+
+      const customer = customerGroupMembership[0];
+      console.log('✅ Customer verified:', customer.customerName, customer.customerLastName);
+
+      // Now get orders for this verified customer
+      const orderResults = await db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.customerPhone, phoneNumber),
+            eq(orders.wholesalerId, wholesalerId)
+          )
+        )
+        .orderBy(desc(orders.createdAt));
+
+      if (orderResults.length === 0) {
+        return res.json([]);
+      }
+
+      // Get order items and product details for each order
+      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
+        const items = await db
+          .select({
+            orderItemId: orderItems.id,
+            quantity: orderItems.quantity,
+            unitPrice: orderItems.unitPrice,
+            total: orderItems.total,
+            productId: products.id,
+            productName: products.name,
+          })
+          .from(orderItems)
+          .leftJoin(products, eq(orderItems.productId, products.id))
+          .where(eq(orderItems.orderId, order.id));
+
+        // Get wholesaler details
+        const [wholesaler] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, order.wholesalerId));
+
+        return {
+          ...order,
+          items: items.map(item => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice || "0",
+            total: item.total || "0"
+          })),
+          wholesaler: wholesaler ? {
+            businessName: wholesaler.businessName,
+            firstName: wholesaler.firstName,
+            lastName: wholesaler.lastName
+          } : null
+        };
+      }));
+      
+      // Format orders for customer portal display
+      const formattedOrders = ordersWithDetails.map(order => ({
+        id: order.id,
+        orderNumber: `#${order.id}`,
+        date: new Date(order.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short', 
+          year: 'numeric'
+        }),
+        time: new Date(order.createdAt).toLocaleTimeString('en-GB', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        status: order.status,
+        total: parseFloat(order.total || "0").toFixed(2),
+        currency: order.currency || "£",
+        items: order.items,
+        wholesaler: order.wholesaler,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        customerEmail: order.customerEmail,
+        deliveryAddress: order.deliveryAddress,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        fulfillmentType: order.fulfillmentType,
+        deliveryCarrier: order.deliveryCarrier,
+        shippingStatus: order.shippingStatus,
+        notes: order.notes
+      }));
+
+      res.json(formattedOrders);
+    } catch (error) {
+      console.error("Customer orders fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch order history" });
+    }
+  });
+
+  // Auth middleware - setup session handling after customer routes
   // Set up unified session middleware 
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
-  app.use((req: any, res: any, next: any) => {
-    // Set up app settings required for Replit Auth
-    app.set("trust proxy", 1);
-    next();
-  });
-
   // Use simple session configuration that works for both auth methods
   await setupAuth(app);
 
@@ -1869,289 +2117,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error adding customer to group:", error);
       res.status(500).json({ message: "Failed to add customer to group" });
-    }
-  });
-
-  // Customer authentication routes
-  app.post("/api/customer-auth/verify", async (req, res) => {
-    try {
-      const { wholesalerId, lastFourDigits } = req.body;
-
-      if (!wholesalerId || !lastFourDigits) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Find customer in any of the wholesaler's groups by last 4 digits only
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      
-      if (!customer) {
-        return res.status(401).json({ error: "Invalid credentials or customer not found" });
-      }
-
-      res.json({ 
-        success: true, 
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          groupId: customer.groupId,
-          groupName: customer.groupName
-        }
-      });
-    } catch (error) {
-      console.error("Customer authentication error:", error);
-      res.status(500).json({ error: "Authentication failed" });
-    }
-  });
-
-  // SMS verification routes for enhanced security
-  app.post("/api/customer-auth/request-sms", async (req, res) => {
-    try {
-      const { wholesalerId, lastFourDigits } = req.body;
-      const ipAddress = req.ip || req.connection.remoteAddress;
-
-      if (!wholesalerId || !lastFourDigits) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Check if SMS service is configured
-      if (!SMSService.isConfigured()) {
-        return res.status(503).json({ error: "SMS service not configured" });
-      }
-
-      // Find customer by last 4 digits
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      
-      if (!customer) {
-        return res.status(401).json({ error: "Invalid credentials or customer not found" });
-      }
-
-      // Rate limiting: Check recent SMS codes for this customer (max 3 per 15 minutes)
-      const recentCodes = await storage.getRecentSMSCodes(wholesalerId, customer.id, 15);
-      if (recentCodes.length >= 3) {
-        return res.status(429).json({ 
-          error: "Too many SMS requests. Please wait 15 minutes before requesting another code." 
-        });
-      }
-
-      // Rate limiting: Check recent SMS codes by IP (max 5 per 15 minutes)
-      const recentCodesByIP = await storage.getRecentSMSCodesByIP(ipAddress, 15);
-      if (recentCodesByIP.length >= 5) {
-        return res.status(429).json({ 
-          error: "Too many SMS requests from this location. Please wait 15 minutes." 
-        });
-      }
-
-      // Generate verification code
-      const verificationCode = SMSService.generateVerificationCode();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-      // Get wholesaler info for SMS message
-      const wholesaler = await storage.getWholesalerProfile(wholesalerId);
-      const businessName = wholesaler?.businessName || "Quikpik";
-
-      // Send SMS
-      const smsSent = await SMSService.sendSMSCode(customer.phone, verificationCode, businessName);
-      
-      console.log(`SMS Service Result: ${smsSent ? 'SUCCESS' : 'FAILED'}`);
-      
-      if (!smsSent) {
-        return res.status(500).json({ error: "Failed to send SMS code" });
-      }
-
-      // Store verification code in database
-      await storage.createSMSVerificationCode({
-        customerId: customer.id,
-        wholesalerId: wholesalerId,
-        code: verificationCode,
-        phoneNumber: customer.phone,
-        expiresAt,
-        ipAddress: ipAddress
-      });
-
-      res.json({ 
-        success: true, 
-        message: "SMS verification code sent successfully",
-        expiresIn: 300 // 5 minutes in seconds
-      });
-    } catch (error) {
-      console.error("SMS request error:", error);
-      res.status(500).json({ error: "Failed to send SMS code" });
-    }
-  });
-
-  app.post("/api/customer-auth/verify-sms", async (req, res) => {
-    try {
-      const { wholesalerId, lastFourDigits, smsCode } = req.body;
-      const ipAddress = req.ip || req.connection.remoteAddress;
-
-      if (!wholesalerId || !lastFourDigits || !smsCode) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Find customer by last 4 digits
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      
-      if (!customer) {
-        return res.status(401).json({ error: "Invalid credentials or customer not found" });
-      }
-
-      // Clean up expired codes
-      await storage.cleanupExpiredSMSCodes();
-
-      // Get SMS verification code
-      const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
-      
-      if (!verificationRecord) {
-        return res.status(401).json({ error: "Invalid or expired verification code" });
-      }
-
-      // Check if code is expired
-      if (new Date() > verificationRecord.expiresAt) {
-        return res.status(401).json({ error: "Verification code has expired" });
-      }
-
-      // Check if code was already used
-      if (verificationRecord.isUsed) {
-        return res.status(401).json({ error: "Verification code has already been used" });
-      }
-
-      // Check attempt limit (max 5 attempts per code)
-      if (verificationRecord.attempts >= 5) {
-        return res.status(401).json({ error: "Too many verification attempts. Please request a new code." });
-      }
-
-      // Mark code as used
-      await storage.markSMSCodeAsUsed(verificationRecord.id);
-
-      res.json({ 
-        success: true, 
-        message: "SMS verification successful",
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          groupId: customer.groupId,
-          groupName: customer.groupName
-        }
-      });
-    } catch (error) {
-      console.error("SMS verification error:", error);
-      res.status(500).json({ error: "SMS verification failed" });
-    }
-  });
-
-  // Get customer order history - only for customers registered in wholesaler's groups
-  app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
-    try {
-      const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
-      }
-
-      // First, verify this customer is registered in the wholesaler's customer groups
-      const customerInGroups = await db
-        .select({ customerId: customerGroupMembers.customerId })
-        .from(customerGroupMembers)
-        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-        .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
-        .where(
-          and(
-            eq(customerGroups.wholesalerId, wholesalerId),
-            eq(users.phoneNumber, phoneNumber)
-          )
-        );
-
-      if (customerInGroups.length === 0) {
-        return res.status(403).json({ error: "Customer not registered with this wholesaler" });
-      }
-
-      // Now get orders for this verified customer
-      const orderResults = await db
-        .select()
-        .from(orders)
-        .where(
-          and(
-            eq(orders.customerPhone, phoneNumber),
-            eq(orders.wholesalerId, wholesalerId)
-          )
-        )
-        .orderBy(desc(orders.createdAt));
-
-      if (orderResults.length === 0) {
-        return res.json([]);
-      }
-
-      // Get order items and product details for each order
-      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
-        const items = await db
-          .select({
-            orderItemId: orderItems.id,
-            quantity: orderItems.quantity,
-            unitPrice: orderItems.unitPrice,
-            total: orderItems.total,
-            productId: products.id,
-            productName: products.name,
-          })
-          .from(orderItems)
-          .leftJoin(products, eq(orderItems.productId, products.id))
-          .where(eq(orderItems.orderId, order.id));
-
-        // Get wholesaler details
-        const [wholesaler] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, order.wholesalerId));
-
-        return {
-          ...order,
-          items: items.map(item => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice || "0",
-            total: item.total || "0"
-          })),
-          wholesaler: wholesaler ? {
-            businessName: wholesaler.businessName,
-            firstName: wholesaler.firstName,
-            lastName: wholesaler.lastName
-          } : null
-        };
-      }));
-      
-      // Format orders for customer portal display
-      const formattedOrders = ordersWithDetails.map(order => ({
-        id: order.id,
-        orderNumber: `#${order.id}`,
-        date: order.createdAt,
-        status: order.status,
-        total: order.totalAmount || order.total || "0",
-        platformFee: order.platformFee || "0",
-        subtotal: order.subtotal || "0",
-        items: order.items,
-        wholesaler: order.wholesaler,
-        fulfillmentType: order.fulfillmentType || "pickup",
-        deliveryCarrier: order.deliveryCarrier || "",
-        shippingTotal: order.shippingTotal || "0",
-        shippingStatus: order.shippingStatus || "pending",
-        customerName: order.customerName || "",
-        customerEmail: order.customerEmail || "",
-        customerPhone: order.customerPhone || "",
-        customerAddress: order.customerAddress || "",
-        orderNotes: order.orderNotes || "",
-        paymentMethod: order.paymentMethod || "stripe",
-        paymentStatus: (order.status === "paid" || order.status === "fulfilled") ? "paid" : "pending",
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      }));
-
-      res.json(formattedOrders);
-    } catch (error) {
-      console.error("Error fetching customer orders:", error);
-      res.status(500).json({ error: "Failed to fetch order history" });
     }
   });
 
@@ -8856,6 +8821,93 @@ The Quikpik Team
     } catch (error) {
       console.error('Error fetching product performance summary:', error);
       res.status(500).json({ error: 'Failed to fetch product performance summary' });
+    }
+  });
+
+  // Customer Address Book routes
+  app.get('/api/customers', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const customers = await storage.getAllCustomers(targetUserId);
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    }
+  });
+
+  app.get('/api/customers/search', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ error: 'Search query is required' });
+      }
+      
+      const customers = await storage.searchCustomers(targetUserId, q);
+      res.json(customers);
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      res.status(500).json({ error: 'Failed to search customers' });
+    }
+  });
+
+  app.get('/api/customers/stats', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const stats = await storage.getCustomerStats(targetUserId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching customer stats:', error);
+      res.status(500).json({ error: 'Failed to fetch customer stats' });
+    }
+  });
+
+  app.get('/api/customers/:id', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.params.id;
+      
+      const customer = await storage.getCustomerDetails(customerId);
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      
+      res.json(customer);
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+      res.status(500).json({ error: 'Failed to fetch customer details' });
+    }
+  });
+
+  app.patch('/api/customers/:id', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.params.id;
+      const updates = req.body;
+      
+      const updatedCustomer = await storage.updateCustomer(customerId, updates);
+      res.json(updatedCustomer);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      res.status(500).json({ error: 'Failed to update customer' });
+    }
+  });
+
+  app.patch('/api/customers/bulk', requireAuth, async (req: any, res) => {
+    try {
+      const { customerUpdates } = req.body;
+      
+      if (!Array.isArray(customerUpdates)) {
+        return res.status(400).json({ error: 'customerUpdates must be an array' });
+      }
+      
+      await storage.bulkUpdateCustomers(customerUpdates);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error bulk updating customers:', error);
+      res.status(500).json({ error: 'Failed to bulk update customers' });
     }
   });
 

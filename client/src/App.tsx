@@ -36,6 +36,7 @@ import TeamInvitation from "@/pages/team-invitation";
 import Signup from "@/pages/signup";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
+import CustomerAddressBook from "@/pages/customer-address-book";
 import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
@@ -79,6 +80,7 @@ function AuthenticatedRoutes() {
           <Route path="/" component={WholesalerDashboard} />
           <Route path="/products" component={ProductManagement} />
           <Route path="/customer-groups" component={CustomerGroups} />
+          <Route path="/customers" component={CustomerAddressBook} />
           <Route path="/orders" component={Orders} />
           <Route path="/subscription" component={SubscriptionSettings} />
           <Route path="/analytics" component={Analytics} />

@@ -109,6 +109,29 @@ export interface IStorage {
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
   
+  // Customer address book operations
+  getAllCustomers(wholesalerId: string): Promise<(User & { 
+    groupNames: string[]; 
+    totalOrders: number; 
+    totalSpent: number; 
+    lastOrderDate?: Date;
+    groupIds: number[];
+  })[]>;
+  getCustomerDetails(customerId: string): Promise<(User & { 
+    groups: CustomerGroup[];
+    orders: Order[];
+    totalOrders: number;
+    totalSpent: number;
+  }) | undefined>;
+  searchCustomers(wholesalerId: string, searchTerm: string): Promise<User[]>;
+  bulkUpdateCustomers(customerUpdates: { customerId: string; updates: Partial<User> }[]): Promise<void>;
+  getCustomerStats(wholesalerId: string): Promise<{
+    totalCustomers: number;
+    activeCustomers: number;
+    newCustomersThisMonth: number;
+    topCustomers: { customerId: string; name: string; totalSpent: number }[];
+  }>;
+  
   // SMS verification operations
   createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
   getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined>;
@@ -2981,6 +3004,240 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(smsVerificationCodes)
       .where(sql`${smsVerificationCodes.expiresAt} < ${now}`);
+  }
+
+  // Customer Address Book operations
+  async getAllCustomers(wholesalerId: string): Promise<(User & { 
+    groupNames: string[]; 
+    totalOrders: number; 
+    totalSpent: number; 
+    lastOrderDate?: Date;
+    groupIds: number[];
+  })[]> {
+    // Get all customers in wholesaler's groups with their group information
+    const customersWithGroups = await db.execute(sql`
+      SELECT DISTINCT
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone_number,
+        u.street_address,
+        u.city,
+        u.state,
+        u.postal_code,
+        u.country,
+        u.created_at,
+        COALESCE(
+          NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 
+          u.first_name, 
+          'Customer'
+        ) as full_name,
+        STRING_AGG(cg.name, ', ') as group_names,
+        STRING_AGG(cg.id::text, ',') as group_ids,
+        COUNT(DISTINCT o.id) as total_orders,
+        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent,
+        MAX(o.created_at) as last_order_date
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
+               u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
+      ORDER BY total_spent DESC, u.first_name ASC
+    `);
+
+    return customersWithGroups.rows.map((customer: any) => ({
+      id: customer.id,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      email: customer.email,
+      phoneNumber: customer.phone_number,
+      streetAddress: customer.street_address,
+      city: customer.city,
+      state: customer.state,
+      postalCode: customer.postal_code,
+      country: customer.country,
+      createdAt: customer.created_at,
+      role: 'retailer' as const,
+      groupNames: customer.group_names ? customer.group_names.split(', ') : [],
+      groupIds: customer.group_ids ? customer.group_ids.split(',').map(Number) : [],
+      totalOrders: parseInt(customer.total_orders) || 0,
+      totalSpent: parseFloat(customer.total_spent) || 0,
+      lastOrderDate: customer.last_order_date ? new Date(customer.last_order_date) : undefined
+    }));
+  }
+
+  async getCustomerDetails(customerId: string): Promise<(User & { 
+    groups: CustomerGroup[];
+    orders: Order[];
+    totalOrders: number;
+    totalSpent: number;
+  }) | undefined> {
+    // Get customer basic info
+    const [customer] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, customerId));
+
+    if (!customer) return undefined;
+
+    // Get customer groups
+    const customerGroups = await db
+      .select({
+        group: customerGroups
+      })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(eq(customerGroupMembers.customerId, customerId));
+
+    // Get customer orders
+    const customerOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.retailerId, customerId))
+      .orderBy(desc(orders.createdAt));
+
+    // Calculate stats
+    const paidOrders = customerOrders.filter(order => 
+      ['paid', 'fulfilled', 'completed'].includes(order.status)
+    );
+    const totalSpent = paidOrders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
+
+    return {
+      ...customer,
+      groups: customerGroups.map(cg => cg.group),
+      orders: customerOrders,
+      totalOrders: customerOrders.length,
+      totalSpent
+    };
+  }
+
+  async searchCustomers(wholesalerId: string, searchTerm: string): Promise<User[]> {
+    const customers = await db.execute(sql`
+      SELECT DISTINCT u.*
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+        AND (
+          LOWER(u.first_name) LIKE LOWER(${'%' + searchTerm + '%'}) OR
+          LOWER(u.last_name) LIKE LOWER(${'%' + searchTerm + '%'}) OR
+          LOWER(u.email) LIKE LOWER(${'%' + searchTerm + '%'}) OR
+          u.phone_number LIKE ${'%' + searchTerm + '%'}
+        )
+      ORDER BY u.first_name ASC
+    `);
+
+    return customers.rows.map((customer: any) => ({
+      id: customer.id,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      email: customer.email,
+      phoneNumber: customer.phone_number,
+      streetAddress: customer.street_address,
+      city: customer.city,
+      state: customer.state,
+      postalCode: customer.postal_code,
+      country: customer.country,
+      createdAt: customer.created_at,
+      role: customer.role
+    }));
+  }
+
+  async bulkUpdateCustomers(customerUpdates: { customerId: string; updates: Partial<User> }[]): Promise<void> {
+    for (const { customerId, updates } of customerUpdates) {
+      await db
+        .update(users)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, customerId));
+    }
+  }
+
+  async getCustomerStats(wholesalerId: string): Promise<{
+    totalCustomers: number;
+    activeCustomers: number;
+    newCustomersThisMonth: number;
+    topCustomers: { customerId: string; name: string; totalSpent: number }[];
+  }> {
+    // Get total customers count
+    const totalCustomersResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT u.id) as total
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+    `);
+
+    // Get active customers (those who have placed orders in last 3 months)
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    const activeCustomersResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT u.id) as active
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      INNER JOIN orders o ON u.id = o.retailer_id
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+        AND o.created_at >= ${threeMonthsAgo}
+    `);
+
+    // Get new customers this month
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    thisMonth.setHours(0, 0, 0, 0);
+    
+    const newCustomersResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT u.id) as new_customers
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+        AND u.created_at >= ${thisMonth}
+    `);
+
+    // Get top customers by spending
+    const topCustomersResult = await db.execute(sql`
+      SELECT 
+        u.id as customer_id,
+        COALESCE(
+          NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 
+          u.first_name, 
+          'Customer'
+        ) as name,
+        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent
+      FROM users u
+      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
+      WHERE cg.wholesaler_id = ${wholesalerId}
+        AND u.role = 'retailer'
+      GROUP BY u.id, u.first_name, u.last_name
+      HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END) > 0
+      ORDER BY total_spent DESC
+      LIMIT 5
+    `);
+
+    return {
+      totalCustomers: parseInt(totalCustomersResult.rows[0]?.total || '0'),
+      activeCustomers: parseInt(activeCustomersResult.rows[0]?.active || '0'),
+      newCustomersThisMonth: parseInt(newCustomersResult.rows[0]?.new_customers || '0'),
+      topCustomers: topCustomersResult.rows.map((customer: any) => ({
+        customerId: customer.customer_id,
+        name: customer.name,
+        totalSpent: parseFloat(customer.total_spent) || 0
+      }))
+    };
   }
 }
 
