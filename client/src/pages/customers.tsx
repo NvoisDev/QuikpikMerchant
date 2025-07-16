@@ -188,11 +188,20 @@ export default function Customers() {
 
   const { data: groupMembers = [] } = useQuery({
     queryKey: ['/api/customer-groups', selectedGroup?.id, 'members'],
+    queryFn: async () => {
+      if (!selectedGroup?.id) return [];
+      const url = `/api/customer-groups/${selectedGroup.id}/members`;
+      console.log('Fetching group members from:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch group members: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Group members data received:', data);
+      return data;
+    },
     enabled: !!selectedGroup?.id && isViewMembersDialogOpen,
     staleTime: 2 * 60 * 1000,
-    onSuccess: (data) => {
-      console.log('Group members data received:', data);
-    },
   });
 
   // Query for customer orders

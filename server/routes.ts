@@ -508,8 +508,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ Parameters OK, checking customer registration...');
       
-      // For now, return empty array until customer order system is fixed
-      return res.json([]);
+      // Check if customer is registered in any of this wholesaler's groups
+      const customerGroupMembership = await db
+        .select({
+          customerName: users.firstName,
+          customerLastName: users.lastName,
+          customerPhone: users.phoneNumber,
+          groupId: customerGroupMembers.groupId,
+          groupName: customerGroups.name
+        })
+        .from(customerGroupMembers)
+        .leftJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+        .leftJoin(users, eq(customerGroupMembers.customerId, users.id))
+        .where(
+          and(
+            eq(customerGroups.wholesalerId, wholesalerId),
+            eq(users.phoneNumber, decodeURIComponent(phoneNumber))
+          )
+        );
 
       if (customerGroupMembership.length === 0) {
         console.log('❌ Customer not registered with wholesaler:', { wholesalerId, phoneNumber });

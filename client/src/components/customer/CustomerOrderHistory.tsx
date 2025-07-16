@@ -258,14 +258,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const { data: orders, isLoading, error } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
     queryFn: async () => {
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${customerPhone}`);
+      // Encode the phone number properly for URL
+      const encodedPhone = encodeURIComponent(customerPhone);
+      console.log('Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone });
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`);
       if (!response.ok) {
         if (response.status === 403) {
           throw new Error('You must be added to this wholesaler\'s customer list to view orders');
         }
         throw new Error('Failed to fetch order history');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Customer orders response:', data);
+      return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
   });
