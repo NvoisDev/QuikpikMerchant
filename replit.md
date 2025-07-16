@@ -187,6 +187,7 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Fee Calculation**: Platform collects 2.5% from product total, customers pay additional 2.5% transaction fee
 - **Connect Account Integration**: Both regular payment intents and Stripe Connect payment intents now properly handle new fee structure
 - **Production Ready**: Complete end-to-end implementation with customer checkout showing transparent fee breakdown and proper payment processing
+- **Active Orders**: System successfully processing orders with new fee structure (Orders #34: £445.00, #35: £929.00 - July 16, 2025)
 
 ### Complete SMS Verification System Implementation - PRODUCTION READY (July 16, 2025):
 - **Mandatory SMS Verification**: Successfully implemented two-step customer authentication requiring both last 4 digits AND SMS verification code
