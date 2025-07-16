@@ -79,6 +79,11 @@ const editCustomerFormSchema = z.object({
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
+const editGroupFormSchema = z.object({
+  name: z.string().min(1, "Group name is required"),
+  description: z.string().optional(),
+});
+
 const addToGroupFormSchema = z.object({
   groupId: z.number().min(1, "Please select a group"),
 });
@@ -89,6 +94,7 @@ type AddMemberFormData = z.infer<typeof addMemberFormSchema>;
 type BulkAddFormData = z.infer<typeof bulkAddFormSchema>;
 type EditMemberFormData = z.infer<typeof editMemberFormSchema>;
 type EditCustomerFormData = z.infer<typeof editCustomerFormSchema>;
+type EditGroupFormData = z.infer<typeof editGroupFormSchema>;
 type AddToGroupFormData = z.infer<typeof addToGroupFormSchema>;
 
 interface CustomerGroup {
@@ -137,6 +143,7 @@ export default function Customers() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
+  const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
@@ -178,6 +185,11 @@ export default function Customers() {
   const addToGroupForm = useForm<AddToGroupFormData>({
     resolver: zodResolver(addToGroupFormSchema),
     defaultValues: { groupId: 0 },
+  });
+
+  const editGroupForm = useForm<EditGroupFormData>({
+    resolver: zodResolver(editGroupFormSchema),
+    defaultValues: { name: "", description: "" },
   });
 
   // Queries - Customer Groups
@@ -245,6 +257,24 @@ export default function Customers() {
           variant: "destructive",
         });
       }
+    },
+  });
+
+  const editGroupMutation = useMutation({
+    mutationFn: ({ groupId, data }: { groupId: number; data: EditGroupFormData }) =>
+      apiRequest(`/api/customer-groups/${groupId}`, 'PUT', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      toast({ title: "Success", description: "Customer group updated successfully!" });
+      setIsEditGroupDialogOpen(false);
+      editGroupForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer group",
+        variant: "destructive",
+      });
     },
   });
 
@@ -392,6 +422,20 @@ export default function Customers() {
   const handleViewCustomerOrders = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsViewCustomerOrdersDialogOpen(true);
+  };
+
+  const handleEditGroup = (group: CustomerGroup) => {
+    setSelectedGroup(group);
+    editGroupForm.reset({
+      name: group.name,
+      description: group.description || '',
+    });
+    setIsEditGroupDialogOpen(true);
+  };
+
+  const handleUpdateGroup = (data: EditGroupFormData) => {
+    if (!selectedGroup) return;
+    editGroupMutation.mutate({ groupId: selectedGroup.id, data });
   };
 
   return (
@@ -546,10 +590,26 @@ export default function Customers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            // Navigate to campaigns with this group pre-selected
+                            window.location.href = `/campaigns?groupId=${group.id}`;
+                          }}
+                          title="Send Message"
+                        >
                           <MessageSquare className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            setIsEditGroupDialogOpen(true);
+                          }}
+                          title="Edit Group"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -1157,6 +1217,59 @@ export default function Customers() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Group Dialog */}
+      <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Customer Group</DialogTitle>
+            <DialogDescription>
+              Update the name and description of this customer group.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editGroupForm}>
+            <form onSubmit={editGroupForm.handleSubmit(handleUpdateGroup)} className="space-y-4">
+              <FormField
+                control={editGroupForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Group Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Regular Customers" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editGroupForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe this customer group..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditGroupDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={editGroupMutation.isPending}>
+                  {editGroupMutation.isPending ? "Updating..." : "Update Group"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
