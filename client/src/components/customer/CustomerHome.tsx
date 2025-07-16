@@ -281,9 +281,12 @@ export function CustomerHome({
         </div>
 
         {/* Customer Order History */}
-        {customerData && (
+        {customerData && wholesaler?.id && (
           <div className="mb-6">
-            <CustomerOrderHistory customerId={customerData.id} />
+            <CustomerOrderHistory 
+              wholesalerId={wholesaler.id} 
+              customerPhone={customerData.phoneNumber} 
+            />
           </div>
         )}
 

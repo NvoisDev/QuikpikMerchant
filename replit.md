@@ -176,6 +176,16 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 16, 2025)
 
+### CRITICAL SECURITY ENHANCEMENT: Customer Registration Requirement - PRODUCTION READY (July 16, 2025):
+- **Mandatory Customer Group Registration**: Implemented security requirement that customers must be added to wholesaler's customer groups before accessing order history
+- **Pre-Registration Access Control**: Updated customer order API endpoint from `/api/customer-orders/:phoneNumber` to `/api/customer-orders/:wholesalerId/:phoneNumber` with group membership verification
+- **Database Security Verification**: Added customer group membership check that queries customerGroupMembers table to verify customer is registered with specific wholesaler
+- **403 Access Denied Response**: System returns HTTP 403 "Customer not registered with this wholesaler" when unauthorized access attempts are made
+- **Enhanced User Experience**: Added professional amber warning message explaining registration requirement when customers aren't in wholesaler's group
+- **Payment-Authentication Anchor**: Customer authentication remains anchored to last 4 digits of phone numbers, but orders only accessible after wholesaler adds customer to groups
+- **Security Flow**: 1) Wholesaler adds customer to group, 2) Customer authenticates with last 4 digits + SMS, 3) Customer can access order history for that wholesaler only
+- **Production Ready**: Complete security implementation preventing unauthorized order access while maintaining smooth user experience for registered customers
+
 ### Complete Dual Fee Payment Structure Implementation - PRODUCTION READY (July 16, 2025):
 - **Updated Payment Structure**: Successfully implemented new 2.5% dual fee structure - both wholesalers and customers pay 2.5% each
 - **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 2.5% transaction fee

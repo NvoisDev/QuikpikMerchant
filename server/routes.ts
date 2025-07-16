@@ -2043,20 +2043,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get customer order history
-  app.get('/api/customer-orders/:customerId', async (req, res) => {
+  // Get customer order history - only for customers registered in wholesaler's groups
+  app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
-      const customerId = req.params.customerId;
+      const { wholesalerId, phoneNumber } = req.params;
       
-      if (!customerId) {
-        return res.status(400).json({ error: "Customer ID is required" });
+      if (!wholesalerId || !phoneNumber) {
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
       }
 
-      // Get orders for this customer
-      const orders = await storage.getOrders(undefined, customerId);
+      // First, verify this customer is registered in the wholesaler's customer groups
+      const customerInGroups = await db
+        .select({ customerId: customerGroupMembers.customerId })
+        .from(customerGroupMembers)
+        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+        .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
+        .where(
+          and(
+            eq(customerGroups.wholesalerId, wholesalerId),
+            eq(users.phoneNumber, phoneNumber)
+          )
+        );
+
+      if (customerInGroups.length === 0) {
+        return res.status(403).json({ error: "Customer not registered with this wholesaler" });
+      }
+
+      // Now get orders for this verified customer
+      const orderResults = await db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.customerPhone, phoneNumber),
+            eq(orders.wholesalerId, wholesalerId)
+          )
+        )
+        .orderBy(desc(orders.createdAt));
+
+      if (orderResults.length === 0) {
+        return res.json([]);
+      }
+
+      // Get order items and product details for each order
+      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
+        const items = await db
+          .select({
+            orderItemId: orderItems.id,
+            quantity: orderItems.quantity,
+            unitPrice: orderItems.unitPrice,
+            total: orderItems.total,
+            productId: products.id,
+            productName: products.name,
+          })
+          .from(orderItems)
+          .leftJoin(products, eq(orderItems.productId, products.id))
+          .where(eq(orderItems.orderId, order.id));
+
+        // Get wholesaler details
+        const [wholesaler] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, order.wholesalerId));
+
+        return {
+          ...order,
+          items: items.map(item => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice || "0",
+            total: item.total || "0"
+          })),
+          wholesaler: wholesaler ? {
+            businessName: wholesaler.businessName,
+            firstName: wholesaler.firstName,
+            lastName: wholesaler.lastName
+          } : null
+        };
+      }));
       
       // Format orders for customer portal display
-      const formattedOrders = orders.map(order => ({
+      const formattedOrders = ordersWithDetails.map(order => ({
         id: order.id,
         orderNumber: `#${order.id}`,
         date: order.createdAt,
@@ -2064,29 +2131,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: order.totalAmount || order.total || "0",
         platformFee: order.platformFee || "0",
         subtotal: order.subtotal || "0",
-        items: order.items.map(item => ({
-          productName: item.product.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice || "0",
-          total: item.total || "0"
-        })),
-        wholesaler: {
-          businessName: order.wholesaler.businessName,
-          firstName: order.wholesaler.firstName,
-          lastName: order.wholesaler.lastName
-        },
+        items: order.items,
+        wholesaler: order.wholesaler,
         fulfillmentType: order.fulfillmentType || "pickup",
         deliveryCarrier: order.deliveryCarrier || "",
         shippingTotal: order.shippingTotal || "0",
         shippingStatus: order.shippingStatus || "pending",
-        // Add additional order details for "View Details" functionality
         customerName: order.customerName || "",
         customerEmail: order.customerEmail || "",
         customerPhone: order.customerPhone || "",
         customerAddress: order.customerAddress || "",
         orderNotes: order.orderNotes || "",
         paymentMethod: order.paymentMethod || "stripe",
-        // Fix payment status logic: if order status is paid or fulfilled, payment is paid
         paymentStatus: (order.status === "paid" || order.status === "fulfilled") ? "paid" : "pending",
         createdAt: order.createdAt,
         updatedAt: order.updatedAt

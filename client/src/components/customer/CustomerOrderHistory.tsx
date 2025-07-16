@@ -8,7 +8,8 @@ import { format } from "date-fns";
 import { useState } from "react";
 
 interface CustomerOrderHistoryProps {
-  customerId: string;
+  wholesalerId: string;
+  customerPhone: string;
 }
 
 interface OrderItem {
@@ -253,17 +254,20 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   );
 };
 
-export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) {
+export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
   const { data: orders, isLoading, error } = useQuery({
-    queryKey: [`/api/customer-orders/${customerId}`],
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
     queryFn: async () => {
-      const response = await fetch(`/api/customer-orders/${customerId}`);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${customerPhone}`);
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('You must be added to this wholesaler\'s customer list to view orders');
+        }
         throw new Error('Failed to fetch order history');
       }
       return response.json();
     },
-    enabled: !!customerId,
+    enabled: !!wholesalerId && !!customerPhone,
   });
 
   if (isLoading) {
@@ -290,6 +294,7 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
   }
 
   if (error) {
+    const isAccessDenied = error.message.includes('customer list');
     return (
       <Card className="w-full">
         <CardHeader>
@@ -299,9 +304,23 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-500 text-center py-8">
-            Unable to load order history. Please try again later.
-          </p>
+          <div className="text-center py-8">
+            {isAccessDenied ? (
+              <div className="space-y-3">
+                <div className="text-amber-600 bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <p className="font-medium mb-2">Access Required</p>
+                  <p className="text-sm">
+                    You need to be added to this wholesaler's customer list to view your order history. 
+                    Please contact them to register your account.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">
+                Unable to load order history. Please try again later.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
