@@ -45,6 +45,7 @@ import {
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 
 // Form Schemas
 const customerGroupFormSchema = z.object({
@@ -1162,10 +1163,10 @@ export default function Customers() {
             </DialogDescription>
           </DialogHeader>
           
-          {selectedCustomer && (
+          {selectedCustomer && user && (
             <CustomerOrderHistory 
-              customerId={selectedCustomer.id}
-              customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`}
+              wholesalerId={user.id}
+              customerPhone={selectedCustomer.phoneNumber}
             />
           )}
           
