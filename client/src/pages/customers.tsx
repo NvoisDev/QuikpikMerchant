@@ -39,7 +39,8 @@ import {
   Activity,
   Contact,
   UserCheck,
-  X
+  X,
+  Eye
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -143,6 +144,7 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [isAddToGroupDialogOpen, setIsAddToGroupDialogOpen] = useState(false);
+  const [isViewCustomerOrdersDialogOpen, setIsViewCustomerOrdersDialogOpen] = useState(false);
   const [isViewMembersDialogOpen, setIsViewMembersDialogOpen] = useState(false);
   const [selectedGroupForCustomer, setSelectedGroupForCustomer] = useState<number | null>(null);
 
@@ -384,18 +386,14 @@ export default function Customers() {
       </div>
 
       <Tabs defaultValue="groups" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="groups" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span>Customer Groups</span>
           </TabsTrigger>
           <TabsTrigger value="address-book" className="flex items-center space-x-2">
             <Contact className="h-4 w-4" />
-            <span>Address Book</span>
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="flex items-center space-x-2">
-            <ShoppingBag className="h-4 w-4" />
-            <span>Customer Orders</span>
+            <span>Customer Directory</span>
           </TabsTrigger>
         </TabsList>
 
@@ -522,6 +520,14 @@ export default function Customers() {
                         Add Member
                       </Button>
                       <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewMembers(group)}
+                          title="View Members"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm">
                           <MessageSquare className="h-4 w-4" />
                         </Button>
@@ -1051,6 +1057,76 @@ export default function Customers() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Members Dialog */}
+      <Dialog open={isViewMembersDialogOpen} onOpenChange={setIsViewMembersDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedGroup?.name} Members
+            </DialogTitle>
+            <DialogDescription>
+              View all members in this customer group
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {groupMembers.length > 0 ? (
+              <div className="space-y-3">
+                {groupMembers.map((member: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
+                          {member.name?.charAt(0) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{member.name}</p>
+                        <p className="text-xs text-gray-500">{member.phoneNumber}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setIsEditMemberDialogOpen(true);
+                          setIsViewMembersDialogOpen(false);
+                        }}
+                        title="Edit Member"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveFromGroup(member.customerId || member.id, selectedGroup?.id!)}
+                        title="Remove Member"
+                        className="hover:bg-red-100"
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No members in this group yet</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsViewMembersDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
