@@ -102,6 +102,7 @@ export interface IStorage {
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
   createCustomer(customer: { phoneNumber: string; firstName: string; lastName?: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
+  isCustomerInGroup(groupId: number, customerId: string): Promise<boolean>;
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomerInfo(customerId: string, phoneNumber: string, name: string, email?: string): Promise<void>;
@@ -1026,6 +1027,21 @@ export class DatabaseStorage implements IStorage {
         groupId: groupId,
         customerId: customerId,
       });
+  }
+
+  async isCustomerInGroup(groupId: number, customerId: string): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(customerGroupMembers)
+      .where(
+        and(
+          eq(customerGroupMembers.groupId, groupId),
+          eq(customerGroupMembers.customerId, customerId)
+        )
+      )
+      .limit(1);
+    
+    return !!result;
   }
 
   async removeCustomerFromGroup(groupId: number, customerId: string): Promise<void> {

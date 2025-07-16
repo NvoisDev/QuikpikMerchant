@@ -2120,6 +2120,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add existing customer to group by customer ID
+  app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
+    try {
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const groupId = parseInt(req.params.groupId);
+      const customerId = req.params.customerId;
+      
+      // Get the customer group to verify ownership using parent company data
+      const groups = await storage.getCustomerGroups(targetUserId);
+      const group = groups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Customer group not found" });
+      }
+
+      // Get the customer to verify they exist
+      const customer = await storage.getUser(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Check if customer is already in the group
+      const existingMember = await storage.isCustomerInGroup(groupId, customerId);
+      if (existingMember) {
+        return res.status(400).json({ message: "Customer is already in this group" });
+      }
+
+      // Add customer to the group
+      await storage.addCustomerToGroup(groupId, customerId);
+      
+      res.json({
+        success: true,
+        message: `${customer.firstName} ${customer.lastName || ''} added to ${group.name} successfully`,
+        customer: {
+          id: customer.id,
+          name: `${customer.firstName} ${customer.lastName || ''}`.trim(),
+          phoneNumber: customer.phoneNumber,
+        }
+      });
+    } catch (error) {
+      console.error("Error adding existing customer to group:", error);
+      res.status(500).json({ message: "Failed to add customer to group" });
+    }
+  });
+
   // Get group members
   app.get('/api/customer-groups/:groupId/members', requireAuth, async (req: any, res) => {
     try {
