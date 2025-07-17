@@ -91,6 +91,15 @@ const addToGroupFormSchema = z.object({
   groupId: z.number().min(1, "Please select a group"),
 });
 
+const addCustomerFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional(),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  phoneNumber: z.string()
+    .min(10, "Valid phone number is required")
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
+});
+
 // Type definitions
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
 type AddMemberFormData = z.infer<typeof addMemberFormSchema>;
@@ -99,6 +108,7 @@ type EditMemberFormData = z.infer<typeof editMemberFormSchema>;
 type EditCustomerFormData = z.infer<typeof editCustomerFormSchema>;
 type EditGroupFormData = z.infer<typeof editGroupFormSchema>;
 type AddToGroupFormData = z.infer<typeof addToGroupFormSchema>;
+type AddCustomerFormData = z.infer<typeof addCustomerFormSchema>;
 
 interface CustomerGroup {
   id: number;
@@ -152,6 +162,7 @@ export default function Customers() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<any[]>([]);
   const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
+  const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   
   // Address book state
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,6 +207,11 @@ export default function Customers() {
   const editGroupForm = useForm<EditGroupFormData>({
     resolver: zodResolver(editGroupFormSchema),
     defaultValues: { name: "", description: "" },
+  });
+
+  const addCustomerForm = useForm<AddCustomerFormData>({
+    resolver: zodResolver(addCustomerFormSchema),
+    defaultValues: { firstName: "", lastName: "", email: "", phoneNumber: "" },
   });
 
   // Queries - Customer Groups
@@ -357,6 +373,24 @@ export default function Customers() {
     },
   });
 
+  const addCustomerMutation = useMutation({
+    mutationFn: (data: AddCustomerFormData) => apiRequest('/api/customers', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+      toast({ title: "Success", description: "Customer added to directory successfully!" });
+      setIsAddCustomerDialogOpen(false);
+      addCustomerForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -510,6 +544,10 @@ export default function Customers() {
       title: "Contacts Imported",
       description: `Successfully imported ${selectedContacts.length} contacts to ${selectedGroup.name}`,
     });
+  };
+
+  const handleAddCustomer = (data: AddCustomerFormData) => {
+    addCustomerMutation.mutate(data);
   };
 
   return (
@@ -772,8 +810,8 @@ export default function Customers() {
             </div>
           )}
 
-          {/* Search Bar */}
-          <div className="flex items-center space-x-4">
+          {/* Search Bar and Actions */}
+          <div className="flex items-center justify-between space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -782,6 +820,101 @@ export default function Customers() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() => {
+                  // Set a default group for directory additions (or create a general one)
+                  setSelectedGroup({ id: 0, name: 'All Customers', description: 'General customer directory' } as CustomerGroup);
+                  setIsImportContactsDialogOpen(true);
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+              >
+                <Smartphone className="h-4 w-4" />
+                <span>Import Contacts</span>
+              </Button>
+              <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="flex items-center space-x-2">
+                    <UserPlus className="h-4 w-4" />
+                    <span>Add Customer</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Customer</DialogTitle>
+                    <DialogDescription>
+                      Add a new customer to your directory.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...addCustomerForm}>
+                    <form onSubmit={addCustomerForm.handleSubmit(handleAddCustomer)} className="space-y-4">
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="john@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={addCustomerForm.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="+447123456789" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={addCustomerMutation.isPending}>
+                          {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 

@@ -8902,6 +8902,35 @@ The Quikpik Team
     }
   });
 
+  app.post('/api/customers', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const { firstName, lastName, email, phoneNumber } = req.body;
+      
+      if (!firstName || !phoneNumber) {
+        return res.status(400).json({ error: 'First name and phone number are required' });
+      }
+      
+      // Format phone number
+      const formattedPhone = formatPhoneToInternational(phoneNumber);
+      
+      // Create customer user
+      const customer = await storage.createCustomer({
+        firstName,
+        lastName: lastName || '',
+        email: email || '',
+        phoneNumber: formattedPhone,
+        wholesalerId: targetUserId
+      });
+      
+      res.json(customer);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ error: 'Failed to create customer' });
+    }
+  });
+
   app.get('/api/customers/search', requireAuth, async (req: any, res) => {
     try {
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
