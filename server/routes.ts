@@ -8921,7 +8921,7 @@ The Quikpik Team
         lastName: lastName || '',
         email: email || '',
         phoneNumber: formattedPhone,
-        wholesalerId: targetUserId
+        role: 'customer'
       });
       
       res.json(customer);
