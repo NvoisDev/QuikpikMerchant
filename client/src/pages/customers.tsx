@@ -100,6 +100,10 @@ const addCustomerFormSchema = z.object({
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
 });
 
+const searchAndAddFormSchema = z.object({
+  customerId: z.string().min(1, "Please select a customer"),
+});
+
 // Type definitions
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
 type AddMemberFormData = z.infer<typeof addMemberFormSchema>;
@@ -108,6 +112,7 @@ type EditMemberFormData = z.infer<typeof editMemberFormSchema>;
 type EditCustomerFormData = z.infer<typeof editCustomerFormSchema>;
 type EditGroupFormData = z.infer<typeof editGroupFormSchema>;
 type AddToGroupFormData = z.infer<typeof addToGroupFormSchema>;
+type SearchAndAddFormData = z.infer<typeof searchAndAddFormSchema>;
 type AddCustomerFormData = z.infer<typeof addCustomerFormSchema>;
 
 interface CustomerGroup {
@@ -158,11 +163,13 @@ export default function Customers() {
   const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [isImportContactsDialogOpen, setIsImportContactsDialogOpen] = useState(false);
+  const [isSearchAndAddDialogOpen, setIsSearchAndAddDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<any[]>([]);
   const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
   // Address book state
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,6 +219,11 @@ export default function Customers() {
   const addCustomerForm = useForm<AddCustomerFormData>({
     resolver: zodResolver(addCustomerFormSchema),
     defaultValues: { firstName: "", lastName: "", email: "", phoneNumber: "" },
+  });
+
+  const searchAndAddForm = useForm<SearchAndAddFormData>({
+    resolver: zodResolver(searchAndAddFormSchema),
+    defaultValues: { customerId: "" },
   });
 
   // Queries - Customer Groups
@@ -582,6 +594,25 @@ export default function Customers() {
     addCustomerMutation.mutate(data);
   };
 
+  const handleSearchAndAddCustomer = (data: SearchAndAddFormData) => {
+    if (!selectedGroup) return;
+    addCustomerToGroupMutation.mutate({ groupId: selectedGroup.id, customerId: data.customerId });
+  };
+
+  // Filter customers for search and add (exclude already added customers)
+  const getAvailableCustomers = () => {
+    if (!selectedGroup || !customers) return [];
+    const existingMemberIds = groupMembers.map((member: any) => member.id || member.customerId) || [];
+    return customers.filter(customer => {
+      const matchesSearch = customerSearchQuery.length === 0 || 
+        `${customer.firstName} ${customer.lastName || ''}`.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+        customer.phoneNumber.includes(customerSearchQuery) ||
+        (customer.email && customer.email.toLowerCase().includes(customerSearchQuery.toLowerCase()));
+      const notAlreadyMember = !existingMemberIds.includes(customer.id);
+      return matchesSearch && notAlreadyMember;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -725,6 +756,18 @@ export default function Customers() {
                         >
                           <UserPlus className="mr-2 h-4 w-4" />
                           Add Member
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedGroup(group);
+                            setIsSearchAndAddDialogOpen(true);
+                          }}
+                          title="Search & Add Existing Customer"
+                        >
+                          <Search className="mr-2 h-4 w-4" />
+                          Search & Add
                         </Button>
                         <Button
                           variant="outline"
@@ -1751,6 +1794,91 @@ export default function Customers() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Search & Add Customer Dialog */}
+      <Dialog open={isSearchAndAddDialogOpen} onOpenChange={setIsSearchAndAddDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Search & Add Customer to {selectedGroup?.name}</DialogTitle>
+            <DialogDescription>
+              Search for existing customers and add them directly to this group.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Label htmlFor="search">Search Customers</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="search"
+                  placeholder="Search by name, phone, or email..."
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Customer Results */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {getAvailableCustomers().length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  {customerSearchQuery.length === 0 ? (
+                    <p>Start typing to search for customers...</p>
+                  ) : (
+                    <p>No customers found matching "{customerSearchQuery}"</p>
+                  )}
+                </div>
+              ) : (
+                getAvailableCustomers().map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      searchAndAddForm.setValue('customerId', customer.id);
+                      handleSearchAndAddCustomer({ customerId: customer.id });
+                      setIsSearchAndAddDialogOpen(false);
+                      setCustomerSearchQuery('');
+                      searchAndAddForm.reset();
+                    }}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-600">
+                        {customer.firstName[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium">{customer.firstName} {customer.lastName || ''}</p>
+                        <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
+                        {customer.email && (
+                          <p className="text-xs text-gray-500">{customer.email}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsSearchAndAddDialogOpen(false);
+                setCustomerSearchQuery('');
+                searchAndAddForm.reset();
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
