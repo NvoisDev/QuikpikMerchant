@@ -88,9 +88,11 @@ Respond with JSON in this exact format:
     };
 
   } catch (error) {
-    console.error('OpenAI API Error:', error);
+    console.error('OpenAI API Error details:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
-    // Fallback to default personalized message
+    // Always return fallback message instead of throwing error
     const fallbackGreeting = context.customerName ? `Hi ${context.customerName}!` : "Hello!";
     const fallbackMain = context.productName 
       ? `New stock: ${context.productName} available` 

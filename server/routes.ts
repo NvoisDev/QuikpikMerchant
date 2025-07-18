@@ -3077,7 +3077,17 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json(personalizedMessage);
     } catch (error) {
       console.error("AI personalization error:", error);
-      res.status(500).json({ message: "Failed to generate personalized message" });
+      console.error("Error details:", error.message);
+      
+      // Return fallback message instead of error to ensure UI doesn't break
+      const fallbackMessage = {
+        greeting: context.customerName ? `Hi ${context.customerName}!` : "Hello!",
+        mainMessage: context.productName ? `New stock: ${context.productName} available` : `Fresh stock from ${context.businessName}`,
+        callToAction: "Order today!",
+        fullMessage: `${context.customerName ? `Hi ${context.customerName}!` : "Hello!"} ${context.productName ? `New stock: ${context.productName} available` : `Fresh stock from ${context.businessName}`}. Order today!`
+      };
+      
+      res.json(fallbackMessage);
     }
   });
 

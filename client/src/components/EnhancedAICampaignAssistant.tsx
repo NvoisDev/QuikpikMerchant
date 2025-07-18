@@ -120,6 +120,7 @@ export function EnhancedAICampaignAssistant({
       body: JSON.stringify(context)
     }),
     onSuccess: (data: PersonalizedMessage) => {
+      console.log("AI generation successful:", data);
       toast({
         title: "Message Generated!",
         description: "AI has created your personalized campaign message.",
@@ -128,7 +129,8 @@ export function EnhancedAICampaignAssistant({
         onMessageGenerated(data.fullMessage);
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("AI generation failed:", error);
       toast({
         title: "Generation Failed",
         description: "Could not generate personalized message. Please try again.",
