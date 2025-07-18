@@ -3051,6 +3051,40 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Test endpoint for AI generation without authentication
+  app.post('/api/ai/test-message', async (req: any, res) => {
+    try {
+      console.log("AI test message request received");
+      console.log("Request body:", req.body);
+      
+      const context = {
+        businessName: "Test Business",
+        businessType: "wholesale",
+        customerName: "Test Customer",
+        productName: "Test Product",
+        productCategory: "Food",
+        ...req.body
+      };
+
+      console.log("AI test context:", context);
+      const personalizedMessage = await generatePersonalizedTagline(context);
+      console.log("Generated test message:", personalizedMessage);
+      res.json(personalizedMessage);
+    } catch (error) {
+      console.error("AI test error:", error);
+      console.error("Error details:", error.message);
+      
+      const fallbackMessage = {
+        greeting: "Hi Test Customer!",
+        mainMessage: "Fresh stock from Test Business available",
+        callToAction: "Order today!",
+        fullMessage: "Hi Test Customer! Fresh stock from Test Business available. Order today!"
+      };
+      
+      res.json(fallbackMessage);
+    }
+  });
+
   // AI-powered campaign personalization endpoints
   app.post('/api/ai/personalized-message', requireAuth, async (req: any, res) => {
     try {

@@ -172,6 +172,7 @@ export function EnhancedAICampaignAssistant({
       customerGroup: selectedGroupData?.name || personalizationContext.customerGroup,
     };
 
+    console.log("Sending AI generation request with context:", contextWithSelections);
     personalizeMutation.mutate(contextWithSelections);
   };
 
