@@ -392,6 +392,26 @@ export default function Customers() {
     },
   });
 
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ groupId, memberId, data }: { groupId: number; memberId: string; data: EditMemberFormData }) =>
+      apiRequest('PATCH', `/api/customer-groups/${groupId}/members/${memberId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-groups/${selectedGroup?.id}/members`] });
+      toast({ title: "Success", description: "Member updated successfully!" });
+      setIsEditMemberDialogOpen(false);
+      editMemberForm.reset();
+    },
+    onError: (error: any) => {
+      console.error('Update member error:', error);
+      toast({ 
+        title: "Error", 
+        description: error?.response?.data?.error || "Failed to update member", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Helper functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -478,6 +498,16 @@ export default function Customers() {
   const handleUpdateGroup = (data: EditGroupFormData) => {
     if (!selectedGroup) return;
     editGroupMutation.mutate({ groupId: selectedGroup.id, data });
+  };
+
+  const handleUpdateMember = (data: EditMemberFormData) => {
+    if (!selectedMember || !selectedGroup) return;
+    const memberId = selectedMember.id || selectedMember.customerId;
+    updateMemberMutation.mutate({ 
+      groupId: selectedGroup.id, 
+      memberId, 
+      data 
+    });
   };
 
   // Contact import functionality
@@ -1405,10 +1435,19 @@ export default function Customers() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setSelectedMember(member);
+                          // Pre-populate the form with current member data
+                          const fullName = member.firstName && member.lastName 
+                            ? `${member.firstName} ${member.lastName}` 
+                            : member.name || '';
+                          editMemberForm.reset({
+                            name: fullName,
+                            phoneNumber: member.phoneNumber || member.phone_number || '',
+                          });
                           setIsEditMemberDialogOpen(true);
-                          setIsViewMembersDialogOpen(false);
                         }}
                         title="Edit Member"
                       >
@@ -1662,6 +1701,56 @@ export default function Customers() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Group Member</DialogTitle>
+            <DialogDescription>
+              Update member information for this customer group.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editMemberForm}>
+            <form onSubmit={editMemberForm.handleSubmit(handleUpdateMember)} className="space-y-4">
+              <FormField
+                control={editMemberForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., John Smith" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editMemberForm.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., +447123456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditMemberDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateMemberMutation.isPending}>
+                  {updateMemberMutation.isPending ? "Updating..." : "Update Member"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
