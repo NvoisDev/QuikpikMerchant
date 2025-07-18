@@ -54,7 +54,7 @@ import { PromotionalOffersManager } from "@/components/PromotionalOffersManager"
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
-import { AICampaignAssistant } from "@/components/AICampaignAssistant";
+import { EnhancedAICampaignAssistant } from "@/components/EnhancedAICampaignAssistant";
 import { SmartCampaignWizard } from "@/components/SmartCampaignWizard";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
@@ -849,7 +849,7 @@ export default function Campaigns() {
               setIsCreateOpen(true);
             }}
           />
-          <AICampaignAssistant 
+          <EnhancedAICampaignAssistant 
             selectedProduct={products?.find(p => p.id === parseInt(form.watch('productId') || '0'))}
             selectedCustomerGroup={customerGroups?.find(g => g.id === parseInt(form.watch('customerGroupId') || '0'))}
             onMessageGenerated={(message) => {

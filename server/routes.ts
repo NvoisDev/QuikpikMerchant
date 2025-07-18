@@ -1867,6 +1867,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all customers from all customer groups (for AI assistant search)
+  app.get('/api/customer-groups/all-members', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const customerGroups = await storage.getCustomerGroups(targetUserId);
+      
+      const allMembers: any[] = [];
+      const seenCustomers = new Set<string>();
+      
+      for (const group of customerGroups) {
+        const members = await storage.getGroupMembers(group.id);
+        for (const member of members) {
+          if (!seenCustomers.has(member.userId)) {
+            seenCustomers.add(member.userId);
+            allMembers.push({
+              id: member.userId,
+              firstName: member.firstName,
+              lastName: member.lastName,
+              phoneNumber: member.phoneNumber,
+              customerGroups: [group.name]
+            });
+          } else {
+            // Add group to existing customer
+            const existingCustomer = allMembers.find(c => c.id === member.userId);
+            if (existingCustomer) {
+              existingCustomer.customerGroups.push(group.name);
+            }
+          }
+        }
+      }
+      
+      res.json(allMembers);
+    } catch (error) {
+      console.error("Error fetching all customer group members:", error);
+      res.status(500).json({ message: "Failed to fetch customer group members" });
+    }
+  });
+
   app.post('/api/customer-groups', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
@@ -3033,7 +3074,6 @@ Write a professional, sales-focused description that highlights the key benefits
       const customerGroups = await storage.getCustomerGroups(userId);
 
       // Get recent campaign performance (simplified for now)
-      const recentCampaigns = await storage.getCampaigns(userId);
       const recentPerformance = {
         openRate: 75, // This would come from analytics in a real implementation
         clickRate: 25,
