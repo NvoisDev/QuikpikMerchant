@@ -453,47 +453,39 @@ export default function Campaigns() {
     const baseUrl = window.location.origin;
     const customerPortalUrl = `${baseUrl}/customer/${user?.id}`;
 
-    let message = `🛍️ ${campaign.title}`;
+    let message = `🛍️ *${campaign.title}*\n\n`;
     
     if (campaign.customMessage) {
-      message += `\n\n${campaign.customMessage}`;
+      message += `${campaign.customMessage}\n\n`;
     }
 
     if (campaign.campaignType === 'single' && campaign.product) {
-      message += `\n\n📦 Featured Product:\n${campaign.product.name}\n\n`;
+      message += `📦 *Featured Products:*\n\n`;
       
       // Use special price if provided, otherwise use promotional price if active, otherwise use regular price
       const price = campaign.specialPrice || 
                    (campaign.product.promoActive && campaign.product.promoPrice ? campaign.product.promoPrice : campaign.product.price);
-      message += `💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
       
-      // Show special pricing indicator if special price or promotional price is being used
-      if (campaign.specialPrice && campaign.specialPrice !== campaign.product.price) {
-        message += `🔥 Special Campaign Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
-      } else if (campaign.product.promoActive && campaign.product.promoPrice && campaign.product.promoPrice !== campaign.product.price) {
-        message += `🔥 Promotional Price! (Regular: ${formatCurrency(parseFloat(campaign.product.price))})\n`;
-      }
+      message += `1. ${campaign.product.name}\n`;
+      message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
       
       // Add negotiation information if enabled
       if (campaign.product.negotiationEnabled) {
-        message += `💬 Price Negotiable - Request Custom Quote Available!\n`;
+        message += `   💬 Price Negotiable - Request Custom Quote Available!\n`;
         if (campaign.product.minimumBidPrice) {
-          message += `💡 Minimum acceptable price: ${formatCurrency(parseFloat(campaign.product.minimumBidPrice))}\n`;
+          message += `   💡 Minimum acceptable price: ${formatCurrency(parseFloat(campaign.product.minimumBidPrice))}\n`;
         }
       }
       
-      message += `📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
-      message += `📦 In Stock: ${formatNumber(campaign.product.stock)} packs available`;
+      message += `   📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
+      message += `   📦 In Stock: ${formatNumber(campaign.product.stock)} packs available\n`;
       
-      if (campaign.product.description) {
-        message += `\n\n📋 ${campaign.product.description}`;
-      }
     } else if (campaign.campaignType === 'multi' && campaign.products) {
-      message += `\n\n📦 Featured Products:\n`;
+      message += `📦 *Featured Products:*\n\n`;
       campaign.products.forEach((item, index) => {
         const price = item.specialPrice || 
                      (item.product.promoActive && item.product.promoPrice ? item.product.promoPrice : item.product.price);
-        message += `\n${index + 1}. ${item.product.name}\n`;
+        message += `${index + 1}. ${item.product.name}\n`;
         message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
         
         // Add negotiation information if enabled
@@ -505,23 +497,24 @@ export default function Campaigns() {
         }
         
         message += `   📦 MOQ: ${formatNumber(item.product.moq)} units\n`;
-        message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available`;
+        message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available\n`;
       });
     }
 
     if (campaign.includePurchaseLink) {
+      message += `🛒 *Place Your Order Now:*\n${customerPortalUrl}`;
       if (campaign.campaignType === 'single' && campaign.product) {
-        message += `\n\n🛒 Place Your Order Now:\n${customerPortalUrl}?product=${campaign.product.id}`;
-      } else {
-        message += `\n\n🛒 Place Your Order Now:\n${customerPortalUrl}`;
+        // For single product campaigns, add featured product parameter
+        message = message.replace(customerPortalUrl, `${customerPortalUrl}?featured=${campaign.product.id}`);
       }
+      message += `\n\n`;
     }
 
     if (campaign.includeContact) {
-      message += `\n\n📞 Questions or Bulk Orders?\n${businessName}\n📱 ${phone}`;
+      message += `📞 *Questions or Bulk Orders?*\n${businessName}\n📱 ${phone}\n\n`;
     }
 
-    message += `\n\n✨ This update was powered by Quikpik Merchant`;
+    message += `✨ This update was powered by Quikpik Merchant`;
 
     return message;
   };
