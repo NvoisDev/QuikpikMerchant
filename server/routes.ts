@@ -592,34 +592,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       // Format orders for customer portal display
-      const formattedOrders = ordersWithDetails.map(order => ({
-        id: order.id,
-        orderNumber: `#${order.id}`,
-        date: new Date(order.createdAt).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short', 
-          year: 'numeric'
-        }),
-        time: new Date(order.createdAt).toLocaleTimeString('en-GB', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        status: order.status,
-        total: parseFloat(order.total || "0").toFixed(2),
-        currency: order.currency || "£",
-        items: order.items,
-        wholesaler: order.wholesaler,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        customerEmail: order.customerEmail,
-        deliveryAddress: order.deliveryAddress,
-        paymentMethod: order.paymentMethod,
-        paymentStatus: order.paymentStatus,
-        fulfillmentType: order.fulfillmentType,
-        deliveryCarrier: order.deliveryCarrier,
-        shippingStatus: order.shippingStatus,
-        notes: order.notes
-      }));
+      const formattedOrders = ordersWithDetails.map(order => {
+        const total = parseFloat(order.total || "0");
+        // Calculate subtotal and platform fee based on current pricing structure
+        // For new orders: total = subtotal + 2.5% transaction fee, platform fee = 2.5% of subtotal
+        // For older orders: may use different fee structure, calculate best estimate
+        const subtotal = order.subtotal ? parseFloat(order.subtotal) : total / 1.025; // Remove 2.5% transaction fee
+        const platformFee = order.platformFee ? parseFloat(order.platformFee) : subtotal * 0.025; // 2.5% platform fee
+        
+        return {
+          id: order.id,
+          orderNumber: `#${order.id}`,
+          date: new Date(order.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short', 
+            year: 'numeric'
+          }),
+          time: new Date(order.createdAt).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          status: order.status,
+          total: total.toFixed(2),
+          subtotal: subtotal.toFixed(2),
+          platformFee: platformFee.toFixed(2),
+          currency: order.currency || "£",
+          items: order.items,
+          wholesaler: order.wholesaler,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          customerEmail: order.customerEmail,
+          deliveryAddress: order.deliveryAddress,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          fulfillmentType: order.fulfillmentType,
+          deliveryCarrier: order.deliveryCarrier,
+          shippingStatus: order.shippingStatus,
+          shippingTotal: order.shippingTotal,
+          notes: order.notes,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
+        };
+      });
 
       res.json(formattedOrders);
     } catch (error) {
