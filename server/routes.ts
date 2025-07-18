@@ -1886,12 +1886,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Fetching members for group: ${group.name} (ID: ${group.id})`);
         const members = await storage.getGroupMembers(group.id);
         console.log(`Found ${members.length} members in group ${group.name}`);
+        console.log("Member data:", members.map(m => ({ firstName: m.firstName, lastName: m.lastName, userId: m.userId, phoneNumber: m.phoneNumber })));
         
         for (const member of members) {
-          if (!seenCustomers.has(member.userId)) {
-            seenCustomers.add(member.userId);
+          // Use phone number as unique identifier instead of userId since customers might share userIds
+          const customerKey = `${member.phoneNumber}-${member.firstName}-${member.lastName}`;
+          
+          if (!seenCustomers.has(customerKey)) {
+            seenCustomers.add(customerKey);
             allMembers.push({
-              id: member.userId,
+              id: member.userId || `customer-${allMembers.length + 1}`,
               firstName: member.firstName,
               lastName: member.lastName,
               phoneNumber: member.phoneNumber,
@@ -1899,8 +1903,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           } else {
             // Add group to existing customer
-            const existingCustomer = allMembers.find(c => c.id === member.userId);
-            if (existingCustomer) {
+            const existingCustomer = allMembers.find(c => 
+              c.phoneNumber === member.phoneNumber && 
+              c.firstName === member.firstName && 
+              c.lastName === member.lastName
+            );
+            if (existingCustomer && !existingCustomer.customerGroups.includes(group.name)) {
               existingCustomer.customerGroups.push(group.name);
             }
           }
