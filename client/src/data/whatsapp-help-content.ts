@@ -52,24 +52,24 @@ export const helpContent = {
     title: "Customer Directory & Groups",
     steps: [
       {
-        title: "Customer Groups",
-        content: "Create organized groups to categorize your customers by location, business type, or buying patterns. Each group can receive targeted messages and promotions.",
-        tip: "Use descriptive group names like 'Downtown Restaurants' or 'Bulk Buyers' for easy identification."
+        title: "Creating Customer Groups",
+        content: "Start by creating organized groups to categorize your customers. Groups help you send targeted messages and track different customer segments. Click 'Create Group' to get started.",
+        tip: "Use specific names like 'Local Restaurants', 'Bulk Buyers', or 'Premium Customers' instead of generic names."
       },
       {
-        title: "Adding Members",
-        content: "Three easy ways to add customers: Manual Entry for new customers, Search Existing to add from your directory, or Import Contacts from your phone.",
-        tip: "Import Contacts is fastest for bulk additions - just copy/paste from WhatsApp or phone contacts."
+        title: "Adding Members to Groups",
+        content: "Use the 'Add Member' dropdown to add customers to your groups. You have three options: Manual Entry (new customers), Search Existing (from your directory), or Import Contacts (from your phone).",
+        tip: "Import Contacts is the fastest method - just copy/paste contact lists from WhatsApp or your phone's contact list."
       },
       {
-        title: "Customer Directory",
-        content: "View all customers in one place with their contact details, order history, and group memberships. Track customer activity and manage relationships.",
-        tip: "Use the search function to quickly find customers by name, phone, or email address."
+        title: "Managing Your Customer Directory",
+        content: "The Customer Directory tab shows all your customers with their contact details, order history, and total spending. Use the search bar to quickly find specific customers.",
+        tip: "Review customer order history regularly to identify your best customers for VIP treatment and special offers."
       },
       {
-        title: "Order Tracking",
-        content: "Click on any customer to view their complete order history, total spending, and engagement patterns. This helps you provide better service.",
-        tip: "Regular customers with high order values are perfect candidates for VIP groups and special offers."
+        title: "Broadcasting to Groups",
+        content: "Once you have groups set up, you can send targeted WhatsApp campaigns to specific customer segments. This increases engagement and response rates compared to mass messaging.",
+        tip: "Send different messages to different groups - restaurant owners need different information than retail customers."
       }
     ]
   },
