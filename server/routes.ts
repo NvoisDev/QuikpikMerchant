@@ -8904,9 +8904,11 @@ The Quikpik Team
 
   app.post('/api/customers', requireAuth, async (req: any, res) => {
     try {
+      console.log('Creating customer - user:', req.user);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       
       const { firstName, lastName, email, phoneNumber } = req.body;
+      console.log('Customer data:', { firstName, lastName, email, phoneNumber });
       
       if (!firstName || !phoneNumber) {
         return res.status(400).json({ error: 'First name and phone number are required' });
@@ -8914,6 +8916,7 @@ The Quikpik Team
       
       // Format phone number
       const formattedPhone = formatPhoneToInternational(phoneNumber);
+      console.log('Formatted phone:', formattedPhone);
       
       // Create customer user
       const customer = await storage.createCustomer({
@@ -8924,10 +8927,11 @@ The Quikpik Team
         role: 'customer'
       });
       
+      console.log('Customer created:', customer);
       res.json(customer);
     } catch (error) {
       console.error('Error creating customer:', error);
-      res.status(500).json({ error: 'Failed to create customer' });
+      res.status(500).json({ error: 'Failed to create customer', details: error.message });
     }
   });
 
