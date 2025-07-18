@@ -95,7 +95,7 @@ export function ContextualHelpBubble({
               </div>
               
               {/* Step Indicator */}
-              {steps.length > 1 && (
+              {steps && steps.length > 1 && (
                 <div className="flex items-center gap-1 mt-2">
                   {steps.map((_, index) => (
                     <div
@@ -114,17 +114,19 @@ export function ContextualHelpBubble({
 
             <CardContent className="space-y-3">
               {/* Current Step Content */}
-              <div>
-                <h4 className="font-medium text-gray-900 text-sm mb-2">
-                  {steps[currentStep].title}
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {steps[currentStep].content}
-                </p>
-              </div>
+              {steps && steps[currentStep] && (
+                <div>
+                  <h4 className="font-medium text-gray-900 text-sm mb-2">
+                    {steps[currentStep].title}
+                  </h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {steps[currentStep].content}
+                  </p>
+                </div>
+              )}
 
               {/* Step Image */}
-              {steps[currentStep].image && (
+              {steps && steps[currentStep] && steps[currentStep].image && (
                 <div className="bg-gray-50 rounded-lg p-3">
                   <img
                     src={steps[currentStep].image}
@@ -135,7 +137,7 @@ export function ContextualHelpBubble({
               )}
 
               {/* Tip */}
-              {steps[currentStep].tip && (
+              {steps && steps[currentStep] && steps[currentStep].tip && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-xs text-yellow-800">
                     <span className="font-medium">💡 Tip:</span> {steps[currentStep].tip}
@@ -144,7 +146,7 @@ export function ContextualHelpBubble({
               )}
 
               {/* Navigation */}
-              {steps.length > 1 && (
+              {steps && steps.length > 1 && (
                 <div className="flex justify-between pt-2">
                   <Button
                     variant="outline"
@@ -160,7 +162,7 @@ export function ContextualHelpBubble({
                     variant="outline"
                     size="sm"
                     onClick={nextStep}
-                    disabled={currentStep === steps.length - 1}
+                    disabled={!steps || currentStep === steps.length - 1}
                     className="text-xs h-7"
                   >
                     Next
