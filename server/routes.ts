@@ -3054,10 +3054,14 @@ Write a professional, sales-focused description that highlights the key benefits
   // AI-powered campaign personalization endpoints
   app.post('/api/ai/personalized-message', requireAuth, async (req: any, res) => {
     try {
+      console.log("AI personalized message request received");
+      console.log("Request body:", req.body);
+      
       const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
+        console.log("User not found for ID:", userId);
         return res.status(404).json({ message: "User not found" });
       }
 
@@ -3067,7 +3071,9 @@ Write a professional, sales-focused description that highlights the key benefits
         ...req.body
       };
 
+      console.log("AI context:", context);
       const personalizedMessage = await generatePersonalizedTagline(context);
+      console.log("Generated message:", personalizedMessage);
       res.json(personalizedMessage);
     } catch (error) {
       console.error("AI personalization error:", error);
