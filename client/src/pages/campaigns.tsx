@@ -54,6 +54,8 @@ import { PromotionalOffersManager } from "@/components/PromotionalOffersManager"
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
+import { AICampaignAssistant } from "@/components/AICampaignAssistant";
+import { SmartCampaignWizard } from "@/components/SmartCampaignWizard";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -836,25 +838,48 @@ export default function Campaigns() {
           <h1 className="text-2xl font-bold text-gray-900">Broadcast</h1>
           <p className="text-gray-600 mt-1">Send WhatsApp messages to promote products and boost sales</p>
         </div>
-        <Button 
-          className="flex items-center space-x-2"
-          onClick={() => {
-            setEditingCampaign(null);
-            setCampaignType('single');
-            form.reset({
-              title: "",
-              customMessage: "",
-              includeContact: true,
-              includePurchaseLink: true,
-              campaignType: 'single',
-            });
-            setSelectedProducts([{ productId: 0, quantity: 1 }]);
-            setIsCreateOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create Broadcast</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <SmartCampaignWizard 
+            onCampaignCreated={(campaignData) => {
+              // Auto-fill the form with AI-generated campaign data
+              form.setValue('title', campaignData.title);
+              form.setValue('customMessage', campaignData.message);
+              form.setValue('customerGroupId', campaignData.customerGroupId?.toString() || '');
+              form.setValue('productId', campaignData.productId?.toString() || '');
+              setIsCreateOpen(true);
+            }}
+          />
+          <AICampaignAssistant 
+            selectedProduct={products?.find(p => p.id === parseInt(form.watch('productId') || '0'))}
+            selectedCustomerGroup={customerGroups?.find(g => g.id === parseInt(form.watch('customerGroupId') || '0'))}
+            onMessageGenerated={(message) => {
+              form.setValue('customMessage', message);
+              toast({
+                title: "Message Applied",
+                description: "AI-generated message has been added to your campaign.",
+              });
+            }}
+          />
+          <Button 
+            className="flex items-center space-x-2"
+            onClick={() => {
+              setEditingCampaign(null);
+              setCampaignType('single');
+              form.reset({
+                title: "",
+                customMessage: "",
+                includeContact: true,
+                includePurchaseLink: true,
+                campaignType: 'single',
+              });
+              setSelectedProducts([{ productId: 0, quantity: 1 }]);
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Broadcast</span>
+          </Button>
+        </div>
       </div>
 
       {/* Unified Create/Edit Campaign Dialog */}

@@ -7,7 +7,7 @@ import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } 
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
-import { generateTaglines } from "./ai-taglines";
+import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
 import { z } from "zod";
@@ -2992,6 +2992,114 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("AI description generation error:", error);
       res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
+  // AI-powered campaign personalization endpoints
+  app.post('/api/ai/personalized-message', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const context = {
+        businessName: user.businessName || user.firstName || "Your Business",
+        businessType: user.businessType,
+        ...req.body
+      };
+
+      const personalizedMessage = await generatePersonalizedTagline(context);
+      res.json(personalizedMessage);
+    } catch (error) {
+      console.error("AI personalization error:", error);
+      res.status(500).json({ message: "Failed to generate personalized message" });
+    }
+  });
+
+  app.get('/api/ai/campaign-suggestions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get products and customer groups for context
+      const products = await storage.getProducts(userId);
+      const customerGroups = await storage.getCustomerGroups(userId);
+
+      // Get recent campaign performance (simplified for now)
+      const recentCampaigns = await storage.getCampaigns(userId);
+      const recentPerformance = {
+        openRate: 75, // This would come from analytics in a real implementation
+        clickRate: 25,
+        conversionRate: 8
+      };
+
+      const context = {
+        businessName: user.businessName || user.firstName || "Your Business",
+        businessType: user.businessType,
+        products: products.map(p => ({
+          name: p.name,
+          category: p.category,
+          price: p.price
+        })),
+        customerGroups: customerGroups.map(g => ({
+          name: g.name,
+          memberCount: g.memberCount || 0
+        })),
+        recentPerformance
+      };
+
+      const suggestions = await generateCampaignSuggestions(context);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Campaign suggestions error:", error);
+      res.status(500).json({ message: "Failed to generate campaign suggestions" });
+    }
+  });
+
+  app.post('/api/ai/optimize-timing', requireAuth, async (req: any, res) => {
+    try {
+      const { customerGroup, previousCampaignData } = req.body;
+      
+      const timing = await optimizeMessageTiming({
+        customerGroup: customerGroup || 'General',
+        previousCampaignData: previousCampaignData || []
+      });
+      
+      res.json(timing);
+    } catch (error) {
+      console.error("AI timing optimization error:", error);
+      res.status(500).json({ message: "Failed to optimize campaign timing" });
+    }
+  });
+
+  app.post('/api/ai/optimize-timing', requireAuth, async (req: any, res) => {
+    try {
+      const { customerGroup, previousCampaignData } = req.body;
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const context = {
+        customerGroup: customerGroup || "General",
+        businessType: user.businessType || "wholesale",
+        previousCampaignData
+      };
+
+      const timing = await optimizeMessageTiming(context);
+      res.json(timing);
+    } catch (error) {
+      console.error("Timing optimization error:", error);
+      res.status(500).json({ message: "Failed to optimize message timing" });
     }
   });
 
