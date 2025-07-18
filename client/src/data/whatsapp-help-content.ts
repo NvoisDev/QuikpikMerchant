@@ -48,6 +48,32 @@ export const helpContent = {
     ]
   },
 
+  customerDirectory: {
+    title: "Customer Directory & Groups",
+    steps: [
+      {
+        title: "Customer Groups",
+        content: "Create organized groups to categorize your customers by location, business type, or buying patterns. Each group can receive targeted messages and promotions.",
+        tip: "Use descriptive group names like 'Downtown Restaurants' or 'Bulk Buyers' for easy identification."
+      },
+      {
+        title: "Adding Members",
+        content: "Three easy ways to add customers: Manual Entry for new customers, Search Existing to add from your directory, or Import Contacts from your phone.",
+        tip: "Import Contacts is fastest for bulk additions - just copy/paste from WhatsApp or phone contacts."
+      },
+      {
+        title: "Customer Directory",
+        content: "View all customers in one place with their contact details, order history, and group memberships. Track customer activity and manage relationships.",
+        tip: "Use the search function to quickly find customers by name, phone, or email address."
+      },
+      {
+        title: "Order Tracking",
+        content: "Click on any customer to view their complete order history, total spending, and engagement patterns. This helps you provide better service.",
+        tip: "Regular customers with high order values are perfect candidates for VIP groups and special offers."
+      }
+    ]
+  },
+
   campaigns: {
     title: "Creating Effective Campaigns",
     steps: [

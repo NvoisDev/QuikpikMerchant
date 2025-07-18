@@ -641,7 +641,7 @@ export default function Customers() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Customer Groups</h2>
             <div className="flex items-center space-x-2">
-              <ContextualHelpBubble content={helpContent.customerGroups} />
+              <ContextualHelpBubble content={helpContent.customerDirectory} />
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -902,6 +902,7 @@ export default function Customers() {
               />
             </div>
             <div className="flex items-center space-x-2">
+              <ContextualHelpBubble content={helpContent.customerDirectory} />
               <Button
                 onClick={() => {
                   // Set a default group for directory additions (or create a general one)
