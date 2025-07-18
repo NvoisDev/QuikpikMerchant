@@ -447,11 +447,80 @@ export default function Campaigns() {
 
 
 
+  // Helper function to generate promotional offers messaging
+  const generatePromotionalOffersMessage = (promotionalOffers: any[], currencySymbol: string = '£'): string => {
+    if (!promotionalOffers || promotionalOffers.length === 0) {
+      return '';
+    }
+
+    let promoMessage = '\n\n🎉 *SPECIAL OFFERS ACTIVE:*';
+    
+    promotionalOffers.forEach((offer, index) => {
+      switch (offer.type) {
+        case 'percentage_discount':
+          const percentageDiscount = offer.value || offer.discountPercentage;
+          promoMessage += `\n💥 ${percentageDiscount}% OFF - Save big on your order!`;
+          break;
+        case 'fixed_discount':
+        case 'fixed_amount_discount':
+          const fixedDiscount = offer.value || offer.discountAmount;
+          promoMessage += `\n💥 ${currencySymbol}${fixedDiscount} OFF each unit - Instant savings!`;
+          break;
+        case 'fixed_price':
+          promoMessage += `\n🔥 SPECIAL PRICE: Only ${currencySymbol}${offer.fixedPrice} each!`;
+          break;
+        case 'bogo':
+        case 'buy_x_get_y_free':
+          promoMessage += `\n🎁 AMAZING DEAL: Buy ${offer.buyQuantity}, Get ${offer.getQuantity} FREE!`;
+          break;
+        case 'multi_buy':
+          promoMessage += `\n📦 BULK DISCOUNT: Buy ${offer.quantity}+ and get ${offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${currencySymbol}${offer.discountValue} OFF`} each!`;
+          break;
+        case 'bulk_tier':
+          promoMessage += `\n📊 WHOLESALE PRICING: ${offer.quantity}+ units = ${currencySymbol}${offer.pricePerUnit} each!`;
+          break;
+        case 'bulk_discount':
+          if (offer.bulkTiers && offer.bulkTiers.length > 0) {
+            const firstTier = offer.bulkTiers[0];
+            if (firstTier.pricePerUnit) {
+              promoMessage += `\n📊 TIERED PRICING: Starting from ${currencySymbol}${firstTier.pricePerUnit} each!`;
+            } else if (firstTier.discountPercentage) {
+              promoMessage += `\n📊 BULK SAVINGS: Up to ${firstTier.discountPercentage}% OFF on bulk orders!`;
+            } else if (firstTier.discountAmount) {
+              promoMessage += `\n📊 BULK SAVINGS: Up to ${currencySymbol}${firstTier.discountAmount} OFF each!`;
+            }
+          }
+          break;
+        case 'free_shipping':
+          promoMessage += `\n🚚 FREE DELIVERY on orders over ${currencySymbol}${offer.minimumOrderValue}!`;
+          break;
+        case 'bundle_deal':
+          if (offer.bundlePrice) {
+            promoMessage += `\n🎁 BUNDLE SPECIAL: ${currencySymbol}${offer.bundlePrice} each when bought together!`;
+          } else if (offer.discountType === 'percentage' && offer.discountValue) {
+            promoMessage += `\n🎁 BUNDLE DEAL: Save ${offer.discountValue}% when buying together!`;
+          } else if (offer.discountType === 'fixed' && offer.discountValue) {
+            promoMessage += `\n🎁 BUNDLE DEAL: Save ${currencySymbol}${offer.discountValue} each when buying together!`;
+          }
+          break;
+        default:
+          if (offer.name) {
+            promoMessage += `\n✨ ${offer.name} - Special offer available!`;
+          }
+          break;
+      }
+    });
+
+    promoMessage += `\n⏰ *Limited time offer - Order now!*`;
+    return promoMessage;
+  };
+
   const generatePreviewMessage = (campaign: Campaign) => {
     const businessName = user?.businessName || "Your Business";
     const phone = user?.businessPhone || user?.phoneNumber || "+1234567890";
     const baseUrl = window.location.origin;
     const customerPortalUrl = `${baseUrl}/customer/${user?.id}`;
+    const currencySymbol = user?.defaultCurrency === 'GBP' ? '£' : user?.defaultCurrency === 'EUR' ? '€' : '$';
 
     let message = `🛍️ *${campaign.title}*\n\n`;
     
@@ -463,11 +532,27 @@ export default function Campaigns() {
       message += `📦 *Featured Products:*\n\n`;
       
       // Use special price if provided, otherwise use promotional price if active, otherwise use regular price
-      const price = campaign.specialPrice || 
-                   (campaign.product.promoActive && campaign.product.promoPrice ? campaign.product.promoPrice : campaign.product.price);
+      const basePrice = campaign.specialPrice ? parseFloat(campaign.specialPrice) : parseFloat(campaign.product.price) || 0;
+      const promoPrice = campaign.product.promoPrice ? parseFloat(campaign.product.promoPrice) : undefined;
       
-      message += `1. ${campaign.product.name}\n`;
-      message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
+      // Calculate promotional pricing using the same logic as backend
+      const promotionalOffers = (campaign as any).promotionalOffers || [];
+      const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+        basePrice,
+        1,
+        promotionalOffers,
+        promoPrice,
+        campaign.product.promoActive
+      );
+      
+      // Format price display with promotional pricing
+      const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
+      const priceDisplay = hasPromotion 
+        ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ 🔥PROMO🔥`
+        : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
+      
+      message += `1. ${campaign.product.name}${hasPromotion ? ' 🔥' : ''}\n`;
+      message += `   💰 Unit Price: ${priceDisplay}\n`;
       
       // Add negotiation information if enabled
       if (campaign.product.negotiationEnabled) {
@@ -480,13 +565,36 @@ export default function Campaigns() {
       message += `   📦 MOQ: ${formatNumber(campaign.product.moq)} units\n`;
       message += `   📦 In Stock: ${formatNumber(campaign.product.stock)} packs available\n`;
       
+      // Add promotional offers for single product campaigns
+      const promoMessaging = generatePromotionalOffersMessage(promotionalOffers, currencySymbol);
+      if (promoMessaging) {
+        message += `   ${promoMessaging.replace(/\n/g, '\n   ')}\n`;
+      }
+      
     } else if (campaign.campaignType === 'multi' && campaign.products) {
       message += `📦 *Featured Products:*\n\n`;
       campaign.products.forEach((item, index) => {
-        const price = item.specialPrice || 
-                     (item.product.promoActive && item.product.promoPrice ? item.product.promoPrice : item.product.price);
-        message += `${index + 1}. ${item.product.name}\n`;
-        message += `   💰 Unit Price: ${formatCurrency(parseFloat(price))}\n`;
+        const basePrice = item.specialPrice ? parseFloat(item.specialPrice) : parseFloat(item.product.price) || 0;
+        const promoPrice = item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined;
+        
+        // Calculate promotional pricing for this product
+        const promotionalOffers = item.promotionalOffers || [];
+        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          basePrice,
+          1,
+          promotionalOffers,
+          promoPrice,
+          item.product.promoActive
+        );
+        
+        // Format price display with promotional pricing
+        const hasPromotion = pricing.effectivePrice < pricing.originalPrice;
+        const priceDisplay = hasPromotion 
+          ? `${currencySymbol}${pricing.effectivePrice.toFixed(2)} ~~${currencySymbol}${pricing.originalPrice.toFixed(2)}~~ 🔥PROMO🔥`
+          : `${currencySymbol}${pricing.originalPrice.toFixed(2)}`;
+        
+        message += `${index + 1}. ${item.product.name}${hasPromotion ? ' 🔥' : ''}\n`;
+        message += `   💰 Unit Price: ${priceDisplay}\n`;
         
         // Add negotiation information if enabled
         if (item.product.negotiationEnabled) {
@@ -498,6 +606,12 @@ export default function Campaigns() {
         
         message += `   📦 MOQ: ${formatNumber(item.product.moq)} units\n`;
         message += `   📦 In Stock: ${formatNumber(item.product.stock)} packs available\n`;
+        
+        // Add promotional offers for this product
+        const promoMessaging = generatePromotionalOffersMessage(promotionalOffers, currencySymbol);
+        if (promoMessaging) {
+          message += `   ${promoMessaging.replace(/\n/g, '\n   ')}\n`;
+        }
       });
     }
 
