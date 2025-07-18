@@ -53,6 +53,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
+import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -237,6 +238,7 @@ export default function Campaigns() {
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
   const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'performance'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
@@ -714,10 +716,22 @@ export default function Campaigns() {
           <p className="text-gray-600">Create and manage WhatsApp marketing campaigns</p>
         </div>
       </div>
-      {/* Sandbox Notification Banner */}
 
+      {/* Main Tabs */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'performance')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Campaign Management
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Performance Analytics
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Broadcast Dashboard */}
+        <TabsContent value="campaigns" className="space-y-6">
+          {/* Broadcast Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
@@ -1704,6 +1718,16 @@ export default function Campaigns() {
           )}
         </DialogContent>
       </Dialog>
+
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <CampaignPerformanceDashboard 
+            campaigns={campaigns}
+            onRefresh={refetchCampaigns}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Subscription Upgrade Modal */}
       <SubscriptionUpgradeModal 

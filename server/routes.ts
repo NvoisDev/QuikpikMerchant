@@ -4002,6 +4002,219 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Campaign Analytics API endpoint
+  app.get('/api/campaigns/analytics', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { timeFilter = '7d', campaignFilter = 'all' } = req.query;
+
+      // Calculate date range based on timeFilter
+      const now = new Date();
+      let fromDate = new Date();
+      
+      switch (timeFilter) {
+        case '1d':
+          fromDate.setDate(now.getDate() - 1);
+          break;
+        case '7d':
+          fromDate.setDate(now.getDate() - 7);
+          break;
+        case '30d':
+          fromDate.setDate(now.getDate() - 30);
+          break;
+        case '90d':
+          fromDate.setDate(now.getDate() - 90);
+          break;
+        case 'all':
+        default:
+          fromDate = new Date(2020, 0, 1); // Far back date for "all time"
+          break;
+      }
+
+      // Get campaigns and analytics data
+      const [broadcasts, templates, allOrders] = await Promise.all([
+        storage.getBroadcasts(targetUserId),
+        storage.getMessageTemplates(targetUserId),
+        storage.getOrders(targetUserId)
+      ]);
+
+      // Filter campaigns by date and type
+      const filteredBroadcasts = broadcasts.filter(broadcast => {
+        const created = new Date(broadcast.createdAt);
+        const isInTimeRange = created >= fromDate;
+        
+        if (campaignFilter === 'promotional') {
+          try {
+            const hasOffers = broadcast.promotionalOffers && 
+              broadcast.promotionalOffers !== '[]' && 
+              broadcast.promotionalOffers !== 'null' &&
+              broadcast.promotionalOffers.length > 0;
+            return isInTimeRange && hasOffers;
+          } catch (e) {
+            return false;
+          }
+        }
+        if (campaignFilter === 'single') return isInTimeRange;
+        return isInTimeRange; // 'all' case
+      });
+
+      const filteredTemplates = templates.filter(template => {
+        const created = new Date(template.createdAt);
+        const isInTimeRange = created >= fromDate;
+        
+        if (campaignFilter === 'promotional') {
+          const hasOffers = template.products.some(p => {
+            try {
+              return p.promotionalOffers && 
+                p.promotionalOffers !== '[]' && 
+                p.promotionalOffers !== 'null' &&
+                p.promotionalOffers.length > 0;
+            } catch (e) {
+              return false;
+            }
+          });
+          return isInTimeRange && hasOffers;
+        }
+        if (campaignFilter === 'multi') return isInTimeRange;
+        return isInTimeRange; // 'all' case
+      });
+
+      // Calculate performance metrics
+      let totalRecipients = 0;
+      let totalViews = 0;
+      let totalClicks = 0;
+      let totalOrders = 0;
+      let totalRevenue = 0;
+
+      // Calculate metrics from broadcast campaigns
+      for (const broadcast of filteredBroadcasts) {
+        if (broadcast.sentAt) {
+          totalRecipients += broadcast.recipientCount || 0;
+          
+          // Calculate real order metrics for this broadcast
+          const broadcastDate = new Date(broadcast.sentAt);
+          const ordersForProduct = allOrders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
+            return orderDate >= broadcastDate && validStatuses.includes(order.status);
+          });
+
+          // Get order items for this specific product
+          const productOrders = await Promise.all(
+            ordersForProduct.map(async order => {
+              const orderItems = await storage.getOrderItems(order.id);
+              return orderItems.filter(item => item.productId === broadcast.product?.id);
+            })
+          );
+
+          const ordersWithProduct = productOrders.filter(orderItems => orderItems.length > 0);
+          const broadcastOrderCount = ordersWithProduct.length;
+          const broadcastRevenue = productOrders.flat().reduce((sum, item) => {
+            return sum + (parseFloat(item.unitPrice) * item.quantity);
+          }, 0);
+
+          totalOrders += broadcastOrderCount;
+          totalRevenue += broadcastRevenue;
+          
+          // Estimate clicks and views based on conversion data
+          totalClicks += Math.ceil(broadcastOrderCount * 1.5); // Assume 67% conversion from clicks
+          totalViews += Math.ceil((broadcast.recipientCount || 0) * 0.6); // Assume 60% view rate
+        }
+      }
+
+      // Calculate metrics from template campaigns
+      for (const template of filteredTemplates) {
+        for (const campaign of template.campaigns || []) {
+          if (campaign.sentAt) {
+            totalRecipients += campaign.recipientCount || 0;
+            totalOrders += campaign.orderCount || 0;
+            totalRevenue += parseFloat(campaign.totalRevenue || '0');
+            totalClicks += campaign.clickCount || 0;
+            totalViews += Math.ceil((campaign.recipientCount || 0) * 0.6); // Estimate 60% view rate
+          }
+        }
+      }
+
+      // Calculate rates
+      const averageConversionRate = totalRecipients > 0 ? (totalOrders / totalRecipients) * 100 : 0;
+      const averageClickRate = totalRecipients > 0 ? (totalClicks / totalRecipients) * 100 : 0;
+
+      // Find best performing campaign
+      let bestPerformingCampaign = null;
+      let bestRevenue = 0;
+
+      // Check broadcasts
+      for (const broadcast of filteredBroadcasts) {
+        if (broadcast.sentAt) {
+          const broadcastDate = new Date(broadcast.sentAt);
+          const ordersForProduct = allOrders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
+            return orderDate >= broadcastDate && validStatuses.includes(order.status);
+          });
+
+          const productOrders = await Promise.all(
+            ordersForProduct.map(async order => {
+              const orderItems = await storage.getOrderItems(order.id);
+              return orderItems.filter(item => item.productId === broadcast.product?.id);
+            })
+          );
+
+          const revenue = productOrders.flat().reduce((sum, item) => {
+            return sum + (parseFloat(item.unitPrice) * item.quantity);
+          }, 0);
+
+          if (revenue > bestRevenue) {
+            bestRevenue = revenue;
+            bestPerformingCampaign = {
+              id: `broadcast_${broadcast.id}`,
+              title: `${broadcast.product?.name} Promotion`,
+              revenue: revenue,
+              type: 'single'
+            };
+          }
+        }
+      }
+
+      // Check template campaigns
+      for (const template of filteredTemplates) {
+        for (const campaign of template.campaigns || []) {
+          const revenue = parseFloat(campaign.totalRevenue || '0');
+          if (revenue > bestRevenue) {
+            bestRevenue = revenue;
+            bestPerformingCampaign = {
+              id: `template_${template.id}`,
+              title: template.title,
+              revenue: revenue,
+              type: 'multi'
+            };
+          }
+        }
+      }
+
+      const performanceData = {
+        totalCampaigns: filteredBroadcasts.length + filteredTemplates.length,
+        activeCampaigns: filteredBroadcasts.filter(b => b.sentAt).length + 
+                         filteredTemplates.reduce((sum, t) => sum + (t.campaigns?.filter(c => c.sentAt).length || 0), 0),
+        totalRecipients,
+        totalViews,
+        totalClicks,
+        totalOrders,
+        totalRevenue,
+        averageConversionRate: Math.round(averageConversionRate * 100) / 100,
+        averageClickRate: Math.round(averageClickRate * 100) / 100,
+        bestPerformingCampaign,
+        recentPerformance: [] // Could be expanded with detailed trend data
+      };
+
+      res.json(performanceData);
+    } catch (error) {
+      console.error("Error fetching campaign analytics:", error);
+      res.status(500).json({ message: "Failed to fetch campaign analytics" });
+    }
+  });
+
   app.post('/api/campaigns', requireAuth, async (req: any, res) => {
     try {
       const user = req.user;
