@@ -108,32 +108,8 @@ export function EnhancedAICampaignAssistant({
   });
 
   // Fetch all customers from customer groups
-  const { data: allCustomers = [] } = useQuery({
+  const { data: allCustomers = [], isLoading: customersLoading } = useQuery({
     queryKey: ['/api/customer-groups/all-members'],
-    queryFn: async () => {
-      const groups = await apiRequest('/api/customer-groups');
-      const allMembers: Customer[] = [];
-      
-      for (const group of groups) {
-        const members = await apiRequest(`/api/customer-groups/${group.id}/members`);
-        members.forEach((member: any) => {
-          const existingCustomer = allMembers.find(c => c.id === member.userId);
-          if (existingCustomer) {
-            existingCustomer.customerGroups = [...(existingCustomer.customerGroups || []), group.name];
-          } else {
-            allMembers.push({
-              id: member.userId,
-              firstName: member.firstName,
-              lastName: member.lastName,
-              phoneNumber: member.phoneNumber,
-              customerGroups: [group.name]
-            });
-          }
-        });
-      }
-      
-      return allMembers;
-    },
     enabled: isOpen
   });
 

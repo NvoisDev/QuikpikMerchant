@@ -1870,17 +1870,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all customers from all customer groups (for AI assistant search)
   app.get('/api/customer-groups/all-members', requireAuth, async (req: any, res) => {
     try {
+      console.log("Fetching all customer members for user:", req.user?.id);
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
       
+      console.log("Target user ID:", targetUserId);
       const customerGroups = await storage.getCustomerGroups(targetUserId);
+      console.log("Found customer groups:", customerGroups.length);
       
       const allMembers: any[] = [];
       const seenCustomers = new Set<string>();
       
       for (const group of customerGroups) {
+        console.log(`Fetching members for group: ${group.name} (ID: ${group.id})`);
         const members = await storage.getGroupMembers(group.id);
+        console.log(`Found ${members.length} members in group ${group.name}`);
+        
         for (const member of members) {
           if (!seenCustomers.has(member.userId)) {
             seenCustomers.add(member.userId);
@@ -1901,6 +1907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log("Total unique customers found:", allMembers.length);
       res.json(allMembers);
     } catch (error) {
       console.error("Error fetching all customer group members:", error);
