@@ -245,9 +245,9 @@ export default function Customers() {
   });
 
   // Queries - Customer Address Book
-  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+  const { data: customers = [], isLoading: isLoadingCustomers, refetch: refetchCustomers } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 seconds instead of 5 minutes
   });
 
   const { data: stats } = useQuery<CustomerStats>({
@@ -375,9 +375,10 @@ export default function Customers() {
 
   const addCustomerMutation = useMutation({
     mutationFn: (data: AddCustomerFormData) => apiRequest('POST', '/api/customers', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+      await refetchCustomers(); // Force immediate refresh
       toast({ title: "Success", description: "Customer added to directory successfully!" });
       setIsAddCustomerDialogOpen(false);
       addCustomerForm.reset();
@@ -412,6 +413,7 @@ export default function Customers() {
   };
 
   const displayedCustomers = searchQuery.length > 2 ? searchResults : customers;
+  console.log('Customer display data:', { searchQuery, customersCount: customers.length, displayedCount: displayedCustomers.length });
   const sortedCustomers = displayedCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
 
   // Event handlers

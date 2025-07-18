@@ -3030,8 +3030,8 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // Get all customers in wholesaler's groups with their group information
-    const customersWithGroups = await db.execute(sql`
+    // Get all customers (both in groups and standalone) with their group information
+    const allCustomers = await db.execute(sql`
       SELECT DISTINCT
         u.id,
         u.first_name,
@@ -3049,23 +3049,22 @@ export class DatabaseStorage implements IStorage {
           u.first_name, 
           'Customer'
         ) as full_name,
-        STRING_AGG(cg.name, ', ') as group_names,
-        STRING_AGG(cg.id::text, ',') as group_ids,
+        COALESCE(STRING_AGG(cg.name, ', '), '') as group_names,
+        COALESCE(STRING_AGG(cg.id::text, ','), '') as group_ids,
         COUNT(DISTINCT o.id) as total_orders,
         COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent,
         MAX(o.created_at) as last_order_date
       FROM users u
-      INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
-      INNER JOIN customer_groups cg ON cgm.group_id = cg.id
+      LEFT JOIN customer_group_members cgm ON u.id = cgm.customer_id
+      LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
       LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
-      WHERE cg.wholesaler_id = ${wholesalerId}
-        AND u.role = 'retailer'
+      WHERE u.role IN ('retailer', 'customer')
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
     `);
 
-    return customersWithGroups.rows.map((customer: any) => ({
+    return allCustomers.rows.map((customer: any) => ({
       id: customer.id,
       firstName: customer.first_name,
       lastName: customer.last_name,
