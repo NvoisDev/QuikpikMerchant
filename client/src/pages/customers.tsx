@@ -262,7 +262,7 @@ export default function Customers() {
 
   // Mutations - Customer Groups
   const createGroupMutation = useMutation({
-    mutationFn: (data: CustomerGroupFormData) => apiRequest('/api/customer-groups', 'POST', data),
+    mutationFn: (data: CustomerGroupFormData) => apiRequest('POST', '/api/customer-groups', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       toast({ title: "Success", description: "Customer group created successfully!" });
@@ -284,7 +284,7 @@ export default function Customers() {
 
   const editGroupMutation = useMutation({
     mutationFn: ({ groupId, data }: { groupId: number; data: EditGroupFormData }) =>
-      apiRequest(`/api/customer-groups/${groupId}`, 'PUT', data),
+      apiRequest('PUT', `/api/customer-groups/${groupId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       toast({ title: "Success", description: "Customer group updated successfully!" });
@@ -302,7 +302,7 @@ export default function Customers() {
 
   const addMemberMutation = useMutation({
     mutationFn: ({ groupId, data }: { groupId: number; data: AddMemberFormData }) =>
-      apiRequest(`/api/customer-groups/${groupId}/members`, 'POST', data),
+      apiRequest('POST', `/api/customer-groups/${groupId}/members`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
@@ -322,7 +322,7 @@ export default function Customers() {
   // Mutations - Customer Address Book
   const updateCustomerMutation = useMutation({
     mutationFn: ({ customerId, data }: { customerId: string; data: EditCustomerFormData }) =>
-      apiRequest(`/api/customers/${customerId}`, 'PUT', data),
+      apiRequest('PUT', `/api/customers/${customerId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       toast({ title: "Success", description: "Customer updated successfully!" });
@@ -339,7 +339,7 @@ export default function Customers() {
 
   const addCustomerToGroupMutation = useMutation({
     mutationFn: ({ groupId, customerId }: { groupId: number; customerId: string }) =>
-      apiRequest(`/api/customer-groups/${groupId}/members/${customerId}`, 'POST'),
+      apiRequest('POST', `/api/customer-groups/${groupId}/members/${customerId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
@@ -358,7 +358,7 @@ export default function Customers() {
 
   const removeFromGroupMutation = useMutation({
     mutationFn: ({ groupId, customerId }: { groupId: number; customerId: string }) =>
-      apiRequest(`/api/customer-groups/${groupId}/members/${customerId}`, 'DELETE'),
+      apiRequest('DELETE', `/api/customer-groups/${groupId}/members/${customerId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
@@ -374,7 +374,7 @@ export default function Customers() {
   });
 
   const addCustomerMutation = useMutation({
-    mutationFn: (data: AddCustomerFormData) => apiRequest('/api/customers', 'POST', data),
+    mutationFn: (data: AddCustomerFormData) => apiRequest('POST', '/api/customers', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
