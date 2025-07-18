@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -43,7 +44,8 @@ import {
   Eye,
   Smartphone,
   ContactRound,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -746,41 +748,44 @@ export default function Customers() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedGroup(group);
-                            setIsAddMemberDialogOpen(true);
-                          }}
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Add Member
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedGroup(group);
-                            setIsSearchAndAddDialogOpen(true);
-                          }}
-                          title="Search & Add Existing Customer"
-                        >
-                          <Search className="mr-2 h-4 w-4" />
-                          Search & Add
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedGroup(group);
-                            setIsImportContactsDialogOpen(true);
-                          }}
-                          title="Import from Contacts"
-                          className="px-2"
-                        >
-                          <Smartphone className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Add Member
+                              <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedGroup(group);
+                                setIsAddMemberDialogOpen(true);
+                              }}
+                            >
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Manual Entry
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedGroup(group);
+                                setIsSearchAndAddDialogOpen(true);
+                              }}
+                            >
+                              <Search className="mr-2 h-4 w-4" />
+                              Search Existing
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedGroup(group);
+                                setIsImportContactsDialogOpen(true);
+                              }}
+                            >
+                              <Smartphone className="mr-2 h-4 w-4" />
+                              Import Contacts
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Button
@@ -1237,9 +1242,9 @@ export default function Customers() {
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Customer to {selectedGroup?.name}</DialogTitle>
+            <DialogTitle>Manual Entry - Add Customer to {selectedGroup?.name}</DialogTitle>
             <DialogDescription>
-              Add a new customer to this group. They'll be able to receive your broadcasts.
+              Create a new customer profile and add them to this group. They'll be able to receive your broadcasts.
             </DialogDescription>
           </DialogHeader>
           <Form {...addMemberForm}>
