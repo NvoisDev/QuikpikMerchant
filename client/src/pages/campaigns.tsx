@@ -54,8 +54,6 @@ import { PromotionalOffersManager } from "@/components/PromotionalOffersManager"
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
-import { EnhancedAICampaignAssistant } from "@/components/EnhancedAICampaignAssistant";
-import { SmartCampaignWizard } from "@/components/SmartCampaignWizard";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -839,27 +837,7 @@ export default function Campaigns() {
           <p className="text-gray-600 mt-1">Send WhatsApp messages to promote products and boost sales</p>
         </div>
         <div className="flex items-center gap-3">
-          <SmartCampaignWizard 
-            onCampaignCreated={(campaignData) => {
-              // Auto-fill the form with AI-generated campaign data
-              form.setValue('title', campaignData.title);
-              form.setValue('customMessage', campaignData.message);
-              form.setValue('customerGroupId', campaignData.customerGroupId?.toString() || '');
-              form.setValue('productId', campaignData.productId?.toString() || '');
-              setIsCreateOpen(true);
-            }}
-          />
-          <EnhancedAICampaignAssistant 
-            selectedProduct={products?.find(p => p.id === parseInt(form.watch('productId') || '0'))}
-            selectedCustomerGroup={customerGroups?.find(g => g.id === parseInt(form.watch('customerGroupId') || '0'))}
-            onMessageGenerated={(message) => {
-              form.setValue('customMessage', message);
-              toast({
-                title: "Message Applied",
-                description: "AI-generated message has been added to your campaign.",
-              });
-            }}
-          />
+          {/* AI components removed as requested by user */}
           <Button 
             className="flex items-center space-x-2"
             onClick={() => {
