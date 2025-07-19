@@ -111,7 +111,7 @@ function Router() {
   const [location] = useLocation();
   
   // Check if current route is public (doesn't need authentication)
-  const isPublicRoute = ['/login', '/campaign/', '/marketplace/product/', '/customer/', '/team-invitation', '/signup'].some(route => location.includes(route));
+  const isPublicRoute = location === '/' || ['/login', '/campaign/', '/marketplace/product/', '/customer/', '/team-invitation', '/signup'].some(route => location.includes(route));
   
   // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
