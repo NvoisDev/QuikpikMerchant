@@ -572,45 +572,65 @@ export default function CustomerPortal() {
 
   // Customer authentication state with localStorage persistence
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      return stored ? JSON.parse(stored).isAuthenticated : false;
-    } catch {
-      return false;
+    // In preview mode, allow stored authentication
+    if (isPreviewMode) {
+      try {
+        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+        return stored ? JSON.parse(stored).isAuthenticated : false;
+      } catch {
+        return false;
+      }
     }
+    // For regular customer portal access, always start unauthenticated
+    return false;
   });
   
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(() => {
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      return stored ? JSON.parse(stored).customer : null;
-    } catch {
-      return null;
+    // In preview mode, allow stored customer data
+    if (isPreviewMode) {
+      try {
+        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+        return stored ? JSON.parse(stored).customer : null;
+      } catch {
+        return null;
+      }
     }
+    // For regular customer portal access, start with no customer data
+    return null;
   });
   
   const [showHomePage, setShowHomePage] = useState(true);
   const [showAuth, setShowAuth] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      return stored ? !JSON.parse(stored).isAuthenticated : true;
-    } catch {
-      return true;
+    // In preview mode, use stored auth state
+    if (isPreviewMode) {
+      try {
+        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+        return stored ? !JSON.parse(stored).isAuthenticated : true;
+      } catch {
+        return true;
+      }
     }
+    // For regular customer portal access, always show auth first
+    return true;
   });
   
   const [isGuestMode, setIsGuestMode] = useState(() => {
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      return stored ? !JSON.parse(stored).isAuthenticated : true;
-    } catch {
-      return true;
+    // In preview mode, use stored guest mode state
+    if (isPreviewMode) {
+      try {
+        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
+        return stored ? !JSON.parse(stored).isAuthenticated : true;
+      } catch {
+        return true;
+      }
     }
+    // For regular customer portal access, start in guest mode
+    return true;
   });
 
-  // Persist authentication state to localStorage
+  // Persist authentication state to localStorage (only in preview mode)
   useEffect(() => {
-    if (wholesalerId) {
+    if (wholesalerId && isPreviewMode) {
       const authData = {
         isAuthenticated,
         customer: authenticatedCustomer,
@@ -618,7 +638,7 @@ export default function CustomerPortal() {
       };
       localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify(authData));
     }
-  }, [isAuthenticated, authenticatedCustomer, wholesalerId]);
+  }, [isAuthenticated, authenticatedCustomer, wholesalerId, isPreviewMode]);
 
   // Clear expired authentication data on component mount
   useEffect(() => {
