@@ -117,7 +117,7 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
               <TooltipTrigger asChild>
                 <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
+              <TooltipContent className="max-w-xs z-[9999] bg-black text-white border-gray-700" sideOffset={8}>
                 <p className="text-xs">Track promotional campaign performance and effectiveness</p>
               </TooltipContent>
             </Tooltip>
@@ -136,7 +136,7 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                <TooltipContent className="max-w-xs z-[9999] bg-black text-white border-gray-700" sideOffset={8}>
                   <p className="text-xs"><strong>Revenue:</strong> Total earnings from promotional orders</p>
                 </TooltipContent>
               </Tooltip>
@@ -148,7 +148,7 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                <TooltipContent className="max-w-xs z-[9999] bg-black text-white border-gray-700" sideOffset={8}>
                   <p className="text-xs"><strong>Orders:</strong> Number of promotional orders placed</p>
                 </TooltipContent>
               </Tooltip>
@@ -160,7 +160,7 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                <TooltipContent className="max-w-xs z-[9999] bg-black text-white border-gray-700" sideOffset={8}>
                   <p className="text-xs"><strong>AOV:</strong> Average order value (Revenue ÷ Orders)</p>
                 </TooltipContent>
               </Tooltip>
@@ -172,7 +172,7 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
+                <TooltipContent className="max-w-xs z-[9999] bg-black text-white border-gray-700" sideOffset={8}>
                   <p className="text-xs"><strong>Conversion:</strong> Views that resulted in purchases (%)</p>
                 </TooltipContent>
               </Tooltip>
