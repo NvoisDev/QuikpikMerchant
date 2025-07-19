@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Target, DollarSign, ShoppingCart, BarChart3, Calendar } from "lucide-react";
+import { TrendingUp, Target, DollarSign, ShoppingCart, BarChart3, Calendar, HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PromotionAnalyticsProps {
   productId: number;
@@ -101,36 +107,77 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <BarChart3 className="h-4 w-4" />
-          Promotion Analytics
-        </CardTitle>
-        <CardDescription className="text-xs">
-          {analytics.length} active promotion{analytics.length !== 1 ? 's' : ''}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-1">
-            <DollarSign className="h-3 w-3 text-green-600" />
-            <span className="font-medium">£{totalRevenue.toLocaleString()}</span>
+    <TooltipProvider>
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Promotion Analytics
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm">
+                <p className="text-xs">Track the performance of your promotional campaigns. These metrics help you understand which promotions are most effective at driving sales and customer engagement.</p>
+              </TooltipContent>
+            </Tooltip>
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {analytics.length} active promotion{analytics.length !== 1 ? 's' : ''}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <DollarSign className="h-3 w-3 text-green-600" />
+              <span className="font-medium">£{totalRevenue.toLocaleString()}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs"><strong>Total Revenue:</strong> Total money earned from orders where promotional offers were applied to this product.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-1">
+              <ShoppingCart className="h-3 w-3 text-blue-600" />
+              <span className="font-medium">{totalOrders} orders</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs"><strong>Orders:</strong> Number of customer orders that included this product with promotional pricing applied.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 text-purple-600" />
+              <span className="font-medium">£{avgOrderValue.toFixed(0)} AOV</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs"><strong>Average Order Value:</strong> Average amount customers spend per order when buying this product with promotions (Revenue ÷ Orders).</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-1">
+              <Target className="h-3 w-3 text-orange-600" />
+              <span className="font-medium">{performance?.conversionRate || 0}% conv.</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs"><strong>Conversion Rate:</strong> Percentage of customers who viewed this product and then purchased it with promotional pricing. Higher is better.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <ShoppingCart className="h-3 w-3 text-blue-600" />
-            <span className="font-medium">{totalOrders} orders</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-purple-600" />
-            <span className="font-medium">£{avgOrderValue.toFixed(0)} AOV</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Target className="h-3 w-3 text-orange-600" />
-            <span className="font-medium">{performance?.conversionRate || 0}% conv.</span>
-          </div>
-        </div>
 
         {/* Recent Promotions */}
         <div className="space-y-2">
@@ -180,5 +227,6 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
         )}
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 }
