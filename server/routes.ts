@@ -550,16 +550,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('✅ Customer verified:', customer.customerName, customer.customerLastName);
 
       // Now get orders for this verified customer
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      console.log('🔍 Looking for orders with phone number:', decodedPhoneNumber);
+      
       const orderResults = await db
         .select()
         .from(orders)
         .where(
           and(
-            eq(orders.customerPhone, phoneNumber),
+            eq(orders.customerPhone, decodedPhoneNumber),
             eq(orders.wholesalerId, wholesalerId)
           )
         )
         .orderBy(desc(orders.createdAt));
+      
+      console.log('🔍 Found orders:', orderResults.length);
 
       if (orderResults.length === 0) {
         return res.json([]);
