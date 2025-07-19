@@ -181,6 +181,8 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Preview Text Section Removal**: Removed the blue "Message Preview" section from campaign cards per user request for streamlined interface
 - **Clean Campaign Cards**: Simplified campaign card layout by removing preview text functionality while maintaining full preview capabilities through Preview button
 - **Streamlined UI**: Eliminated unnecessary interface elements (refresh button and preview text section) for cleaner, more focused campaign management
+- **Icon-Free Preview Button**: Removed eye icon from Preview button, displaying only "Preview" text for minimal, clean appearance
+- **Text-Only Interface**: Campaign preview button simplified to text-only format per user preference for reduced visual complexity
 - **Improved User Experience**: Campaign cards now show essential information without preview text clutter, maintaining professional appearance
 
 ## Recent Bug Fixes and Feature Implementations (July 19, 2025)

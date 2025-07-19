@@ -1452,26 +1452,10 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsPreviewOpen(true);
                     }}
-                    className="flex-1 min-w-0 px-2 text-xs max-w-none"
+                    className="flex-1 min-w-0 px-2 text-xs"
                     title={generatePreviewMessage(campaign)}
                   >
-                    <Eye className="h-3 w-3 mr-1 flex-shrink-0" />
-                    <span className="truncate text-left">
-                      {(() => {
-                        const previewMessage = generatePreviewMessage(campaign);
-                        // Remove common emojis and symbols for cleaner preview
-                        const cleanMessage = previewMessage
-                          .replace(/[🛒🔥💰📦🎁🚚💯⭐]/g, '')
-                          .replace(/~/g, '')
-                          .replace(/\*+/g, '')
-                          .replace(/\s+/g, ' ')
-                          .trim();
-                        const truncatedMessage = cleanMessage.length > 60 
-                          ? cleanMessage.substring(0, 60) + '...' 
-                          : cleanMessage;
-                        return truncatedMessage;
-                      })()}
-                    </span>
+                    <span className="truncate">Preview</span>
                   </Button>
                   <Button 
                     size="sm" 
