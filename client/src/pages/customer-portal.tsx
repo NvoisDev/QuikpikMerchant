@@ -1807,7 +1807,7 @@ export default function CustomerPortal() {
                           <img 
                             src={product.imageUrl || product.images[0]} 
                             alt={product.name}
-                            className="w-full h-40 object-cover rounded-lg"
+                            className="w-full h-40 object-contain rounded-lg bg-white"
                           />
                         ) : (
                           <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -1969,7 +1969,7 @@ export default function CustomerPortal() {
                             <img 
                               src={product.imageUrl || product.images[0]} 
                               alt={product.name}
-                              className="w-16 h-16 object-cover rounded-lg border"
+                              className="w-16 h-16 object-contain rounded-lg border bg-white"
                             />
                           ) : (
                             <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
@@ -2210,7 +2210,7 @@ export default function CustomerPortal() {
                               <img 
                                 src={product.imageUrl || product.images[0]} 
                                 alt={product.name}
-                                className="w-full h-40 object-cover rounded-lg"
+                                className="w-full h-40 object-contain rounded-lg bg-white"
                               />
                             ) : (
                               <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -2326,7 +2326,7 @@ export default function CustomerPortal() {
                                 <img 
                                   src={product.imageUrl || product.images[0]} 
                                   alt={product.name}
-                                  className="w-16 h-16 object-cover rounded-lg border"
+                                  className="w-16 h-16 object-contain rounded-lg border bg-white"
                                 />
                               ) : (
                                 <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
