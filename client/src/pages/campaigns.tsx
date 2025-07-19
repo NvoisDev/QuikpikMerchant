@@ -30,7 +30,7 @@ import {
   Users,
   Package,
   ShoppingCart,
-  RefreshCw,
+
   ExternalLink,
   BarChart3,
   Calendar,
@@ -1443,6 +1443,23 @@ export default function Campaigns() {
                 </div>
               )}
 
+              {/* Preview Text Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Message Preview</span>
+                </div>
+                <div className="text-xs text-blue-700 leading-relaxed">
+                  {(() => {
+                    const previewMessage = generatePreviewMessage(campaign);
+                    const truncatedMessage = previewMessage.length > 120 
+                      ? previewMessage.substring(0, 120) + '...' 
+                      : previewMessage;
+                    return truncatedMessage;
+                  })()}
+                </div>
+              </div>
+
               <div className="flex flex-col space-y-2 w-full">
                 <div className="flex space-x-1 w-full">
                   <Button 
@@ -1491,20 +1508,7 @@ export default function Campaigns() {
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
-                {campaign.sentCampaigns.length > 0 && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedCampaign(campaign);
-                      setIsStockRefreshOpen(true);
-                    }}
-                    className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 text-xs px-2"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    <span className="truncate">Refresh</span>
-                  </Button>
-                )}
+
               </div>
             </CardContent>
           </Card>
