@@ -1459,9 +1459,16 @@ export default function Campaigns() {
                     <span className="truncate text-left">
                       {(() => {
                         const previewMessage = generatePreviewMessage(campaign);
-                        const truncatedMessage = previewMessage.length > 50 
-                          ? previewMessage.substring(0, 50) + '...' 
-                          : previewMessage;
+                        // Remove common emojis and symbols for cleaner preview
+                        const cleanMessage = previewMessage
+                          .replace(/[🛒🔥💰📦🎁🚚💯⭐]/g, '')
+                          .replace(/~/g, '')
+                          .replace(/\*+/g, '')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+                        const truncatedMessage = cleanMessage.length > 60 
+                          ? cleanMessage.substring(0, 60) + '...' 
+                          : cleanMessage;
                         return truncatedMessage;
                       })()}
                     </span>
