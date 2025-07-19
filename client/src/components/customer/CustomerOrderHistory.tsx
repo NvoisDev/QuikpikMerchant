@@ -370,99 +370,79 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {orders.map((order: Order, index: number) => {
             console.log(`Rendering order ${index}:`, order);
             return (
-            <Card key={order.id} className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-3">
+            <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-lg font-semibold">{order.orderNumber}</div>
-                    <Badge className={getStatusColor(order.status)}>
-                      {getStatusIcon(order.status)}
-                      <span className="ml-1 capitalize">{order.status}</span>
-                    </Badge>
+                  {/* Left side - Order info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <div className="text-sm font-semibold">{order.orderNumber}</div>
+                      <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                        {getStatusIcon(order.status)}
+                        <span className="ml-1 capitalize">{order.status}</span>
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-2">
+                      From {order.wholesaler.businessName}
+                    </div>
+                    
+                    {/* Compact Items List */}
+                    <div className="space-y-1">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="text-xs text-gray-700">
+                          <span className="font-medium">{item.productName}</span>
+                          <span className="text-gray-500 ml-1">
+                            {item.quantity} units × {formatCurrency(item.unitPrice)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Summary in compact format */}
+                    <div className="mt-2 space-y-0.5">
+                      <div className="flex justify-between text-xs">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(order.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span>Platform Fee:</span>
+                        <span>{formatCurrency(order.platformFee)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
+                        <span>Total:</span>
+                        <span>{formatCurrency(order.total)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
+                  
+                  {/* Right side - Price and actions */}
+                  <div className="flex-shrink-0 text-right ml-4">
                     <div className="font-semibold text-lg">{formatCurrency(order.total)}</div>
-                    <div className="text-sm text-gray-500 flex items-center">
+                    <div className="text-xs text-gray-500 flex items-center justify-end">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(order.date), 'MMM d, yyyy')}
                     </div>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600">
-                  From {order.wholesaler.businessName}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {/* Order Items */}
-                  <div className="space-y-2">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                        <div className="flex-1">
-                          <div className="font-medium">{item.productName}</div>
-                          <div className="text-sm text-gray-500">
-                            {item.quantity} units × {formatCurrency(item.unitPrice)}
-                          </div>
-                        </div>
-                        <div className="font-semibold">
-                          {formatCurrency(item.total)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(order.subtotal)}</span>
+                    
+                    {/* Delivery info */}
+                    <div className="flex items-center justify-end space-x-1 mt-1">
+                      {order.fulfillmentType === 'delivery' ? (
+                        <Truck className="h-3 w-3 text-gray-500" />
+                      ) : (
+                        <MapPin className="h-3 w-3 text-gray-500" />
+                      )}
+                      <span className="text-xs text-gray-600 capitalize">{order.fulfillmentType}</span>
                     </div>
-                    {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span>Shipping:</span>
-                        <span>{formatCurrency(order.shippingTotal)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm">
-                      <span>Platform Fee:</span>
-                      <span>{formatCurrency(order.platformFee)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-base border-t pt-1">
-                      <span>Total:</span>
-                      <span>{formatCurrency(order.total)}</span>
-                    </div>
-                  </div>
-
-                  {/* Delivery Information and View Details Button */}
-                  <div className="flex items-center justify-between">
-                    {order.fulfillmentType && (
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          {order.fulfillmentType === 'delivery' ? (
-                            <Truck className="h-4 w-4" />
-                          ) : (
-                            <MapPin className="h-4 w-4" />
-                          )}
-                          <span className="capitalize">{order.fulfillmentType}</span>
-                        </div>
-                        {order.deliveryCarrier && (
-                          <div className="flex items-center space-x-1">
-                            <span>via {order.deliveryCarrier}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
                     
                     {/* View Details Button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                          <Eye className="h-4 w-4" />
-                          <span>View Details</span>
+                        <Button variant="outline" size="sm" className="text-xs mt-2">
+                          <Eye className="h-3 w-3 mr-1" />
+                          View Details
                         </Button>
                       </DialogTrigger>
                       <OrderDetailsModal order={order} />
