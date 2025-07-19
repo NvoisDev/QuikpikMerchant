@@ -1444,7 +1444,7 @@ export default function Campaigns() {
               )}
 
               <div className="flex flex-col space-y-2 w-full">
-                <div className="flex space-x-2 w-full">
+                <div className="flex space-x-1 w-full">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -1452,19 +1452,19 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsPreviewOpen(true);
                     }}
-                    className="flex-1 min-w-0"
+                    className="flex-1 min-w-0 px-2 text-xs"
                   >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Preview
+                    <Eye className="h-3 w-3 mr-1" />
+                    <span className="truncate">Preview</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
                     onClick={() => handleEditCampaign(campaign)}
-                    className="flex-1 min-w-0"
+                    className="flex-1 min-w-0 px-2 text-xs"
                   >
-                    <Edit3 className="h-4 w-4 mr-1" />
-                    Edit
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    <span className="truncate">Edit</span>
                   </Button>
                   <Button 
                     size="sm" 
@@ -1472,10 +1472,10 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsSendOpen(true);
                     }}
-                    className="flex-1 min-w-0"
+                    className="flex-1 min-w-0 px-2 text-xs"
                   >
-                    <Send className="h-4 w-4 mr-1" />
-                    Send
+                    <Send className="h-3 w-3 mr-1" />
+                    <span className="truncate">Send</span>
                   </Button>
                   <Button 
                     size="sm" 
@@ -1485,10 +1485,10 @@ export default function Campaigns() {
                         deleteCampaignMutation.mutate(campaign.id);
                       }
                     }}
-                    className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
                     disabled={deleteCampaignMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
                 {campaign.sentCampaigns.length > 0 && (
@@ -1499,10 +1499,10 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsStockRefreshOpen(true);
                     }}
-                    className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                    className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 text-xs px-2"
                   >
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Refresh
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    <span className="truncate">Refresh</span>
                   </Button>
                 )}
               </div>
