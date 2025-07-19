@@ -1443,23 +1443,6 @@ export default function Campaigns() {
                 </div>
               )}
 
-              {/* Preview Text Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">Message Preview</span>
-                </div>
-                <div className="text-xs text-blue-700 leading-relaxed">
-                  {(() => {
-                    const previewMessage = generatePreviewMessage(campaign);
-                    const truncatedMessage = previewMessage.length > 120 
-                      ? previewMessage.substring(0, 120) + '...' 
-                      : previewMessage;
-                    return truncatedMessage;
-                  })()}
-                </div>
-              </div>
-
               <div className="flex flex-col space-y-2 w-full">
                 <div className="flex space-x-1 w-full">
                   <Button 
@@ -1469,10 +1452,19 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsPreviewOpen(true);
                     }}
-                    className="flex-1 min-w-0 px-2 text-xs"
+                    className="flex-1 min-w-0 px-2 text-xs max-w-none"
+                    title={generatePreviewMessage(campaign)}
                   >
-                    <Eye className="h-3 w-3 mr-1" />
-                    <span className="truncate">Preview</span>
+                    <Eye className="h-3 w-3 mr-1 flex-shrink-0" />
+                    <span className="truncate text-left">
+                      {(() => {
+                        const previewMessage = generatePreviewMessage(campaign);
+                        const truncatedMessage = previewMessage.length > 50 
+                          ? previewMessage.substring(0, 50) + '...' 
+                          : previewMessage;
+                        return truncatedMessage;
+                      })()}
+                    </span>
                   </Button>
                   <Button 
                     size="sm" 

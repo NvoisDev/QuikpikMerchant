@@ -178,10 +178,10 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ### Campaign Interface Improvements - User Experience Enhancement (July 19, 2025):
 - **Refresh Button Removal**: Removed the orange "Refresh" button from campaign cards per user request for cleaner interface design
-- **Preview Text Feature**: Added message preview functionality showing first 120 characters of WhatsApp message directly in campaign cards
-- **Enhanced Campaign Cards**: Blue-themed preview section with message icon displays truncated WhatsApp message content for quick reference
-- **Streamlined UI**: Eliminated unnecessary refresh functionality while maintaining full preview capabilities through existing Preview button
-- **Improved User Experience**: Users can now quickly see message content without opening full preview dialog, reducing clicks and improving workflow efficiency
+- **Preview Text Section Removal**: Removed the blue "Message Preview" section from campaign cards per user request for streamlined interface
+- **Clean Campaign Cards**: Simplified campaign card layout by removing preview text functionality while maintaining full preview capabilities through Preview button
+- **Streamlined UI**: Eliminated unnecessary interface elements (refresh button and preview text section) for cleaner, more focused campaign management
+- **Improved User Experience**: Campaign cards now show essential information without preview text clutter, maintaining professional appearance
 
 ## Recent Bug Fixes and Feature Implementations (July 19, 2025)
 
