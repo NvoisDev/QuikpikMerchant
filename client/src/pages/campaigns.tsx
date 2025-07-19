@@ -1700,7 +1700,7 @@ export default function Campaigns() {
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center mb-2">
-                  <RefreshCw className="h-4 w-4 text-blue-600 mr-2" />
+                  <Package className="h-4 w-4 text-blue-600 mr-2" />
                   <span className="font-medium text-blue-800">Stock Data Refresh</span>
                 </div>
                 <p className="text-sm text-blue-800">
@@ -1717,7 +1717,7 @@ export default function Campaigns() {
                     campaignId: selectedCampaign.id.toString(),
                   });
                 }}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <Package className="h-4 w-4 mr-2" />
                   Refresh Stock Data
                 </Button>
               </div>
