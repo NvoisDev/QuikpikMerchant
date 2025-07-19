@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
@@ -15,7 +15,7 @@ import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
-import { SMSService } from "./sms-service";
+import { SMSService, sendSMSVerificationCode } from "./sms-service";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -413,6 +413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Customer not found" });
       }
 
+      console.log("Customer found for SMS:", customer);
+
       // Get wholesaler info for business name
       const wholesaler = await storage.getWholesalerProfile(wholesalerId);
       
@@ -420,8 +422,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await sendSMSVerificationCode(customer.phone, wholesaler?.businessName || 'Business');
       
       if (result.success) {
-        // Store verification code in database
-        await storage.createSMSVerificationCode(wholesalerId, customer.id, result.code);
+        // Store verification code in database with proper structure
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+        const smsData = {
+          customerId: customer.id,
+          wholesalerId: wholesalerId,
+          code: result.code || '',
+          phoneNumber: customer.phone,
+          expiresAt: expiresAt
+        };
+        console.log("About to create SMS verification with data:", smsData);
+        await storage.createSMSVerificationCode(smsData);
         res.json({ success: true, message: "SMS verification code sent" });
       } else {
         res.status(500).json({ error: "Failed to send SMS verification code" });

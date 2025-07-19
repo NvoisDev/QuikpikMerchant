@@ -124,3 +124,15 @@ export class SMSService {
     return twilioClient !== null && !!process.env.TWILIO_PHONE_NUMBER;
   }
 }
+
+// Export the main function for SMS verification
+export async function sendSMSVerificationCode(phoneNumber: string, businessName: string): Promise<{ success: boolean; code?: string; messageId?: string }> {
+  const code = SMSService.generateVerificationCode();
+  const success = await SMSService.sendSMSCode(phoneNumber, code, businessName);
+  
+  return {
+    success,
+    code: success ? code : undefined,
+    messageId: success ? `sim_${Date.now()}` : undefined
+  };
+}
