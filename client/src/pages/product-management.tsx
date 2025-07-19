@@ -1837,8 +1837,8 @@ export default function ProductManagement() {
                     onDelete={handleDelete}
                     onDuplicate={handleDuplicate}
                     onStatusChange={handleStatusChange}
+                    showPromotionAnalytics={true}
                   />
-                  <PromotionAnalytics productId={product.id} />
                 </div>
               ))}
             </div>
@@ -1886,7 +1886,7 @@ export default function ProductManagement() {
                               </Button>
                             </div>
                           </div>
-                          <div className="grid grid-cols-4 gap-4 mt-4 text-sm">
+                          <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
                             <div>
                               <span className="text-gray-500">Price:</span>
                               <div className="font-semibold">
@@ -1921,16 +1921,16 @@ export default function ProductManagement() {
                                 {formatNumber(product.stock)} units
                               </div>
                             </div>
-                            <div>
-                              <span className="text-gray-500">Views:</span>
-                              <div className="font-semibold">142</div>
-                            </div>
+                          </div>
+                          
+                          {/* Integrated Promotion Analytics */}
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <PromotionAnalytics productId={product.id} className="w-full" />
                           </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <PromotionAnalytics productId={product.id} />
                 </div>
               ))}
             </div>
