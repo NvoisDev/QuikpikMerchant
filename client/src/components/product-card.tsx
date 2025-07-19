@@ -30,65 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StockTracker from "@/components/stock-tracker";
+import { PromotionAnalytics } from "@/components/PromotionAnalytics";
 import { useState } from "react";
-
-// Compact Promotion Analytics Component
-function CompactPromotionAnalytics({ productId }: { productId: number }) {
-  const { data: analytics, isLoading } = useQuery({
-    queryKey: ['/api/promotion-analytics/product', productId],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  const { data: performance, isLoading: performanceLoading } = useQuery({
-    queryKey: ['/api/promotion-analytics/performance', productId],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  if (isLoading || performanceLoading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-3 bg-gray-200 rounded w-3/4 mb-1"></div>
-        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-      </div>
-    );
-  }
-
-  if (!analytics || analytics.length === 0) {
-    return (
-      <div className="text-xs text-gray-500 flex items-center gap-1">
-        <BarChart3 className="h-3 w-3" />
-        No promotional data yet
-      </div>
-    );
-  }
-
-  const totalRevenue = analytics.reduce((sum: number, promo: any) => sum + (promo.revenue || 0), 0);
-  const totalOrders = analytics.reduce((sum: number, promo: any) => sum + (promo.orders || 0), 0);
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-        <BarChart3 className="h-3 w-3" />
-        Promotion Analytics
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3 text-green-600" />
-          <span className="font-medium">£{totalRevenue.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Target className="h-3 w-3 text-blue-600" />
-          <span className="font-medium">{totalOrders} orders</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <TrendingUp className="h-3 w-3 text-purple-600" />
-          <span className="font-medium">£{avgOrderValue.toFixed(0)} AOV</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface Product {
   id: number;
@@ -127,6 +70,7 @@ export default function ProductCard({
   showPromotionAnalytics = false
 }: ProductCardProps) {
   const [showStockTracker, setShowStockTracker] = useState(false);
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
 
   // Fetch subscription status
   const { data: subscription } = useQuery({
@@ -491,16 +435,24 @@ export default function ProductCard({
           )}
         </div>
 
-        {/* Promotion Analytics and Actions */}
-        <div className="pt-4 border-t border-gray-200">
-          {showPromotionAnalytics ? (
-            <div className="mb-3">
-              <CompactPromotionAnalytics productId={product.id} />
-            </div>
-          ) : null}
+        {/* Actions Row */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="flex items-center space-x-1">
+            {showPromotionAnalytics && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => setShowPromotionModal(true)}
+                title="View Promotion Analytics"
+              >
+                <BarChart3 className="h-3 w-3 text-purple-600" />
+              </Button>
+            )}
+          </div>
           
           {/* Quick Actions */}
-          <div className="flex items-center justify-end space-x-1">
+          <div className="flex items-center space-x-1">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -540,6 +492,16 @@ export default function ProductCard({
             <DialogTitle>Stock Tracker - {product.name}</DialogTitle>
           </DialogHeader>
           <StockTracker product={product} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Promotion Analytics Dialog */}
+      <Dialog open={showPromotionModal} onOpenChange={setShowPromotionModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Promotion Analytics - {product.name}</DialogTitle>
+          </DialogHeader>
+          <PromotionAnalytics productId={product.id} />
         </DialogContent>
       </Dialog>
     </>

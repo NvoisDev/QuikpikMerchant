@@ -1923,10 +1923,7 @@ export default function ProductManagement() {
                             </div>
                           </div>
                           
-                          {/* Integrated Promotion Analytics */}
-                          <div className="mt-4 pt-4 border-t border-gray-100">
-                            <PromotionAnalytics productId={product.id} className="w-full" />
-                          </div>
+
                         </div>
                       </div>
                     </CardContent>
