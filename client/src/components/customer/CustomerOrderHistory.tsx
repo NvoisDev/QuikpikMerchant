@@ -270,6 +270,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       }
       const data = await response.json();
       console.log('Customer orders response:', data);
+      console.log('Customer orders response type:', typeof data);
+      console.log('Customer orders response length:', Array.isArray(data) ? data.length : 'Not an array');
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
@@ -331,6 +333,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
+  console.log('CustomerOrderHistory render - orders data:', { orders, isLoading, error });
+  console.log('CustomerOrderHistory render - orders type:', typeof orders);
+  console.log('CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
+  console.log('CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
+  
   if (!orders || orders.length === 0) {
     return (
       <Card className="w-full">
@@ -364,7 +371,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {orders.map((order: Order) => (
+          {orders.map((order: Order, index: number) => {
+            console.log(`Rendering order ${index}:`, order);
+            return (
             <Card key={order.id} className="border-l-4 border-l-blue-500">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -462,7 +471,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

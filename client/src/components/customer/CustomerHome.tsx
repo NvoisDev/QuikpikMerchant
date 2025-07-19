@@ -281,14 +281,28 @@ export function CustomerHome({
         </div>
 
         {/* Customer Order History */}
-        {customerData && wholesaler?.id && (
-          <div className="mb-6">
-            <CustomerOrderHistory 
-              wholesalerId={wholesaler.id} 
-              customerPhone={customerData.phoneNumber} 
-            />
-          </div>
-        )}
+        {(() => {
+          console.log('CustomerHome - Order History Debug:', {
+            hasCustomerData: !!customerData,
+            customerData,
+            hasWholesaler: !!wholesaler,
+            wholesalerId: wholesaler?.id,
+            customerPhone: customerData?.phone || customerData?.phoneNumber
+          });
+          
+          if (customerData && wholesaler?.id) {
+            return (
+              <div className="mb-6">
+                <CustomerOrderHistory 
+                  wholesalerId={wholesaler.id} 
+                  customerPhone={customerData.phone || customerData.phoneNumber} 
+                />
+              </div>
+            );
+          }
+          
+          return null;
+        })()}
 
         {/* Contact Information */}
         <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
