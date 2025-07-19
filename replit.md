@@ -214,6 +214,15 @@ This approach gives customers control over delivery speed and cost while ensurin
 
 ## Recent Bug Fixes and Feature Implementations (July 19, 2025)
 
+### CUSTOMER PORTAL AUTHENTICATION FIX - DEPLOYMENT READY (July 19, 2025):
+- **Direct Customer Access Fixed**: Resolved issue where customer portal links showed store preview instead of authentication page
+- **Authentication State Management**: Fixed localStorage persistence to only apply in preview mode, ensuring fresh authentication for regular customer access
+- **Preview Mode Separation**: Clear separation between `/preview-store` (wholesaler testing) and `/customer/{wholesaler-id}` (customer authentication)
+- **Featured Product Support**: Customer portal links with featured product parameters (e.g., `?featured=8`) now work correctly after authentication
+- **Live Domain Ready**: Customer portal authentication flow prepared for deployment with live domain URLs instead of development URLs
+- **Clean Authentication Flow**: Customers accessing `/customer/{wholesaler-id}` always see authentication screen first, complete SMS verification, then access store
+- **Production Ready**: Customer portal authentication system fully functional and ready for live deployment
+
 ### CRITICAL SMS VERIFICATION SYSTEM FIX - PRODUCTION READY (July 19, 2025):
 - **SMS Function Import Resolution**: Fixed critical "sendSMSVerificationCode is not defined" error by properly importing SMS functions from sms-service module
 - **Database Schema Integration**: Resolved SMS verification code database storage issues by implementing proper InsertSMSVerificationCode schema structure
