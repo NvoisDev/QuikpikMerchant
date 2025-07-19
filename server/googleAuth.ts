@@ -8,9 +8,14 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
 
 // Flexible redirect URI system for different environments
 const getRedirectUri = () => {
-  // Priority order: explicit env var, replit domain, localhost
+  // Priority order: explicit env var, custom domain, replit domain, localhost
   if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
     return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  }
+  
+  // Check for custom domain first
+  if (process.env.CUSTOM_DOMAIN) {
+    return `https://${process.env.CUSTOM_DOMAIN}/api/auth/google/callback`;
   }
   
   if (process.env.REPLIT_DOMAINS) {
