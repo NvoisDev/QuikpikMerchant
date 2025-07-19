@@ -117,8 +117,8 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
               <TooltipTrigger asChild>
                 <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-sm">
-                <p className="text-xs">Track the performance of your promotional campaigns. These metrics help you understand which promotions are most effective at driving sales and customer engagement.</p>
+              <TooltipContent className="max-w-xs">
+                <p className="text-xs">Track promotional campaign performance and effectiveness</p>
               </TooltipContent>
             </Tooltip>
           </CardTitle>
@@ -136,8 +136,8 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs"><strong>Total Revenue:</strong> Total money earned from orders where promotional offers were applied to this product.</p>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs"><strong>Revenue:</strong> Total earnings from promotional orders</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -148,8 +148,8 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs"><strong>Orders:</strong> Number of customer orders that included this product with promotional pricing applied.</p>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs"><strong>Orders:</strong> Number of promotional orders placed</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -160,8 +160,8 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs"><strong>Average Order Value:</strong> Average amount customers spend per order when buying this product with promotions (Revenue ÷ Orders).</p>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs"><strong>AOV:</strong> Average order value (Revenue ÷ Orders)</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -172,8 +172,8 @@ export function PromotionAnalytics({ productId, className }: PromotionAnalyticsP
                 <TooltipTrigger asChild>
                   <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600 cursor-help ml-1" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs"><strong>Conversion Rate:</strong> Percentage of customers who viewed this product and then purchased it with promotional pricing. Higher is better.</p>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs"><strong>Conversion:</strong> Views that resulted in purchases (%)</p>
                 </TooltipContent>
               </Tooltip>
             </div>
