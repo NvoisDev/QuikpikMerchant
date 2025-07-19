@@ -160,10 +160,21 @@ export default function ShippingSettings() {
   // Save automation settings mutation
   const saveAutomationMutation = useMutation({
     mutationFn: async (settings: typeof automationSettings) => {
-      return await apiRequest('/api/shipping/automation-settings', {
+      const response = await fetch('/api/shipping/automation-settings', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
         body: JSON.stringify(settings),
       });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(error.message || 'Failed to save settings');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
