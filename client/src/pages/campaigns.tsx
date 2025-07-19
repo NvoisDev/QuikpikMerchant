@@ -1222,7 +1222,7 @@ export default function Campaigns() {
         </Dialog>
 
       {/* Campaigns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {campaigns.map((campaign: Campaign) => (
           <Card key={campaign.id} className="hover:shadow-md transition-all duration-200">
             <CardHeader className="pb-3">
@@ -1444,7 +1444,7 @@ export default function Campaigns() {
               )}
 
               <div className="flex flex-col space-y-2 w-full">
-                <div className="flex space-x-1 w-full">
+                <div className="flex flex-wrap gap-1 sm:gap-2 w-full">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -1452,7 +1452,7 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsPreviewOpen(true);
                     }}
-                    className="flex-1 min-w-0 px-2 text-xs"
+                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
                     title={generatePreviewMessage(campaign)}
                   >
                     <span className="truncate">Preview</span>
@@ -1461,9 +1461,9 @@ export default function Campaigns() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleEditCampaign(campaign)}
-                    className="flex-1 min-w-0 px-2 text-xs"
+                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
                   >
-                    <Edit3 className="h-3 w-3 mr-1" />
+                    <Edit3 className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Edit</span>
                   </Button>
                   <Button 
@@ -1472,9 +1472,9 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsSendOpen(true);
                     }}
-                    className="flex-1 min-w-0 px-2 text-xs"
+                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
                   >
-                    <Send className="h-3 w-3 mr-1" />
+                    <Send className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Send</span>
                   </Button>
                   <Button 
@@ -1485,7 +1485,7 @@ export default function Campaigns() {
                         deleteCampaignMutation.mutate(campaign.id);
                       }
                     }}
-                    className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                    className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50 px-2 w-10"
                     disabled={deleteCampaignMutation.isPending}
                   >
                     <Trash2 className="h-3 w-3" />

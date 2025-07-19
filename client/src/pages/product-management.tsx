@@ -892,12 +892,12 @@ export default function ProductManagement() {
     <div className="min-h-screen bg-gray-50">
       <div className="flex-1">
         {/* Top Bar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
           <div className="space-y-4">
             {/* Header Section */}
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Product Management</h1>
                 <ContextualHelpBubble
                   topic="product management"
                   title="Managing Your Products"
@@ -905,24 +905,27 @@ export default function ProductManagement() {
                   position="right"
                 />
               </div>
-              <p className="text-gray-600 mt-1">Manage your inventory, pricing, and product details.</p>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your inventory, pricing, and product details.</p>
             </div>
             
             {/* Action Buttons Section */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <Button 
                   variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700"
+                  size="sm"
+                  className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
                   onClick={() => window.open('/preview-store', '_blank')}
                 >
                   <Package className="mr-2 h-4 w-4" />
-                  Preview Store
+                  <span className="hidden xs:inline">Preview Store</span>
+                  <span className="xs:hidden">Preview</span>
                 </Button>
                 
-                <Button variant="outline" onClick={downloadTemplate}>
+                <Button variant="outline" size="sm" onClick={downloadTemplate} className="flex-1 sm:flex-none">
                   <Download className="mr-2 h-4 w-4" />
-                  Download Template
+                  <span className="hidden xs:inline">CSV Template</span>
+                  <span className="xs:hidden">CSV</span>
                 </Button>
                 
                 <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>

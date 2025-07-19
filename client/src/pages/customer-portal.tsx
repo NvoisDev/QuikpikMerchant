@@ -1706,8 +1706,8 @@ export default function CustomerPortal() {
 
         {/* Search and Filters */}
         {(!featuredProduct || showAllProducts) && (
-          <div className="mb-6 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+          <div className="mb-4 sm:mb-6 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
@@ -1718,9 +1718,9 @@ export default function CustomerPortal() {
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2 sm:gap-2">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
@@ -1742,6 +1742,7 @@ export default function CustomerPortal() {
                     className="rounded-r-none"
                   >
                     <Grid className="w-4 h-4" />
+                    <span className="hidden xs:inline ml-2">Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
@@ -1750,6 +1751,7 @@ export default function CustomerPortal() {
                     className="rounded-l-none"
                   >
                     <List className="w-4 h-4" />
+                    <span className="hidden xs:inline ml-2">List</span>
                   </Button>
                 </div>
               </div>
@@ -1780,12 +1782,12 @@ export default function CustomerPortal() {
         {/* See All Products Section */}
         {featuredProduct && !showAllProducts && otherProducts.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">See All Products</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">See All Products</h2>
               <Button
                 onClick={() => setShowAllProducts(true)}
                 variant="outline"
-                className="text-green-600 border-green-600 hover:bg-green-50 font-medium"
+                className="text-green-600 border-green-600 hover:bg-green-50 font-medium w-full sm:w-auto"
               >
                 View All ({otherProducts.length})
               </Button>

@@ -56,6 +56,19 @@
   -ms-user-select: none;
 }
 
+/* Mobile responsive utilities for extra small screens */
+@media (min-width: 375px) {
+  .xs\:inline {
+    display: inline;
+  }
+  .xs\:hidden {
+    display: none;
+  }
+  .xs\:block {
+    display: block;
+  }
+}
+
 
 
 @layer base {

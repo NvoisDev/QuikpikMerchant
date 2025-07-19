@@ -171,14 +171,14 @@ export default function WholesalerDashboard() {
     <div className="bg-white min-h-screen" data-onboarding="dashboard">
       <div className="flex-1">
         {/* Modern Header with Glass Effect */}
-        <div className="backdrop-blur-sm bg-white/80 border-gray-200/50 border-b px-8 py-8">
+        <div className="backdrop-blur-sm bg-white/80 border-gray-200/50 border-b px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
               <div className="space-y-2" data-onboarding="dashboard-header">
-                <h1 className="text-4xl font-bold text-gray-900">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
                   Hello, {user?.firstName || user?.businessName?.split(' ')[0] || 'Wholesaler'} 👋
                 </h1>
-                <p className="text-lg text-gray-900 opacity-80">
+                <p className="text-base sm:text-lg text-gray-900 opacity-80">
                   Your business performance at a glance
                 </p>
               </div>
@@ -202,43 +202,48 @@ export default function WholesalerDashboard() {
         </div>
 
         {/* Quick Actions Section */}
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Link href="/products">
-              <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25" data-onboarding="add-product-button">
+              <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25 flex-1 sm:flex-none" data-onboarding="add-product-button">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Product
+                <span className="hidden xs:inline">Add Product</span>
+                <span className="xs:hidden">Product</span>
               </Button>
             </Link>
             <Link href="/campaigns">
-              <Button variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700">
+              <Button size="sm" variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700 flex-1 sm:flex-none">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Create Campaign
+                <span className="hidden xs:inline">Create Campaign</span>
+                <span className="xs:hidden">Campaign</span>
               </Button>
             </Link>
             <Link href="/customer-groups">
-              <Button variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700">
+              <Button size="sm" variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700 flex-1 sm:flex-none">
                 <Users className="h-4 w-4 mr-2" />
-                Add Customers
+                <span className="hidden xs:inline">Add Customers</span>
+                <span className="xs:hidden">Customers</span>
               </Button>
             </Link>
             <Link href="/preview-store">
               <Button 
+                size="sm"
                 variant="outline" 
-                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700"
+                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
                 data-onboarding="preview-store"
               >
                 <Package className="h-4 w-4 mr-2" />
-                Preview Store
+                <span className="hidden xs:inline">Preview Store</span>
+                <span className="xs:hidden">Preview</span>
               </Button>
             </Link>
           </div>
         </div>
 
         {/* Dashboard Content */}
-        <div className="max-w-7xl mx-auto px-8 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {/* Stats Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">

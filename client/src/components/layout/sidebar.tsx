@@ -80,7 +80,7 @@ export default function Sidebar() {
         "lg:translate-x-0 lg:block"
       )}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <Logo size="lg" className="mb-2" />
