@@ -1762,11 +1762,11 @@ export default function CustomerPortal() {
                 />
               </div>
               
-              {/* Filters and View Toggle - Mobile Stacked */}
+              {/* Filters and View Toggle - Mobile Optimized */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1 sm:max-w-xs">
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
+                    <SelectTrigger className="w-full h-11 text-sm sm:text-base">
                       <Filter className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
@@ -1781,25 +1781,25 @@ export default function CustomerPortal() {
                   </Select>
                 </div>
                 
-                {/* View Toggle - Mobile Responsive */}
-                <div className="flex border rounded-lg bg-gray-50 p-1 w-full sm:w-auto">
+                {/* View Toggle - Fixed Mobile Layout */}
+                <div className="flex border rounded-lg bg-gray-50 p-1 w-full sm:w-auto shrink-0">
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 text-xs sm:text-sm h-8 sm:h-9 ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
                   >
-                    <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="ml-1 sm:ml-2">Grid</span>
+                    <Grid className="w-4 h-4 mr-2" />
+                    Grid
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 text-xs sm:text-sm h-8 sm:h-9 ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
                   >
-                    <List className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="ml-1 sm:ml-2">List</span>
+                    <List className="w-4 h-4 mr-2" />
+                    List
                   </Button>
                 </div>
               </div>

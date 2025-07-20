@@ -59,22 +59,22 @@ export default function Sidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md border"
+        className="lg:hidden fixed top-4 left-4 z-[60] p-2 bg-white rounded-md shadow-md border"
       >
-        <Menu className="h-5 w-5" />
+        {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
       </button>
 
       {/* Mobile Overlay */}
       {!isCollapsed && (
         <div 
-          className="lg:hidden fixed inset-0 z-30 bg-black bg-opacity-50"
+          className="lg:hidden fixed inset-0 z-[40] bg-black bg-opacity-50"
           onClick={() => setIsCollapsed(true)}
         />
       )}
 
       {/* Sidebar */}
       <div className={cn(
-        "bg-white shadow-lg h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
+        "bg-white shadow-lg h-screen fixed left-0 top-0 z-[50] transition-transform duration-300",
         "w-64",
         isCollapsed ? "-translate-x-full lg:translate-x-0" : "translate-x-0",
         "lg:translate-x-0 lg:block"
