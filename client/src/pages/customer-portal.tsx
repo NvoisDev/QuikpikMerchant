@@ -1797,22 +1797,30 @@ export default function CustomerPortal() {
                   </Select>
                 </div>
                 
-                {/* View Toggle - Fixed Mobile Layout */}
-                <div className="flex border rounded-lg bg-gray-50 p-1 w-full sm:w-auto shrink-0">
+                {/* View Toggle - Improved Design */}
+                <div className="flex gap-2 w-full sm:w-auto shrink-0">
                   <Button
-                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    variant={viewMode === "grid" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 min-w-[80px] font-medium ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-10 min-w-[90px] font-medium ${
+                      viewMode === "grid" 
+                        ? "bg-white border-gray-300 shadow-sm text-gray-900" 
+                        : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
                   >
                     <Grid className="w-4 h-4 mr-2" />
                     <span>Grid</span>
                   </Button>
                   <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
+                    variant={viewMode === "list" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 min-w-[80px] font-medium ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-10 min-w-[90px] font-medium ${
+                      viewMode === "list" 
+                        ? "bg-white border-gray-300 shadow-sm text-gray-900" 
+                        : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
                   >
                     <List className="w-4 h-4 mr-2" />
                     <span>List</span>
