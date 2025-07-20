@@ -2,6 +2,30 @@
 
 ## Outstanding Issues (July 20, 2025)
 
+### All Issues RESOLVED ✅
+
+### Share Store Button Implementation - COMPLETED ✅ (July 20, 2025)
+- **Feature**: Added "Share Store" button to dashboard quick actions section
+- **Implementation**: 
+  - Orange-styled button with external link icon positioned after "Preview Store"
+  - Automatic copy-to-clipboard functionality for customer portal URLs
+  - Success toast notifications with user-friendly messaging
+  - Works for both regular wholesalers and team members (uses parent company ID for team members)
+  - Responsive design with mobile-friendly text display
+- **URL Format**: `https://quikpik.app/customer/{wholesaler-id}`
+- **Status**: ✅ COMPLETED - Button visible and functional in dashboard
+
+### Dashboard Routing Fix - RESOLVED ✅ (July 20, 2025)
+- **Problem**: Dashboard showing 404 errors and redirecting to landing page for authenticated users
+- **Root Cause**: Router function treating root path "/" as public route without checking authentication state
+- **Solution**: Enhanced Router component to check authentication status before determining route destination
+- **Implementation**: 
+  - Added authentication state checking in Router function
+  - Improved routing logic to handle authenticated vs public routes properly
+  - Added loading state while authentication is being verified
+  - Fixed root path to show dashboard for authenticated users instead of landing page
+- **Status**: ✅ RESOLVED - Dashboard loads properly for authenticated users
+
 ### Mark Fulfilled Button Loading State Issue - RESOLVED ✅
 - **Problem**: When clicking "Mark Fulfilled" on one order, all "Mark Fulfilled" buttons on the page showed loading state instead of just the specific order button
 - **Root Cause**: Single `updateOrderStatusMutation.isPending` state was shared across all buttons, causing global loading state
