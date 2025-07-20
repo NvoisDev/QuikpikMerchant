@@ -273,7 +273,13 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         throw new Error('Failed to fetch order history');
       }
       const data = await response.json();
-      console.log('📦 Customer orders found:', data?.length || 0);
+      console.log('📦 Customer orders API response:', { 
+        dataType: typeof data, 
+        isArray: Array.isArray(data), 
+        length: data?.length || 0,
+        firstOrder: data?.[0] || null,
+        allOrders: data
+      });
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
