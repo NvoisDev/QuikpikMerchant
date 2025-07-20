@@ -863,12 +863,12 @@ export class DatabaseStorage implements IStorage {
         return null;
       }
 
-      // If multiple customers have the same last 4 digits, prioritize the one with the most orders
+      // If multiple customers have the same last 4 digits, use better matching logic
       let matchingCustomer = matchingCustomers[0];
       if (matchingCustomers.length > 1) {
-        console.log(`Multiple customers found with last 4 digits: ${lastFourDigits}, checking order counts...`);
+        console.log(`Multiple customers found with last 4 digits: ${lastFourDigits}, using intelligent selection...`);
         
-        // Get order counts for each matching customer
+        // Get order counts and recent activity for each matching customer
         const customerOrderCounts = await Promise.all(
           matchingCustomers.map(async (customer: any) => {
             const orderCount = await db.execute(sql`
@@ -885,11 +885,26 @@ export class DatabaseStorage implements IStorage {
           })
         );
         
-        // Sort by order count (descending) and pick the one with most orders
-        customerOrderCounts.sort((a, b) => b.orderCount - a.orderCount);
-        matchingCustomer = customerOrderCounts[0].customer;
+        // Prioritize customers who have placed orders (even if fewer)
+        // This helps distinguish between actual customers and duplicates
+        const customersWithOrders = customerOrderCounts.filter(c => c.orderCount > 0);
         
-        console.log(`Selected customer with most orders: ${matchingCustomer.name} (${customerOrderCounts[0].orderCount} orders)`);
+        if (customersWithOrders.length > 0) {
+          // If multiple customers have orders, pick the most recent one based on profile completeness
+          // Prefer customers with email addresses that look like real customer emails
+          const preferredCustomer = customersWithOrders.find(c => 
+            c.customer.email && 
+            c.customer.email.includes('@') && 
+            !c.customer.email.includes('hello@quikpik.co') // Exclude business owner emails
+          ) || customersWithOrders[0];
+          
+          matchingCustomer = preferredCustomer.customer;
+          console.log(`Selected customer with orders and real email: ${matchingCustomer.name} (${preferredCustomer.orderCount} orders)`);
+        } else {
+          // If no customers have orders, just pick the first one
+          matchingCustomer = customerOrderCounts[0].customer;
+          console.log(`No customers have orders, selected: ${matchingCustomer.name}`);
+        }
       }
 
       
