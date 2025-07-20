@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
 import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
 import WholesalerDashboard from "@/pages/wholesaler-dashboard";
@@ -42,7 +41,15 @@ import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
 function PublicRoutes() {
-  console.log('Rendering PublicRoutes');
+  const [location] = useLocation();
+  console.log('Rendering PublicRoutes, current location:', location);
+  
+  // For debugging - render LandingPage directly for root path
+  if (location === "/") {
+    console.log('Rendering LandingPage directly for root path');
+    return <LandingPage />;
+  }
+  
   return (
     <Switch>
       <Route path="/campaign/:id" component={CampaignPreview} />
@@ -52,7 +59,6 @@ function PublicRoutes() {
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
-      <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />
     </Switch>
