@@ -80,6 +80,7 @@ function AuthenticatedRoutes() {
         {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
           <>
             <Route path="/" component={WholesalerDashboard} />
+            <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
             <Route path="/orders" component={Orders} />
@@ -116,11 +117,15 @@ function Router() {
   
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
-  const isPublicRoute = location === '/' || 
-    location.startsWith('/campaign/') || 
+  const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
     publicRoutes.includes(location);
+  
+  // Landing page route - only show if at exact root and not authenticated
+  if (location === '/') {
+    return <PublicRoutes />;
+  }
   
   // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
