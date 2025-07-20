@@ -206,23 +206,48 @@ export default function WholesalerDashboard() {
   }
 
   // Share store functionality
-  const handleShareStore = () => {
+  const handleShareStore = async () => {
     // Use team member's parent wholesaler ID if user is team member
     const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
-    const customerPortalUrl = `${window.location.origin}/customer/${effectiveUserId}`;
+    const customerPortalUrl = `https://quikpik.app/customer/${effectiveUserId}`;
+    const businessName = user?.businessName || "My Store";
     
-    navigator.clipboard.writeText(customerPortalUrl).then(() => {
+    const shareData = {
+      title: `${businessName} - Wholesale Store`,
+      text: `Check out ${businessName}! Browse our wholesale products and place orders directly.`,
+      url: customerPortalUrl,
+    };
+
+    // Try native sharing first (works on mobile devices)
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: "Store Shared!",
+          description: "Store link shared successfully!",
+        });
+        return;
+      } catch (error) {
+        // User cancelled sharing or sharing failed
+        console.log("Native sharing cancelled or failed:", error);
+      }
+    }
+
+    // Fallback to clipboard copying
+    try {
+      await navigator.clipboard.writeText(`${businessName}\n${customerPortalUrl}\n\nCheck out ${businessName} - browse our wholesale products and place orders directly!`);
       toast({
         title: "Store Link Copied!",
-        description: "Share this link with your customers to let them browse and order from your store.",
+        description: "Store link copied to clipboard. Paste it anywhere to share!",
       });
-    }).catch(() => {
+    } catch (error) {
       toast({
-        title: "Copy Failed",
-        description: "Please copy this link manually: " + customerPortalUrl,
-        variant: "destructive",
+        title: "Share Store",
+        description: `Copy this link: ${customerPortalUrl}`,
+        variant: "default",
+        duration: 8000,
       });
-    });
+    }
   };
 
   return (
