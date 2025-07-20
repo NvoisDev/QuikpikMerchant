@@ -1,0 +1,192 @@
+// Email templates for Quikpik platform notifications
+
+export interface OrderEmailData {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress?: string;
+  total: string;
+  subtotal: string;
+  platformFee: string;
+  shippingTotal?: string;
+  fulfillmentType: string;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: string;
+    total: string;
+  }>;
+  wholesaler: {
+    businessName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  orderDate: string;
+  paymentMethod?: string;
+}
+
+export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): { subject: string; html: string; text: string } {
+  const subject = `New Order #${data.orderNumber} - ${data.customerName}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Order Notification</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; }
+        .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; margin: -20px -20px 20px -20px; }
+        .order-summary { background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+        .customer-info { background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+        .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .items-table th, .items-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .items-table th { background-color: #f9fafb; font-weight: bold; }
+        .total-section { background-color: #fef3e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .action-buttons { text-align: center; margin: 30px 0; }
+        .btn { display: inline-block; padding: 12px 24px; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; }
+        .btn-primary { background-color: #10b981; }
+        .btn-secondary { background-color: #6b7280; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+        .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .badge { display: inline-block; padding: 4px 8px; background-color: rgba(16, 185, 129, 0.1); color: #059669; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Quikpik</div>
+            <h1 style="margin: 0; font-size: 24px;">🎉 New Order Received!</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Order #${data.orderNumber}</p>
+        </div>
+
+        <div class="order-summary">
+            <h2 style="margin-top: 0; color: #059669;">📦 Order Summary</h2>
+            <p><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p><strong>Order Date:</strong> ${new Date(data.orderDate).toLocaleString('en-GB', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</p>
+            <p><strong>Total Value:</strong> <span style="color: #059669; font-weight: bold; font-size: 18px;">£${data.total}</span></p>
+            <p><strong>Fulfillment:</strong> <span class="badge">${data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery Required'}</span></p>
+        </div>
+
+        <div class="customer-info">
+            <h2 style="margin-top: 0; color: #1d4ed8;">👤 Customer Information</h2>
+            <p><strong>Name:</strong> ${data.customerName}</p>
+            <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
+            <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
+            ${data.customerAddress ? `<p><strong>Address:</strong> ${data.customerAddress}</p>` : ''}
+        </div>
+
+        <h2 style="color: #374151;">🛍️ Order Items</h2>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.items.map(item => `
+                <tr>
+                    <td><strong>${item.productName}</strong></td>
+                    <td>${item.quantity}</td>
+                    <td>£${item.unitPrice}</td>
+                    <td><strong>£${item.total}</strong></td>
+                </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <div class="total-section">
+            <h2 style="margin-top: 0; color: #d97706;">💰 Payment Breakdown</h2>
+            <p><strong>Subtotal:</strong> £${data.subtotal}</p>
+            ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `<p><strong>Shipping:</strong> £${data.shippingTotal}</p>` : ''}
+            <p><strong>Platform Fee (5.4%):</strong> £${data.platformFee}</p>
+            <hr style="margin: 15px 0; border: none; border-top: 2px solid #f59e0b;">
+            <p style="font-size: 18px;"><strong>Total Paid by Customer:</strong> <span style="color: #d97706; font-weight: bold;">£${data.total}</span></p>
+            <p style="color: #059669; font-weight: bold;">💰 You will receive: £${(parseFloat(data.subtotal) * 0.946).toFixed(2)} (94.6% of product value)</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="https://quikpik.app/orders" class="btn btn-primary">View Order Details</a>
+            <a href="https://quikpik.app/customers" class="btn btn-secondary">Manage Customers</a>
+        </div>
+
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="margin-top: 0; color: #0369a1;">📱 Next Steps</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+                <li>Review the order details in your Quikpik dashboard</li>
+                <li>Prepare the items for ${data.fulfillmentType === 'pickup' ? 'customer pickup' : 'delivery'}</li>
+                <li>Contact the customer if you have any questions</li>
+                <li>Mark the order as fulfilled when ready</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p><strong>Quikpik</strong> - Your B2B Wholesale Platform</p>
+            <p>Manage your business at <a href="https://quikpik.app">quikpik.app</a></p>
+            <p style="font-size: 12px; margin-top: 10px;">This is an automated notification. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+
+  const text = `
+New Order Notification - Quikpik
+
+🎉 NEW ORDER RECEIVED!
+Order #${data.orderNumber}
+
+📦 ORDER SUMMARY
+Order Number: ${data.orderNumber}
+Order Date: ${new Date(data.orderDate).toLocaleString('en-GB')}
+Total Value: £${data.total}
+Fulfillment: ${data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery Required'}
+
+👤 CUSTOMER INFORMATION
+Name: ${data.customerName}
+Email: ${data.customerEmail}
+Phone: ${data.customerPhone}
+${data.customerAddress ? `Address: ${data.customerAddress}` : ''}
+
+🛍️ ORDER ITEMS
+${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
+
+💰 PAYMENT BREAKDOWN
+Subtotal: £${data.subtotal}
+${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Platform Fee (5.4%): £${data.platformFee}
+Total Paid by Customer: £${data.total}
+
+💰 You will receive: £${(parseFloat(data.subtotal) * 0.946).toFixed(2)} (94.6% of product value)
+
+📱 NEXT STEPS
+1. Review the order details in your Quikpik dashboard
+2. Prepare the items for ${data.fulfillmentType === 'pickup' ? 'customer pickup' : 'delivery'}
+3. Contact the customer if you have any questions
+4. Mark the order as fulfilled when ready
+
+View your orders: https://quikpik.app/orders
+Manage customers: https://quikpik.app/customers
+
+---
+Quikpik - Your B2B Wholesale Platform
+Manage your business at quikpik.app
+
+This is an automated notification. Please do not reply to this email.
+  `;
+
+  return { subject, html, text };
+}

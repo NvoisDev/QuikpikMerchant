@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search } from "lucide-react";
+import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -257,13 +257,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
 export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: orders, isLoading, error } = useQuery({
+  const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
     queryFn: async () => {
       // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
-      console.log('Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone });
+      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone });
       const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`);
       if (!response.ok) {
         if (response.status === 403) {
@@ -272,12 +273,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         throw new Error('Failed to fetch order history');
       }
       const data = await response.json();
-      console.log('Customer orders response:', data);
-      console.log('Customer orders response type:', typeof data);
-      console.log('Customer orders response length:', Array.isArray(data) ? data.length : 'Not an array');
+      console.log('📦 Customer orders found:', data?.length || 0);
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchIntervalInBackground: true, // Continue refetching when tab is not active
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    gcTime: 5 * 60 * 1000, // Keep data in cache for 5 minutes
   });
 
   // Filter orders based on search term
@@ -298,6 +301,15 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       );
     });
   }, [orders, searchTerm]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -383,13 +395,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Package className="h-5 w-5" />
-          <span>Order History</span>
-          <Badge variant="secondary" className="ml-2">
-            {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
-          </Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Package className="h-5 w-5" />
+            <span className="text-lg font-semibold">Order History</span>
+            <Badge variant="secondary" className="ml-2">
+              {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
+            </Badge>
+            {isFetching && (
+              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Updating...</span>
+              </div>
+            )}
+          </div>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isRefreshing || isFetching}
+            className="h-8 px-2"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing || isFetching ? 'animate-spin' : ''}`} />
+            <span className="text-xs">Refresh</span>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Search Bar */}

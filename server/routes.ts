@@ -16,6 +16,8 @@ import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
 import { SMSService, sendSMSVerificationCode } from "./sms-service";
+import { sendEmail } from "./sendgrid-service";
+import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 
@@ -1385,6 +1387,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // Send email notification to wholesaler
+        if (wholesaler && wholesaler.email) {
+          try {
+            // Prepare order data for email template
+            const enrichedItemsForEmail = await Promise.all(validatedItems.map(async (item: any) => {
+              const product = await storage.getProduct(item.product.id);
+              return {
+                productName: product?.name || item.product.name || `Product #${item.product.id}`,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+              };
+            }));
+
+            const emailData: OrderEmailData = {
+              orderNumber: order.orderNumber || `ORD-${order.id}`,
+              customerName,
+              customerEmail: customerEmail || '',
+              customerPhone,
+              customerAddress: typeof customerAddress === 'string' ? customerAddress : 
+                (customerAddress ? JSON.stringify(customerAddress) : undefined),
+              total: totalAmountWithFee.toFixed(2),
+              subtotal: calculatedTotal.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              shippingTotal: shippingInfo?.service?.price?.toString() || '0.00',
+              fulfillmentType: shippingInfo?.option || 'pickup',
+              items: enrichedItemsForEmail,
+              wholesaler: {
+                businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
+                firstName: wholesaler.firstName || '',
+                lastName: wholesaler.lastName || '',
+                email: wholesaler.email
+              },
+              orderDate: new Date().toISOString(),
+              paymentMethod: 'Card Payment'
+            };
+
+            const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
+            
+            await sendEmail({
+              to: wholesaler.email,
+              from: 'orders@quikpik.app',
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+              text: emailTemplate.text
+            });
+
+            console.log(`📧 Wholesaler email notification sent to ${wholesaler.email} for Order #${order.id}`);
+          } catch (error) {
+            console.error('Failed to send wholesaler email notification:', error);
+          }
+        }
+
         res.json({ 
           success: true, 
           orderId: order.id, 
@@ -1515,6 +1570,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`📱 WhatsApp notification sent to wholesaler for Order #${order.id}`);
             } catch (error) {
               console.error('Failed to send WhatsApp notification:', error);
+            }
+          }
+
+          // Send email notification to wholesaler
+          if (wholesaler && wholesaler.email) {
+            try {
+              // Prepare order data for email template
+              const enrichedItemsForEmail = await Promise.all(orderItems.map(async (item: any) => {
+                const product = await storage.getProduct(item.productId);
+                return {
+                  productName: product?.name || `Product #${item.productId}`,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  total: item.total
+                };
+              }));
+
+              const emailData: OrderEmailData = {
+                orderNumber: order.orderNumber || `ORD-${order.id}`,
+                customerName,
+                customerEmail: customerEmail || '',
+                customerPhone,
+                customerAddress: typeof customerAddress === 'string' ? customerAddress : 
+                  (customerAddress ? JSON.stringify(customerAddress) : undefined),
+                total: totalAmount,
+                subtotal: (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2),
+                platformFee,
+                shippingTotal: orderData.deliveryCost,
+                fulfillmentType: orderData.fulfillmentType,
+                items: enrichedItemsForEmail,
+                wholesaler: {
+                  businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
+                  firstName: wholesaler.firstName || '',
+                  lastName: wholesaler.lastName || '',
+                  email: wholesaler.email
+                },
+                orderDate: new Date().toISOString(),
+                paymentMethod: 'Card Payment'
+              };
+
+              const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
+              
+              await sendEmail({
+                to: wholesaler.email,
+                from: 'orders@quikpik.app',
+                subject: emailTemplate.subject,
+                html: emailTemplate.html,
+                text: emailTemplate.text
+              });
+
+              console.log(`📧 Wholesaler email notification sent to ${wholesaler.email} for Order #${order.id}`);
+            } catch (error) {
+              console.error('Failed to send wholesaler email notification:', error);
             }
           }
 
