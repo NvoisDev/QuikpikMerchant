@@ -41,36 +41,6 @@ import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
 function PublicRoutes() {
-  const [location] = useLocation();
-  console.log('Rendering PublicRoutes, current location:', location);
-  
-  // For debugging - render a simple test component for root path
-  if (location === "/") {
-    console.log('Rendering test component for root path');
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Quikpik Merchant</h1>
-          <p className="text-lg text-gray-600 mb-8">Wholesale Platform</p>
-          <div className="space-x-4">
-            <button 
-              onClick={() => window.location.href = '/login'}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Login
-            </button>
-            <button 
-              onClick={() => window.location.href = '/signup'}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
-            >
-              Sign Up
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <Switch>
       <Route path="/campaign/:id" component={CampaignPreview} />
@@ -80,6 +50,7 @@ function PublicRoutes() {
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
+      <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />
     </Switch>
@@ -90,10 +61,7 @@ function PublicRoutes() {
 function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  console.log('Auth state:', { user: !!user, isLoading, isAuthenticated }); // Debug logging
-
   if (isLoading) {
-    console.log('Auth loading - showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -102,11 +70,8 @@ function AuthenticatedRoutes() {
   }
 
   if (!isAuthenticated) {
-    console.log('Not authenticated - showing login');
     return <Login />;
   }
-
-  console.log('Authenticated - showing app layout');
 
   return (
     <AppLayout>
@@ -149,35 +114,6 @@ function AuthenticatedRoutes() {
 function Router() {
   const [location] = useLocation();
   
-  console.log('Current route:', location); // Debug logging
-  
-  // Direct render for debugging - bypass all routing logic
-  if (location === '/') {
-    console.log('Direct rendering simple test page');
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Quikpik Merchant Platform</h1>
-          <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '2rem' }}>Welcome to your wholesale management platform</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button 
-              onClick={() => window.location.href = '/login'}
-              style={{ backgroundColor: '#3b82f6', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
-            >
-              Login
-            </button>
-            <button 
-              onClick={() => window.location.href = '/signup'}
-              style={{ backgroundColor: '#10b981', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
-            >
-              Sign Up
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
   const isPublicRoute = location === '/' || 
@@ -185,8 +121,6 @@ function Router() {
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
     publicRoutes.includes(location);
-  
-  console.log('Is public route:', isPublicRoute); // Debug logging
   
   // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
