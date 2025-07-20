@@ -467,19 +467,19 @@ export default function Orders() {
                     variant={viewMode === "cards" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("cards")}
-                    className={`${viewMode === "cards" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2`}
+                    className={`${viewMode === "cards" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2 min-w-[80px]`}
                   >
                     <Grid className="h-4 w-4" />
-                    <span>Grid</span>
+                    <span className="font-medium">Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className={`${viewMode === "table" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2`}
+                    className={`${viewMode === "table" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"} flex items-center gap-2 min-w-[80px]`}
                   >
                     <List className="h-4 w-4" />
-                    <span>List</span>
+                    <span className="font-medium">List</span>
                   </Button>
                 </div>
                 
