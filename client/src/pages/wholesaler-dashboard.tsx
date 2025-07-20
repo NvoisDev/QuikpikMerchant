@@ -32,7 +32,25 @@ import { Link } from "wouter";
 // Chart data is now fetched from real backend API instead of fake data generation
 
 export default function WholesalerDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  
+  // Early return if auth is still loading
+  if (authLoading || !user) {
+    return (
+      <div className="p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          <AnalyticsCardSkeleton />
+          <AnalyticsCardSkeleton />
+          <AnalyticsCardSkeleton />
+          <AnalyticsCardSkeleton />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <OrderCardSkeleton />
+          <ProductCardSkeleton />
+        </div>
+      </div>
+    );
+  }
   const { isActive } = useOnboarding();
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -83,34 +101,44 @@ export default function WholesalerDashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showFloatingMenu]);
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ["/api/analytics/stats"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: false,
+    enabled: !!user,
   });
 
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: orders, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ["/api/orders"],
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+    enabled: !!user,
   });
 
-  const { data: topProducts, isLoading: productsLoading } = useQuery({
+  const { data: topProducts, isLoading: productsLoading, error: productsError } = useQuery({
     queryKey: ["/api/analytics/top-products"],
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes
+    retry: false,
+    enabled: !!user,
   });
 
-  const { data: broadcastStats, isLoading: broadcastStatsLoading } = useQuery({
+  const { data: broadcastStats, isLoading: broadcastStatsLoading, error: broadcastError } = useQuery({
     queryKey: ["/api/broadcasts/stats"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: false,
+    enabled: !!user,
   });
 
-  const { data: alertsData } = useQuery({
+  const { data: alertsData, error: alertsError } = useQuery({
     queryKey: ["/api/stock-alerts/count"],
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+    enabled: !!user,
   });
 
   // Chart data query with real data from backend
@@ -145,12 +173,14 @@ export default function WholesalerDashboard() {
         return [];
       }
     },
-    enabled: !!dateRange?.from && !!dateRange?.to,
+    enabled: !!dateRange?.from && !!dateRange?.to && !!user,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
 
-  if (statsLoading) {
+  // Show loading screen while user data is being fetched
+  if (!user || statsLoading) {
     return (
       <div className="p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
@@ -165,6 +195,11 @@ export default function WholesalerDashboard() {
         </div>
       </div>
     );
+  }
+
+  // If there are authentication errors, show a simplified dashboard
+  if (statsError || ordersError || productsError) {
+    console.warn('Dashboard API errors:', { statsError, ordersError, productsError });
   }
 
   return (
