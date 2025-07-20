@@ -1040,33 +1040,65 @@ export default function CustomerPortal() {
     // Always use customer portal URL format for sharing
     const customerPortalUrl = `https://quikpik.app/customer/${wholesalerId}`;
     const storeName = wholesaler?.businessName || "Wholesale Store";
+    const shareText = `${storeName}\n${customerPortalUrl}\nCheck out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`;
     
     console.log("🔗 Share Store Debug:", {
       wholesalerId,
       isPreviewMode,
       customerPortalUrl,
       storeName,
+      shareText,
       userRole: user?.role,
       userWholesalerId: user?.wholesalerId,
       userId: user?.id
     });
 
-    // Always copy to clipboard (consistent with dashboard share functionality)
-    try {
-      await navigator.clipboard.writeText(customerPortalUrl);
-      toast({
-        title: "Store Link Copied!",
-        description: `Customer portal link copied: ${customerPortalUrl}`,
-      });
-    } catch (error) {
-      // Fallback: Show the link in toast
-      toast({
-        title: "Share Store",
-        description: "Copy this link to share: " + customerPortalUrl,
-        duration: 5000,
-      });
+    // Check if native sharing is available and override it to use our URL
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: storeName,
+          text: `Check out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`,
+          url: customerPortalUrl, // Force customer portal URL
+        });
+        toast({
+          title: "Store Shared!",
+          description: "Customer portal link shared successfully!",
+        });
+      } catch (error) {
+        // User cancelled sharing or sharing failed, fallback to clipboard
+        console.log("Native sharing cancelled or failed:", error);
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast({
+            title: "Store Link Copied!",
+            description: `Customer portal link copied to clipboard`,
+          });
+        } catch (clipboardError) {
+          toast({
+            title: "Share Store",
+            description: "Copy this link to share: " + customerPortalUrl,
+            duration: 5000,
+          });
+        }
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          title: "Store Link Copied!",
+          description: `Customer portal link copied to clipboard`,
+        });
+      } catch (error) {
+        toast({
+          title: "Share Store",
+          description: "Copy this link to share: " + customerPortalUrl,
+          duration: 5000,
+        });
+      }
     }
-  }, [wholesalerId, wholesaler?.businessName, toast, isPreviewMode, user]);
+  }, [wholesalerId, wholesaler?.businessName, wholesaler?.storeTagline, toast, isPreviewMode, user]);
 
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
