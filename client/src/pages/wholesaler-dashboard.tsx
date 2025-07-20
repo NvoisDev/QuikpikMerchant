@@ -12,6 +12,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
@@ -25,7 +26,8 @@ import {
   Bell,
   TrendingUp,
   Users,
-  Trophy
+  Trophy,
+  ExternalLink
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -33,6 +35,7 @@ import { Link } from "wouter";
 
 export default function WholesalerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   
   // Early return if auth is still loading
   if (authLoading || !user) {
@@ -202,6 +205,26 @@ export default function WholesalerDashboard() {
     console.warn('Dashboard API errors:', { statsError, ordersError, productsError });
   }
 
+  // Share store functionality
+  const handleShareStore = () => {
+    // Use team member's parent wholesaler ID if user is team member
+    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
+    const customerPortalUrl = `${window.location.origin}/customer/${effectiveUserId}`;
+    
+    navigator.clipboard.writeText(customerPortalUrl).then(() => {
+      toast({
+        title: "Store Link Copied!",
+        description: "Share this link with your customers to let them browse and order from your store.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Copy Failed",
+        description: "Please copy this link manually: " + customerPortalUrl,
+        variant: "destructive",
+      });
+    });
+  };
+
   return (
     <div className="bg-white min-h-screen" data-onboarding="dashboard">
       <div className="flex-1">
@@ -272,6 +295,17 @@ export default function WholesalerDashboard() {
                 <span className="xs:hidden">Preview</span>
               </Button>
             </Link>
+            <Button 
+              size="sm"
+              variant="outline" 
+              onClick={handleShareStore}
+              className="border-2 border-orange-200 hover:bg-orange-50 hover:text-orange-800 text-orange-700 flex-1 sm:flex-none"
+              title="Copy customer portal link to clipboard"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              <span className="hidden xs:inline">Share Store</span>
+              <span className="xs:hidden">Share</span>
+            </Button>
           </div>
         </div>
 
