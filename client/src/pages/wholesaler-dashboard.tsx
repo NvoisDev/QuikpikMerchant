@@ -219,8 +219,9 @@ export default function WholesalerDashboard() {
     };
 
     // Try native sharing first (works on mobile devices)
-    if (navigator.share && navigator.canShare?.(shareData)) {
+    if (navigator.share) {
       try {
+        console.log("🔗 Attempting native share with data:", shareData);
         await navigator.share(shareData);
         toast({
           title: "Store Shared!",
@@ -230,7 +231,13 @@ export default function WholesalerDashboard() {
       } catch (error) {
         // User cancelled sharing or sharing failed
         console.log("Native sharing cancelled or failed:", error);
+        // Don't show error toast if user just cancelled
+        if (error.name !== 'AbortError') {
+          console.warn("Share API error:", error);
+        }
       }
+    } else {
+      console.log("🔗 Native sharing not available, falling back to clipboard");
     }
 
     // Fallback to clipboard copying
