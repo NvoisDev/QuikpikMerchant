@@ -12,8 +12,9 @@
   - Success toast notifications with user-friendly messaging
   - Works for both regular wholesalers and team members (uses parent company ID for team members)
   - Responsive design with mobile-friendly text display
+  - **Preview Store Cleanup**: Removed share button from preview store since it's for wholesaler testing only
 - **URL Format**: `https://quikpik.app/customer/{wholesaler-id}`
-- **Status**: ✅ COMPLETED - Button visible and functional in dashboard
+- **Status**: ✅ COMPLETED - Dashboard share button functional, preview store cleaned up
 
 ### Customer Portal Share Enhancement - COMPLETED ✅ (July 20, 2025)
 - **Feature**: Updated customer portal "Share Store" functionality to copy customer portal links

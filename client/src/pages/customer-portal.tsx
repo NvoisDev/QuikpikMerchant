@@ -1371,14 +1371,16 @@ export default function CustomerPortal() {
                 </>
               )}
               
-              <Button
-                onClick={handleShare}
-                variant="outline"
-                className="border-green-600 text-green-600 hover:bg-green-50"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Store
-              </Button>
+              {!isPreviewMode && (
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share Store
+                </Button>
+              )}
               {!isPreviewMode && (
                 <Button
                   onClick={() => setShowCheckout(true)}
