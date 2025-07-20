@@ -1,5 +1,18 @@
 # Quikpik Merchant Platform
 
+## Outstanding Issues (July 20, 2025)
+
+### Google OAuth Login Issue - UNRESOLVED
+- **Problem**: Users clicking "Sign in with Google" are redirected back to landing page instead of dashboard after authentication
+- **Root Cause**: Production deployment OAuth redirect URI still using quikpik-merchant-hello3253.replit.app instead of quikpik.app
+- **Attempted Fixes**: 
+  - Modified server/googleAuth.ts to prioritize custom domain
+  - Added environment variable override in server/index.ts
+  - Built production version with correct OAuth URI
+  - Verified development environment shows correct URI
+- **Status**: Development shows correct OAuth URI but production deployment not updating
+- **Next Steps**: Need to locate Replit deployment settings or force production deployment update
+
 ## Overview
 
 Quikpik Merchant is a comprehensive web-based B2B platform designed for small-scale wholesalers to manage inventory, connect with retail customers, and process orders. The platform enables wholesalers to list products, broadcast stock updates via WhatsApp, accept online payments, and track business analytics while collecting a 5% platform fee per sale.
