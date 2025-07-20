@@ -393,18 +393,18 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Security Flow**: 1) Wholesaler adds customer to group, 2) Customer authenticates with last 4 digits + SMS, 3) Customer can access order history for that wholesaler only
 - **Production Ready**: Complete security implementation preventing unauthorized order access while maintaining smooth user experience for registered customers
 
-### Complete Dual Fee Payment Structure Implementation - PRODUCTION READY (July 16, 2025):
-- **Updated Payment Structure**: Successfully implemented new 2.5% dual fee structure - both wholesalers and customers pay 2.5% each
-- **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 2.5% transaction fee
-- **Wholesaler Receives**: Wholesalers now receive 97.5% of product value instead of 95% (improvement for wholesalers)
-- **Customer Transparency**: Added clear transaction fee display in checkout showing "Transaction Fee (2.5%)" as separate line item
-- **Payment Button Update**: Updated payment button to show total amount including transaction fee for customer clarity
-- **API Response Enhancement**: Payment intent creation now returns detailed fee breakdown including totalAmount, transactionFee, platformFee, totalAmountWithFee, and wholesalerReceives
-- **Metadata Storage**: Enhanced payment intent metadata to include both platform_fee and transaction_fee fields for proper tracking
-- **Fee Calculation**: Platform collects 2.5% from product total, customers pay additional 2.5% transaction fee
-- **Connect Account Integration**: Both regular payment intents and Stripe Connect payment intents now properly handle new fee structure
-- **Production Ready**: Complete end-to-end implementation with customer checkout showing transparent fee breakdown and proper payment processing
-- **Active Orders**: System successfully processing orders with new fee structure (Orders #34: £445.00, #35: £929.00 - July 16, 2025)
+### Complete Payment Fee Structure Update - PRODUCTION READY (July 20, 2025):
+- **Updated Payment Structure**: Implemented new fee structure - wholesalers pay 5.4% (1% + 4.4%), customers pay 3.3% transaction fee
+- **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 3.3% transaction fee
+- **Wholesaler Receives**: Wholesalers now receive 94.6% of product value (down from 97.5%)
+- **Customer Transparency**: Updated transaction fee display in checkout showing "Transaction Fee (3.3%)" as separate line item
+- **Settings Page Update**: Updated wholesaler settings to show "You keep 94.6% of order value" with new fee breakdown
+- **API Response Enhancement**: Payment intent creation returns updated fee breakdown including totalAmount, transactionFee (3.3%), platformFee (5.4%), totalAmountWithFee, and wholesalerReceives (94.6%)
+- **Metadata Storage**: Enhanced payment intent metadata to include updated platform_fee and transaction_fee fields
+- **Fee Calculation**: Platform collects 5.4% from product total, customers pay additional 3.3% transaction fee
+- **Connect Account Integration**: Both regular payment intents and Stripe Connect payment intents properly handle updated fee structure
+- **Frontend Update**: Customer portal checkout calculations updated to reflect 3.3% transaction fee in total amount
+- **Production Ready**: Complete end-to-end implementation with updated fee structure across all payment endpoints
 
 ### Enhanced Payment Failure Handling System - PRODUCTION READY (July 16, 2025):
 - **Comprehensive Error Detection**: Added specific error handling for card_declined, insufficient_funds, expired_card, incorrect_cvc, processing_error, validation_error, and api_error scenarios

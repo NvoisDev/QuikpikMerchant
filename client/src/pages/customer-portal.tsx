@@ -3191,13 +3191,13 @@ export default function CustomerPortal() {
                     </div>
                   )}
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Transaction Fee (2.5%):</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue * 0.025).toFixed(2)}</span>
+                    <span>Transaction Fee (3.3%):</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue * 0.033).toFixed(2)}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total Amount:</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue + (cartStats.totalValue * 0.025)).toFixed(2)}</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue + (cartStats.totalValue * 0.033)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
