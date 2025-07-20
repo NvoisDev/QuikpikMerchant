@@ -44,10 +44,31 @@ function PublicRoutes() {
   const [location] = useLocation();
   console.log('Rendering PublicRoutes, current location:', location);
   
-  // For debugging - render LandingPage directly for root path
+  // For debugging - render a simple test component for root path
   if (location === "/") {
-    console.log('Rendering LandingPage directly for root path');
-    return <LandingPage />;
+    console.log('Rendering test component for root path');
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Quikpik Merchant</h1>
+          <p className="text-lg text-gray-600 mb-8">Wholesale Platform</p>
+          <div className="space-x-4">
+            <button 
+              onClick={() => window.location.href = '/login'}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => window.location.href = '/signup'}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   return (
