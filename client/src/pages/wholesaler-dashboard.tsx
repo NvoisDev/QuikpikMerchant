@@ -27,7 +27,7 @@ import {
   TrendingUp,
   Users,
   Trophy,
-  ExternalLink
+  Share2
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -334,7 +334,7 @@ export default function WholesalerDashboard() {
               className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
               title="Copy customer portal link to clipboard"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
+              <Share2 className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Share Store</span>
               <span className="xs:hidden">Share</span>
             </Button>
