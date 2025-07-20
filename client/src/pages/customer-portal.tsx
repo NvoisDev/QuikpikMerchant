@@ -1053,50 +1053,24 @@ export default function CustomerPortal() {
       userId: user?.id
     });
 
-    // Check if native sharing is available and override it to use our URL
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: storeName,
-          text: `Check out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`,
-          url: customerPortalUrl, // Force customer portal URL
-        });
-        toast({
-          title: "Store Shared!",
-          description: "Customer portal link shared successfully!",
-        });
-      } catch (error) {
-        // User cancelled sharing or sharing failed, fallback to clipboard
-        console.log("Native sharing cancelled or failed:", error);
-        try {
-          await navigator.clipboard.writeText(shareText);
-          toast({
-            title: "Store Link Copied!",
-            description: `Customer portal link copied to clipboard`,
-          });
-        } catch (clipboardError) {
-          toast({
-            title: "Share Store",
-            description: "Copy this link to share: " + customerPortalUrl,
-            duration: 5000,
-          });
-        }
-      }
-    } else {
-      // Fallback: Copy to clipboard
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Store Link Copied!",
-          description: `Customer portal link copied to clipboard`,
-        });
-      } catch (error) {
-        toast({
-          title: "Share Store",
-          description: "Copy this link to share: " + customerPortalUrl,
-          duration: 5000,
-        });
-      }
+    // Always use clipboard-only approach to ensure we control the exact URL being shared
+    // The Web Share API sometimes adds the current page URL automatically, so we'll bypass it
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast({
+        title: "Store Link Copied!",
+        description: `Customer portal link copied: ${customerPortalUrl}`,
+      });
+      
+      console.log("✅ Successfully copied to clipboard:", shareText);
+    } catch (error) {
+      console.error("❌ Clipboard failed:", error);
+      // Fallback: Show the link in toast for manual copying
+      toast({
+        title: "Share Store",
+        description: "Copy this link to share: " + customerPortalUrl,
+        duration: 8000,
+      });
     }
   }, [wholesalerId, wholesaler?.businessName, wholesaler?.storeTagline, toast, isPreviewMode, user]);
 
