@@ -1027,17 +1027,36 @@ export default function CustomerPortal() {
 
   // Handle sharing the store
   const handleShare = useCallback(async () => {
+    // Ensure we have a valid wholesaler ID
+    if (!wholesalerId) {
+      toast({
+        title: "Unable to Share",
+        description: "Store information is still loading. Please try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Always use customer portal URL format for sharing
     const customerPortalUrl = `https://quikpik.app/customer/${wholesalerId}`;
     const storeName = wholesaler?.businessName || "Wholesale Store";
-    const shareText = `Check out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`;
+    
+    console.log("🔗 Share Store Debug:", {
+      wholesalerId,
+      isPreviewMode,
+      customerPortalUrl,
+      storeName,
+      userRole: user?.role,
+      userWholesalerId: user?.wholesalerId,
+      userId: user?.id
+    });
 
     // Always copy to clipboard (consistent with dashboard share functionality)
     try {
       await navigator.clipboard.writeText(customerPortalUrl);
       toast({
         title: "Store Link Copied!",
-        description: "Customer portal link copied to clipboard. Share it with your customers!",
+        description: `Customer portal link copied: ${customerPortalUrl}`,
       });
     } catch (error) {
       // Fallback: Show the link in toast
@@ -1047,7 +1066,7 @@ export default function CustomerPortal() {
         duration: 5000,
       });
     }
-  }, [wholesalerId, wholesaler?.businessName, toast]);
+  }, [wholesalerId, wholesaler?.businessName, toast, isPreviewMode, user]);
 
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
