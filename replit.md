@@ -7,13 +7,23 @@
 ### Share Store Button Implementation - COMPLETED ✅ (July 20, 2025)
 - **Feature**: Added "Share Store" button to dashboard quick actions section
 - **Implementation**: 
-  - Orange-styled button with external link icon positioned after "Preview Store"
+  - Green-styled button with external link icon positioned after "Preview Store" (matches other action buttons)
   - Automatic copy-to-clipboard functionality for customer portal URLs
   - Success toast notifications with user-friendly messaging
   - Works for both regular wholesalers and team members (uses parent company ID for team members)
   - Responsive design with mobile-friendly text display
 - **URL Format**: `https://quikpik.app/customer/{wholesaler-id}`
 - **Status**: ✅ COMPLETED - Button visible and functional in dashboard
+
+### Customer Portal Share Enhancement - COMPLETED ✅ (July 20, 2025)
+- **Feature**: Updated customer portal "Share Store" functionality to copy customer portal links
+- **Implementation**: 
+  - Modified handleShare function to always copy customer portal URL format instead of current page URL
+  - Consistent copy-to-clipboard behavior matching dashboard functionality
+  - Updated toast messaging for clarity ("Customer portal link copied to clipboard")
+  - Removes dependency on Web Share API for consistent cross-platform experience
+- **URL Format**: Always shares `https://quikpik.app/customer/{wholesaler-id}` regardless of current page
+- **Status**: ✅ COMPLETED - Both dashboard and customer portal share the same customer portal URL format
 
 ### Dashboard Routing Fix - RESOLVED ✅ (July 20, 2025)
 - **Problem**: Dashboard showing 404 errors and redirecting to landing page for authenticated users

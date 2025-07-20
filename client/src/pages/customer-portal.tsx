@@ -1027,43 +1027,27 @@ export default function CustomerPortal() {
 
   // Handle sharing the store
   const handleShare = useCallback(async () => {
-    const currentUrl = window.location.href;
+    // Always use customer portal URL format for sharing
+    const customerPortalUrl = `https://quikpik.app/customer/${wholesalerId}`;
     const storeName = wholesaler?.businessName || "Wholesale Store";
     const shareText = `Check out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`;
 
-    // Check if native sharing is available (mobile devices)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: storeName,
-          text: shareText,
-          url: currentUrl,
-        });
-        toast({
-          title: "Store Shared",
-          description: "Thank you for sharing this store!",
-        });
-      } catch (error) {
-        // User cancelled sharing or sharing failed
-        console.log("Sharing cancelled or failed:", error);
-      }
-    } else {
-      // Fallback: Copy to clipboard
-      try {
-        await navigator.clipboard.writeText(`${shareText} ${currentUrl}`);
-        toast({
-          title: "Link Copied",
-          description: "Store link copied to clipboard. Share it with others!",
-        });
-      } catch (error) {
-        // Fallback fallback: Show share options
-        toast({
-          title: "Share Store",
-          description: "Copy this link to share: " + currentUrl,
-        });
-      }
+    // Always copy to clipboard (consistent with dashboard share functionality)
+    try {
+      await navigator.clipboard.writeText(customerPortalUrl);
+      toast({
+        title: "Store Link Copied!",
+        description: "Customer portal link copied to clipboard. Share it with your customers!",
+      });
+    } catch (error) {
+      // Fallback: Show the link in toast
+      toast({
+        title: "Share Store",
+        description: "Copy this link to share: " + customerPortalUrl,
+        duration: 5000,
+      });
     }
-  }, [wholesaler?.businessName, toast]);
+  }, [wholesalerId, wholesaler?.businessName, toast]);
 
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
