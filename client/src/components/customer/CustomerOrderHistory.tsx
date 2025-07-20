@@ -256,6 +256,8 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 };
 
 export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
   const { data: orders, isLoading, error } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
     queryFn: async () => {
@@ -277,6 +279,25 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     },
     enabled: !!wholesalerId && !!customerPhone,
   });
+
+  // Filter orders based on search term
+  const filteredOrders = useMemo(() => {
+    if (!orders || !Array.isArray(orders)) return [];
+    
+    if (!searchTerm) return orders;
+    
+    return orders.filter((order: Order) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        order.orderNumber.toLowerCase().includes(searchLower) ||
+        order.status.toLowerCase().includes(searchLower) ||
+        order.wholesaler?.businessName?.toLowerCase().includes(searchLower) ||
+        order.items.some(item => item.productName.toLowerCase().includes(searchLower)) ||
+        order.total.toString().includes(searchTerm) ||
+        format(new Date(order.date), 'MMM d, yyyy').toLowerCase().includes(searchLower)
+      );
+    });
+  }, [orders, searchTerm]);
 
   if (isLoading) {
     return (
@@ -366,13 +387,34 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           <Package className="h-5 w-5" />
           <span>Order History</span>
           <Badge variant="secondary" className="ml-2">
-            {orders.length} order{orders.length !== 1 ? 's' : ''}
+            {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search orders by number, status, products, or date..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
+        </div>
+
+        {/* Orders List */}
+        {filteredOrders.length === 0 && searchTerm ? (
+          <div className="text-center py-8">
+            <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500 text-lg mb-2">No orders found</p>
+            <p className="text-gray-400">Try adjusting your search terms.</p>
+          </div>
+        ) : (
         <div className="space-y-2">
-          {orders.map((order: Order, index: number) => {
+          {filteredOrders.map((order: Order, index: number) => {
             console.log(`Rendering order ${index}:`, order);
             return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
@@ -458,6 +500,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             );
           })}
         </div>
+        )}
       </CardContent>
     </Card>
   );
