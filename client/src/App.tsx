@@ -114,6 +114,7 @@ function AuthenticatedRoutes() {
 
 function Router() {
   const [location] = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
   
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
@@ -122,9 +123,22 @@ function Router() {
     location.startsWith('/customer/') || 
     publicRoutes.includes(location);
   
-  // Landing page route - only show if at exact root and not authenticated
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+  
+  // Handle root path based on authentication status
   if (location === '/') {
-    return <PublicRoutes />;
+    if (isAuthenticated) {
+      return <AuthenticatedRoutes />;
+    } else {
+      return <PublicRoutes />;
+    }
   }
   
   // Route to public or authenticated routes based on current path
