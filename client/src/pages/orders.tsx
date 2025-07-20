@@ -134,10 +134,14 @@ export default function Orders() {
   const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("orders");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [fulfillingOrders, setFulfillingOrders] = useState<Set<number>>(new Set());
 
   // Update order status mutation
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
+      // Add order to fulfilling set
+      setFulfillingOrders(prev => new Set(prev).add(orderId));
+      
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
@@ -155,6 +159,13 @@ export default function Orders() {
       return response.json();
     },
     onSuccess: (data, variables) => {
+      // Remove order from fulfilling set
+      setFulfillingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables.orderId);
+        return newSet;
+      });
+      
       toast({
         title: "Order Updated",
         description: `Order #${variables.orderId} has been marked as fulfilled successfully.`,
@@ -166,7 +177,14 @@ export default function Orders() {
       
       setSelectedOrder(null); // Close the modal after successful update
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      // Remove order from fulfilling set on error
+      setFulfillingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables.orderId);
+        return newSet;
+      });
+      
       toast({
         title: "Update Failed", 
         description: error.message,
@@ -636,11 +654,11 @@ export default function Orders() {
                                           status: 'fulfilled'
                                         });
                                       }}
-                                      disabled={updateOrderStatusMutation.isPending}
+                                      disabled={fulfillingOrders.has(order.id)}
                                       className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
                                     >
                                       <CheckCircle className="h-4 w-4" />
-                                      Fulfill
+                                      {fulfillingOrders.has(order.id) ? 'Processing...' : 'Fulfill'}
                                     </Button>
                                   )}
                                 </div>
@@ -769,11 +787,11 @@ export default function Orders() {
                                 status: 'fulfilled'
                               });
                             }}
-                            disabled={updateOrderStatusMutation.isPending}
+                            disabled={fulfillingOrders.has(order.id)}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
-                            {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark Fulfilled'}
+                            {fulfillingOrders.has(order.id) ? 'Processing...' : 'Mark Fulfilled'}
                           </Button>
                         )}
                       </div>
@@ -940,11 +958,11 @@ export default function Orders() {
                                   status: 'fulfilled'
                                 });
                               }}
-                              disabled={updateOrderStatusMutation.isPending}
+                              disabled={fulfillingOrders.has(selectedOrder.id)}
                               className="bg-green-600 hover:bg-green-700 text-white"
                             >
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              {updateOrderStatusMutation.isPending ? 'Processing...' : 'Mark as Fulfilled'}
+                              {fulfillingOrders.has(selectedOrder.id) ? 'Processing...' : 'Mark as Fulfilled'}
                             </Button>
                           )}
                         </div>

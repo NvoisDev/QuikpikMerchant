@@ -2,25 +2,20 @@
 
 ## Outstanding Issues (July 20, 2025)
 
-### Google OAuth Login Issue - RESOLVED ✅
-- **Problem**: Users clicking "Sign in with Google" were redirected back to landing page instead of dashboard after authentication
-- **Root Cause**: Production deployment OAuth redirect URI was using old quikpik-merchant-hello3253.replit.app instead of quikpik.app
-- **Solution**: Manual deployment redeploy through Replit interface to apply OAuth configuration changes
-- **Status**: ✅ RESOLVED - OAuth redirect URI now correctly showing https://quikpik.app/api/auth/google/callback on production
+### Mark Fulfilled Button Loading State Issue - RESOLVED ✅
+- **Problem**: When clicking "Mark Fulfilled" on one order, all "Mark Fulfilled" buttons on the page showed loading state instead of just the specific order button
+- **Root Cause**: Single `updateOrderStatusMutation.isPending` state was shared across all buttons, causing global loading state
+- **Solution**: Implemented per-order loading state using `fulfillingOrders` Set to track individual order fulfillment status
+- **Implementation**: 
+  - Added `fulfillingOrders` state to track which specific orders are being processed
+  - Updated all "Mark Fulfilled" buttons (table view, cards view, modal) to use `fulfillingOrders.has(order.id)` instead of global mutation state
+  - Enhanced mutation handlers to add/remove orders from fulfilling set on start/completion/error
+- **Status**: ✅ RESOLVED - Each order button now shows individual loading state without affecting other orders
 - **Date Fixed**: July 20, 2025
 
-### Critical Navigation and Authentication Stability Issues - RESOLVED ✅
-- **Problem**: Application crashing when clicking Dashboard tab, sidebar icon overlapping, blank screen issues due to authentication instability
-- **Root Cause**: Authentication state fluctuation, Dashboard component trying to fetch data before auth completion, routing conflicts, and icon conflicts in sidebar
-- **Solutions Applied**:
-  - Fixed authentication query settings (retry: false, longer staleTime, disabled refetching)
-  - Added comprehensive error handling and ErrorBoundary component
-  - Enhanced Dashboard component with proper user validation and early loading states
-  - Fixed sidebar icon overlapping by changing Team Management icon from Crown to Contact
-  - Improved routing logic with Switch component and better route matching
-  - Added enabled: !!user to all Dashboard API queries to prevent premature calls
-- **Status**: ✅ RESOLVED - Dashboard loads properly, navigation works smoothly, sidebar displays correctly
-- **Date Fixed**: July 20, 2025
+### Previous Issues - RESOLVED ✅
+- Google OAuth Login Issue - RESOLVED ✅ (July 20, 2025)
+- Critical Navigation and Authentication Stability Issues - RESOLVED ✅ (July 20, 2025)
 
 ## Overview
 
