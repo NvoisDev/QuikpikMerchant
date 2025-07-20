@@ -3330,11 +3330,13 @@ Write a professional, sales-focused description that highlights the key benefits
           const deletedSub = event.data.object;
           const userToUpdate = await storage.getUser(deletedSub.metadata?.userId);
           if (userToUpdate) {
+            // Don't immediately downgrade - set status to 'cancelled' but preserve tier features
+            // This gives businesses a grace period to reactivate or export their data
             await storage.updateUserSubscription(userToUpdate.id, {
-              tier: 'free',
-              status: 'inactive',
-              subscriptionEndsAt: new Date(),
-              productLimit: 3
+              tier: userToUpdate.subscriptionTier, // Keep existing tier
+              status: 'cancelled',                 // Mark as cancelled, not free
+              subscriptionEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7-day grace period
+              productLimit: userToUpdate.productLimit // Keep existing limits during grace period
             });
           }
           break;
