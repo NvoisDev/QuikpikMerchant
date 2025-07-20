@@ -150,6 +150,35 @@ export default function SubscriptionSettings() {
     setUpgradeModalOpen(true);
   };
 
+  const handleDowngrade = async (targetPlan: string) => {
+    setCanceling(true);
+    try {
+      const response = await apiRequest("POST", "/api/subscription/downgrade", {
+        targetTier: targetPlan
+      });
+      
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        toast({
+          title: "Plan Downgraded",
+          description: `Your subscription has been downgraded to ${targetPlan}. Changes will take effect immediately.`,
+        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to downgrade subscription");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to downgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -265,18 +294,43 @@ export default function SubscriptionSettings() {
                 </ul>
 
                 <Button
-                  onClick={() => handleUpgrade(plan.id)}
-                  disabled={plan.current || plan.id === "free"}
+                  onClick={() => {
+                    if (plan.current) return;
+                    
+                    const tierOrder = { free: 0, standard: 1, premium: 2 };
+                    const currentTierOrder = tierOrder[currentTier as keyof typeof tierOrder] || 0;
+                    const targetTierOrder = tierOrder[plan.id as keyof typeof tierOrder] || 0;
+                    
+                    if (targetTierOrder < currentTierOrder) {
+                      // This is a downgrade
+                      handleDowngrade(plan.id);
+                    } else {
+                      // This is an upgrade
+                      handleUpgrade(plan.id);
+                    }
+                  }}
+                  disabled={plan.current || canceling}
                   className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : ''}`}
                   variant={plan.current ? "outline" : plan.popular ? "default" : "outline"}
                 >
-                  {plan.current ? (
+                  {canceling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : plan.current ? (
                     "Current Plan"
-                  ) : plan.id === "free" ? (
-                    "Downgrade Not Available"
-                  ) : (
-                    `Upgrade to ${plan.name}`
-                  )}
+                  ) : (() => {
+                    const tierOrder = { free: 0, standard: 1, premium: 2 };
+                    const currentTierOrder = tierOrder[currentTier as keyof typeof tierOrder] || 0;
+                    const targetTierOrder = tierOrder[plan.id as keyof typeof tierOrder] || 0;
+                    
+                    if (targetTierOrder < currentTierOrder) {
+                      return `Downgrade to ${plan.name}`;
+                    } else {
+                      return `Upgrade to ${plan.name}`;
+                    }
+                  })()}
                 </Button>
               </CardContent>
             </Card>

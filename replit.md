@@ -2,18 +2,39 @@
 
 ## Outstanding Issues (July 20, 2025)
 
+### Subscription Downgrade Functionality - IMPLEMENTED ✅ (July 20, 2025)
+- **Issue Identified**: Downgrade button was not functional - showed "Downgrade Not Available"
+- **Problem**: System only supported upgrades but lacked proper downgrade functionality for users wanting to move to lower tiers
+- **Solution Implemented**: Complete subscription downgrade system
+- **Enhancement Features**:
+  - Smart button logic that detects upgrade vs downgrade scenarios
+  - Dedicated `/api/subscription/downgrade` endpoint for secure downgrade processing
+  - Automatic Stripe subscription cancellation when downgrading
+  - Usage validation warnings when current usage exceeds new tier limits
+  - Real-time UI updates showing "Downgrade to [Plan]" vs "Upgrade to [Plan]"
+  - Loading states and proper error handling for downgrade operations
+- **Business Logic**: Validates tier hierarchy, cancels Stripe subscriptions, updates user limits immediately
+- **Status**: ✅ IMPLEMENTED - Users can now downgrade from any tier to any lower tier with proper validation
+
+### Subscription Edit Limit Corrections - IMPLEMENTED ✅ (July 20, 2025)
+- **Issue Identified**: Standard plan incorrectly showed "Unlimited" edits instead of "10 edits per product"
+- **Problem**: Inconsistent subscription tier displays and backend validation logic
+- **Solution Implemented**: Comprehensive edit limit system corrections
+- **Technical Fixes**:
+  - Updated Standard plan display from "Unlimited product edits" to "10 product edits per product"
+  - Fixed backend validation logic to enforce 10-edit limit for Standard tier
+  - Corrected frontend `useSubscription.ts` hook to properly validate edit limits
+  - Updated product card edit counters to show "X/10 edits" for Standard
+  - Enhanced subscription modal and settings page displays
+- **Subscription Tiers Now Correctly Implemented**:
+  - **Free**: 3 products, 3 edits per product
+  - **Standard**: 10 products, 10 edits per product
+  - **Premium**: Unlimited products, unlimited edits
+- **Status**: ✅ IMPLEMENTED - All subscription tiers now display and function correctly
+
 ### Subscription Cancellation Protection - IMPLEMENTED ✅ (July 20, 2025)
 - **Issue Identified**: Subscription cancellation immediately downgraded businesses to free tier, causing data loss
-- **Problem**: When businesses cancelled subscriptions, webhook forced tier='free' and productLimit=3, causing:
-  - Standard businesses (10 products) suddenly lose access to 7 products
-  - Loss of team member access, customer groups, and broadcasting capabilities
-  - Immediate business disruption without grace period
-- **Solution Implemented**: Enhanced cancellation system with 7-day grace period
-- **Protection Measures**:
-  - Cancelled subscriptions maintain current tier and limits for 7 days
-  - Status changes to 'cancelled' instead of immediate downgrade to 'free'
-  - Businesses retain full access during grace period for data export or reactivation
-  - Prevents accidental data loss and business disruption
+- **Solution Implemented**: Enhanced cancellation system with 7-day grace period to protect business continuity
 - **Status**: ✅ IMPLEMENTED - Cancellation now preserves business continuity with grace period
 
 ### All Other Issues RESOLVED ✅

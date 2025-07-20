@@ -7117,6 +7117,66 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
   });
 
+  app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
+    try {
+      const { targetTier } = req.body;
+      const userId = req.user.claims.sub;
+      
+      if (!targetTier) {
+        return res.status(400).json({ error: "Target tier is required" });
+      }
+
+      // Validate target tier
+      const validTiers = ['free', 'standard', 'premium'];
+      if (!validTiers.includes(targetTier)) {
+        return res.status(400).json({ error: "Invalid target tier" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if this is actually a downgrade
+      const tierOrder = { free: 0, standard: 1, premium: 2 };
+      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
+      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
+
+      if (targetTierOrder >= currentTierOrder) {
+        return res.status(400).json({ error: "This is not a downgrade. Use upgrade endpoint instead." });
+      }
+
+      // If user has an active subscription, cancel it
+      if (user.stripeSubscriptionId && user.subscriptionStatus === 'active') {
+        await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+      }
+
+      // Update user subscription to the lower tier
+      const newProductLimit = getProductLimit(targetTier);
+      
+      await storage.updateUserSubscription(userId, {
+        tier: targetTier,
+        status: targetTier === 'free' ? 'inactive' : 'active',
+        stripeSubscriptionId: targetTier === 'free' ? null : user.stripeSubscriptionId,
+        subscriptionEndsAt: targetTier === 'free' ? null : user.subscriptionEndsAt,
+        productLimit: newProductLimit
+      });
+
+      // Check if downgrade affects user's current usage
+      const currentProducts = await storage.getProducts(userId);
+      const exceededProducts = currentProducts.length > newProductLimit && newProductLimit !== -1;
+
+      res.json({ 
+        success: true, 
+        message: `Subscription downgraded to ${targetTier}`,
+        warning: exceededProducts ? `You currently have ${currentProducts.length} products but the ${targetTier} plan allows only ${newProductLimit}. Please delete some products to comply with your new plan limits.` : null
+      });
+    } catch (error) {
+      console.error('Subscription downgrade error:', error);
+      res.status(500).json({ error: "Failed to downgrade subscription" });
+    }
+  });
+
   // Stripe webhook for subscription events
   app.post('/api/webhooks/stripe', async (req, res) => {
     let event;
