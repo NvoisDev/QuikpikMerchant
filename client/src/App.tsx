@@ -151,6 +151,33 @@ function Router() {
   
   console.log('Current route:', location); // Debug logging
   
+  // Direct render for debugging - bypass all routing logic
+  if (location === '/') {
+    console.log('Direct rendering simple test page');
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Quikpik Merchant Platform</h1>
+          <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '2rem' }}>Welcome to your wholesale management platform</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button 
+              onClick={() => window.location.href = '/login'}
+              style={{ backgroundColor: '#3b82f6', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => window.location.href = '/signup'}
+              style={{ backgroundColor: '#10b981', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
   const isPublicRoute = location === '/' || 
