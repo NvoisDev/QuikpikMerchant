@@ -546,10 +546,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wholesalerEmail: users.email,
           wholesalerPhone: users.businessPhone,
         })
-        .from(customerGroupsMembers)
-        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .from(customerGroupMembers)
+        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
         .innerJoin(users, eq(customerGroups.wholesalerId, users.id))
-        .where(eq(customerGroupsMembers.customerId, customer.id));
+        .where(eq(customerGroupMembers.customerId, customer.id));
 
       console.log('🔍 Customer is registered with wholesalers:', customerWholesalers.map(w => w.wholesalerName));
 
