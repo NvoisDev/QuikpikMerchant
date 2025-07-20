@@ -53,6 +53,13 @@
 - **User Experience**: Timeline now provides clear visual feedback, professional appearance, and intuitive progress tracking
 - **Status**: ✅ IMPLEMENTED - Modern timeline design with enhanced visual appeal and better usability
 
+### Marketplace Button Hidden - COMPLETED ✅ (July 20, 2025)
+- **User Request**: Hide marketplace button from navigation temporarily
+- **Implementation**: Commented out marketplace navigation item from sidebar navigation array
+- **Technical Details**: Marketplace route and functionality remain intact, only navigation access temporarily disabled
+- **Location**: `client/src/components/layout/sidebar.tsx` - line 44 commented out
+- **Status**: ✅ COMPLETED - Marketplace button no longer visible in sidebar navigation
+
 ### All Other Issues RESOLVED ✅
 
 ### Share Store Button Implementation - COMPLETED ✅ (July 20, 2025)

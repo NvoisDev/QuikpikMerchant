@@ -39,7 +39,7 @@ const navigation = [
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
-  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
+  // { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" }, // Hidden temporarily
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
