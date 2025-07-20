@@ -1803,19 +1803,19 @@ export default function CustomerPortal() {
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 min-w-[80px] font-medium ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
                   >
                     <Grid className="w-4 h-4 mr-2" />
-                    Grid
+                    <span>Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm h-9 min-w-[80px] font-medium ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
                   >
                     <List className="w-4 h-4 mr-2" />
-                    List
+                    <span>List</span>
                   </Button>
                 </div>
               </div>

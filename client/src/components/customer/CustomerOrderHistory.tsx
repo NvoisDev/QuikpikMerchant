@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText } from "lucide-react";
+import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
