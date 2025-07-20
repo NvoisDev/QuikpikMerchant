@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/Login";
@@ -74,35 +75,38 @@ function AuthenticatedRoutes() {
 
   return (
     <AppLayout>
-      <Route path="/marketplace" component={Marketplace} />
-      {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
-        <>
-          <Route path="/" component={WholesalerDashboard} />
-          <Route path="/products" component={ProductManagement} />
-          <Route path="/customers" component={Customers} />
-          <Route path="/orders" component={Orders} />
-          <Route path="/subscription" component={SubscriptionSettings} />
-          <Route path="/analytics" component={Analytics} />
-          <Route path="/business-performance" component={BusinessPerformance} />
-          <Route path="/financials" component={Financials} />
-          <Route path="/financial-health" component={FinancialHealth} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/campaigns" component={Campaigns} />
-          {/* Legacy route redirect */}
-          <Route path="/broadcasts" component={Campaigns} />
-          <Route path="/message-templates" component={Campaigns} />
-          <Route path="/stock-alerts" component={StockAlerts} />
-          <Route path="/team-management" component={TeamManagement} />
-          <Route path="/help" component={Help} />
-          <Route path="/preview-store" component={CustomerPortal} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={RetailerInterface} />
-          <Route path="/orders" component={Orders} />
-          <Route path="/checkout" component={Checkout} />
-        </>
-      )}
+      <Switch>
+        <Route path="/marketplace" component={Marketplace} />
+        {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
+          <>
+            <Route path="/" component={WholesalerDashboard} />
+            <Route path="/products" component={ProductManagement} />
+            <Route path="/customers" component={Customers} />
+            <Route path="/orders" component={Orders} />
+            <Route path="/subscription" component={SubscriptionSettings} />
+            <Route path="/analytics" component={Analytics} />
+            <Route path="/business-performance" component={BusinessPerformance} />
+            <Route path="/financials" component={Financials} />
+            <Route path="/financial-health" component={FinancialHealth} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/campaigns" component={Campaigns} />
+            {/* Legacy route redirect */}
+            <Route path="/broadcasts" component={Campaigns} />
+            <Route path="/message-templates" component={Campaigns} />
+            <Route path="/stock-alerts" component={StockAlerts} />
+            <Route path="/team-management" component={TeamManagement} />
+            <Route path="/help" component={Help} />
+            <Route path="/preview-store" component={CustomerPortal} />
+          </>
+        ) : (
+          <>
+            <Route path="/" component={RetailerInterface} />
+            <Route path="/orders" component={Orders} />
+            <Route path="/checkout" component={Checkout} />
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
     </AppLayout>
   );
 }
@@ -111,7 +115,12 @@ function Router() {
   const [location] = useLocation();
   
   // Check if current route is public (doesn't need authentication)
-  const isPublicRoute = location === '/' || ['/login', '/campaign/', '/marketplace/product/', '/customer/', '/team-invitation', '/signup'].some(route => location.includes(route));
+  const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
+  const isPublicRoute = location === '/' || 
+    location.startsWith('/campaign/') || 
+    location.startsWith('/marketplace/product/') || 
+    location.startsWith('/customer/') || 
+    publicRoutes.includes(location);
   
   // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
@@ -123,14 +132,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <OnboardingProvider>
-          <Toaster />
-          <Router />
-        </OnboardingProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <OnboardingProvider>
+            <Toaster />
+            <Router />
+          </OnboardingProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
