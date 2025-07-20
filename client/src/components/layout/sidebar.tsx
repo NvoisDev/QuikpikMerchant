@@ -39,7 +39,7 @@ const navigation = [
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
-  // { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" }, // Hidden temporarily
+  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
@@ -100,7 +100,7 @@ export default function Sidebar() {
         </div>
         
         {/* Navigation */}
-        <nav className="mt-6 flex-1">
+        <nav className="mt-6 flex-1 pb-48 overflow-y-auto">
           {navigation.filter(item => checkTabAccess(item.tabName)).map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
@@ -110,7 +110,7 @@ export default function Sidebar() {
             // Show premium lock for premium features without access
             if (isPremiumFeature && !hasPremiumAccess) {
               return (
-                <div key={item.name} className="px-6 py-3">
+                <div key={item.name} className="px-6 py-2">
                   <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed relative">
                     <IconComponent className="mr-3 h-5 w-5" />
                     <span className="flex-1">{item.name}</span>
@@ -127,7 +127,7 @@ export default function Sidebar() {
               <Link key={item.name} href={item.href}>
                 <div
                   className={cn(
-                    "flex items-center px-6 py-3 text-sm font-medium transition-colors cursor-pointer relative",
+                    "flex items-center px-6 py-2 text-sm font-medium transition-colors cursor-pointer relative",
                     isActive
                       ? "text-primary bg-blue-50 border-r-4 border-primary"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -152,8 +152,8 @@ export default function Sidebar() {
         </nav>
         
         {/* User Profile & Actions */}
-        <div className="absolute bottom-6 left-6 right-6">
-          <div className="flex items-center mb-4">
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className="flex items-center mb-3">
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <span className="text-sm font-bold text-white">
                 {user?.firstName?.charAt(0) || 'U'}{user?.lastName?.charAt(0) || ''}
@@ -168,7 +168,7 @@ export default function Sidebar() {
               </p>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Link href="/settings">
               <Button variant="ghost" size="sm" className="w-full justify-start" data-onboarding="settings">
                 <Settings className="mr-2 h-4 w-4" />
