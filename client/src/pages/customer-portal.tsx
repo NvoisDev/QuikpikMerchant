@@ -1298,18 +1298,20 @@ export default function CustomerPortal() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Mobile Responsive */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Logo variant="icon-only" size="sm" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            {/* Store Info - Mobile Optimized */}
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+              <Logo variant="icon-only" size="sm" className="flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                   {wholesalerLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading...</span>
+                      <span className="hidden sm:inline">Loading...</span>
+                      <span className="sm:hidden">...</span>
                     </div>
                   ) : wholesalerError ? (
                     "Store Unavailable"
@@ -1317,22 +1319,25 @@ export default function CustomerPortal() {
                     wholesaler?.businessName || "Wholesale Store"
                   )}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 truncate hidden sm:block">
                   {wholesaler?.storeTagline || "Premium wholesale products"}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            {/* Action Buttons - Mobile Stack */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
               {/* Contact Wholesaler button for guests */}
               {isGuestMode && (
                 <Button
                   onClick={() => window.location.reload()}
                   variant="outline"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                  size="sm"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Contact Wholesaler
+                  <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Contact Wholesaler</span>
+                  <span className="sm:hidden">Contact</span>
                 </Button>
               )}
               
@@ -1345,9 +1350,10 @@ export default function CustomerPortal() {
                       setShowAllProducts(false);
                     }}
                     variant="outline"
-                    className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                    size="sm"
+                    className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs sm:text-sm"
                   >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                     Home
                   </Button>
                   <Button
@@ -1364,9 +1370,11 @@ export default function CustomerPortal() {
                       });
                     }}
                     variant="outline"
-                    className="border-red-300 text-red-600 hover:bg-red-50"
+                    size="sm"
+                    className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
                   >
-                    Log out
+                    <span className="hidden sm:inline">Log out</span>
+                    <span className="sm:hidden">Logout</span>
                   </Button>
                 </>
               )}
@@ -1375,22 +1383,26 @@ export default function CustomerPortal() {
                 <Button
                   onClick={handleShare}
                   variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50"
+                  size="sm"
+                  className="border-green-600 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share Store
+                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Share Store</span>
+                  <span className="sm:hidden">Share</span>
                 </Button>
               )}
               {!isPreviewMode && (
                 <Button
                   onClick={() => setShowCheckout(true)}
-                  className="bg-green-600 hover:bg-green-700 relative"
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
                   disabled={cart.length === 0}
                 >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Cart ({cartStats.totalItems})
+                  <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
+                  <span className="sm:hidden">({cartStats.totalItems})</span>
                   {cartStats.totalItems > 0 && (
-                    <Badge className="ml-2 bg-green-800">
+                    <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
                       {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
                     </Badge>
                   )}
@@ -1401,7 +1413,7 @@ export default function CustomerPortal() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {/* Guest Mode Notice */}
         {isGuestMode && (
           <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -1435,51 +1447,51 @@ export default function CustomerPortal() {
           </div>
         )}
         
-        {/* Featured Product - Clean Modern Design */}
+        {/* Featured Product - Mobile Responsive Design */}
         {featuredProduct && (
-          <div className="mb-12">
+          <div className="mb-8 sm:mb-12">
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="grid lg:grid-cols-2">
-                  {/* Product Image */}
-                  <div className="relative bg-white flex items-center justify-center">
+                  {/* Product Image - Mobile Optimized */}
+                  <div className="relative bg-white flex items-center justify-center p-4 sm:p-6 lg:p-8">
                     {featuredProduct.imageUrl || (featuredProduct.images && featuredProduct.images.length > 0) ? (
                       <img 
                         src={featuredProduct.imageUrl || featuredProduct.images[0]} 
                         alt={featuredProduct.name}
-                        className="w-full max-w-md h-auto object-contain"
+                        className="w-full max-w-sm sm:max-w-md h-auto object-contain"
                       />
                     ) : (
-                      <div className="w-full h-80 lg:h-96 bg-gray-50 flex items-center justify-center">
-                        <Package className="w-24 h-24 text-gray-300" />
+                      <div className="w-full h-60 sm:h-80 lg:h-96 bg-gray-50 flex items-center justify-center rounded-lg">
+                        <Package className="w-16 h-16 sm:w-24 sm:h-24 text-gray-300" />
                       </div>
                     )}
                     
-                    {/* Sale Badge */}
+                    {/* Sale Badge - Mobile Responsive */}
                     {featuredProduct.promoActive && featuredProduct.promoPrice && (
-                      <div className="absolute top-6 left-6">
-                        <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                      <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
+                        <div className="bg-red-500 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium">
                           SALE
                         </div>
                       </div>
                     )}
                     
-                    {/* Negotiable Badge */}
+                    {/* Negotiable Badge - Mobile Responsive */}
                     {featuredProduct.negotiationEnabled && (
-                      <div className="absolute top-6 right-6">
-                        <div className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                      <div className="absolute top-3 right-3 sm:top-6 sm:right-6">
+                        <div className="bg-blue-500 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium">
                           Negotiable
                         </div>
                       </div>
                     )}
                   </div>
                   
-                  {/* Product Details */}
-                  <div className="p-8 lg:p-12 bg-white">
-                    <div className="space-y-6">
+                  {/* Product Details - Mobile Responsive */}
+                  <div className="p-4 sm:p-6 lg:p-8 xl:p-12 bg-white">
+                    <div className="space-y-4 sm:space-y-6">
                       {/* Title and Category */}
                       <div>
-                        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
                           {featuredProduct.name}
                         </h1>
                         {/* Product Tags */}
@@ -1735,54 +1747,59 @@ export default function CustomerPortal() {
           </div>
         )}
 
-        {/* Search and Filters */}
+        {/* Search and Filters - Mobile Optimized */}
         {(!featuredProduct || showAllProducts) && (
-          <div className="mb-4 sm:mb-6 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <div className="flex-1 relative">
+          <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+            <div className="flex flex-col gap-3">
+              {/* Search Bar - Full Width on Mobile */}
+              <div className="w-full relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-10 sm:h-11 text-sm sm:text-base"
                 />
               </div>
               
-              <div className="flex flex-wrap gap-2 sm:gap-2">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Filters and View Toggle - Mobile Stacked */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="flex-1 sm:max-w-xs">
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
-                <div className="flex border rounded-md">
+                {/* View Toggle - Mobile Responsive */}
+                <div className="flex border rounded-lg bg-gray-50 p-1 w-full sm:w-auto">
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className="rounded-r-none"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 text-xs sm:text-sm h-8 sm:h-9 ${viewMode === "grid" ? "bg-white shadow-sm" : ""}`}
                   >
-                    <Grid className="w-4 h-4" />
-                    <span className="hidden xs:inline ml-2">Grid</span>
+                    <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="ml-1 sm:ml-2">Grid</span>
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className="rounded-l-none"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 text-xs sm:text-sm h-8 sm:h-9 ${viewMode === "list" ? "bg-white shadow-sm" : ""}`}
                   >
-                    <List className="w-4 h-4" />
-                    <span className="hidden xs:inline ml-2">List</span>
+                    <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="ml-1 sm:ml-2">List</span>
                   </Button>
                 </div>
               </div>
@@ -1824,34 +1841,34 @@ export default function CustomerPortal() {
               </Button>
             </div>
             
-            {/* Preview of Products */}
+            {/* Preview of Products - Mobile Responsive Grid */}
             <div className={`${viewMode === "grid" 
-              ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" 
-              : "space-y-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" 
+              : "space-y-3 sm:space-y-4"
             }`}>
               {otherProducts.slice(0, 6).map((product: Product) => (
                 viewMode === "grid" ? (
-                  // Grid View
+                  // Grid View - Mobile Responsive
                   <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
-                      {/* Product Image */}
-                      <div className="mb-4">
+                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                      {/* Product Image - Mobile Optimized */}
+                      <div className="mb-3 sm:mb-4">
                         {product.imageUrl || (product.images && product.images.length > 0) ? (
                           <img 
                             src={product.imageUrl || product.images[0]} 
                             alt={product.name}
-                            className="w-full h-40 object-contain rounded-lg bg-white"
+                            className="w-full h-32 sm:h-36 lg:h-40 object-contain rounded-lg bg-white"
                           />
                         ) : (
-                          <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center">
-                            <Package className="w-12 h-12 text-gray-300" />
+                          <div className="w-full h-32 sm:h-36 lg:h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <Package className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gray-300" />
                           </div>
                         )}
                       </div>
                       
-                      {/* Product Info */}
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                      {/* Product Info - Mobile Responsive */}
+                      <div className="space-y-2 sm:space-y-3">
+                        <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 line-clamp-2">{product.name}</h3>
                         
                         {/* Product Tags */}
                         <div className="flex flex-wrap gap-2">
@@ -1931,31 +1948,35 @@ export default function CustomerPortal() {
                           })()}
                         </div>
                         
-                        {/* Action Buttons - Hidden for Guests */}
+                        {/* Action Buttons - Mobile Responsive */}
                         {!isGuestMode && (
-                          <div className="flex justify-end gap-2 mt-4">
+                          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4">
                             <Button 
-                              onClick={() => handleAddToCart(product)}
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                              onClick={() => openQuantityEditor(product)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm"
                             >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add to Cart
+                              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Add to Cart</span>
+                              <span className="sm:hidden">Add</span>
                             </Button>
                             {product.negotiationEnabled && (
                               <Button 
                                 variant="outline" 
-                                onClick={() => handleNegotiation(product)}
-                                className="px-3 border-green-600 text-green-600 hover:bg-green-50 rounded-xl"
+                                size="sm"
+                                onClick={() => openNegotiation(product)}
+                                className="px-2 sm:px-3 border-green-600 text-green-600 hover:bg-green-50 rounded-xl text-xs sm:text-sm"
                               >
                                 💬
+                                <span className="hidden sm:inline ml-1">Quote</span>
                               </Button>
                             )}
                           </div>
                         )}
                         
-                        {/* Guest Call-to-Action */}
+                        {/* Guest Call-to-Action - Mobile Responsive */}
                         {isGuestMode && (
-                          <div className="flex justify-end mt-4">
+                          <div className="flex justify-end mt-3 sm:mt-4">
                             <Button 
                               onClick={() => {
                                 toast({
@@ -1973,10 +1994,12 @@ export default function CustomerPortal() {
                                   variant: "default",
                                 });
                               }}
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm"
                             >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add to Cart
+                              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Add to Cart</span>
+                              <span className="sm:hidden">Add</span>
                             </Button>
                           </div>
                         )}
@@ -1992,30 +2015,30 @@ export default function CustomerPortal() {
                     </CardContent>
                   </Card>
                 ) : (
-                  // List View - Horizontal layout like product management
+                  // List View - Mobile Responsive Layout
                   <Card key={product.id} className="border hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        {/* Product Image */}
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        {/* Product Image - Mobile Optimized */}
                         <div className="flex-shrink-0">
                           {product.imageUrl || (product.images && product.images.length > 0) ? (
                             <img 
                               src={product.imageUrl || product.images[0]} 
                               alt={product.name}
-                              className="w-16 h-16 object-contain rounded-lg border bg-white"
+                              className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg border bg-white"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
-                              <Package className="w-8 h-8 text-gray-400" />
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-lg flex items-center justify-center border">
+                              <Package className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                             </div>
                           )}
                         </div>
                         
-                        {/* Product Details */}
+                        {/* Product Details - Mobile Responsive */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-lg text-gray-900 truncate">{product.name}</h3>
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex-1 min-w-0 mb-2 sm:mb-0">
+                              <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 truncate">{product.name}</h3>
                               <div className="flex items-center gap-2 mt-1">
                                 {product.category && (
                                   <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md">
@@ -2064,63 +2087,68 @@ export default function CustomerPortal() {
                               )}
                             </div>
                             
-                            {/* Price and Action Buttons */}
-                            <div className="flex-shrink-0 text-right ml-4">
-                              <div className="text-lg font-bold text-gray-900 mb-2">
-                                {(() => {
-                                  const pricing = calculatePromotionalPricing(product);
-                                  const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
-                                  
-                                  return (
-                                    <PriceDisplay 
-                                      price={pricing.effectivePrice}
-                                      originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
-                                      currency={wholesaler?.defaultCurrency}
-                                      isGuestMode={isGuestMode}
-                                      size="medium"
-                                      showStrikethrough={true}
-                                    />
-                                  );
-                                })()}
+                            {/* Price and Action Buttons - Mobile Responsive */}
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:text-right ml-2 sm:ml-4 space-y-2 sm:space-y-0 sm:space-x-2">
+                              <div className="sm:flex-1">
+                                <div className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2">
+                                  {(() => {
+                                    const pricing = calculatePromotionalPricing(product);
+                                    const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                                    
+                                    return (
+                                      <PriceDisplay 
+                                        price={pricing.effectivePrice}
+                                        originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
+                                        currency={wholesaler?.defaultCurrency}
+                                        isGuestMode={isGuestMode}
+                                        size="medium"
+                                        showStrikethrough={true}
+                                      />
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               
-                              {/* Action Buttons - Hidden for Guests */}
+                              {/* Action Buttons - Mobile Stacked */}
                               {!isGuestMode && (
-                                <div className="flex space-x-2">
+                                <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                                   {product.negotiationEnabled ? (
                                     <>
                                       <Button 
                                         onClick={() => openNegotiation(product)}
                                         size="sm"
                                         variant="outline"
-                                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                        className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
                                       >
                                         <Mail className="w-3 h-3 mr-1" />
-                                        Quote
+                                        <span className="hidden sm:inline">Quote</span>
+                                        <span className="sm:hidden">💬</span>
                                       </Button>
                                       <Button 
                                         onClick={() => openQuantityEditor(product)}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
+                                        className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                                       >
                                         <Plus className="w-3 h-3 mr-1" />
-                                        Add
+                                        <span className="hidden sm:inline">Add</span>
+                                        <span className="sm:hidden">+</span>
                                       </Button>
                                     </>
                                   ) : (
                                     <Button 
                                       onClick={() => openQuantityEditor(product)}
                                       size="sm"
-                                      className="bg-green-600 hover:bg-green-700"
+                                      className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                                     >
                                       <Plus className="w-3 h-3 mr-1" />
-                                      Add to Cart
+                                      <span className="hidden sm:inline">Add to Cart</span>
+                                      <span className="sm:hidden">Add</span>
                                     </Button>
                                   )}
                                 </div>
                               )}
                               
-                              {/* Guest Call-to-Action */}
+                              {/* Guest Call-to-Action - Mobile Responsive */}
                               {isGuestMode && (
                                 <Button 
                                   onClick={() => {
@@ -2140,10 +2168,11 @@ export default function CustomerPortal() {
                                     });
                                   }}
                                   size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
                                 >
                                   <Plus className="w-3 h-3 mr-1" />
-                                  Add to Cart
+                                  <span className="hidden sm:inline">Add to Cart</span>
+                                  <span className="sm:hidden">Add</span>
                                 </Button>
                               )}
                             </div>
