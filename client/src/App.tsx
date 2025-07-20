@@ -42,6 +42,7 @@ import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
 function PublicRoutes() {
+  console.log('Rendering PublicRoutes');
   return (
     <Switch>
       <Route path="/campaign/:id" component={CampaignPreview} />
@@ -53,6 +54,7 @@ function PublicRoutes() {
       <Route path="/login" component={Login} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
@@ -61,7 +63,10 @@ function PublicRoutes() {
 function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
+  console.log('Auth state:', { user: !!user, isLoading, isAuthenticated }); // Debug logging
+
   if (isLoading) {
+    console.log('Auth loading - showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -70,8 +75,11 @@ function AuthenticatedRoutes() {
   }
 
   if (!isAuthenticated) {
+    console.log('Not authenticated - showing login');
     return <Login />;
   }
+
+  console.log('Authenticated - showing app layout');
 
   return (
     <AppLayout>
@@ -114,6 +122,8 @@ function AuthenticatedRoutes() {
 function Router() {
   const [location] = useLocation();
   
+  console.log('Current route:', location); // Debug logging
+  
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
   const isPublicRoute = location === '/' || 
@@ -121,6 +131,8 @@ function Router() {
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
     publicRoutes.includes(location);
+  
+  console.log('Is public route:', isPublicRoute); // Debug logging
   
   // Route to public or authenticated routes based on current path
   if (isPublicRoute) {
