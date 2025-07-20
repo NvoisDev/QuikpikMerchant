@@ -1267,16 +1267,7 @@ export default function CustomerPortal() {
     }
   }, [isPreviewMode]);
 
-  // Debug authentication state
-  console.log('🔍 Customer Portal Auth Debug:', {
-    wholesalerId,
-    showAuth,
-    isAuthenticated,
-    hasAuthenticatedCustomer: !!authenticatedCustomer,
-    authenticatedCustomer: authenticatedCustomer,
-    isPreviewMode,
-    showHomePage
-  });
+
 
   // Show authentication screen
   if (showAuth && !isPreviewMode) {
