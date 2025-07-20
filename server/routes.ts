@@ -17,6 +17,7 @@ import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
 import { SMSService, sendSMSVerificationCode } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
+import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -9716,6 +9717,80 @@ The Quikpik Team
     } catch (error) {
       console.error('Error tracking promotion activity:', error);
       res.status(500).json({ error: 'Failed to track promotion activity' });
+    }
+  });
+
+  // Phase 2: Email verification endpoints for enhanced customer authentication
+  app.post('/api/customer-email-verification/send', async (req, res) => {
+    try {
+      const { customerId, email } = req.body;
+      
+      if (!customerId || !email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Customer ID and email are required' 
+        });
+      }
+      
+      // Verify customer exists and has this email
+      const customer = await storage.getUser(customerId);
+      if (!customer || customer.email !== email) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Customer email verification failed' 
+        });
+      }
+      
+      // Send email verification code
+      const verificationCode = await createEmailVerification(customerId, email);
+      
+      res.json({ 
+        success: true, 
+        message: 'Email verification code sent',
+        expiresIn: 600 // 10 minutes
+      });
+      
+    } catch (error) {
+      console.error('Email verification send error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send email verification' 
+      });
+    }
+  });
+
+  app.post('/api/customer-email-verification/verify', async (req, res) => {
+    try {
+      const { customerId, email, code } = req.body;
+      
+      if (!customerId || !email || !code) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Customer ID, email, and verification code are required' 
+        });
+      }
+      
+      // Verify the email code
+      const isVerified = await verifyEmailCode(customerId, email, code);
+      
+      if (isVerified) {
+        res.json({ 
+          success: true, 
+          message: 'Email verified successfully' 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Invalid or expired verification code' 
+        });
+      }
+      
+    } catch (error) {
+      console.error('Email verification verify error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to verify email code' 
+      });
     }
   });
 

@@ -885,25 +885,54 @@ export class DatabaseStorage implements IStorage {
           })
         );
         
-        // Prioritize customers who have placed orders (even if fewer)
-        // This helps distinguish between actual customers and duplicates
-        const customersWithOrders = customerOrderCounts.filter(c => c.orderCount > 0);
+        // Enhanced customer selection logic for Phase 1 improvements
         
-        if (customersWithOrders.length > 0) {
-          // If multiple customers have orders, pick the most recent one based on profile completeness
-          // Prefer customers with email addresses that look like real customer emails
-          const preferredCustomer = customersWithOrders.find(c => 
+        // Priority 1: Exact phone number matches (after standardization)  
+        const exactPhoneMatches = customerOrderCounts.filter(c => 
+          c.customer.phone === `+44${lastFourDigits}` || 
+          c.customer.phone.endsWith(lastFourDigits) && c.customer.phone.length >= 10
+        );
+        
+        if (exactPhoneMatches.length === 1) {
+          matchingCustomer = exactPhoneMatches[0].customer;
+          console.log(`Selected customer with exact phone match: ${matchingCustomer.name}`);
+        } else {
+          // Priority 2: Customers with orders and valid business emails (not business owner accounts)
+          const customersWithOrders = customerOrderCounts.filter(c => 
+            c.orderCount > 0 && 
             c.customer.email && 
             c.customer.email.includes('@') && 
-            !c.customer.email.includes('hello@quikpik.co') // Exclude business owner emails
-          ) || customersWithOrders[0];
+            !c.customer.email.includes('hello@quikpik.co') && // Exclude business owner emails
+            !c.customer.email.includes('nvois.co') // Exclude internal test emails
+          );
           
-          matchingCustomer = preferredCustomer.customer;
-          console.log(`Selected customer with orders and real email: ${matchingCustomer.name} (${preferredCustomer.orderCount} orders)`);
-        } else {
-          // If no customers have orders, just pick the first one
-          matchingCustomer = customerOrderCounts[0].customer;
-          console.log(`No customers have orders, selected: ${matchingCustomer.name}`);
+          if (customersWithOrders.length > 0) {
+            // Among customers with orders, prefer one with more complete profile
+            const bestCustomer = customersWithOrders.reduce((best, current) => {
+              // Scoring system: orders + email quality + name completeness
+              const bestScore = best.orderCount + 
+                (best.customer.email?.includes('gmail') ? 2 : 1) +
+                (best.customer.name?.split(' ').length > 1 ? 1 : 0);
+              const currentScore = current.orderCount +
+                (current.customer.email?.includes('gmail') ? 2 : 1) +
+                (current.customer.name?.split(' ').length > 1 ? 1 : 0);
+              return currentScore > bestScore ? current : best;
+            });
+            
+            matchingCustomer = bestCustomer.customer;
+            console.log(`Selected customer with best profile score: ${matchingCustomer.name} (${bestCustomer.orderCount} orders, ${matchingCustomer.email})`);
+          } else {
+            // Priority 3: Any customer with email, prefer non-business accounts
+            const customersWithEmail = customerOrderCounts.filter(c => 
+              c.customer.email && 
+              !c.customer.email.includes('hello@quikpik.co')
+            );
+            
+            matchingCustomer = customersWithEmail.length > 0 
+              ? customersWithEmail[0].customer 
+              : customerOrderCounts[0].customer;
+            console.log(`Selected customer with email: ${matchingCustomer.name}`);
+          }
         }
       }
 

@@ -2,6 +2,23 @@
 
 ## Outstanding Issues (July 20, 2025)
 
+### Customer Account Management Improvements - IN PROGRESS (July 20, 2025)
+- **Issue Identified**: Multiple duplicate customer records causing authentication conflicts and wrong order display
+- **Current Problems**: 
+  - Same customers with multiple IDs (Michael Ogunjemilua appears 3 times)
+  - Inconsistent phone number formats (+44 vs 07)
+  - Authentication conflicts when multiple customers share last 4 digits
+  - Weak security using only last 4 digits authentication
+- **Solution Approach**: Hybrid approach with immediate fixes followed by gradual enhancements
+- **Phase 1 (Immediate)**: Phone number standardization, duplicate cleanup, improved customer selection logic
+- **Phase 2 (Next)**: Email verification integration with SMS flow
+- **Phase 3 (Future)**: Full customer account system with registration/login
+- **Status**: ✅ PHASE 1 COMPLETED - Enhanced customer selection algorithm with phone standardization, duplicate cleanup logic, and intelligent profile scoring
+- **Phase 1 Results**: System now correctly identifies Michael Ogunjemilua (Order #38) instead of wrong Michael with 11 orders
+- **Next Phase**: Phase 2 email verification system implemented and ready for frontend integration
+
+## Outstanding Issues (July 20, 2025)
+
 ### Customer Portal Mobile Responsiveness Enhancement - COMPLETED ✅ (July 20, 2025)
 - **Feature Enhancement**: Implemented comprehensive mobile-first responsive design across the entire customer portal
 - **Mobile Grid Layout**: Enhanced product grid with responsive columns (1 on mobile, 2 on tablet, 3 on desktop) for optimal viewing
