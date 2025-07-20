@@ -36,7 +36,7 @@ const navigation = [
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
-  { name: "Team Management", href: "/team-management", icon: Crown, tabName: "team-management" },
+  { name: "Team Management", href: "/team-management", icon: Users, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
@@ -111,10 +111,10 @@ export default function Sidebar() {
             if (isPremiumFeature && !hasPremiumAccess) {
               return (
                 <div key={item.name} className="px-6 py-3">
-                  <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed">
+                  <div className="flex items-center text-sm font-medium text-gray-400 cursor-not-allowed relative">
                     <IconComponent className="mr-3 h-5 w-5" />
                     <span className="flex-1">{item.name}</span>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 ml-2">
                       <Crown className="h-3 w-3" />
                       <Lock className="h-3 w-3" />
                     </div>
@@ -127,7 +127,7 @@ export default function Sidebar() {
               <Link key={item.name} href={item.href}>
                 <div
                   className={cn(
-                    "flex items-center px-6 py-3 text-sm font-medium transition-colors cursor-pointer",
+                    "flex items-center px-6 py-3 text-sm font-medium transition-colors cursor-pointer relative",
                     isActive
                       ? "text-primary bg-blue-50 border-r-4 border-primary"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -137,13 +137,13 @@ export default function Sidebar() {
                 >
                   <IconComponent 
                     className={cn(
-                      "mr-3 h-5 w-5",
+                      "mr-3 h-5 w-5 flex-shrink-0",
                       isActive ? "text-primary" : "text-gray-400"
                     )} 
                   />
                   <span className="flex-1">{item.name}</span>
                   {isPremiumFeature && (
-                    <Crown className="h-3 w-3 text-yellow-500" />
+                    <Crown className="h-3 w-3 text-yellow-500 ml-2 flex-shrink-0" />
                   )}
                 </div>
               </Link>
