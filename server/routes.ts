@@ -17,7 +17,7 @@ import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
 import { SMSService, sendSMSVerificationCode } from "./sms-service";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get customer order history - only for customers registered in wholesaler's groups
+  // Get customer order history - aggregated from all wholesalers where customer is registered
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
     console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
@@ -536,8 +536,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id);
 
-      // Now get orders for this specific customer ID (retailer_id)
-      console.log('🔍 Looking for orders with customer ID:', customer.id);
+      // Find ALL wholesalers where this customer is registered
+      console.log('🔍 Finding all wholesalers where customer is registered...');
+      
+      const customerWholesalers = await db
+        .select({
+          wholesalerId: customerGroups.wholesalerId,
+          wholesalerName: users.businessName,
+          wholesalerEmail: users.email,
+          wholesalerPhone: users.businessPhone,
+        })
+        .from(customerGroupsMembers)
+        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .innerJoin(users, eq(customerGroups.wholesalerId, users.id))
+        .where(eq(customerGroupsMembers.customerId, customer.id));
+
+      console.log('🔍 Customer is registered with wholesalers:', customerWholesalers.map(w => w.wholesalerName));
+
+      if (customerWholesalers.length === 0) {
+        return res.json([]);
+      }
+
+      // Get orders from ALL wholesalers where customer is registered
+      const wholesalerIds = customerWholesalers.map(w => w.wholesalerId);
+      console.log('🔍 Looking for orders across wholesaler IDs:', wholesalerIds);
       
       const orderResults = await db
         .select()
@@ -545,12 +567,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(orders.retailerId, customer.id),
-            eq(orders.wholesalerId, wholesalerId)
+            inArray(orders.wholesalerId, wholesalerIds)
           )
         )
         .orderBy(desc(orders.createdAt));
       
-      console.log('🔍 Found orders:', orderResults.length);
+      console.log('🔍 Found orders across all wholesalers:', orderResults.length);
 
       if (orderResults.length === 0) {
         return res.json([]);
@@ -571,11 +593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .leftJoin(products, eq(orderItems.productId, products.id))
           .where(eq(orderItems.orderId, order.id));
 
-        // Get wholesaler details
-        const [wholesaler] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, order.wholesalerId));
+        // Get wholesaler details from the mapped data
+        const wholesalerDetails = customerWholesalers.find(w => w.wholesalerId === order.wholesalerId);
 
         return {
           ...order,
@@ -585,10 +604,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             unitPrice: item.unitPrice || "0",
             total: item.total || "0"
           })),
-          wholesaler: wholesaler ? {
-            businessName: wholesaler.businessName,
-            firstName: wholesaler.firstName,
-            lastName: wholesaler.lastName
+          wholesaler: wholesalerDetails ? {
+            id: order.wholesalerId,
+            businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
+            email: wholesalerDetails.wholesalerEmail || '',
+            phone: wholesalerDetails.wholesalerPhone || '',
           } : null
         };
       }));

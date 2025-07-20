@@ -386,8 +386,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span className="ml-1 capitalize">{order.status}</span>
                       </Badge>
                     </div>
-                    <div className="text-xs text-gray-600 mb-2">
-                      From {order.wholesaler.businessName}
+                    <div className="text-xs text-gray-600 mb-2 flex items-center space-x-2">
+                      <span>From</span>
+                      <Badge variant="outline" className="text-xs px-2 py-0.5">
+                        {order.wholesaler?.businessName || 'Unknown Business'}
+                      </Badge>
                     </div>
                     
                     {/* Compact Items List */}
