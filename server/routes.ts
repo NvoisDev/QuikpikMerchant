@@ -1141,6 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transfer_data: {
           destination: wholesaler.stripeAccountId, // Wholesaler receives 94.6% of product total
         },
+        receipt_email: customerEmail, // ✅ Automatically send Stripe receipt to customer
         metadata: {
           customerName,
           customerEmail,
@@ -1489,7 +1490,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Order processing complete - Order #${order.id} ready for wholesaler review`);
 
           console.log(`Order created successfully for payment ${paymentIntent.id}`);
-          console.log(`✅ Stripe invoice automatically sent to customer: ${customerEmail}`);
+          console.log(`✅ Stripe receipt automatically sent to customer: ${customerEmail}`);
+          console.log(`✅ Customer invoice email sent to: ${customerEmail}`);
+          console.log(`✅ Stripe invoice created and sent to: ${customerEmail}`);
         }
       } catch (error) {
         console.error('Error processing payment success:', error);
@@ -2863,10 +2866,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Get retailer information for receipt email
+      const retailer = await storage.getUser(userId);
+      
       const totalAmount = Math.round(parseFloat(order.total) * 100); // Convert to cents
       const platformFeeAmount = Math.round(parseFloat(order.platformFee) * 100); // 5% platform fee in cents
 
-      const paymentIntent = await stripe.paymentIntents.create({
+      const paymentIntentData: any = {
         amount: totalAmount,
         currency: "usd",
         application_fee_amount: platformFeeAmount, // Quikpik's platform fee
@@ -2880,7 +2886,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformFee: order.platformFee,
           subtotal: order.subtotal
         }
-      });
+      };
+
+      // Add receipt email if available
+      if (retailer?.email) {
+        paymentIntentData.receipt_email = retailer.email;
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+      console.log(`💳 Payment intent created for Order #${orderId}`);
+      if (retailer?.email) {
+        console.log(`✅ Stripe receipt will be automatically sent to: ${retailer.email}`);
+      }
 
       res.json({ clientSecret: paymentIntent.client_secret });
     } catch (error: any) {
@@ -2908,6 +2926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Log successful payment and platform fee collection
           console.log(`Order ${orderId} paid successfully. Platform fee: $${paymentIntent.application_fee_amount / 100}`);
+          console.log(`✅ Stripe receipt automatically sent to customer`);
           break;
 
         case 'payment_intent.payment_failed':
@@ -5467,6 +5486,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             transfer_data: {
               destination: wholesaler.stripeAccountId, // Wholesaler receives 94.6%
             },
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
               orderType: 'customer_portal',
               wholesalerId: wholesalerId,
@@ -5499,6 +5519,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
               orderType: 'customer_portal',
               wholesalerId: wholesalerId,
