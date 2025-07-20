@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Shield, ShoppingCart, Package, Star } from "lucide-react";
+import { Loader2, Shield, ShoppingCart, Package, Star, MessageSquare, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
@@ -27,7 +27,10 @@ interface Wholesaler {
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'phone' | 'sms'>('phone');
+  const [authStep, setAuthStep] = useState<'phone' | 'verification'>('phone');
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
+  const [emailCode, setEmailCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSMSLoading, setIsSMSLoading] = useState(false);
   const [error, setError] = useState("");
@@ -93,9 +96,18 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       const data = await response.json();
 
       if (response.ok) {
-        // Customer found, now require SMS verification
-        setAuthStep('sms');
-        // Automatically request SMS code
+        // Store customer data for verification step
+        setCustomerData(data.customer);
+        
+        // Determine verification method based on customer email
+        if (data.customer.email && data.customer.email.includes('@')) {
+          setVerificationMethod('both'); // Customer has email, offer both options
+        } else {
+          setVerificationMethod('sms'); // No email, SMS only
+        }
+        
+        setAuthStep('verification');
+        // Automatically request SMS code as default
         await handleRequestSMS();
       } else {
         setError(data.error || "Customer not found. Please check the last 4 digits of your phone number.");
@@ -147,6 +159,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         setError(data.error || "Failed to send SMS code. Please try again.");
         // If SMS fails, go back to phone step
         setAuthStep('phone');
+        setCustomerData(null);
       }
     } catch (error) {
       console.error('SMS request error:', error);
@@ -203,12 +216,107 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   };
 
+  // Email verification functions
+  const handleRequestEmail = async () => {
+    if (!customerData || !customerData.email) {
+      setError("Email address not available for verification");
+      return;
+    }
+
+    setIsSMSLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('/api/customer-email-verification/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customerData.id,
+          email: customerData.email
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Email Sent!",
+          description: `A verification code has been sent to ${customerData.email}`,
+        });
+        setCountdown(600); // 10 minutes for email
+        setSmsExpiry(Date.now() + 600000); // 10 minutes
+      } else {
+        setError(data.message || "Failed to send email verification. Please try SMS instead.");
+      }
+    } catch (error) {
+      console.error('Email verification request error:', error);
+      setError("Connection error. Please try again.");
+    } finally {
+      setIsSMSLoading(false);
+    }
+  };
+
+  const handleEmailVerification = async () => {
+    if (!emailCode) {
+      setError("Please enter the email verification code");
+      return;
+    }
+
+    if (emailCode.length !== 6) {
+      setError("Please enter the complete 6-digit code");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('/api/customer-email-verification/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customerData.id,
+          email: customerData.email,
+          code: emailCode.trim()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Email Verification Successful!",
+          description: `Welcome ${customerData.name}, you're now securely logged in.`,
+        });
+        onAuthSuccess(customerData);
+      } else {
+        setError(data.message || "Invalid email verification code. Please try again.");
+      }
+    } catch (error) {
+      console.error('Email verification error:', error);
+      setError("Connection error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6); // Only digits, max 6
+    setEmailCode(value);
+  };
+
   const handleBackToPhone = () => {
     setAuthStep('phone');
     setSmsCode("");
+    setEmailCode("");
     setCountdown(0);
     setSmsExpiry(null);
     setError("");
+    setCustomerData(null);
   };
 
   const handleLastFourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -584,7 +692,200 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </>
                 )}
 
-                {/* Step 2: SMS Verification */}
+                {/* Step 2: Verification (SMS or Email) */}
+                {authStep === 'verification' && customerData && (
+                  <>
+                    <div className="text-center mb-6">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                        🔐 Verification Required
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Hello {customerData.name}! Please verify your identity:
+                      </p>
+                      <div className="flex items-center justify-center space-x-2 my-4">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      </div>
+                      <p className="text-xs text-gray-600 font-medium">
+                        Step 2 of 2: Identity Verification
+                      </p>
+                      {countdown > 0 && (
+                        <p className="text-xs text-blue-600 mt-2">
+                          Code expires in {formatCountdown(countdown)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Verification Method Tabs */}
+                    {verificationMethod === 'both' ? (
+                      <div className="mb-6">
+                        <div className="flex bg-gray-100 rounded-xl p-1">
+                          <button
+                            onClick={() => setVerificationMethod('sms')}
+                            className="flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm bg-blue-500 text-white shadow-md"
+                          >
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            SMS
+                          </button>
+                          <button
+                            onClick={() => setVerificationMethod('email')}
+                            className="flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200"
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Email
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* SMS Verification */}
+                    {(verificationMethod === 'sms' || verificationMethod === 'both') && (
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-3">
+                            Enter the 6-digit code sent to your phone
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            placeholder="123456"
+                            value={smsCode}
+                            onChange={handleSMSCodeChange}
+                            maxLength={6}
+                            className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
+                          />
+                          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Email Verification */}
+                    {verificationMethod === 'email' && (
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-2">
+                            Enter the 6-digit code sent to:
+                          </p>
+                          <p className="text-sm font-medium text-blue-600 mb-3">
+                            {customerData.email}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRequestEmail}
+                            disabled={isSMSLoading}
+                            className="text-xs"
+                          >
+                            {isSMSLoading ? (
+                              <>
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="mr-1 h-3 w-3" />
+                                Send Email Code
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            placeholder="123456"
+                            value={emailCode}
+                            onChange={handleEmailCodeChange}
+                            maxLength={6}
+                            className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
+                          />
+                          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📧</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {error && (
+                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
+                        <AlertDescription className="text-center">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-3">
+                      {verificationMethod === 'sms' || verificationMethod === 'both' ? (
+                        <Button 
+                          onClick={handleSMSVerification}
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          disabled={isLoading || smsCode.length !== 6}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                              Verifying SMS code...
+                            </>
+                          ) : (
+                            <>
+                              <span>Verify SMS Code</span>
+                              <span className="ml-2 text-xl">📱</span>
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={handleEmailVerification}
+                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          disabled={isLoading || emailCode.length !== 6}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                              Verifying email code...
+                            </>
+                          ) : (
+                            <>
+                              <span>Verify Email Code</span>
+                              <span className="ml-2 text-xl">📧</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
+
+                      <div className="flex space-x-3">
+                        <Button 
+                          variant="outline" 
+                          onClick={handleBackToPhone}
+                          className="flex-1 h-12 rounded-xl font-medium border-2 border-gray-300 hover:border-gray-400 text-gray-600 hover:text-gray-700"
+                        >
+                          ← Back
+                        </Button>
+                        
+                        {verificationMethod === 'sms' || verificationMethod === 'both' ? (
+                          <Button 
+                            variant="outline"
+                            onClick={handleRequestSMS}
+                            disabled={isSMSLoading || countdown > 240}
+                            className="flex-1 h-12 rounded-xl font-medium border-2 border-blue-300 hover:border-blue-400 text-blue-600 hover:text-blue-700"
+                          >
+                            {isSMSLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : countdown > 240 ? (
+                              `Wait ${formatCountdown(countdown - 240)}`
+                            ) : (
+                              <>
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Resend SMS
+                              </>
+                            )}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Maintain existing structure for any remaining SMS-only references */}
                 {authStep === 'sms' && (
                   <>
                     <div className="text-center mb-6">
