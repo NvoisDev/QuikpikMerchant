@@ -860,111 +860,253 @@ export default function Orders() {
 
                   <Separator />
                   
-                  {/* Order Timeline */}
+                  {/* Enhanced Order Timeline */}
                   <div>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Order Timeline
+                    <h3 className="font-semibold mb-6 flex items-center gap-2 text-lg">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Order Progress
                     </h3>
-                    <div className="space-y-4">
-                      {/* Automatic Steps */}
-                      <div className="text-sm">
-                        <div className="font-medium text-muted-foreground mb-2">Automatic Steps:</div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-green-600">✅ Order Placed (Automatic)</div>
-                              <div className="text-xs text-muted-foreground">When customer places order</div>
-                            </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-medium text-gray-700">Order Status</span>
+                        <span className="text-sm text-gray-500">
+                          {selectedOrder.status === 'fulfilled' ? '4/4 Complete' : 
+                           selectedOrder.status === 'paid' ? '3/4 Complete' :
+                           selectedOrder.status === 'confirmed' ? '2/4 Complete' : '1/4 Complete'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out"
+                          style={{ 
+                            width: selectedOrder.status === 'fulfilled' ? '100%' : 
+                                   selectedOrder.status === 'paid' ? '75%' :
+                                   selectedOrder.status === 'confirmed' ? '50%' : '25%'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Timeline Steps */}
+                    <div className="relative">
+                      {/* Vertical Line */}
+                      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
+                      
+                      <div className="space-y-8">
+                        {/* Step 1: Order Placed */}
+                        <div className="relative flex items-start">
+                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <CheckCircle className="h-6 w-6 text-white" />
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-green-600">✅ Confirmed (Automatic)</div>
-                              <div className="text-xs text-muted-foreground">When order is validated</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                              selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
-                                ? 'bg-green-100' : 'bg-gray-100'
-                            }`}>
-                              <CheckCircle className={`h-4 w-4 ${
-                                selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                  ? 'text-green-600' : 'text-gray-400'
-                              }`} />
-                            </div>
-                            <div>
-                              <div className={`font-medium ${
-                                selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                  ? 'text-green-600' : 'text-gray-400'
-                              }`}>
-                                {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Payment Received (Automatic)
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
-                                  ? 'Payment successfully processed by Stripe' 
-                                  : 'When Stripe payment succeeds'
-                                }
+                          <div className="ml-6 flex-1">
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-semibold text-green-700 text-base">Order Placed</h4>
+                                  <p className="text-sm text-gray-600 mt-1">Customer successfully placed order</p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5" />
+                                    Automatic
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {new Date(selectedOrder.createdAt).toLocaleString()}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Manual Step */}
-                      <div className="text-sm">
-                        <div className="font-medium text-muted-foreground mb-2">Manual Step (Wholesaler Action Required):</div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                              selectedOrder.status === 'fulfilled' 
-                                ? 'bg-green-100' : 'bg-orange-100'
-                            }`}>
-                              {selectedOrder.status === 'fulfilled' ? (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-orange-600" />
-                              )}
-                            </div>
-                            <div>
-                              <div className={`font-medium ${
-                                selectedOrder.status === 'fulfilled'
-                                  ? 'text-green-600' : 'text-orange-600'
-                              }`}>
-                                {selectedOrder.status === 'fulfilled' ? '✅' : '⚪'} Fulfilled (Manual)
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {selectedOrder.status === 'fulfilled' 
-                                  ? 'Completed manually by wholesaler' 
-                                  : 'Must be clicked manually by wholesaler'
-                                }
+                        {/* Step 2: Order Confirmed */}
+                        <div className="relative flex items-start">
+                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <CheckCircle className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="ml-6 flex-1">
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-semibold text-green-700 text-base">Order Confirmed</h4>
+                                  <p className="text-sm text-gray-600 mt-1">Order validated and confirmed in system</p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5" />
+                                    Automatic
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {new Date(selectedOrder.createdAt).toLocaleString()}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                          
-                          {/* Mark as Fulfilled button in timeline */}
-                          {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                updateOrderStatusMutation.mutate({
-                                  orderId: selectedOrder.id,
-                                  status: 'fulfilled'
-                                });
-                              }}
-                              disabled={fulfillingOrders.has(selectedOrder.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {fulfillingOrders.has(selectedOrder.id) ? 'Processing...' : 'Mark as Fulfilled'}
-                            </Button>
-                          )}
+                        </div>
+
+                        {/* Step 3: Payment Received */}
+                        <div className="relative flex items-start">
+                          <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${
+                            selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                              ? 'bg-gradient-to-br from-green-400 to-green-600'
+                              : 'bg-gradient-to-br from-gray-300 to-gray-400'
+                          }`}>
+                            {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' ? (
+                              <CheckCircle className="h-6 w-6 text-white" />
+                            ) : (
+                              <Clock className="h-6 w-6 text-white" />
+                            )}
+                          </div>
+                          <div className="ml-6 flex-1">
+                            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
+                              selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                ? 'border-green-100'
+                                : 'border-gray-200'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className={`font-semibold text-base ${
+                                    selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                      ? 'text-green-700'
+                                      : 'text-gray-600'
+                                  }`}>
+                                    Payment Received
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
+                                      ? 'Payment processed successfully via Stripe' 
+                                      : 'Waiting for payment processing'
+                                    }
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <div className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+                                    selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                      selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
+                                        ? 'bg-green-500'
+                                        : 'bg-gray-400'
+                                    }`} />
+                                    Automatic
+                                  </div>
+                                  {(selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled') && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {new Date(selectedOrder.updatedAt).toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Step 4: Order Fulfilled */}
+                        <div className="relative flex items-start">
+                          <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${
+                            selectedOrder.status === 'fulfilled'
+                              ? 'bg-gradient-to-br from-green-400 to-green-600'
+                              : selectedOrder.status === 'paid'
+                                ? 'bg-gradient-to-br from-orange-400 to-orange-600'
+                                : 'bg-gradient-to-br from-gray-300 to-gray-400'
+                          }`}>
+                            {selectedOrder.status === 'fulfilled' ? (
+                              <CheckCircle className="h-6 w-6 text-white" />
+                            ) : selectedOrder.status === 'paid' ? (
+                              <Clock className="h-6 w-6 text-white" />
+                            ) : (
+                              <Clock className="h-6 w-6 text-white opacity-50" />
+                            )}
+                          </div>
+                          <div className="ml-6 flex-1">
+                            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
+                              selectedOrder.status === 'fulfilled'
+                                ? 'border-green-100'
+                                : selectedOrder.status === 'paid'
+                                  ? 'border-orange-100'
+                                  : 'border-gray-200'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h4 className={`font-semibold text-base ${
+                                    selectedOrder.status === 'fulfilled'
+                                      ? 'text-green-700'
+                                      : selectedOrder.status === 'paid'
+                                        ? 'text-orange-700'
+                                        : 'text-gray-600'
+                                  }`}>
+                                    Order Fulfilled
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {selectedOrder.status === 'fulfilled' 
+                                      ? 'Order completed and fulfilled by wholesaler' 
+                                      : selectedOrder.status === 'paid'
+                                        ? 'Ready for fulfillment - action required'
+                                        : 'Pending payment completion'
+                                    }
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <div className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+                                      selectedOrder.status === 'fulfilled'
+                                        ? 'bg-green-100 text-green-800'
+                                        : selectedOrder.status === 'paid'
+                                          ? 'bg-orange-100 text-orange-800'
+                                          : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                        selectedOrder.status === 'fulfilled'
+                                          ? 'bg-green-500'
+                                          : selectedOrder.status === 'paid'
+                                            ? 'bg-orange-500'
+                                            : 'bg-gray-400'
+                                      }`} />
+                                      Manual
+                                    </div>
+                                    {selectedOrder.status === 'fulfilled' && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {new Date(selectedOrder.updatedAt).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Enhanced Fulfill Button */}
+                                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
+                                    <Button
+                                      onClick={() => {
+                                        updateOrderStatusMutation.mutate({
+                                          orderId: selectedOrder.id,
+                                          status: 'fulfilled'
+                                        });
+                                      }}
+                                      disabled={fulfillingOrders.has(selectedOrder.id)}
+                                      className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-2"
+                                    >
+                                      {fulfillingOrders.has(selectedOrder.id) ? (
+                                        <>
+                                          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                          Processing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="h-4 w-4 mr-2" />
+                                          Mark as Fulfilled
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
