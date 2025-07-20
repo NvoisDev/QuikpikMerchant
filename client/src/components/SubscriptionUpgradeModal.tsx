@@ -101,7 +101,7 @@ export function SubscriptionUpgradeModal({
       current: currentPlan === "standard",
       features: [
         "Up to 10 products",
-        "Unlimited product edits",
+        "10 product edits per product",
         "5 customer groups (50 customers each)",
         "25 WhatsApp broadcasts per month",
         "Enhanced analytics & reports",
@@ -109,7 +109,7 @@ export function SubscriptionUpgradeModal({
       ],
       limits: {
         products: 10,
-        edits: "unlimited",
+        edits: 10,
         groups: 5,
         broadcasts: 25
       },

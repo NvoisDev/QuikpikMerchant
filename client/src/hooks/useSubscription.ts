@@ -23,10 +23,13 @@ export function useSubscription() {
     if (!user) return false;
     
     const tier = user.subscriptionTier || 'free';
-    if (tier === 'free') {
-      return editCount < 3;
+    const editLimit = getEditLimit(tier);
+    
+    if (editLimit === -1) {
+      return true; // Unlimited for premium
     }
-    return true; // Standard and Premium have unlimited edits
+    
+    return editCount < editLimit;
   };
 
   const getProductLimit = (tier: string) => {
@@ -47,8 +50,9 @@ export function useSubscription() {
       case 'free':
         return 3;
       case 'standard':
+        return 10; // 10 edits for standard
       case 'premium':
-        return -1; // Unlimited
+        return -1; // Unlimited for premium only
       default:
         return 3;
     }

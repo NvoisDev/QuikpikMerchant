@@ -7209,8 +7209,8 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
   function getEditLimit(tier: string): number {
     switch (tier) {
       case 'free': return 3;
-      case 'standard':
-      case 'premium': return -1; // Unlimited
+      case 'standard': return 10; // 10 edits for standard
+      case 'premium': return -1; // Unlimited for premium only
       default: return 3;
     }
   }

@@ -100,7 +100,7 @@ export default function SubscriptionSettings() {
       popular: true,
       features: [
         "Up to 10 products",
-        "Unlimited product edits",
+        "10 product edits per product",
         "Up to 5 customer groups",
         "25 broadcasts per month", 
         "50 customers per group",
@@ -112,7 +112,7 @@ export default function SubscriptionSettings() {
       ],
       limits: {
         products: 10,
-        edits: "Unlimited"
+        edits: 10
       },
       current: currentTier === "standard"
     },
