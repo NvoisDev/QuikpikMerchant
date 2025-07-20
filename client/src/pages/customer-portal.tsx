@@ -1218,13 +1218,20 @@ export default function CustomerPortal() {
 
   // Authentication handlers
   const handleAuthSuccess = (customer: any) => {
+    console.log("🎉 handleAuthSuccess called with customer:", customer);
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
     setIsGuestMode(false); // Disable guest mode when authenticated
     
-    // The localStorage persistence is handled by the useEffect hooks above
-    // No need to manually set localStorage here
+    // Store authentication data in localStorage immediately
+    const authData = {
+      isAuthenticated: true,
+      customer: customer,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify(authData));
+    console.log("💾 Authentication data stored in localStorage");
     
     toast({
       title: "Welcome!",
@@ -1248,6 +1255,8 @@ export default function CustomerPortal() {
   useEffect(() => {
     if (!isAuthenticated && !isPreviewMode) {
       setShowAuth(true);
+    } else if (isAuthenticated && !isPreviewMode) {
+      setShowAuth(false);
     }
   }, [isAuthenticated, isPreviewMode]);
 
