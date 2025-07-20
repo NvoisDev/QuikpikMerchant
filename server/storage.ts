@@ -82,7 +82,7 @@ export interface IStorage {
   deleteProduct(id: number): Promise<void>;
   
   // Order operations
-  getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
+  getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
   getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
@@ -454,20 +454,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Order operations - Optimized with joins to reduce database calls
-  async getOrders(wholesalerId?: string, retailerId?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
-    console.log(`📊 Orders query - wholesalerId: ${wholesalerId}, retailerId: ${retailerId}`);
+  async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
+    console.log(`📊 Orders query - wholesalerId: ${wholesalerId}, retailerId: ${retailerId}, searchTerm: ${searchTerm}`);
     const startTime = Date.now();
     
-    // Get orders first
+    // Get orders first with basic filtering
     let orderQuery = db
       .select()
       .from(orders);
 
-    // Apply filters
+    // Apply basic filters
+    const conditions = [];
     if (wholesalerId) {
-      orderQuery = orderQuery.where(eq(orders.wholesalerId, wholesalerId));
-    } else if (retailerId) {
-      orderQuery = orderQuery.where(eq(orders.retailerId, retailerId));
+      conditions.push(eq(orders.wholesalerId, wholesalerId));
+    }
+    if (retailerId) {
+      conditions.push(eq(orders.retailerId, retailerId));
+    }
+    
+    // Apply search filter on order fields
+    if (searchTerm && searchTerm.trim()) {
+      const searchValue = `%${searchTerm.trim()}%`;
+      conditions.push(
+        or(
+          ilike(orders.orderNumber, searchValue),
+          ilike(orders.customerName, searchValue),
+          ilike(orders.customerEmail, searchValue),
+          ilike(orders.customerPhone, searchValue),
+          ilike(orders.status, searchValue)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      orderQuery = orderQuery.where(and(...conditions));
     }
     
     orderQuery = orderQuery.orderBy(desc(orders.createdAt));
@@ -496,8 +516,51 @@ export class DatabaseStorage implements IStorage {
       return acc;
     }, {} as Record<string, any>);
     
-    // Get all order items in a single query
-    const orderIds = orderResults.map(o => o.id);
+    // If searching by wholesaler/retailer names, filter results after fetching user data
+    let filteredOrderResults = orderResults;
+    if (searchTerm && searchTerm.trim()) {
+      const searchValue = searchTerm.trim().toLowerCase();
+      filteredOrderResults = orderResults.filter(order => {
+        const retailer = userMap[order.retailerId];
+        const wholesaler = userMap[order.wholesalerId];
+        
+        // Check order fields (already filtered by database)
+        if (
+          order.orderNumber?.toLowerCase().includes(searchValue) ||
+          order.customerName?.toLowerCase().includes(searchValue) ||
+          order.customerEmail?.toLowerCase().includes(searchValue) ||
+          order.customerPhone?.toLowerCase().includes(searchValue) ||
+          order.status?.toLowerCase().includes(searchValue)
+        ) {
+          return true;
+        }
+        
+        // Check retailer fields
+        if (retailer && (
+          retailer.businessName?.toLowerCase().includes(searchValue) ||
+          retailer.firstName?.toLowerCase().includes(searchValue) ||
+          retailer.lastName?.toLowerCase().includes(searchValue) ||
+          `${retailer.firstName} ${retailer.lastName}`.toLowerCase().includes(searchValue)
+        )) {
+          return true;
+        }
+        
+        // Check wholesaler fields
+        if (wholesaler && (
+          wholesaler.businessName?.toLowerCase().includes(searchValue) ||
+          wholesaler.firstName?.toLowerCase().includes(searchValue) ||
+          wholesaler.lastName?.toLowerCase().includes(searchValue) ||
+          `${wholesaler.firstName} ${wholesaler.lastName}`.toLowerCase().includes(searchValue)
+        )) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
+    
+    // Get all order items in a single query using filtered results
+    const orderIds = filteredOrderResults.map(o => o.id);
     const itemsResults = await db
       .select({
         orderItemId: orderItems.id,
@@ -540,8 +603,8 @@ export class DatabaseStorage implements IStorage {
       return acc;
     }, {} as Record<number, any[]>);
     
-    // Transform results
-    const ordersWithItems = orderResults.map(order => {
+    // Transform results using filtered results
+    const ordersWithItems = filteredOrderResults.map(order => {
       const retailer = userMap[order.retailerId];
       const wholesaler = userMap[order.wholesalerId];
       

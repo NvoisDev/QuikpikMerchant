@@ -193,12 +193,13 @@ export default function Orders() {
     },
   });
 
-  // Fetch orders based on user role
+  // Fetch orders based on user role with search functionality
   const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: ["/api/orders", user?.role],
+    queryKey: ["/api/orders", user?.role, searchTerm],
     queryFn: async () => {
       const roleParam = user?.role === 'retailer' ? 'customer' : 'wholesaler';
-      const response = await fetch(`/api/orders?role=${roleParam}`, {
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+      const response = await fetch(`/api/orders?role=${roleParam}${searchParam}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch orders");

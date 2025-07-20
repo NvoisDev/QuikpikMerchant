@@ -951,7 +951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Order routes
+  // Order routes with search functionality
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
       // Use parent company ID for team members
@@ -961,6 +961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
       const user = await storage.getUser(targetUserId);
       const role = req.query.role; // 'customer' or 'wholesaler'
+      const search = req.query.search; // search term
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -969,10 +970,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let orders;
       if (role === 'customer' || user.role === 'retailer') {
         // Get orders placed by this customer/retailer
-        orders = await storage.getOrders(undefined, targetUserId);
+        orders = await storage.getOrders(undefined, targetUserId, search);
       } else {
         // Get orders received by this wholesaler
-        orders = await storage.getOrders(targetUserId);
+        orders = await storage.getOrders(targetUserId, undefined, search);
       }
       
       res.json(orders);
