@@ -561,7 +561,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerIds = customerWholesalers.map(w => w.wholesalerId);
       console.log('🔍 Looking for orders across wholesaler IDs:', wholesalerIds);
       
-      const orderResults = await db
+      // Normalize customer phone number for matching
+      const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+      const customerPhoneVariants = [
+        customer.phone, // Original format
+        normalizedCustomerPhone, // UK format (07...)
+        '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
+      ];
+      
+      console.log('🔍 Searching with phone variants:', customerPhoneVariants);
+      
+      // Search by retailer ID first (most reliable)
+      let orderResults = await db
         .select()
         .from(orders)
         .where(
@@ -572,7 +583,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .orderBy(desc(orders.createdAt));
       
-      console.log('🔍 Found orders across all wholesalers:', orderResults.length);
+      // If no orders found by retailer ID, search by all phone number variants
+      if (orderResults.length === 0) {
+        console.log('🔍 No orders found by retailer ID, searching by phone number variants...');
+        
+        const phoneConditions = customerPhoneVariants.map(phone => 
+          eq(orders.customerPhone, phone)
+        );
+        
+        orderResults = await db
+          .select()
+          .from(orders)
+          .where(
+            and(
+              or(...phoneConditions),
+              inArray(orders.wholesalerId, wholesalerIds)
+            )
+          )
+          .orderBy(desc(orders.createdAt));
+      }
+      
+      console.log('🔍 Total orders found:', orderResults.length);
 
       if (orderResults.length === 0) {
         return res.json([]);

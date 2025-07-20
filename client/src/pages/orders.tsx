@@ -201,15 +201,25 @@ export default function Orders() {
       const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
       const response = await fetch(`/api/orders?role=${roleParam}${searchParam}`, {
         credentials: "include",
+        cache: 'no-cache', // Force no caching
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       if (!response.ok) throw new Error("Failed to fetch orders");
-      return response.json();
+      const ordersData = await response.json();
+      console.log('📦 Orders fetched:', ordersData.length, 'orders loaded successfully');
+      return ordersData;
     },
     enabled: !!user,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Auto-refresh every 60 seconds (reduced frequency)
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes but refetch on component mount
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    refetchOnReconnect: true,
   });
 
   // Fetch user business address for shipping collection address
