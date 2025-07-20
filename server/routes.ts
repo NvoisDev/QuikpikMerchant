@@ -519,46 +519,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ Parameters OK, checking customer registration...');
       
-      // Check if customer is registered in any of this wholesaler's groups
-      const customerGroupMembership = await db
-        .select({
-          customerName: users.firstName,
-          customerLastName: users.lastName,
-          customerPhone: users.phoneNumber,
-          groupId: customerGroupMembers.groupId,
-          groupName: customerGroups.name
-        })
-        .from(customerGroupMembers)
-        .leftJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-        .leftJoin(users, eq(customerGroupMembers.customerId, users.id))
-        .where(
-          and(
-            eq(customerGroups.wholesalerId, wholesalerId),
-            eq(users.phoneNumber, decodeURIComponent(phoneNumber))
-          )
-        );
-
-      if (customerGroupMembership.length === 0) {
-        console.log('❌ Customer not registered with wholesaler:', { wholesalerId, phoneNumber });
+      // Find the correct customer using the same logic as authentication
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      console.log('🔍 Finding customer by last 4 digits:', lastFourDigits);
+      
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        console.log('❌ Customer not found with last 4 digits:', lastFourDigits);
         return res.status(403).json({ 
           error: "Customer not registered with this wholesaler",
           message: "You must be added to this wholesaler's customer group to access orders"
         });
       }
 
-      const customer = customerGroupMembership[0];
-      console.log('✅ Customer verified:', customer.customerName, customer.customerLastName);
+      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id);
 
-      // Now get orders for this verified customer
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      console.log('🔍 Looking for orders with phone number:', decodedPhoneNumber);
+      // Now get orders for this specific customer ID (retailer_id)
+      console.log('🔍 Looking for orders with customer ID:', customer.id);
       
       const orderResults = await db
         .select()
         .from(orders)
         .where(
           and(
-            eq(orders.customerPhone, decodedPhoneNumber),
+            eq(orders.retailerId, customer.id),
             eq(orders.wholesalerId, wholesalerId)
           )
         )
