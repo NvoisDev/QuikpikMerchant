@@ -693,8 +693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set user session
       req.session.userId = user.id;
       
-      // Redirect to home page
-      res.redirect('/');
+      // Redirect to dashboard for authenticated users
+      res.redirect('/dashboard');
     } catch (error) {
       console.error('Google auth callback error:', error);
       res.redirect('/login?error=auth_failed');
