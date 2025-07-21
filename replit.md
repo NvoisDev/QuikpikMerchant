@@ -7,7 +7,8 @@
 - **Root Cause**: Inconsistent fee calculations between backend APIs and frontend components causing user frustration
 - **Solution Implemented**: 
   - **Backend API Correction**: Updated all marketplace payment endpoints to use correct 5.5% + £0.50 customer transaction fee and 3.3% platform fee
-  - **Frontend Component Updates**: Fixed order-summary-modal.tsx to calculate and display transaction fees correctly instead of flat £6.00
+  - **Frontend Component Updates**: Fixed order-summary-modal.tsx AND customer-portal.tsx to calculate and display transaction fees correctly instead of flat £6.00
+  - **Customer Portal Payment Modal**: Updated payment processing text from "Platform fee (£6.00)" to "Transaction fee (5.5% + £0.50)"
   - **Response Structure**: Updated API responses to include customerTransactionFee, platformFee, and wholesalerReceives fields
   - **Currency Consistency**: Maintained GBP currency across all payment processing
 - **Verified Results**:
@@ -15,9 +16,9 @@
   - **£50 Order**: Customer pays £3.25 transaction fee (5.5% + £0.50), Platform collects £1.65, Wholesaler receives £48.35
 - **Technical Implementation**:
   - **Marketplace Endpoints**: All marketplace payment creation endpoints now use percentage-based calculations
-  - **Frontend Display**: Order summary modal shows "Transaction Fee (5.5% + £0.50)" with calculated amounts
+  - **Frontend Display**: Both order summary modal and customer portal show "Transaction Fee (5.5% + £0.50)" with calculated amounts
   - **API Testing**: Confirmed correct fee breakdown in payment intent responses
-- **Status**: ✅ COMPLETED - Payment structure now correctly implemented across all endpoints and components
+- **Status**: ✅ COMPLETED - Payment structure now correctly implemented across ALL endpoints and components including customer portal
 
 ### Currency Consistency and Payment Processing Fix - COMPLETED ✅ (July 21, 2025)
 - **Issue Identified**: Payment processing errors due to inconsistent currency settings (USD vs GBP) and outdated transactionFee references
