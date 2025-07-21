@@ -90,7 +90,7 @@ const PriceDisplay = ({
           <div className="text-center">
             <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
             <Button 
-              onClick={() => window.location.reload()}
+              onClick={() => window.location.href = '/'}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
             >
@@ -1336,14 +1336,14 @@ export default function CustomerPortal() {
               {/* Contact Wholesaler button for guests */}
               {isGuestMode && (
                 <Button
-                  onClick={() => window.location.reload()}
+                  onClick={() => window.location.href = '/'}
                   variant="outline"
                   size="sm"
                   className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
                 >
                   <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Contact Wholesaler</span>
-                  <span className="sm:hidden">Contact</span>
+                  <span className="hidden sm:inline">Back to Quikpik</span>
+                  <span className="sm:hidden">Back</span>
                 </Button>
               )}
               
@@ -1352,15 +1352,29 @@ export default function CustomerPortal() {
                 <>
                   <Button
                     onClick={() => {
-                      setShowHomePage(true);
-                      setShowAllProducts(false);
+                      // Smart back navigation based on current view state
+                      if (featuredProductId) {
+                        // If viewing a featured product, go back to home page
+                        setFeaturedProductId(null);
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                      } else if (showAllProducts) {
+                        // If viewing all products, go back to home page
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                      } else {
+                        // Already on home page, just ensure state is correct
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                        setFeaturedProductId(null);
+                      }
                     }}
                     variant="outline"
                     size="sm"
                     className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs sm:text-sm"
                   >
                     <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                    Home
+                    {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
                   </Button>
                   <Button
                     onClick={() => {
@@ -1441,7 +1455,7 @@ export default function CustomerPortal() {
                 </p>
                 <div className="flex items-center space-x-4">
                   <Button
-                    onClick={() => window.location.reload()}
+                    onClick={() => window.location.href = '/'}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Contact Wholesaler
@@ -1692,7 +1706,7 @@ export default function CustomerPortal() {
                                 description: "Please contact the wholesaler to be added as a customer before you can place orders.",
                                 action: (
                                   <Button
-                                    onClick={() => window.location.reload()}
+                                    onClick={() => window.location.href = '/'}
                                     size="sm"
                                     className="bg-blue-600 hover:bg-blue-700 text-white"
                                   >
@@ -1717,7 +1731,7 @@ export default function CustomerPortal() {
                                   description: "Please contact the wholesaler to be added as a customer before you can place orders.",
                                   action: (
                                     <Button
-                                      onClick={() => window.location.reload()}
+                                      onClick={() => window.location.href = '/'}
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-700 text-white"
                                     >
@@ -2000,7 +2014,7 @@ export default function CustomerPortal() {
                                   description: "Please contact the wholesaler to be added as a customer before you can place orders.",
                                   action: (
                                     <Button
-                                      onClick={() => window.location.reload()}
+                                      onClick={() => window.location.href = '/'}
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-700 text-white"
                                     >
@@ -2173,7 +2187,7 @@ export default function CustomerPortal() {
                                       description: "Please contact the wholesaler to be added as a customer before you can place orders.",
                                       action: (
                                         <Button
-                                          onClick={() => window.location.reload()}
+                                          onClick={() => window.location.href = '/'}
                                           size="sm"
                                           className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >

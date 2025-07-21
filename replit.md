@@ -2,6 +2,21 @@
 
 ## Payment System Status - FULLY OPERATIONAL ✅ (July 21, 2025)
 
+### CONTACT WHOLESALER BUTTON FIX - COMPLETED ✅ (July 21, 2025)
+- **Issue Resolved**: All "Contact Wholesaler" buttons were using `window.location.reload()` causing page refresh instead of proper navigation
+- **Root Cause**: Multiple instances (5 total) of Contact Wholesaler buttons across customer portal using reload instead of redirect
+- **Solution Implemented**: Updated all Contact Wholesaler buttons to use `window.location.href = '/'` for proper navigation to landing page
+- **Technical Implementation**:
+  - **Fixed Locations**: All 5 instances in customer-portal.tsx updated:
+    - Line 93: Guest mode price overlay "Sign In" button
+    - Line 1458: Guest mode notice "Contact Wholesaler" button
+    - Line 1734: Featured product "Request Custom Quote" toast action
+    - Line 2017: Product grid "Add to Cart" toast action
+    - Line 2190: Product list "Add to Cart" toast action
+  - **Navigation Flow**: Contact buttons now redirect to landing page instead of refreshing current page
+  - **Consistent Experience**: All Contact Wholesaler buttons now use same navigation pattern
+- **Status**: ✅ COMPLETED - All Contact Wholesaler buttons properly redirect to home page
+
 ### CUSTOMER LOGOUT REDIRECT FIX - COMPLETED ✅ (July 21, 2025)
 - **Issue Resolved**: Customer logout was redirecting to verification page instead of landing page
 - **Root Cause**: Logout functionality only cleared authentication state but didn't redirect to home page
