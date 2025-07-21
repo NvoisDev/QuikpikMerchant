@@ -1390,8 +1390,8 @@ export default function CustomerPortal() {
                         title: "Logged out",
                         description: "You have been successfully logged out.",
                       });
-                      // Redirect to customer login page
-                      window.location.href = '/customer-login';
+                      // Reload the current customer portal URL to restart authentication from last 4 digits
+                      window.location.reload();
                     }}
                     variant="outline"
                     size="sm"

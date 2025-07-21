@@ -64,15 +64,16 @@
 - **User Experience**: Triple-layer notification system ensures users always receive verification codes
 - **Status**: ✅ COMPLETED - Complete SMS system rebuild operational with guaranteed code delivery in development
 
-### CUSTOMER LOGOUT REDIRECT FIX - COMPLETED ✅ (July 21, 2025)
-- **Issue Resolved**: Customer logout was redirecting to verification page instead of landing page
-- **Root Cause**: Logout functionality only cleared authentication state but didn't redirect to home page
-- **Solution Implemented**: Updated logout button to include `window.location.href = '/'` redirect
+### CUSTOMER LOGOUT TO LAST 4 DIGITS FIX - COMPLETED ✅ (July 21, 2025)
+- **Issue Resolved**: Customer logout was redirecting to different pages instead of restarting authentication at last 4 digits entry
+- **Root Cause**: Logout functionality was redirecting to external pages rather than reloading current customer portal
+- **Solution Implemented**: Updated logout to reload current page, restarting authentication from last 4 digits step
 - **Technical Implementation**:
-  - **Logout Flow**: Clear localStorage → Reset authentication state → Show logout toast → Redirect to landing page
-  - **Clean Redirect**: Ensures customers return to main site after logout instead of remaining in verification flow
-  - **Production Ready**: Logout functionality now properly returns users to home page
-- **Status**: ✅ COMPLETED - Logout redirect working correctly
+  - **Logout Flow**: Clear localStorage → Reset authentication state → Show logout toast → Reload current portal page
+  - **Authentication Restart**: Customers return to last 4 digits entry screen within same customer portal
+  - **Clean State Reset**: All authentication data cleared with fresh authentication flow
+- **Production Ready**: Logout functionality now properly restarts authentication from phone verification
+- **Status**: ✅ COMPLETED - Logout now returns to last 4 digits entry as requested
 
 ### URL ENCODING ISSUE RESOLUTION - COMPLETED ✅ (July 21, 2025) 
 - **Issue Resolved**: Wholesaler ID was getting URL encoded with query parameters causing API failures
