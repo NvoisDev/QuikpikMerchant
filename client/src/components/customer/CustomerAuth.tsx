@@ -158,6 +158,18 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             title: "SMS Sent!",
             description: `A verification code has been sent to your phone, ${verifyData.customer.name}.`,
           });
+          
+          // Show debug code in development mode
+          if (smsData.debugCode) {
+            console.log('🚨 DEVELOPMENT DEBUG CODE:', smsData.debugCode);
+            setTimeout(() => {
+              toast({
+                title: "Development Mode",
+                description: `SMS not received? Use code: ${smsData.debugCode}`,
+                duration: 15000,
+              });
+            }, 2000);
+          }
         } else {
           console.error('❌ SMS sending failed:', smsData);
           setError(smsData.error || "Failed to send SMS code. Please try again.");

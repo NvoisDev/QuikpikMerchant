@@ -466,7 +466,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         console.log("About to create SMS verification with data:", smsData);
         await storage.createSMSVerificationCode(smsData);
-        res.json({ success: true, message: "SMS verification code sent" });
+        
+        // In development mode, return the code for debugging
+        if (process.env.NODE_ENV === 'development') {
+          res.json({ 
+            success: true, 
+            message: "SMS verification code sent",
+            debugCode: result.code
+          });
+        } else {
+          res.json({ success: true, message: "SMS verification code sent" });
+        }
       } else {
         res.status(500).json({ error: "Failed to send SMS verification code" });
       }
