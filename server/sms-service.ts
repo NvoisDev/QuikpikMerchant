@@ -52,12 +52,14 @@ export class ReliableSMSService {
     
     // Always show debug info in development
     if (isDevelopment) {
-      console.log('\n🚀 DEVELOPMENT MODE - SMS VERIFICATION CODE');
+      console.log('\n🚨 SMS DELIVERY BLOCKED - TWILIO EMERGENCY ADDRESS ISSUE');
+      console.log('🚀 DEVELOPMENT MODE - SMS VERIFICATION CODE');
       console.log('=' .repeat(50));
       console.log(`📱 Phone: ${phoneNumber}`);
       console.log(`🔐 Code: ${code}`);
       console.log(`🏢 Business: ${businessName}`);
       console.log(`⏰ Expires: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
+      console.log('💡 Use this code - SMS delivery may fail due to carrier blocking');
       console.log('=' .repeat(50));
     }
 
