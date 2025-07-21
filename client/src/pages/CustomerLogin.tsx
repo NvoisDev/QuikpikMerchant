@@ -79,13 +79,9 @@ export default function CustomerLogin() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  // Dynamic theme based on time
+  // Brand green theme colors
   const getThemeColors = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "from-orange-400 via-yellow-400 to-yellow-500"; // Morning
-    if (hour >= 12 && hour < 17) return "from-blue-400 via-cyan-400 to-teal-400"; // Afternoon
-    if (hour >= 17 && hour < 21) return "from-purple-400 via-pink-400 to-rose-400"; // Evening
-    return "from-indigo-500 via-purple-500 to-pink-500"; // Night
+    return "bg-green-500";
   };
 
   // Load all wholesalers when component mounts
@@ -327,7 +323,7 @@ export default function CustomerLogin() {
       </div>
 
       {/* Right side - Animated background with retail owner photo */}
-      <div className={`hidden lg:flex lg:w-1/2 bg-gradient-to-br ${getThemeColors()} relative overflow-hidden`}>
+      <div className={`hidden lg:flex lg:w-1/2 ${getThemeColors()} relative overflow-hidden`}>
         {/* Background retail owner image overlay */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
