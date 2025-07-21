@@ -124,6 +124,7 @@ function Router() {
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
+    location.startsWith('/store/') || // Add /store/ routes as public
     publicRoutes.includes(location);
   
   // Show loading while checking authentication
