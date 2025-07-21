@@ -30,8 +30,13 @@ export default function LandingPage() {
     window.location.href = "/signup";
   };
 
-  const handleLogin = () => {
+  const handleWholesaleLogin = () => {
     window.location.href = "/login";
+  };
+
+  const handleCustomerLogin = () => {
+    // For customer login, we'll create a simple page to enter wholesaler ID
+    window.location.href = "/customer-login";
   };
 
   const handleWaitlist = (e: React.FormEvent) => {
@@ -49,13 +54,20 @@ export default function LandingPage() {
             <div className="flex items-center">
               <span className="text-2xl font-bold text-gray-900">Quikpik Merchant</span>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Button 
                 variant="ghost" 
-                onClick={handleLogin}
+                onClick={handleCustomerLogin}
                 className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               >
-                Log In
+                Customer Login
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={handleWholesaleLogin}
+                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+              >
+                Wholesale Login
               </Button>
               <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90">
                 Sign Up Free
@@ -114,7 +126,7 @@ export default function LandingPage() {
                 <Button 
                   variant="outline" 
                   size="lg"
-                  onClick={handleLogin}
+                  onClick={handleWholesaleLogin}
                   className="text-lg px-8 py-4 border-2"
                 >
                   Already have an account? Log In

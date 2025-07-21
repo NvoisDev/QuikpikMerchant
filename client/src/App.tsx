@@ -9,6 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
+import CustomerLogin from "@/pages/CustomerLogin";
 import WholesalerDashboard from "@/pages/wholesaler-dashboard";
 import ProductManagement from "@/pages/product-management";
 import RetailerInterface from "@/pages/retailer-interface";
@@ -50,6 +51,7 @@ function PublicRoutes() {
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
+      <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />

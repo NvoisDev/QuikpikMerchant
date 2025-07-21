@@ -3936,6 +3936,28 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Wholesaler lookup endpoint for customer login
+  app.get("/api/wholesaler/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const wholesaler = await storage.getUser(id);
+      
+      if (!wholesaler || wholesaler.role !== 'wholesaler') {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      
+      // Return basic wholesaler info for customer login
+      res.json({
+        id: wholesaler.id,
+        businessName: wholesaler.businessName || wholesaler.firstName || 'Business',
+        email: wholesaler.email
+      });
+    } catch (error) {
+      console.error("Error looking up wholesaler:", error);
+      res.status(500).json({ message: "Failed to lookup wholesaler" });
+    }
+  });
+
   // Test endpoint for Stripe account checking
   app.get("/api/test-stripe-account/:wholesalerId", async (req: any, res) => {
     try {
