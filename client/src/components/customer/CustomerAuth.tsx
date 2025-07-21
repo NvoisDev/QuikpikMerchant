@@ -159,16 +159,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             description: `A verification code has been sent to your phone, ${verifyData.customer.name}.`,
           });
           
-          // Show debug code in development mode
+          // Show debug code immediately in development mode
           if (smsData.debugCode) {
             console.log('🚨 DEVELOPMENT DEBUG CODE:', smsData.debugCode);
-            setTimeout(() => {
-              toast({
-                title: "Development Mode",
-                description: `SMS not received? Use code: ${smsData.debugCode}`,
-                duration: 15000,
-              });
-            }, 2000);
+            toast({
+              title: "Development Mode - SMS Code",
+              description: `Code: ${smsData.debugCode} (SMS delivery may fail)`,
+              duration: 30000, // Show for 30 seconds
+            });
           }
         } else {
           console.error('❌ SMS sending failed:', smsData);

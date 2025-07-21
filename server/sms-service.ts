@@ -1,142 +1,169 @@
 import twilio from 'twilio';
 
-let twilioClient: twilio.Twilio | null = null;
+// SMS Service with comprehensive debugging and fallback support
+export class ReliableSMSService {
+  private static twilioClient: twilio.Twilio | null = null;
+  private static isInitialized = false;
 
-// Initialize Twilio client if credentials are available
-console.log('Twilio credentials check:', {
-  hasSID: !!process.env.TWILIO_ACCOUNT_SID,
-  hasToken: !!process.env.TWILIO_AUTH_TOKEN,
-  hasPhone: !!process.env.TWILIO_PHONE_NUMBER
-});
+  // Initialize Twilio client
+  private static initialize() {
+    if (this.isInitialized) return;
+    
+    console.log('🔧 SMS Service Initialization');
+    console.log('Twilio credentials check:', {
+      hasSID: !!process.env.TWILIO_ACCOUNT_SID,
+      hasToken: !!process.env.TWILIO_AUTH_TOKEN,
+      hasPhone: !!process.env.TWILIO_PHONE_NUMBER,
+      environment: process.env.NODE_ENV
+    });
 
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-  console.log('Initializing Twilio client...');
-  twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  );
-  console.log('Twilio client initialized successfully');
-} else {
-  console.log('Twilio credentials missing, client not initialized');
-}
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      try {
+        this.twilioClient = twilio(
+          process.env.TWILIO_ACCOUNT_SID,
+          process.env.TWILIO_AUTH_TOKEN
+        );
+        console.log('✅ Twilio client initialized successfully');
+      } catch (error) {
+        console.error('❌ Twilio client initialization failed:', error);
+        this.twilioClient = null;
+      }
+    } else {
+      console.log('⚠️ Twilio credentials missing, using development mode');
+    }
+    
+    this.isInitialized = true;
+  }
 
-export class SMSService {
+  // Generate 6-digit verification code
   static generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  static async sendSMSCode(phoneNumber: string, code: string, businessName: string): Promise<boolean> {
-    // Development mode fallback - simulate SMS sending until phone number is properly verified
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+  // Send SMS with comprehensive error handling and debugging
+  static async sendVerificationSMS(phoneNumber: string, code: string, businessName: string): Promise<{
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    this.initialize();
     
-    console.log('SMS Service - Environment check:', {
-      NODE_ENV: process.env.NODE_ENV,
-      isDevelopment,
-      twilioClientExists: !!twilioClient,
-      phoneConfigured: !!process.env.TWILIO_PHONE_NUMBER
-    });
+    const isDevelopment = process.env.NODE_ENV === 'development';
     
-    if (!twilioClient) {
-      console.error('Twilio client not initialized - missing credentials');
-      
-      // In development mode, simulate successful SMS sending
-      if (isDevelopment) {
-        console.log('🚀 DEVELOPMENT MODE: SMS Service (Twilio client not initialized)');
-        console.log(`📱 Phone: ${phoneNumber}`);
-        console.log(`🔐 Verification Code: ${code}`);
-        console.log(`🏢 Business: ${businessName}`);
-        console.log('✅ SMS simulated as sent successfully');
-        return true;
-      }
-      
-      return false;
+    // Always show debug info in development
+    if (isDevelopment) {
+      console.log('\n🚀 DEVELOPMENT MODE - SMS VERIFICATION CODE');
+      console.log('=' .repeat(50));
+      console.log(`📱 Phone: ${phoneNumber}`);
+      console.log(`🔐 Code: ${code}`);
+      console.log(`🏢 Business: ${businessName}`);
+      console.log(`⏰ Expires: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
+      console.log('=' .repeat(50));
     }
 
+    // If no Twilio client, return success in development mode
+    if (!this.twilioClient) {
+      if (isDevelopment) {
+        console.log('✅ SMS simulated (no Twilio client)');
+        return {
+          success: true,
+          messageId: `dev_${Date.now()}`
+        };
+      }
+      return {
+        success: false,
+        error: 'SMS service not configured'
+      };
+    }
+
+    // If no phone number configured, return success in development mode
     if (!process.env.TWILIO_PHONE_NUMBER) {
-      console.error('Twilio phone number not configured');
-      
-      // In development mode, simulate successful SMS sending
       if (isDevelopment) {
-        console.log('🚀 DEVELOPMENT MODE: SMS Service (Phone number not configured)');
-        console.log(`📱 Phone: ${phoneNumber}`);
-        console.log(`🔐 Verification Code: ${code}`);
-        console.log(`🏢 Business: ${businessName}`);
-        console.log('✅ SMS simulated as sent successfully');
-        return true;
+        console.log('✅ SMS simulated (no phone number configured)');
+        return {
+          success: true,
+          messageId: `dev_${Date.now()}`
+        };
       }
-      
-      return false;
+      return {
+        success: false,
+        error: 'SMS phone number not configured'
+      };
     }
 
+    // Attempt to send real SMS
     try {
-      console.log('Attempting to send SMS with:', {
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: phoneNumber,
-        businessName
-      });
+      console.log(`📤 Attempting SMS to ${phoneNumber}`);
       
-      const message = await twilioClient.messages.create({
+      const message = await this.twilioClient.messages.create({
         body: `Your ${businessName} verification code: ${code}. This code expires in 5 minutes.`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: phoneNumber
       });
 
-      console.log('SMS sent successfully:', message.sid);
-      console.log('🚀 DEVELOPMENT MODE: SMS Code for Customer');
-      console.log(`📱 Phone: ${phoneNumber}`);
-      console.log(`🔐 Verification Code: ${code}`);
-      console.log(`🏢 Business: ${businessName}`);
-      return true;
+      console.log(`✅ SMS sent successfully: ${message.sid}`);
+      
+      return {
+        success: true,
+        messageId: message.sid
+      };
     } catch (error: any) {
-      console.error('Error sending SMS:', error);
+      console.error('❌ SMS sending failed:', error.message);
       
-      // Handle specific Twilio errors
-      if (error.code === 21659) {
-        console.error('Twilio phone number is not valid or not verified. Please check your Twilio configuration.');
-        console.error('This error typically means the phone number needs to be verified in your Twilio console.');
-      } else if (error.code === 21211) {
-        console.error('Invalid phone number format. Please check the recipient phone number.');
-      } else if (error.code === 21408) {
-        console.error('Permission denied. Please check your Twilio account permissions.');
+      // Log specific Twilio error codes
+      if (error.code) {
+        console.error(`Twilio Error Code: ${error.code}`);
+        
+        const errorMessages: Record<string, string> = {
+          '21659': 'Phone number not verified in Twilio Console',
+          '21211': 'Invalid phone number format',
+          '21408': 'Permission denied - check account status',
+          '21610': 'Message blocked by carrier',
+          '30007': 'Message delivery failed'
+        };
+        
+        if (errorMessages[error.code]) {
+          console.error(`Error Details: ${errorMessages[error.code]}`);
+        }
       }
-      
-      // In development mode, simulate successful SMS sending even on error
+
+      // In development mode, simulate success even on error
       if (isDevelopment) {
-        console.log('🚀 DEVELOPMENT MODE: SMS Service (Twilio error occurred)');
-        console.log(`📱 Phone: ${phoneNumber}`);
-        console.log(`🔐 Verification Code: ${code}`);
-        console.log(`🏢 Business: ${businessName}`);
-        console.log('✅ SMS simulated as sent successfully (despite Twilio error)');
-        return true;
+        console.log('✅ SMS simulated (Twilio error occurred)');
+        return {
+          success: true,
+          messageId: `dev_error_${Date.now()}`
+        };
       }
-      
-      // Special handling for phone number verification error - simulate in development
-      if (error.code === 21659) {
-        console.log('🚀 FALLBACK MODE: SMS Service (Phone number not verified)');
-        console.log(`📱 Phone: ${phoneNumber}`);
-        console.log(`🔐 Verification Code: ${code}`);
-        console.log(`🏢 Business: ${businessName}`);
-        console.log('✅ SMS simulated as sent successfully (phone number needs verification)');
-        return true;
-      }
-      
-      return false;
+
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
+  // Check if SMS service is properly configured
   static isConfigured(): boolean {
-    return twilioClient !== null && !!process.env.TWILIO_PHONE_NUMBER;
+    this.initialize();
+    return this.twilioClient !== null && !!process.env.TWILIO_PHONE_NUMBER;
   }
 }
 
-// Export the main function for SMS verification
-export async function sendSMSVerificationCode(phoneNumber: string, businessName: string): Promise<{ success: boolean; code?: string; messageId?: string }> {
-  const code = SMSService.generateVerificationCode();
-  const success = await SMSService.sendSMSCode(phoneNumber, code, businessName);
+// Main export function for SMS verification
+export async function sendSMSVerificationCode(phoneNumber: string, businessName: string): Promise<{
+  success: boolean;
+  code?: string;
+  messageId?: string;
+  error?: string;
+}> {
+  const code = ReliableSMSService.generateVerificationCode();
+  const result = await ReliableSMSService.sendVerificationSMS(phoneNumber, code, businessName);
   
   return {
-    success,
-    code: success ? code : undefined,
-    messageId: success ? `sim_${Date.now()}` : undefined
+    success: result.success,
+    code: result.success ? code : undefined,
+    messageId: result.messageId,
+    error: result.error
   };
 }
