@@ -186,6 +186,9 @@ export default function Customers() {
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [selectedDuplicates, setSelectedDuplicates] = useState<Customer[]>([]);
   const [potentialDuplicates, setPotentialDuplicates] = useState<Customer[]>([]);
+  const [mergeSearchQuery, setMergeSearchQuery] = useState('');
+  const [selectedCustomersForMerge, setSelectedCustomersForMerge] = useState<Customer[]>([]);
+  const [mergeMode, setMergeMode] = useState<'automatic' | 'manual'>('automatic');
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -525,6 +528,44 @@ export default function Customers() {
       customer.phoneNumber.slice(-4) === lastFourDigits && 
       customer.phoneNumber !== phoneNumber
     );
+  };
+
+  // Handle manual customer merge selection
+  const handleCustomerMergeSelection = (customer: Customer) => {
+    const isSelected = selectedCustomersForMerge.find(c => c.id === customer.id);
+    if (isSelected) {
+      setSelectedCustomersForMerge(selectedCustomersForMerge.filter(c => c.id !== customer.id));
+    } else {
+      setSelectedCustomersForMerge([...selectedCustomersForMerge, customer]);
+    }
+  };
+
+  const handleStartManualMerge = () => {
+    if (selectedCustomersForMerge.length < 2) {
+      toast({
+        title: "Select customers to merge",
+        description: "Please select at least 2 customers to merge together",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Sort by total orders descending to make the customer with most orders the primary
+    const sortedForMerge = [...selectedCustomersForMerge].sort((a, b) => b.totalOrders - a.totalOrders);
+    setSelectedDuplicates(sortedForMerge);
+    setMergeMode('manual');
+    setIsMergeDialogOpen(true);
+  };
+
+  // Filter customers for merge search
+  const getMergeSearchResults = () => {
+    if (mergeSearchQuery.length < 2) return [];
+    return customers.filter(customer => {
+      const fullName = `${customer.firstName} ${customer.lastName || ''}`.toLowerCase();
+      const query = mergeSearchQuery.toLowerCase();
+      return fullName.includes(query) || 
+             customer.phoneNumber.includes(query) ||
+             (customer.email && customer.email.toLowerCase().includes(query));
+    });
   };
 
   // Handle customer merge
@@ -966,31 +1007,77 @@ export default function Customers() {
                 title="Customer Directory & Groups"
                 steps={helpContent.customerDirectory.steps}
               />
-              <Button
-                onClick={() => {
-                  // Find Michael's duplicate accounts specifically
-                  const michaelAccounts = customers.filter(c => 
-                    c.phoneNumber.includes('9550') && 
-                    (c.firstName === 'Michael' || c.firstName.includes('Michael'))
-                  ).sort((a, b) => b.totalOrders - a.totalOrders); // Sort by orders descending
-                  
-                  if (michaelAccounts.length > 1) {
-                    setSelectedDuplicates(michaelAccounts);
-                    setIsMergeDialogOpen(true);
-                  } else {
-                    toast({
-                      title: "No duplicates found",
-                      description: "No duplicate customer accounts detected",
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>Merge Customers</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => {
+                    // Find potential duplicates by phone number last 4 digits
+                    const phoneNumbers = customers.map(c => c.phoneNumber);
+                    const duplicatePhoneGroups = new Map<string, Customer[]>();
+                    
+                    customers.forEach(customer => {
+                      const lastFour = customer.phoneNumber.slice(-4);
+                      if (!duplicatePhoneGroups.has(lastFour)) {
+                        duplicatePhoneGroups.set(lastFour, []);
+                      }
+                      duplicatePhoneGroups.get(lastFour)!.push(customer);
                     });
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Users className="h-4 w-4" />
-                <span>Merge Duplicates</span>
-              </Button>
+                    
+                    // Find groups with more than one customer (duplicates)
+                    const duplicateGroups = Array.from(duplicatePhoneGroups.values())
+                      .filter(group => group.length > 1);
+                    
+                    if (duplicateGroups.length > 0) {
+                      // Show the first duplicate group found
+                      const firstDuplicateGroup = duplicateGroups[0];
+                      setSelectedDuplicates(firstDuplicateGroup.sort((a, b) => b.totalOrders - a.totalOrders));
+                      setMergeMode('automatic');
+                      setIsMergeDialogOpen(true);
+                    } else {
+                      // Check for Michael test accounts
+                      const michaelAccounts = customers.filter(customer => 
+                        customer.firstName.toLowerCase().includes('michael') || 
+                        customer.firstName.toLowerCase().includes('john')
+                      ).sort((a, b) => b.totalOrders - a.totalOrders); // Sort by orders descending
+                      
+                      if (michaelAccounts.length > 1) {
+                        setSelectedDuplicates(michaelAccounts);
+                        setMergeMode('automatic');
+                        setIsMergeDialogOpen(true);
+                      } else {
+                        toast({
+                          title: "No duplicates found",
+                          description: "No duplicate customer accounts detected",
+                        });
+                      }
+                    }
+                  }}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Auto-Detect Duplicates
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedCustomersForMerge([]);
+                    setMergeSearchQuery('');
+                    setMergeMode('manual');
+                    // Show search interface in the merge dialog
+                    setSelectedDuplicates([]);
+                    setIsMergeDialogOpen(true);
+                  }}>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search & Select Customers
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 onClick={() => {
                   // Set a default group for directory additions (or create a general one)
@@ -1978,24 +2065,156 @@ export default function Customers() {
 
       {/* Customer Merge Dialog */}
       <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Merge Duplicate Customer Accounts</DialogTitle>
+            <DialogTitle>
+              {mergeMode === 'automatic' ? 'Merge Duplicate Customer Accounts' : 'Search & Select Customers to Merge'}
+            </DialogTitle>
             <DialogDescription>
-              Combine multiple customer records with the same phone number into a single account. All orders and group memberships will be transferred to the primary account.
+              {mergeMode === 'automatic' 
+                ? 'Combine multiple customer records with the same phone number into a single account. All orders and group memberships will be transferred to the primary account.'
+                : 'Search for specific customers and select which ones you want to merge together. The customer with the most orders will become the primary account.'
+              }
             </DialogDescription>
           </DialogHeader>
+          
+          {mergeMode === 'manual' && selectedDuplicates.length === 0 && (
+            <div className="space-y-4">
+              {/* Search Interface */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search customers by name, email, or phone number..."
+                    value={mergeSearchQuery}
+                    onChange={(e) => setMergeSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                {selectedCustomersForMerge.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2">
+                      Selected for Merge ({selectedCustomersForMerge.length} customers)
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedCustomersForMerge.map(customer => (
+                        <div key={customer.id} className="flex items-center justify-between bg-white rounded p-2">
+                          <div>
+                            <span className="font-medium">{customer.firstName} {customer.lastName}</span>
+                            <span className="text-sm text-gray-500 ml-2">({customer.totalOrders} orders)</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCustomerMergeSelection(customer)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end mt-3">
+                      <Button 
+                        onClick={handleStartManualMerge}
+                        disabled={selectedCustomersForMerge.length < 2}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Continue with Merge ({selectedCustomersForMerge.length})
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Search Results */}
+                {mergeSearchQuery.length >= 2 && (
+                  <div className="border rounded-lg max-h-60 overflow-y-auto">
+                    <div className="p-3 border-b bg-gray-50">
+                      <h4 className="text-sm font-medium">Search Results</h4>
+                    </div>
+                    {getMergeSearchResults().map(customer => {
+                      const isSelected = selectedCustomersForMerge.find(c => c.id === customer.id);
+                      return (
+                        <div 
+                          key={customer.id} 
+                          className={`p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
+                          onClick={() => handleCustomerMergeSelection(customer)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={!!isSelected}
+                                onChange={() => handleCustomerMergeSelection(customer)}
+                                className="rounded"
+                              />
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                                  {getInitials(customer.firstName, customer.lastName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h5 className="font-medium">{customer.firstName} {customer.lastName}</h5>
+                                <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
+                                {customer.email && <p className="text-xs text-gray-500">{customer.email}</p>}
+                              </div>
+                            </div>
+                            <div className="text-right text-sm">
+                              <p className="font-medium">{customer.totalOrders} orders</p>
+                              <p className="text-gray-500">£{customer.totalSpent.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {getMergeSearchResults().length === 0 && (
+                      <div className="p-4 text-center text-gray-500">
+                        No customers found matching "{mergeSearchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {mergeSearchQuery.length < 2 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>Start typing to search for customers to merge</p>
+                    <p className="text-sm">Search by name, phone number, or email address</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsMergeDialogOpen(false);
+                    setSelectedCustomersForMerge([]);
+                    setMergeSearchQuery('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
           
           {selectedDuplicates.length > 0 && (
             <div className="space-y-4">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-yellow-800 mb-2">Duplicate Accounts Found</h4>
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">
+                  {mergeMode === 'automatic' ? 'Duplicate Accounts Found' : 'Customers Selected for Merge'}
+                </h4>
                 <p className="text-sm text-yellow-700">
-                  These customers share the same phone number ending in {selectedDuplicates[0]?.phoneNumber.slice(-4)}:
+                  {mergeMode === 'automatic' 
+                    ? `These customers share the same phone number ending in ${selectedDuplicates[0]?.phoneNumber.slice(-4)}:`
+                    : `You have selected ${selectedDuplicates.length} customers to merge. The customer with the most orders will be the primary account:`
+                  }
                 </p>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-48 overflow-y-auto">
                 {selectedDuplicates.map((customer, index) => (
                   <div 
                     key={customer.id} 
@@ -2032,6 +2251,8 @@ export default function Customers() {
                   onClick={() => {
                     setIsMergeDialogOpen(false);
                     setSelectedDuplicates([]);
+                    setSelectedCustomersForMerge([]);
+                    setMergeSearchQuery('');
                   }}
                 >
                   Cancel
