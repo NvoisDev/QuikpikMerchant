@@ -19,6 +19,7 @@
   - **Frontend Display**: Both order summary modal and customer portal show "Transaction Fee (5.5% + £0.50)" with calculated amounts
   - **API Testing**: Confirmed correct fee breakdown in payment intent responses
 - **Status**: ✅ COMPLETED - Payment structure now correctly implemented across ALL endpoints and components including customer portal
+- **User Verification**: Confirmed working July 21, 2025 - Customer portal payment modal correctly displays "Transaction fee (5.5% + £0.50)" text
 
 ### Currency Consistency and Payment Processing Fix - COMPLETED ✅ (July 21, 2025)
 - **Issue Identified**: Payment processing errors due to inconsistent currency settings (USD vs GBP) and outdated transactionFee references
