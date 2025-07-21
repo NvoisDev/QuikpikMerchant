@@ -629,11 +629,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Format orders for customer portal display
       const formattedOrders = ordersWithDetails.map(order => {
         const total = parseFloat(order.total || "0");
-        // Calculate subtotal and platform fee based on current pricing structure
-        // For new orders: total = subtotal + 2.5% transaction fee, platform fee = 2.5% of subtotal
-        // For older orders: may use different fee structure, calculate best estimate
-        const subtotal = order.subtotal ? parseFloat(order.subtotal) : total / 1.025; // Remove 2.5% transaction fee
-        const platformFee = order.platformFee ? parseFloat(order.platformFee) : subtotal * 0.025; // 2.5% platform fee
+        // Calculate proper fees based on current fee structure:
+        // Customer pays: Product subtotal + Transaction fee (5.5% + £0.50)
+        // Wholesaler pays: Platform fee (3.3% of product subtotal)
+        
+        // If we have stored subtotal, use it; otherwise calculate from total
+        const subtotal = order.subtotal ? parseFloat(order.subtotal) : total / 1.055 - 0.50; // Remove transaction fee (5.5% + £0.50)
+        
+        // Transaction fee paid by customer: 5.5% + £0.50
+        const transactionFeePercentage = subtotal * 0.055;
+        const transactionFeeFixed = 0.50;
+        const transactionFee = transactionFeePercentage + transactionFeeFixed;
+        
+        // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
+        const platformFee = subtotal * 0.033;
         
         return {
           id: order.id,
@@ -650,7 +659,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: order.status,
           total: total.toFixed(2),
           subtotal: subtotal.toFixed(2),
-          platformFee: platformFee.toFixed(2),
+          transactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
+          platformFee: platformFee.toFixed(2), // For internal calculation only
           currency: order.currency || "£",
           items: order.items,
           wholesaler: order.wholesaler,
@@ -1037,7 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const platformFee = subtotal * 0.025; // 2.5% platform fee
+      const platformFee = subtotal * 0.033; // 3.3% platform fee
       const total = subtotal + platformFee;
 
       // Get wholesaler from first product

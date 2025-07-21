@@ -50,7 +50,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
         .action-buttons { text-align: center; margin: 30px 0; }
         .btn { display: inline-block; padding: 12px 24px; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; }
         .btn-primary { background-color: #10b981; }
-        .btn-secondary { background-color: #6b7280; }
+        .btn-secondary { background-color: #3b82f6; }
         .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
         .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
         .badge { display: inline-block; padding: 4px 8px; background-color: rgba(16, 185, 129, 0.1); color: #059669; border-radius: 4px; font-size: 12px; font-weight: bold; }
@@ -113,10 +113,10 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <h2 style="margin-top: 0; color: #d97706;">💰 Payment Breakdown</h2>
             <p><strong>Subtotal:</strong> £${data.subtotal}</p>
             ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `<p><strong>Shipping:</strong> £${data.shippingTotal}</p>` : ''}
-            <p><strong>Platform Fee (5.4%):</strong> £${data.platformFee}</p>
+            <p><strong>Platform Fee (3.3%):</strong> £${data.platformFee}</p>
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #f59e0b;">
             <p style="font-size: 18px;"><strong>Total Paid by Customer:</strong> <span style="color: #d97706; font-weight: bold;">£${data.total}</span></p>
-            <p style="color: #059669; font-weight: bold;">💰 You will receive: £${(parseFloat(data.subtotal) * 0.946).toFixed(2)} (94.6% of product value)</p>
+            <p style="color: #059669; font-weight: bold;">💰 You will receive: £${(parseFloat(data.subtotal) * 0.967).toFixed(2)} (96.7% of product value)</p>
         </div>
 
         <div class="action-buttons">
@@ -167,10 +167,10 @@ ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} - £${
 
 💰 PAYMENT BREAKDOWN
 Subtotal: £${data.subtotal}
-${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Platform Fee (5.4%): £${data.platformFee}
+${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Platform Fee (3.3%): £${data.platformFee}
 Total Paid by Customer: £${data.total}
 
-💰 You will receive: £${(parseFloat(data.subtotal) * 0.946).toFixed(2)} (94.6% of product value)
+💰 You will receive: £${(parseFloat(data.subtotal) * 0.967).toFixed(2)} (96.7% of product value)
 
 📱 NEXT STEPS
 1. Review the order details in your Quikpik dashboard

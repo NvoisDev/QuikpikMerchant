@@ -20,6 +20,7 @@ import {
   CheckCircle, 
   XCircle, 
   Truck,
+  Hand,
   User,
   Phone,
   MapPin,
@@ -1127,9 +1128,28 @@ export default function Orders() {
                     <>
                       <Separator />
                       <div>
-                        <h3 className="font-semibold mb-2">Delivery Address</h3>
-                        <div className="text-sm p-3 bg-gray-50 rounded-lg">
-                          {formatAddress(selectedOrder.deliveryAddress)}
+                        <h3 className="font-semibold mb-2 flex items-center">
+                          <Hand className="h-4 w-4 mr-2" />
+                          Collection Information
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                            {selectedOrder.fulfillmentType === 'pickup' || selectedOrder.shippingOption === 'pickup' ? (
+                              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-sm font-medium">
+                                <Hand className="h-4 w-4" />
+                                Pickup
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                                <Truck className="h-4 w-4" />
+                                Collection
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <h4 className="font-medium text-sm text-gray-700 mb-1">Collection Address:</h4>
+                            <p className="text-sm">{formatAddress(selectedOrder.deliveryAddress)}</p>
+                          </div>
                         </div>
                       </div>
                     </>

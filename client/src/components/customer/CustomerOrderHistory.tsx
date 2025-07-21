@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, Clock, Check, Truck, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw } from "lucide-react";
+import { Package, Clock, Check, Truck, Hand, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -48,6 +48,35 @@ interface Order {
   createdAt: string;
   updatedAt: string;
 }
+
+// Helper function to format address from JSON string or regular string
+const formatAddress = (addressData?: string): string => {
+  if (!addressData) return 'Address not provided';
+  
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(addressData);
+    if (typeof parsed === 'object' && parsed !== null) {
+      // Handle comprehensive address object with multiple possible field names
+      const addressParts = [
+        parsed.street || parsed.property || parsed.address1 || parsed.address,
+        parsed.address2,
+        parsed.town || parsed.city,
+        parsed.county || parsed.state,
+        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
+        parsed.country
+      ].filter(part => part && part.trim() !== '');
+      
+      if (addressParts.length > 0) {
+        return addressParts.join(', ');
+      }
+    }
+    return addressData;
+  } catch {
+    // If parsing fails, return as regular string
+    return addressData;
+  }
+};
 
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
@@ -181,7 +210,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
         {/* Collection Information */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center">
-            <Truck className="h-4 w-4 mr-2" />
+            <Hand className="h-4 w-4 mr-2" />
             Collection Information
           </h3>
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
@@ -198,7 +227,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             {order.customerAddress && (
               <div>
                 <span className="text-gray-600 text-sm">Collection Address:</span>
-                <p className="font-medium text-sm mt-1">{order.customerAddress}</p>
+                <p className="font-medium text-sm mt-1">{formatAddress(order.customerAddress)}</p>
               </div>
             )}
             {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
@@ -229,7 +258,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             )}
             <div className="flex justify-between text-sm">
               <span>Transaction Fee:</span>
-              <span>{formatCurrency(order.platformFee)}</span>
+              <span>{formatCurrency(order.transactionFee || order.platformFee)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-2">
               <span>Total Paid:</span>
@@ -509,14 +538,25 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       {format(new Date(order.date), 'MMM d, yyyy')}
                     </div>
                     
-                    {/* Delivery info */}
+                    {/* Collection info */}
                     <div className="flex items-center justify-end space-x-1 mt-1">
                       {order.fulfillmentType === 'delivery' ? (
-                        <Truck className="h-3 w-3 text-gray-500" />
+                        <>
+                          <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-.293-.707L15 4.586A1 1 0 0014.293 4H14v3z"/>
+                          </svg>
+                          <span className="text-xs text-gray-600">Collection</span>
+                        </>
                       ) : (
-                        <MapPin className="h-3 w-3 text-gray-500" />
+                        <>
+                          <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z"/>
+                            <path fillRule="evenodd" d="M6 7a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V7zm2-1a1 1 0 00-1 1v6a1 1 0 001 1h4a1 1 0 001-1V7a1 1 0 00-1-1H8z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-xs text-gray-600">Collect</span>
+                        </>
                       )}
-                      <span className="text-xs text-gray-600 capitalize">{order.fulfillmentType}</span>
                     </div>
                     
                     {/* View Details Button */}
