@@ -64,16 +64,16 @@
 - **User Experience**: Triple-layer notification system ensures users always receive verification codes
 - **Status**: ✅ COMPLETED - Complete SMS system rebuild operational with guaranteed code delivery in development
 
-### CUSTOMER LOGOUT TO LAST 4 DIGITS FIX - COMPLETED ✅ (July 21, 2025)
-- **Issue Resolved**: Customer logout was redirecting to different pages instead of restarting authentication at last 4 digits entry
-- **Root Cause**: Logout functionality was redirecting to external pages rather than reloading current customer portal
-- **Solution Implemented**: Updated logout to reload current page, restarting authentication from last 4 digits step
+### CUSTOMER LOGOUT REDIRECT TO CUSTOMER-LOGIN - COMPLETED ✅ (July 21, 2025)
+- **Issue Resolved**: Customer logout needed to redirect to customer-login page instead of staying in customer portal
+- **Root Cause**: Logout functionality was attempting to restart authentication within same portal instead of redirecting to find store page
+- **Solution Implemented**: Updated logout to redirect to customer-login page for clean authentication restart
 - **Technical Implementation**:
-  - **Logout Flow**: Clear localStorage → Reset authentication state → Show logout toast → Reload current portal page
-  - **Authentication Restart**: Customers return to last 4 digits entry screen within same customer portal
-  - **Clean State Reset**: All authentication data cleared with fresh authentication flow
-- **Production Ready**: Logout functionality now properly restarts authentication from phone verification
-- **Status**: ✅ COMPLETED - Logout now returns to last 4 digits entry as requested
+  - **Logout Flow**: Clear localStorage → Reset authentication state → Show logout toast → Redirect to /customer-login
+  - **Clean Authentication Flow**: Customers return to "Find Your Store" page to restart authentication process
+  - **Complete State Reset**: All authentication data cleared with fresh page load
+- **Production Ready**: Logout functionality now properly redirects to customer-login page
+- **Status**: ✅ COMPLETED - Logout now redirects to customer-login as requested
 
 ### URL ENCODING ISSUE RESOLUTION - COMPLETED ✅ (July 21, 2025) 
 - **Issue Resolved**: Wholesaler ID was getting URL encoded with query parameters causing API failures

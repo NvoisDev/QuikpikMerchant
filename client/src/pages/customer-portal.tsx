@@ -1383,9 +1383,6 @@ export default function CustomerPortal() {
                       localStorage.clear();
                       sessionStorage.clear();
                       
-                      // Set logout indicator for authentication component
-                      sessionStorage.setItem('justLoggedOut', 'true');
-                      
                       setIsAuthenticated(false);
                       setAuthenticatedCustomer(null);
                       setShowAuth(true);
@@ -1395,9 +1392,8 @@ export default function CustomerPortal() {
                         description: "You have been successfully logged out.",
                       });
                       
-                      // Clear URL parameters and reload to clean customer portal URL
-                      const currentUrl = window.location.pathname; // e.g., /customer/104871691614680693123
-                      window.location.href = currentUrl; // Remove query parameters and reload
+                      // Redirect to customer-login page
+                      window.location.href = '/customer-login';
                     }}
                     variant="outline"
                     size="sm"
