@@ -39,17 +39,32 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const { toast } = useToast();
 
-  // Check for auth query parameter (from CustomerLogin page)
+  // Reset authentication state on component mount (after logout)
   useEffect(() => {
+    // Clear any persisted authentication state and reset to phone entry
+    setAuthStep('phone');
+    setLastFourDigits("");
+    setSmsCode("");
+    setEmailCode("");
+    setCustomerData(null);
+    setError("");
+    setSmsExpiry(null);
+    setCountdown(0);
+    
+    // Check for auth query parameter only if not coming from logout
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
     
-    if (authParam && authParam.length === 4) {
+    // Only use auth parameter if there's no indication of a fresh logout
+    if (authParam && authParam.length === 4 && !sessionStorage.getItem('justLoggedOut')) {
       console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
       setLastFourDigits(authParam);
       // Skip to verification step since digits were already entered
       setAuthStep('verification');
     }
+    
+    // Clear logout indicator
+    sessionStorage.removeItem('justLoggedOut');
   }, [wholesalerId]);
 
   // Auto-trigger login when lastFourDigits is set from URL parameter

@@ -1382,6 +1382,10 @@ export default function CustomerPortal() {
                       localStorage.removeItem(`customer_auth_${wholesalerId}`);
                       localStorage.clear();
                       sessionStorage.clear();
+                      
+                      // Set logout indicator for authentication component
+                      sessionStorage.setItem('justLoggedOut', 'true');
+                      
                       setIsAuthenticated(false);
                       setAuthenticatedCustomer(null);
                       setShowAuth(true);
