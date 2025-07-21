@@ -2065,7 +2065,7 @@ export default function Customers() {
 
       {/* Customer Merge Dialog */}
       <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {mergeMode === 'automatic' ? 'Merge Duplicate Customer Accounts' : 'Search & Select Customers to Merge'}
@@ -2078,6 +2078,7 @@ export default function Customers() {
             </DialogDescription>
           </DialogHeader>
           
+          <div className="flex-1 overflow-y-auto space-y-4">
           {mergeMode === 'manual' && selectedDuplicates.length === 0 && (
             <div className="space-y-4">
               {/* Search Interface */}
@@ -2272,6 +2273,7 @@ export default function Customers() {
               </div>
             </div>
           )}
+          </div>
         </DialogContent>
       </Dialog>
 
