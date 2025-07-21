@@ -162,10 +162,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           // Show debug code immediately in development mode
           if (smsData.debugCode) {
             console.log('🚨 DEVELOPMENT DEBUG CODE:', smsData.debugCode);
+            
+            // Show prominent alert with the code
+            setTimeout(() => {
+              alert(`SMS VERIFICATION CODE: ${smsData.debugCode}\n\nSMS delivery failed. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
+            }, 1000);
+            
             toast({
-              title: "Development Mode - SMS Code",
-              description: `Code: ${smsData.debugCode} (SMS delivery may fail)`,
-              duration: 30000, // Show for 30 seconds
+              title: "🚨 SMS FAILED - USE THIS CODE",
+              description: `Verification Code: ${smsData.debugCode}`,
+              duration: 60000, // Show for 60 seconds
             });
           }
         } else {
