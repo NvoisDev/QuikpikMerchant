@@ -27,7 +27,8 @@ import {
   TrendingUp,
   Users,
   Trophy,
-  Share2
+  Share2,
+  CreditCard
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -142,6 +143,15 @@ export default function WholesalerDashboard() {
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
     enabled: !!user,
+  });
+
+  // Stripe Connect status for payment setup notifications
+  const { data: stripeStatus } = useQuery({
+    queryKey: ["/api/stripe/connect-status"],
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: false,
+    enabled: !!user && user.role === 'wholesaler',
   });
 
   // Chart data query with real data from backend
@@ -343,6 +353,47 @@ export default function WholesalerDashboard() {
 
         {/* Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+          {/* Priority Stripe Setup Notification */}
+          {user?.role === 'wholesaler' && stripeStatus && !stripeStatus.paymentsEnabled && (
+            <div className="mb-6 sm:mb-8">
+              <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-400 rounded-lg p-4 sm:p-6 shadow-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full">
+                      <CreditCard className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-red-900">
+                          🚨 Payment Setup Required - Priority Action
+                        </h3>
+                        <p className="mt-1 text-red-800">
+                          Your customers cannot complete purchases until you set up payment processing. 
+                          This is preventing order completion and lost sales.
+                        </p>
+                        <div className="mt-2 text-sm text-red-700">
+                          <p>• Customer payments are currently failing</p>
+                          <p>• All order attempts show "payment setup incomplete" error</p>
+                          <p>• Takes only 2-3 minutes to complete setup</p>
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-shrink-0">
+                        <Link href="/settings">
+                          <Button className="bg-red-600 hover:bg-red-700 text-white shadow-lg">
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Complete Setup Now
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">

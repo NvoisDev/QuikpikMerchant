@@ -284,8 +284,23 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           let errorMessage = "Unable to initialize payment. Please try again.";
           let errorTitle = "Payment Setup Failed";
           
-          if (error.response?.status === 400) {
-            errorMessage = "Invalid payment details. Please check your order and try again.";
+          // Check for specific Stripe setup error
+          if (error.message && error.message.includes("payment setup incomplete")) {
+            errorTitle = "Store Payment Setup Required";
+            errorMessage = "This store hasn't completed their payment setup yet. Please contact the business owner to complete their Stripe payment configuration before placing orders.";
+          } else if (error.response?.status === 400) {
+            // Try to parse error response for more details
+            try {
+              const errorData = await error.response.json();
+              if (errorData.errorType === "stripe_setup_required") {
+                errorTitle = "Payment Processing Unavailable";
+                errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
+              } else {
+                errorMessage = errorData.message || "Invalid payment details. Please check your order and try again.";
+              }
+            } catch {
+              errorMessage = "Invalid payment details. Please check your order and try again.";
+            }
           } else if (error.response?.status === 429) {
             errorMessage = "Too many payment attempts. Please wait a moment and try again.";
           } else if (error.response?.status >= 500) {
@@ -298,6 +313,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             title: errorTitle,
             description: errorMessage,
             variant: "destructive",
+            duration: 10000, // Show longer for Stripe setup errors
           });
         } finally {
           setIsCreatingIntent(false);

@@ -1151,7 +1151,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!wholesaler || !wholesaler.stripeAccountId) {
         return res.status(400).json({ 
-          message: "Wholesaler payment setup incomplete. Please contact seller." 
+          message: "Payment processing not available. The business owner needs to complete Stripe setup.",
+          errorType: "stripe_setup_required",
+          setupInstructions: {
+            title: "Payment Setup Required",
+            description: "To accept customer payments, please complete your Stripe Connect setup in Settings.",
+            actionText: "Go to Settings → Payment Setup",
+            priority: "high"
+          }
         });
       }
 

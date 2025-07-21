@@ -2,6 +2,56 @@
 
 ## Outstanding Issues (July 21, 2025) - ALL RESOLVED ✅
 
+### Currency Consistency and Payment Processing Fix - COMPLETED ✅ (July 21, 2025)
+- **Issue Identified**: Payment processing errors due to inconsistent currency settings (USD vs GBP) and outdated transactionFee references
+- **Root Cause**: Multiple payment endpoints using inconsistent currency settings and deprecated transaction fee variables
+- **Solution Implemented**: 
+  - Updated all payment intent creation to use 'gbp' currency consistently instead of 'usd'
+  - Removed all deprecated transactionFee variable references from payment metadata and API responses
+  - Standardized customer portal payment endpoint to use simplified £6.00 platform fee structure
+  - Updated API responses to use simplified fee structure without transactionFee fields
+- **Technical Fixes**:
+  - **Currency Standardization**: All payment intents now use 'gbp' for consistent payment processing
+  - **Simplified Fee Structure**: Customer pays subtotal + £6.00 platform fee, wholesaler receives full product amount
+  - **Metadata Cleanup**: Removed outdated transactionFee references and updated payment intent metadata
+  - **API Response Update**: Simplified API responses to match new fee structure
+- **Production Testing**: Successfully tested payment intent creation with £6.00 product + £6.00 platform fee = £12.00 total
+- **Payment Flow Verified**: Customer portal payment endpoint working correctly with simplified fee structure
+- **Status**: ✅ COMPLETED - Currency consistency achieved and simplified platform fee structure operational
+
+### Shipping Options Text Correction - COMPLETED ✅ (July 21, 2025)
+- **User Request**: Change "Collection" text to "Delivery" for courier shipping services in customer portal
+- **Issue Identified**: Previous text changes incorrectly labeled courier delivery services as "collection" services
+- **Solution Implemented**: 
+  - Updated customer portal to show "Delivery" for paid courier services (Royal Mail, DPD, etc.)
+  - Changed "Choose Collection Service" to "Choose Delivery Service" for courier selection section
+  - Maintained proper distinction between "Pickup" (free from supplier) vs "Delivery" (paid courier)
+- **Terminology Clarification**:
+  - **Pickup**: Free collection from wholesaler location
+  - **Delivery**: Paid courier delivery service to customer address
+- **Status**: ✅ COMPLETED - Proper shipping terminology restored for customer clarity
+
+### Priority Stripe Setup Notification System - COMPLETED ✅ (July 21, 2025)
+- **User Request**: Create priority notifications to guide wholesalers through Stripe setup when payments fail
+- **Issue Identified**: When Stripe Connect isn't set up, customers receive generic error messages and wholesalers aren't prominently alerted
+- **Solution Implemented**: 
+  - Created prominent red banner notification on dashboard showing when Stripe setup is required
+  - Enhanced backend error responses with structured setup instructions and priority flags
+  - Improved customer portal error handling to detect and explain Stripe setup issues clearly
+  - Added direct "Complete Setup Now" button linking to Settings page
+- **Technical Implementation**:
+  - **Dashboard Banner**: High-priority red gradient notification banner with action button
+  - **Stripe Status Query**: Real-time check of Stripe Connect status with caching
+  - **Enhanced Error Messages**: Structured error responses with errorType and setupInstructions
+  - **Customer Communication**: Clear messaging explaining payment unavailability due to setup requirements
+  - **Priority Indicators**: Visual cues (🚨 icons, red styling) emphasizing urgency
+- **User Experience**: 
+  - Wholesalers see immediate visual alert on dashboard when Stripe setup incomplete
+  - Clear explanation of impact (lost sales, failed orders) and quick setup time (2-3 minutes)
+  - Customers receive helpful error messages explaining business owner needs to complete setup
+  - Direct action path with prominent button to complete setup
+- **Status**: ✅ COMPLETED - Priority notification system operational guiding users to complete Stripe setup
+
 ### Simplified Platform Fee Display Structure - COMPLETED ✅ (July 21, 2025)
 - **User Request**: Simplify fee structure to show "Subtotal £100.00 + Platform Fee £6.00 = Total £106.00"
 - **Implementation**: Replaced complex "Transaction Fee (5.5% + £0.50)" with simple "Platform Fee: £6.00" across all customer-facing components
