@@ -1380,6 +1380,8 @@ export default function CustomerPortal() {
                     onClick={() => {
                       // Clear localStorage
                       localStorage.removeItem(`customer_auth_${wholesalerId}`);
+                      localStorage.clear();
+                      sessionStorage.clear();
                       setIsAuthenticated(false);
                       setAuthenticatedCustomer(null);
                       setShowAuth(true);
@@ -1388,8 +1390,8 @@ export default function CustomerPortal() {
                         title: "Logged out",
                         description: "You have been successfully logged out.",
                       });
-                      // Redirect to landing page
-                      window.location.href = '/';
+                      // Redirect to customer login page
+                      window.location.href = '/customer-login';
                     }}
                     variant="outline"
                     size="sm"
