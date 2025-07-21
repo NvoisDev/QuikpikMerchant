@@ -1394,8 +1394,10 @@ export default function CustomerPortal() {
                         title: "Logged out",
                         description: "You have been successfully logged out.",
                       });
-                      // Reload the current customer portal URL to restart authentication from last 4 digits
-                      window.location.reload();
+                      
+                      // Clear URL parameters and reload to clean customer portal URL
+                      const currentUrl = window.location.pathname; // e.g., /customer/104871691614680693123
+                      window.location.href = currentUrl; // Remove query parameters and reload
                     }}
                     variant="outline"
                     size="sm"
