@@ -1094,17 +1094,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer payment endpoint - creates payment intent with 5% platform fee
+  // NEW: Customer payment endpoint with correct fee structure
+  // Customer pays: Product total + Transaction Fee (5.5% + £0.50)
+  // Wholesaler pays: Platform Fee (3.3% of product total)
   app.post('/api/customer/create-payment', async (req, res) => {
     try {
-      const { customerName, customerEmail, customerPhone, customerAddress, items, totalAmount, notes } = req.body;
+      const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
       }
 
-      // Validate all products exist and calculate total
-      let calculatedTotal = 0;
+      // Calculate product subtotal
+      let productSubtotal = 0;
       const validatedItems = [];
 
       for (const item of items) {
@@ -1125,13 +1127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Use promotional price if active, otherwise regular price
         const effectivePrice = product.promoActive && product.promoPrice 
           ? parseFloat(product.promoPrice) 
           : parseFloat(product.price);
         
         const itemTotal = effectivePrice * item.quantity;
-        calculatedTotal += itemTotal;
+        productSubtotal += itemTotal;
 
         validatedItems.push({
           ...item,
@@ -1141,49 +1142,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Original fee structure - Customer pays product total + 5% platform fee
-      // Wholesaler receives 95% of product amount
+      // NEW FEE STRUCTURE:
+      // Customer Transaction Fee: 5.5% of product total + £0.50 fixed fee
+      const customerTransactionFee = (productSubtotal * 0.055) + 0.50;
+      const totalCustomerPays = productSubtotal + customerTransactionFee;
+      
+      // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
+      const wholesalerPlatformFee = productSubtotal * 0.033;
+      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
-      // Get first product's wholesaler for Stripe Connect account
+      // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
       const wholesaler = await storage.getUser(firstProduct.wholesalerId);
       
-      console.log(`🔍 Customer payment - Wholesaler lookup for ID: ${firstProduct.wholesalerId}`);
-      console.log(`🔍 Customer payment - Wholesaler data:`, wholesaler ? {
-        id: wholesaler.id,
-        businessName: wholesaler.businessName,
-        stripeAccountId: wholesaler.stripeAccountId,
-        email: wholesaler.email
-      } : 'null');
-      
-      if (!wholesaler || !wholesaler.stripeAccountId) {
-        console.log(`❌ Customer payment - Stripe setup validation failed: wholesaler=${!!wholesaler}, stripeAccountId=${wholesaler?.stripeAccountId}`);
-        return res.status(400).json({ 
-          message: "Payment processing not available. The business owner needs to complete Stripe setup.",
-          errorType: "stripe_setup_required",
-          setupInstructions: {
-            title: "Payment Setup Required",
-            description: "To accept customer payments, please complete your Stripe Connect setup in Settings.",
-            actionText: "Go to Settings → Payment Setup",
-            priority: "high"
-          }
-        });
+      if (!wholesaler) {
+        return res.status(400).json({ message: "Wholesaler not found" });
       }
-      
-      console.log(`✅ Customer payment - Stripe validation passed for account: ${wholesaler.stripeAccountId}`)
 
-      // Create Stripe payment intent with Connect account 
+      // Create Stripe payment intent
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round((calculatedTotal + (calculatedTotal * 0.05)) * 100), // Customer pays product total + 5% platform fee
+        amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + transaction fee)
         currency: 'gbp',
         receipt_email: customerEmail,
+        automatic_payment_methods: { enabled: true },
         metadata: {
           customerName,
           customerEmail,
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
-          totalAmount: calculatedTotal.toFixed(2), // Product subtotal (what wholesaler gets)
-          platformFee: (calculatedTotal * 0.05).toFixed(2), // 5% platform fee
+          productSubtotal: productSubtotal.toFixed(2),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
+          wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+          wholesalerReceives: wholesalerReceives.toFixed(2),
+          totalCustomerPays: totalCustomerPays.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
           items: JSON.stringify(validatedItems.map(item => ({
@@ -1191,15 +1182,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             productName: item.product.name,
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice)
-          })))
+          }))),
+          shippingInfo: shippingInfo ? JSON.stringify(shippingInfo) : JSON.stringify({ option: 'pickup' })
         }
       });
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        totalAmount: calculatedTotal.toFixed(2), // Product subtotal
-        platformFee: (calculatedTotal * 0.05).toFixed(2), // 5% platform fee
-        totalAmountWithFee: (calculatedTotal + (calculatedTotal * 0.05)).toFixed(2) // Total customer payment
+        productSubtotal: productSubtotal.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
+        totalCustomerPays: totalCustomerPays.toFixed(2),
+        wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+        wholesalerReceives: wholesalerReceives.toFixed(2)
       });
 
     } catch (error) {
@@ -1583,10 +1577,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName,
           customerEmail,
           customerPhone,
-          totalAmount,
-          platformFee,
-          transactionFee,
+          productSubtotal,
           customerTransactionFee,
+          wholesalerPlatformFee,
+          wholesalerReceives,
+          totalCustomerPays,
           wholesalerId,
           orderType
         } = paymentIntent.metadata;
@@ -1619,9 +1614,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const orderData = {
             wholesalerId: wholesalerId,
             retailerId: customer.id,
-            subtotal: parseFloat(totalAmount).toFixed(2), // Product subtotal (what wholesaler gets)
-            platformFee: parseFloat(platformFee).toFixed(2), // 5% platform fee
-            total: (parseFloat(totalAmount) + parseFloat(platformFee)).toFixed(2), // Total = subtotal + platform fee
+            subtotal: parseFloat(paymentIntent.metadata.productSubtotal).toFixed(2), // Product subtotal
+            platformFee: parseFloat(paymentIntent.metadata.wholesalerPlatformFee).toFixed(2), // 3.3% platform fee (deducted from wholesaler)
+            customerTransactionFee: parseFloat(paymentIntent.metadata.customerTransactionFee).toFixed(2), // Customer transaction fee (5.5% + £0.50)
+            total: parseFloat(paymentIntent.metadata.totalCustomerPays).toFixed(2), // Total amount customer paid
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
@@ -1704,9 +1700,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 customerPhone,
                 customerAddress: typeof customerAddress === 'string' ? customerAddress : 
                   (customerAddress ? JSON.stringify(customerAddress) : undefined),
-                total: totalAmount,
-                subtotal: (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2),
-                platformFee: parseFloat(platformFee).toFixed(2),
+                total: totalCustomerPays,
+                subtotal: productSubtotal,
+                customerTransactionFee: parseFloat(customerTransactionFee).toFixed(2),
+                wholesalerPlatformFee: parseFloat(wholesalerPlatformFee).toFixed(2),
                 shippingTotal: orderData.deliveryCost,
                 fulfillmentType: orderData.fulfillmentType,
                 items: enrichedItemsForEmail,

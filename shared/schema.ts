@@ -374,7 +374,7 @@ export const orders = pgTable("orders", {
   status: varchar("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
-  transactionFee: decimal("transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
+  customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
   deliveryAddress: text("delivery_address"),

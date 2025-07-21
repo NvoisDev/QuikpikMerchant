@@ -257,8 +257,8 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span>Platform Fee:</span>
-              <span>{formatCurrency(6.00)}</span>
+              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span>{formatCurrency(order.customerTransactionFee || 6.00)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-2">
               <span>Total Paid:</span>
