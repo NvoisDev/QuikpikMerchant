@@ -1439,6 +1439,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to send wholesaler notification email
+  app.post('/api/test-wholesaler-email', requireAuth, async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: 'Order ID required' });
+      }
+
+      console.log(`🧪 Testing wholesaler email notification for Order #${orderId}`);
+      
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      console.log(`👤 Wholesaler found: ${wholesaler?.email ? wholesaler.email : 'NO EMAIL'}`);
+      
+      if (!wholesaler?.email) {
+        return res.status(400).json({ message: 'Wholesaler email not found' });
+      }
+
+      const customer = await storage.getUser(order.retailerId);
+      const orderItems = await storage.getOrderItems(orderId);
+      const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+        const product = await storage.getProduct(item.productId);
+        return {
+          productName: product?.name || `Product #${item.productId}`,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice || '0.00',
+          total: item.total || (parseFloat(item.unitPrice || '0') * item.quantity).toFixed(2)
+        };
+      }));
+
+      const { generateWholesalerOrderNotificationEmail } = await import('./email-templates');
+      const { sendEmail } = await import('./sendgrid-service');
+      
+      const customerName = customer && (customer.firstName && customer.lastName 
+        ? `${customer.firstName} ${customer.lastName}` 
+        : customer.firstName || customer.businessName || 'Customer');
+
+      const emailData = {
+        orderNumber: `#${order.id}`,
+        customerName: customerName || 'Customer',
+        customerEmail: customer?.email || '',
+        customerPhone: customer?.phoneNumber || customer?.businessPhone || '',
+        customerAddress: order.deliveryAddress,
+        total: order.total || '0.00',
+        subtotal: order.subtotal || '0.00',
+        platformFee: order.platformFee || '0.00',
+        shippingTotal: order.shippingTotal || '0.00',
+        fulfillmentType: order.fulfillmentType || 'pickup',
+        items: enrichedItems,
+        wholesaler: {
+          businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
+          firstName: wholesaler.firstName || '',
+          lastName: wholesaler.lastName || '',
+          email: wholesaler.email
+        },
+        orderDate: new Date(order.createdAt).toISOString(),
+        paymentMethod: 'Card Payment'
+      };
+
+      console.log(`📧 Preparing test email for ${wholesaler.email}`);
+      
+      // Use simple email first to test
+      const success = await sendEmail({
+        to: wholesaler.email,
+        from: 'hello@quikpik.co', // Use verified sender address
+        subject: `[TEST] New Order #${order.id} - ${customerName}`,
+        html: `<p>You have received a new order #${order.id} from ${customerName}.</p>`,
+        text: `You have received a new order #${order.id} from ${customerName}.`
+      });
+
+      if (success) {
+        console.log(`✅ Test email sent successfully to ${wholesaler.email}`);
+        res.json({ 
+          success: true, 
+          message: `Test email sent to ${wholesaler.email}`,
+          emailData: {
+            to: wholesaler.email,
+            subject: emailTemplate.subject,
+            orderNumber: emailData.orderNumber,
+            customerName: emailData.customerName
+          }
+        });
+      } else {
+        console.log(`❌ Test email failed to send to ${wholesaler.email}`);
+        res.status(500).json({ message: 'Failed to send test email' });
+      }
+    } catch (error: any) {
+      console.error('❌ Test wholesaler email error:', error);
+      res.status(500).json({ message: 'Error testing wholesaler email: ' + error.message });
+    }
+  });
+
   // Webhook to handle successful payments
   app.post('/api/stripe/webhook', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
@@ -3070,11 +3167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const event = req.body;
+      console.log(`🔔 Webhook received: ${event.type}`);
 
       switch (event.type) {
         case 'payment_intent.succeeded':
           const paymentIntent = event.data.object;
           const orderId = parseInt(paymentIntent.metadata.orderId);
+          console.log(`💳 Processing payment success for Order #${orderId}`);
           
           // Update order status to processing
           await storage.updateOrderStatus(orderId, 'processing');
@@ -3087,7 +3186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const customer = await storage.getUser(order.retailerId);
               
               // Send notification email to wholesaler
+              console.log(`👤 Wholesaler found: ${wholesaler?.email ? wholesaler.email : 'NO EMAIL'}`);
               if (wholesaler?.email) {
+                console.log(`📧 Preparing email notification for ${wholesaler.email}`);
                 const orderItems = await storage.getOrderItems(orderId);
                 const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
                   const product = await storage.getProduct(item.productId);
@@ -3128,33 +3229,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   paymentMethod: 'Card Payment'
                 };
 
-                const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
-                
+                // Use simple email notification
                 await sendEmail({
                   to: wholesaler.email,
-                  from: 'orders@quikpik.app',
-                  subject: emailTemplate.subject,
-                  html: emailTemplate.html,
-                  text: emailTemplate.text
+                  from: 'hello@quikpik.co', // Use verified sender address
+                  subject: `New Order #${order.id} - ${customerName}`,
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                      <h2 style="color: #2563eb;">New Order Received</h2>
+                      <p><strong>Order #${order.id}</strong></p>
+                      <p><strong>Customer:</strong> ${customerName}</p>
+                      <p><strong>Email:</strong> ${customer?.email || 'Not provided'}</p>
+                      <p><strong>Phone:</strong> ${customer?.phoneNumber || customer?.businessPhone || 'Not provided'}</p>
+                      <p><strong>Total:</strong> £${order.total || '0.00'}</p>
+                      <p><strong>Collection Type:</strong> ${order.fulfillmentType || 'pickup'}</p>
+                      <hr>
+                      <p>Please log into your Quikpik dashboard to view full order details and manage fulfillment.</p>
+                    </div>
+                  `,
+                  text: `New Order #${order.id} - ${customerName}. Total: £${order.total}. Please check your dashboard for details.`
                 });
 
-                console.log(`📧 Order notification sent to wholesaler: ${wholesaler.email}`);
+                console.log(`✅ Order notification sent successfully to wholesaler: ${wholesaler.email}`);
+              } else {
+                console.log(`⚠️ No wholesaler email found for Order #${orderId}`);
               }
               
               // Send confirmation email to customer  
               if (customer?.email) {
                 try {
-                  const orderItems = await storage.getOrderItems(orderId);
-                  const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
-                    const product = await storage.getProduct(item.productId);
-                    return {
-                      ...item,
-                      productName: product?.name || `Product #${item.productId}`,
-                      product: product ? { name: product.name } : null
-                    };
-                  }));
-                  
-                  await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
+                  await sendEmail({
+                    to: customer.email,
+                    from: 'hello@quikpik.co',
+                    subject: `Order Confirmation #${order.id} - Thank You!`,
+                    html: `
+                      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #10b981;">Order Confirmation</h2>
+                        <p>Thank you for your order! We've received your payment and your order is being processed.</p>
+                        <hr>
+                        <p><strong>Order #${order.id}</strong></p>
+                        <p><strong>Total:</strong> £${order.total || '0.00'}</p>
+                        <p><strong>Collection:</strong> ${order.fulfillmentType || 'pickup'}</p>
+                        <p><strong>Business:</strong> ${wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`}</p>
+                        <hr>
+                        <p>You will be contacted by the business regarding order collection details.</p>
+                        <p style="font-size: 12px; color: #666;">If you have questions, please contact the business directly.</p>
+                      </div>
+                    `,
+                    text: `Order Confirmation #${order.id}. Thank you for your order of £${order.total}. You will be contacted regarding collection details.`
+                  });
                   console.log(`📧 Order confirmation sent to customer: ${customer.email}`);
                 } catch (customerEmailError) {
                   console.error(`Failed to send customer confirmation email:`, customerEmailError);
@@ -3162,9 +3285,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else {
                 console.log(`⚠️ No customer email found for Order #${orderId} - customer ID: ${order.retailerId}`);
               }
+            } else {
+              console.log(`❌ Order #${orderId} not found in database`);
             }
           } catch (emailError) {
-            console.error('Failed to send order emails:', emailError);
+            console.error('❌ Failed to send order emails:', emailError);
           }
           
           // Log successful payment and platform fee collection
