@@ -2527,6 +2527,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Merge duplicate customers
+  app.post('/api/customers/merge', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const { primaryCustomerId, duplicateCustomerIds, mergedData } = req.body;
+
+      if (!primaryCustomerId || !duplicateCustomerIds || !Array.isArray(duplicateCustomerIds)) {
+        return res.status(400).json({ message: "Primary customer ID and duplicate customer IDs are required" });
+      }
+
+      console.log(`🔗 Merging customers: primary=${primaryCustomerId}, duplicates=${duplicateCustomerIds.join(', ')}`);
+
+      // Use the merge functionality from storage
+      const result = await storage.mergeCustomers(primaryCustomerId, duplicateCustomerIds, mergedData);
+      
+      res.json({
+        success: true,
+        message: `Successfully merged ${duplicateCustomerIds.length} duplicate accounts`,
+        primaryCustomerId,
+        mergedOrdersCount: result.mergedOrdersCount || 0
+      });
+    } catch (error) {
+      console.error("Error merging customers:", error);
+      res.status(500).json({ message: "Failed to merge customers" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
     try {
@@ -9671,11 +9701,38 @@ The Quikpik Team
       const customerId = req.params.id;
       const updates = req.body;
       
+      console.log('Updating customer:', customerId, 'with updates:', updates);
       const updatedCustomer = await storage.updateCustomer(customerId, updates);
+      console.log('Customer updated successfully:', updatedCustomer);
       res.json(updatedCustomer);
     } catch (error) {
       console.error('Error updating customer:', error);
       res.status(500).json({ error: 'Failed to update customer' });
+    }
+  });
+
+  // Customer merge endpoint
+  app.post('/api/customers/merge', requireAuth, async (req: any, res) => {
+    try {
+      const { primaryCustomerId, duplicateCustomerIds, mergedData } = req.body;
+      
+      if (!primaryCustomerId || !Array.isArray(duplicateCustomerIds) || duplicateCustomerIds.length === 0) {
+        return res.status(400).json({ error: 'Primary customer ID and duplicate customer IDs are required' });
+      }
+      
+      console.log('Merging customers:', { primaryCustomerId, duplicateCustomerIds, mergedData });
+      
+      // Merge customer records
+      const mergedCustomer = await storage.mergeCustomers(primaryCustomerId, duplicateCustomerIds, mergedData);
+      
+      res.json({ 
+        success: true, 
+        mergedCustomer,
+        message: `Successfully merged ${duplicateCustomerIds.length} duplicate customer records`
+      });
+    } catch (error) {
+      console.error('Error merging customers:', error);
+      res.status(500).json({ error: 'Failed to merge customers' });
     }
   });
 

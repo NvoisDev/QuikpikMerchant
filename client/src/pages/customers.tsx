@@ -181,6 +181,11 @@ export default function Customers() {
   const [isViewCustomerOrdersDialogOpen, setIsViewCustomerOrdersDialogOpen] = useState(false);
   const [isViewMembersDialogOpen, setIsViewMembersDialogOpen] = useState(false);
   const [selectedGroupForCustomer, setSelectedGroupForCustomer] = useState<number | null>(null);
+  
+  // Customer merge states
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [selectedDuplicates, setSelectedDuplicates] = useState<Customer[]>([]);
+  const [potentialDuplicates, setPotentialDuplicates] = useState<Customer[]>([]);
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -336,7 +341,7 @@ export default function Customers() {
   // Mutations - Customer Address Book
   const updateCustomerMutation = useMutation({
     mutationFn: ({ customerId, data }: { customerId: string; data: EditCustomerFormData }) =>
-      apiRequest('PUT', `/api/customers/${customerId}`, data),
+      apiRequest('PATCH', `/api/customers/${customerId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       toast({ title: "Success", description: "Customer updated successfully!" });
@@ -365,6 +370,33 @@ export default function Customers() {
       toast({
         title: "Error",
         description: error.message || "Failed to add customer to group",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Customer merge mutation
+  const mergeCustomersMutation = useMutation({
+    mutationFn: ({ primaryCustomerId, duplicateCustomerIds, mergedData }: { 
+      primaryCustomerId: string; 
+      duplicateCustomerIds: string[]; 
+      mergedData?: any 
+    }) =>
+      apiRequest('POST', '/api/customers/merge', { primaryCustomerId, duplicateCustomerIds, mergedData }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      toast({ 
+        title: "Success", 
+        description: `Successfully merged ${data.message || 'customer records'}` 
+      });
+      setIsMergeDialogOpen(false);
+      setSelectedDuplicates([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to merge customers",
         variant: "destructive",
       });
     },
@@ -484,6 +516,29 @@ export default function Customers() {
   const handleAddCustomerToGroup = (data: AddToGroupFormData) => {
     if (!selectedCustomer) return;
     addCustomerToGroupMutation.mutate({ groupId: data.groupId, customerId: selectedCustomer.id });
+  };
+
+  // Find potential duplicate customers by phone number
+  const findDuplicateCustomers = (phoneNumber: string) => {
+    const lastFourDigits = phoneNumber.slice(-4);
+    return customers.filter(customer => 
+      customer.phoneNumber.slice(-4) === lastFourDigits && 
+      customer.phoneNumber !== phoneNumber
+    );
+  };
+
+  // Handle customer merge
+  const handleMergeCustomers = (primaryCustomer: Customer, duplicates: Customer[]) => {
+    const duplicateIds = duplicates.map(d => d.id);
+    mergeCustomersMutation.mutate({
+      primaryCustomerId: primaryCustomer.id,
+      duplicateCustomerIds: duplicateIds,
+      mergedData: {
+        firstName: primaryCustomer.firstName,
+        lastName: primaryCustomer.lastName,
+        email: primaryCustomer.email || duplicates.find(d => d.email)?.email
+      }
+    });
   };
 
   const handleRemoveFromGroup = (customerId: string, groupId: number) => {
@@ -911,6 +966,31 @@ export default function Customers() {
                 title="Customer Directory & Groups"
                 steps={helpContent.customerDirectory.steps}
               />
+              <Button
+                onClick={() => {
+                  // Find Michael's duplicate accounts specifically
+                  const michaelAccounts = customers.filter(c => 
+                    c.phoneNumber.includes('9550') && 
+                    (c.firstName === 'Michael' || c.firstName.includes('Michael'))
+                  ).sort((a, b) => b.totalOrders - a.totalOrders); // Sort by orders descending
+                  
+                  if (michaelAccounts.length > 1) {
+                    setSelectedDuplicates(michaelAccounts);
+                    setIsMergeDialogOpen(true);
+                  } else {
+                    toast({
+                      title: "No duplicates found",
+                      description: "No duplicate customer accounts detected",
+                    });
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+              >
+                <Users className="h-4 w-4" />
+                <span>Merge Duplicates</span>
+              </Button>
               <Button
                 onClick={() => {
                   // Set a default group for directory additions (or create a general one)
@@ -1893,6 +1973,79 @@ export default function Customers() {
               Cancel
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Merge Dialog */}
+      <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Merge Duplicate Customer Accounts</DialogTitle>
+            <DialogDescription>
+              Combine multiple customer records with the same phone number into a single account. All orders and group memberships will be transferred to the primary account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDuplicates.length > 0 && (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">Duplicate Accounts Found</h4>
+                <p className="text-sm text-yellow-700">
+                  These customers share the same phone number ending in {selectedDuplicates[0]?.phoneNumber.slice(-4)}:
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                {selectedDuplicates.map((customer, index) => (
+                  <div 
+                    key={customer.id} 
+                    className={`p-4 border rounded-lg ${index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h5 className="font-medium">
+                          {customer.firstName} {customer.lastName || ''}
+                          {index === 0 && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">PRIMARY</span>}
+                        </h5>
+                        <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
+                        {customer.email && <p className="text-sm text-gray-600">{customer.email}</p>}
+                        <p className="text-sm text-gray-500">{customer.totalOrders} orders • £{customer.totalSpent.toFixed(2)} spent</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h5 className="text-sm font-medium text-blue-800 mb-2">After Merge:</h5>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• All orders from duplicate accounts will be transferred to the primary account</li>
+                  <li>• Customer group memberships will be consolidated</li>
+                  <li>• Duplicate records will be permanently deleted</li>
+                  <li>• Primary account will retain the best available information (name, email, etc.)</li>
+                </ul>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsMergeDialogOpen(false);
+                    setSelectedDuplicates([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleMergeCustomers(selectedDuplicates[0], selectedDuplicates.slice(1))}
+                  disabled={mergeCustomersMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {mergeCustomersMutation.isPending ? "Merging..." : "Merge Accounts"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

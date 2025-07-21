@@ -132,6 +132,7 @@ export interface IStorage {
     newCustomersThisMonth: number;
     topCustomers: { customerId: string; name: string; totalSpent: number }[];
   }>;
+  mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }>;
   
   // SMS verification operations
   createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode>;
@@ -1192,19 +1193,116 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, customerId));
   }
 
-  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User> {
+  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string }): Promise<User> {
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+    
+    if (updates.firstName !== undefined) updateData.firstName = updates.firstName;
+    if (updates.lastName !== undefined) updateData.lastName = updates.lastName;
+    if (updates.email !== undefined) updateData.email = updates.email;
+    if (updates.phoneNumber !== undefined) updateData.phoneNumber = updates.phoneNumber;
+    
     const [updatedUser] = await db
       .update(users)
-      .set({
-        firstName: updates.firstName,
-        lastName: updates.lastName,
-        email: updates.email,
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(users.id, customerId))
       .returning();
     
     return updatedUser;
+  }
+
+  async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<User> {
+    try {
+      console.log('Starting customer merge process:', { primaryCustomerId, duplicateCustomerIds });
+      
+      // Step 1: Get all customer records
+      const primaryCustomer = await this.getUser(primaryCustomerId);
+      if (!primaryCustomer) {
+        throw new Error('Primary customer not found');
+      }
+      
+      const duplicateCustomers = await Promise.all(
+        duplicateCustomerIds.map(id => this.getUser(id))
+      );
+      
+      // Step 2: Merge customer data (keep best available information)
+      const mergedCustomerData = {
+        firstName: mergedData?.firstName || primaryCustomer.firstName || duplicateCustomers.find(c => c?.firstName)?.firstName,
+        lastName: mergedData?.lastName || primaryCustomer.lastName || duplicateCustomers.find(c => c?.lastName)?.lastName,
+        email: mergedData?.email || primaryCustomer.email || duplicateCustomers.find(c => c?.email)?.email,
+        phoneNumber: primaryCustomer.phoneNumber, // Keep primary phone number
+        updatedAt: new Date()
+      };
+      
+      console.log('Merged customer data:', mergedCustomerData);
+      
+      // Step 3: Update primary customer with merged data
+      const [updatedPrimaryCustomer] = await db
+        .update(users)
+        .set(mergedCustomerData)
+        .where(eq(users.id, primaryCustomerId))
+        .returning();
+      
+      // Step 4: Transfer orders from duplicate customers to primary customer
+      for (const duplicateId of duplicateCustomerIds) {
+        await db
+          .update(orders)
+          .set({ retailerId: primaryCustomerId })
+          .where(eq(orders.retailerId, duplicateId));
+      }
+      
+      // Step 5: Transfer customer group memberships to primary customer
+      for (const duplicateId of duplicateCustomerIds) {
+        // Get customer group memberships for duplicate
+        const memberships = await db
+          .select()
+          .from(customerGroupMembers)
+          .where(eq(customerGroupMembers.customerId, duplicateId));
+        
+        // Add primary customer to groups if not already member
+        for (const membership of memberships) {
+          const existingMembership = await db
+            .select()
+            .from(customerGroupMembers)
+            .where(
+              and(
+                eq(customerGroupMembers.customerGroupId, membership.customerGroupId),
+                eq(customerGroupMembers.customerId, primaryCustomerId)
+              )
+            );
+          
+          if (existingMembership.length === 0) {
+            await db
+              .insert(customerGroupMembers)
+              .values({
+                customerGroupId: membership.customerGroupId,
+                customerId: primaryCustomerId,
+                addedAt: new Date()
+              });
+          }
+        }
+        
+        // Remove duplicate customer from groups
+        await db
+          .delete(customerGroupMembers)
+          .where(eq(customerGroupMembers.customerId, duplicateId));
+      }
+      
+      // Step 6: Delete duplicate customer records
+      for (const duplicateId of duplicateCustomerIds) {
+        await db
+          .delete(users)
+          .where(eq(users.id, duplicateId));
+      }
+      
+      console.log('Customer merge completed successfully');
+      return updatedPrimaryCustomer;
+      
+    } catch (error) {
+      console.error('Error in mergeCustomers:', error);
+      throw error;
+    }
   }
 
   // Order item operations
@@ -3360,6 +3458,65 @@ export class DatabaseStorage implements IStorage {
         totalSpent: parseFloat(customer.total_spent) || 0
       }))
     };
+  }
+
+  // Customer merge implementation
+  async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }> {
+    console.log(`🔗 Starting customer merge: primary=${primaryCustomerId}, duplicates=[${duplicateCustomerIds.join(', ')}]`);
+    
+    try {
+      let mergedOrdersCount = 0;
+      
+      for (const duplicateId of duplicateCustomerIds) {
+        console.log(`🔄 Processing duplicate customer: ${duplicateId}`);
+        
+        // 1. Transfer all orders from duplicate to primary customer
+        const orderUpdateResult = await db
+          .update(orders)
+          .set({ retailerId: primaryCustomerId })
+          .where(eq(orders.retailerId, duplicateId))
+          .returning({ id: orders.id });
+        
+        mergedOrdersCount += orderUpdateResult.length;
+        console.log(`📦 Transferred ${orderUpdateResult.length} orders from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 2. Remove duplicate from all customer groups
+        await db
+          .delete(customerGroupMembers)
+          .where(eq(customerGroupMembers.customerId, duplicateId));
+        
+        console.log(`👥 Removed ${duplicateId} from all customer groups`);
+        
+        // 3. Delete the duplicate user record
+        await db
+          .delete(users)
+          .where(eq(users.id, duplicateId));
+        
+        console.log(`🗑️ Deleted duplicate user record: ${duplicateId}`);
+      }
+      
+      // 4. Update primary customer with merged data if provided
+      if (mergedData) {
+        console.log(`📝 Updating primary customer with merged data:`, mergedData);
+        await db
+          .update(users)
+          .set({
+            firstName: mergedData.firstName,
+            lastName: mergedData.lastName,
+            email: mergedData.email,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, primaryCustomerId));
+      }
+      
+      console.log(`✅ Customer merge completed successfully. Total orders merged: ${mergedOrdersCount}`);
+      
+      return { mergedOrdersCount };
+      
+    } catch (error) {
+      console.error('❌ Error during customer merge:', error);
+      throw error;
+    }
   }
 }
 
