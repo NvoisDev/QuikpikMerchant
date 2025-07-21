@@ -47,9 +47,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     if (authParam && authParam.length === 4) {
       console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
       setLastFourDigits(authParam);
-      // DO NOT auto-trigger - let user manually click login to prevent loops
+      // Auto-proceed to SMS verification since digits already entered in CustomerLogin
+      setTimeout(() => handleLogin(), 100); // Small delay to ensure state is set
     }
-  }, []);
+  }, [wholesalerId]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
