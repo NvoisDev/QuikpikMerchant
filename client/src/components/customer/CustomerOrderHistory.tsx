@@ -257,8 +257,8 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span>Transaction Fee:</span>
-              <span>{formatCurrency(order.transactionFee || order.platformFee)}</span>
+              <span>Platform Fee:</span>
+              <span>{formatCurrency(6.00)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-2">
               <span>Total Paid:</span>
@@ -521,7 +521,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       </div>
                       <div className="flex justify-between text-xs">
                         <span>Platform Fee:</span>
-                        <span>{formatCurrency(order.platformFee)}</span>
+                        <span>{formatCurrency(6.00)}</span>
                       </div>
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total:</span>
@@ -538,7 +538,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       {format(new Date(order.date), 'MMM d, yyyy')}
                     </div>
                     
-                    {/* Collection info */}
+                    {/* Collection/Delivery info */}
                     <div className="flex items-center justify-end space-x-1 mt-1">
                       {order.fulfillmentType === 'delivery' ? (
                         <>
@@ -546,7 +546,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                             <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                             <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-.293-.707L15 4.586A1 1 0 0014.293 4H14v3z"/>
                           </svg>
-                          <span className="text-xs text-gray-600">Collection</span>
+                          <span className="text-xs text-gray-600">Delivery</span>
                         </>
                       ) : (
                         <>
@@ -554,7 +554,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                             <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z"/>
                             <path fillRule="evenodd" d="M6 7a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V7zm2-1a1 1 0 00-1 1v6a1 1 0 001 1h4a1 1 0 001-1V7a1 1 0 00-1-1H8z" clipRule="evenodd"/>
                           </svg>
-                          <span className="text-xs text-gray-600">Collect</span>
+                          <span className="text-xs text-gray-600">Collection</span>
                         </>
                       )}
                     </div>

@@ -208,9 +208,9 @@ export default function Checkout() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Platform Fee (5%):</span>
+                    <span className="text-gray-600">Platform Fee:</span>
                     <span className="font-medium text-gray-900">
-                      {formatCurrency(order.platformFee)}
+                      {formatCurrency(6.00)}
                     </span>
                   </div>
                   <Separator />

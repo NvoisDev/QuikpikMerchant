@@ -1141,12 +1141,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate platform fee (3.3%) and transaction fee (5.5% + £0.50)
-      const platformFee = calculatedTotal * 0.033; // Wholesaler pays 3.3%
-      const transactionFeePercentage = calculatedTotal * 0.055; // Customer pays 5.5%
-      const transactionFeeFixed = 0.50; // Customer pays £0.50 fixed fee
-      const transactionFee = transactionFeePercentage + transactionFeeFixed; // Total customer fee
-      const totalAmountWithFee = calculatedTotal + transactionFee;
+      // Simple platform fee: £6.00 (equivalent to subtotal * 5.5% + £0.50 for £100 order)
+      const platformFee = 6.00; // Customer pays £6 platform fee
+      const totalAmountWithFee = calculatedTotal + platformFee;
 
       // Get first product's wholesaler for Stripe Connect account
       const firstProduct = validatedItems[0].product;
@@ -1160,11 +1157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Stripe payment intent with Connect account and platform fee
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+        amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
         currency: (wholesaler.preferredCurrency?.toLowerCase() || 'usd') as string,
-        application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee collected by platform
+        application_fee_amount: Math.round(platformFee * 100), // £6 platform fee collected by platform
         transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7% of product total
+          destination: wholesaler.stripeAccountId, // Wholesaler receives full product amount
         },
         receipt_email: customerEmail, // ✅ Automatically send Stripe receipt to customer
         metadata: {
@@ -1174,7 +1171,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerAddress: JSON.stringify(customerAddress),
           totalAmount: calculatedTotal.toFixed(2),
           platformFee: platformFee.toFixed(2),
-          transactionFee: transactionFee.toFixed(2),
           totalAmountWithFee: totalAmountWithFee.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
@@ -1190,10 +1186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         totalAmount: calculatedTotal.toFixed(2), // Product subtotal
-        transactionFee: transactionFee.toFixed(2), // Customer pays 5.5% + £0.50 transaction fee
-        platformFee: platformFee.toFixed(2), // Platform collects 3.3% platform fee from wholesaler
+        platformFee: platformFee.toFixed(2), // Platform collects £6 platform fee
         totalAmountWithFee: totalAmountWithFee.toFixed(2), // Total customer payment
-        wholesalerReceives: (calculatedTotal - platformFee).toFixed(2) // 96.7% to wholesaler
+        wholesalerReceives: (calculatedTotal).toFixed(2) // Wholesaler receives full product amount
       });
 
     } catch (error) {
@@ -1313,10 +1308,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName, // Store customer name
           customerEmail, // Store customer email
           customerPhone, // Store customer phone
-          subtotal: wholesalerAmount,
-          platformFee: actualPlatformFee,
-          transactionFee: transactionFee || '0.00',
-          total: totalAmount,
+          subtotal: totalAmount, // Product subtotal (what wholesaler gets)
+          platformFee: '6.00', // Simple £6 platform fee
+          transactionFee: '0.00', // No separate transaction fee
+          total: totalAmountWithFee, // Total = subtotal + £6 platform fee
           status: 'paid',
           stripePaymentIntentId: paymentIntent.id,
           deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
@@ -1602,10 +1597,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const orderData = {
             wholesalerId,
             retailerId: customer.id,
-            subtotal: (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2),
-            platformFee,
-            transactionFee: transactionFee || '0.00',
-            total: totalAmount,
+            subtotal: totalAmount, // Product subtotal (what wholesaler gets)
+            platformFee: '6.00', // Simple £6 platform fee
+            transactionFee: '0.00', // No separate transaction fee
+            total: totalAmountWithFee, // Total = subtotal + £6 platform fee
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,

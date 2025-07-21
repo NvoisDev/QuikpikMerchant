@@ -54,14 +54,13 @@ export default function OrderSummaryModal({
     mutationFn: async (orderData: any) => {
       return await apiRequest("POST", "/api/orders", orderData);
     },
-    onSuccess: (response) => {
+    onSuccess: (orderData) => {
       toast({
         title: "Order Created",
         description: "Your order has been created successfully",
       });
       onClose();
       // Redirect to checkout with order ID
-      const orderData = response.json ? response.json() : response;
       window.location.href = `/checkout?orderId=${orderData.id}`;
     },
     onError: (error: Error) => {
@@ -77,16 +76,14 @@ export default function OrderSummaryModal({
     const subtotal = cartItems.reduce((total, item) => {
       return total + (parseFloat(item.product.price) * item.quantity);
     }, 0);
-    // Customer pays transaction fee: 5.5% + £0.50
-    const transactionFeePercentage = subtotal * 0.055;
-    const transactionFeeFixed = 0.50;
-    const transactionFee = transactionFeePercentage + transactionFeeFixed;
-    const total = subtotal + transactionFee;
+    // Simple platform fee: £6.00
+    const platformFee = 6.00;
+    const total = subtotal + platformFee;
 
-    return { subtotal, transactionFee, total };
+    return { subtotal, platformFee, total };
   };
 
-  const { subtotal, transactionFee, total } = calculateTotals();
+  const { subtotal, platformFee, total } = calculateTotals();
 
   const handleProceedToPayment = () => {
     if (!deliveryAddress.trim()) {
@@ -255,9 +252,9 @@ export default function OrderSummaryModal({
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Transaction Fee (5.5% + £0.50):</span>
+                <span className="text-gray-600">Platform Fee:</span>
                 <span className="font-medium text-gray-900">
-                  {formatCurrency(transactionFee)}
+                  {formatCurrency(6.00)}
                 </span>
               </div>
               <Separator />

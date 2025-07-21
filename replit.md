@@ -2,6 +2,18 @@
 
 ## Outstanding Issues (July 21, 2025) - ALL RESOLVED ✅
 
+### Simplified Platform Fee Display Structure - COMPLETED ✅ (July 21, 2025)
+- **User Request**: Simplify fee structure to show "Subtotal £100.00 + Platform Fee £6.00 = Total £106.00"
+- **Implementation**: Replaced complex "Transaction Fee (5.5% + £0.50)" with simple "Platform Fee: £6.00" across all customer-facing components
+- **Technical Changes**:
+  - **Frontend Updates**: Updated CustomerOrderHistory.tsx, checkout.tsx, and order-summary-modal.tsx to display "Platform Fee: £6.00"
+  - **Backend Calculation**: Simplified platform fee calculation to fixed £6.00 (equivalent to subtotal × 5.5% + £0.50 for £100 order)
+  - **Order Storage Fix**: Fixed order creation to store correct total (subtotal + £6) instead of just subtotal
+  - **Payment Intent**: Updated Stripe payment intent to charge customer subtotal + £6 platform fee
+  - **Database Storage**: Orders now correctly store subtotal (product amount), platformFee (£6.00), and total (subtotal + £6)
+- **Customer Experience**: Clear, simple fee structure showing "Subtotal + Platform Fee = Total" without complex percentage calculations
+- **Status**: ✅ COMPLETED - Simplified fee structure operational across all order flows
+
 ### Transaction Fee Calculation Display Bug - RESOLVED ✅ (July 21, 2025)
 - **Issue Resolved**: Order summary modal was displaying £0.00 transaction fees instead of correct calculated amounts
 - **Root Cause**: Customer-facing order summary used incorrect 5% platform fee calculation instead of proper 5.5% + £0.50 transaction fee formula
