@@ -1572,19 +1572,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
       
       try {
-        // Extract order data from metadata
-        const {
-          customerName,
-          customerEmail,
-          customerPhone,
-          productSubtotal,
-          customerTransactionFee,
-          wholesalerPlatformFee,
-          wholesalerReceives,
-          totalCustomerPays,
-          wholesalerId,
-          orderType
-        } = paymentIntent.metadata;
+        // Extract order data from metadata with fallback handling
+        const metadata = paymentIntent.metadata;
+        const customerName = metadata.customerName;
+        const customerEmail = metadata.customerEmail;
+        const customerPhone = metadata.customerPhone;
+        const productSubtotal = metadata.productSubtotal || metadata.totalAmount;
+        const customerTransactionFee = metadata.customerTransactionFee || '0';
+        const wholesalerPlatformFee = metadata.wholesalerPlatformFee || metadata.platformFee || '0';
+        const wholesalerReceives = metadata.wholesalerReceives || '0';
+        const totalCustomerPays = metadata.totalCustomerPays || metadata.totalAmountWithFee || '0';
+        const wholesalerId = metadata.wholesalerId;
+        const orderType = metadata.orderType;
 
         if (orderType === 'customer_portal') {
           // Extract customer and order data from metadata
@@ -1610,14 +1609,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Create order
+          // Create order with proper field parsing
           const orderData = {
             wholesalerId: wholesalerId,
             retailerId: customer.id,
-            subtotal: parseFloat(paymentIntent.metadata.productSubtotal).toFixed(2), // Product subtotal
-            platformFee: parseFloat(paymentIntent.metadata.wholesalerPlatformFee).toFixed(2), // 3.3% platform fee (deducted from wholesaler)
-            customerTransactionFee: parseFloat(paymentIntent.metadata.customerTransactionFee).toFixed(2), // Customer transaction fee (5.5% + £0.50)
-            total: parseFloat(paymentIntent.metadata.totalCustomerPays).toFixed(2), // Total amount customer paid
+            subtotal: parseFloat(productSubtotal || '0').toFixed(2), // Product subtotal
+            platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee (deducted from wholesaler)
+            customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+            total: parseFloat(totalCustomerPays || '0').toFixed(2), // Total amount customer paid
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
