@@ -2,6 +2,22 @@
 
 ## Outstanding Issues (July 21, 2025) - ALL RESOLVED ✅
 
+### Transaction Fee Calculation Display Bug - RESOLVED ✅ (July 21, 2025)
+- **Issue Resolved**: Order summary modal was displaying £0.00 transaction fees instead of correct calculated amounts
+- **Root Cause**: Customer-facing order summary used incorrect 5% platform fee calculation instead of proper 5.5% + £0.50 transaction fee formula
+- **Solution Implemented**: 
+  - Updated order-summary-modal.tsx calculateTotals function to use correct transaction fee calculation (5.5% + £0.50)
+  - Changed customer-facing display label from "Platform Fee (5%)" to "Transaction Fee (5.5% + £0.50)" for transparency
+  - Fixed backend routes.ts platform fee calculation from incorrect 2.5% to correct 3.3% for proper database storage
+  - Ensured fee structure separation: customers see transaction fees, wholesalers see platform fees
+- **Technical Implementation**:
+  - **Customer Transaction Fees**: 5.5% + £0.50 calculated and displayed correctly in order summary
+  - **Platform Fee Backend**: Updated from 2.5% to 3.3% for proper fee collection and database storage
+  - **Display Logic**: Customer components show transaction fees, wholesaler components show platform fees
+  - **Payment Integration**: All payment endpoints maintain correct fee structure separation
+- **Production Testing**: Transaction fees now calculate and display proper amounts instead of £0.00
+- **Status**: ✅ RESOLVED - Transaction fee calculations working correctly across all customer order flows
+
 ### Complete Email Notification System Fix - COMPLETED ✅ (July 21, 2025)
 - **Issue Resolved**: SendGrid email notifications were failing with 403 Forbidden errors for both wholesaler and customer emails
 - **Root Cause**: Complex email template generation was causing SendGrid API failures despite valid API key
