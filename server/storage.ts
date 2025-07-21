@@ -3167,6 +3167,17 @@ export class DatabaseStorage implements IStorage {
     return code;
   }
 
+  async getLatestSMSCode(customerId: string): Promise<string | null> {
+    const [latest] = await db
+      .select()
+      .from(smsVerificationCodes)
+      .where(eq(smsVerificationCodes.customerId, customerId))
+      .orderBy(desc(smsVerificationCodes.createdAt))
+      .limit(1);
+    
+    return latest?.code || null;
+  }
+
   async getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined> {
     console.log('Getting SMS verification code:', { wholesalerId, customerId, code });
     const [result] = await db

@@ -401,6 +401,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SMS verification request
+  // Debug endpoint to get verification codes when SMS fails
+  app.post('/api/customer-auth/get-debug-code', async (req, res) => {
+    const { wholesalerId, lastFourDigits } = req.body;
+    
+    if (!wholesalerId || !lastFourDigits) {
+      return res.status(400).json({ error: "Wholesaler ID and last four digits required" });
+    }
+    
+    try {
+      // Find the latest SMS verification code for this customer
+      const customer = await findCustomerByLastFourDigits(lastFourDigits, wholesalerId);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      
+      // Get the latest SMS code from database
+      const verificationCode = await storage.getLatestSMSCode(customer.id);
+      
+      res.json({ 
+        success: true,
+        debugCode: verificationCode,
+        message: "Debug code retrieved for development",
+        customerName: customer.name,
+        phone: customer.phone
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/customer-auth/request-sms', async (req, res) => {
     try {
       const { wholesalerId, lastFourDigits } = req.body;

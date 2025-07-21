@@ -82,6 +82,10 @@ export class SMSService {
       });
 
       console.log('SMS sent successfully:', message.sid);
+      console.log('🚀 DEVELOPMENT MODE: SMS Code for Customer');
+      console.log(`📱 Phone: ${phoneNumber}`);
+      console.log(`🔐 Verification Code: ${code}`);
+      console.log(`🏢 Business: ${businessName}`);
       return true;
     } catch (error: any) {
       console.error('Error sending SMS:', error);
