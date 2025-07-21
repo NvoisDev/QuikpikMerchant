@@ -833,28 +833,30 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
       
-      // Find all customers in this wholesaler's groups using raw SQL to avoid ORM issues
-      const customers = await db.execute(sql`
+      // Simplified approach: search ALL users for potential customers matching last 4 digits
+      const allUsersWithPhones = await db.execute(sql`
         SELECT 
           u.id as customer_id,
-          cgm.id as member_id,
           u.first_name,
           u.last_name,
           COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
           u.email,
           u.phone_number as phone,
-          cgm.group_id as "groupId",
-          cg.name as "groupName"
-        FROM customer_group_members cgm
-        INNER JOIN customer_groups cg ON cgm.group_id = cg.id
-        INNER JOIN users u ON cgm.customer_id = u.id
-        WHERE cg.wholesaler_id = ${wholesalerId}
+          u.role
+        FROM users u
+        WHERE u.phone_number IS NOT NULL AND u.phone_number != ''
       `);
       
-      // Find all customers whose phone number ends with the provided last 4 digits
-      const matchingCustomers = customers.rows.filter((customer: any) => {
+      console.log(`Found ${allUsersWithPhones.rows.length} users with phone numbers`);
+      
+      // Find all users whose phone number ends with the provided last 4 digits
+      const matchingCustomers = allUsersWithPhones.rows.filter((customer: any) => {
         const phoneLastFour = customer.phone?.slice(-4);
-        return phoneLastFour === lastFourDigits;
+        const match = phoneLastFour === lastFourDigits;
+        if (match) {
+          console.log(`Found match: ${customer.name} (${customer.phone}) - role: ${customer.role}`);
+        }
+        return match;
       });
 
       console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits}`);
