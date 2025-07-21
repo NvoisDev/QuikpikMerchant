@@ -301,6 +301,22 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             } catch {
               errorMessage = "Invalid payment details. Please check your order and try again.";
             }
+          } else if (error.name === "ApiRequestError" && error.message.includes("stripe_setup_required")) {
+            errorTitle = "Payment Processing Unavailable";
+            errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
+          } else if (error.name === "ApiRequestError") {
+            // Enhanced error parsing for API request errors
+            try {
+              const errorResponse = JSON.parse(error.message);
+              if (errorResponse.errorType === "stripe_setup_required") {
+                errorTitle = "Payment Processing Unavailable";
+                errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
+              } else {
+                errorMessage = errorResponse.message || error.message || "Unable to process payment. Please try again.";
+              }
+            } catch {
+              errorMessage = error.message || "Unable to process payment. Please try again.";
+            }
           } else if (error.response?.status === 429) {
             errorMessage = "Too many payment attempts. Please wait a moment and try again.";
           } else if (error.response?.status >= 500) {
@@ -410,7 +426,17 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         } else if (error.type === 'validation_error') {
           errorMessage = "Invalid payment details. Please check your information and try again.";
         } else if (error.type === 'api_error') {
-          errorMessage = "Payment service temporarily unavailable. Please try again later.";
+          // Check if this might be a Stripe account issue
+          if (error.message && (error.message.includes('account') || error.message.includes('setup') || error.message.includes('onboarding'))) {
+            errorTitle = "Store Payment Setup Issue";
+            errorMessage = "The business owner may need to complete their payment setup. Please contact them directly or try again later.";
+          } else {
+            errorMessage = "Payment service temporarily unavailable. Please try again later.";
+          }
+        } else if (error.type === 'invalid_request_error') {
+          // This could indicate Stripe account setup issues
+          errorTitle = "Payment Configuration Issue";
+          errorMessage = "There's an issue with the payment setup. Please contact the business owner or try again later.";
         } else {
           errorMessage = error.message || "An unexpected payment error occurred. Please try again.";
         }
