@@ -47,10 +47,19 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     if (authParam && authParam.length === 4) {
       console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
       setLastFourDigits(authParam);
-      // Auto-proceed to SMS verification since digits already entered in CustomerLogin
-      setTimeout(() => handleLogin(), 100); // Small delay to ensure state is set
     }
   }, [wholesalerId]);
+
+  // Auto-trigger login when lastFourDigits is set from URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get('auth');
+    
+    if (authParam && lastFourDigits === authParam && lastFourDigits.length === 4 && wholesalerId) {
+      console.log('🚀 Auto-triggering authentication with digits:', lastFourDigits);
+      handleLogin();
+    }
+  }, [lastFourDigits, wholesalerId]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
