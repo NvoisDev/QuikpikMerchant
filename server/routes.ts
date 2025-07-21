@@ -1566,18 +1566,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Webhook to handle successful payments
   app.post('/api/stripe/webhook', async (req, res) => {
+    console.log('📨 Webhook received from Stripe');
+    
     const sig = req.headers['stripe-signature'] as string;
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+      // Check if webhook secret is configured
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.log('⚠️ STRIPE_WEBHOOK_SECRET not configured - webhook processing skipped');
+        return res.status(400).json({ error: 'Webhook secret not configured' });
+      }
+
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      console.log('✅ Webhook signature verified successfully');
     } catch (err: any) {
-      console.log(`Webhook signature verification failed.`, err.message);
+      console.log(`❌ Webhook signature verification failed:`, err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
+      console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
       
       try {
         // Extract order data from metadata
@@ -1619,7 +1629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Create order
           const orderData = {
-            wholesalerId: parseInt(wholesalerId),
+            wholesalerId: wholesalerId,
             retailerId: customer.id,
             subtotal: parseFloat(totalAmount).toFixed(2), // Product subtotal (what wholesaler gets)
             platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
@@ -1643,6 +1653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
 
           const order = await storage.createOrder(orderData, orderItems);
+          console.log('✅ Order created successfully:', order.id);
 
           // Send customer confirmation email and Stripe invoice
           const wholesaler = await storage.getUser(wholesalerId);
