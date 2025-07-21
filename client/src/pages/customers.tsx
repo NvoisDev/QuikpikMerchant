@@ -2115,13 +2115,18 @@ export default function Customers() {
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-end mt-3">
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-blue-200">
+                      <p className="text-sm text-blue-700">
+                        The customer with the most orders will be the primary account
+                      </p>
                       <Button 
                         onClick={handleStartManualMerge}
                         disabled={selectedCustomersForMerge.length < 2}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-green-600 hover:bg-green-700 font-medium"
+                        size="lg"
                       >
-                        Continue with Merge ({selectedCustomersForMerge.length})
+                        <Users className="h-4 w-4 mr-2" />
+                        Merge {selectedCustomersForMerge.length} Customers
                       </Button>
                     </div>
                   </div>

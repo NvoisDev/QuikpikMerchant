@@ -27,6 +27,12 @@
 - **Successful Testing**: Michael Ogunjemilua duplicate accounts successfully merged - consolidated 4 duplicate accounts into single primary account with all 16 orders transferred
 - **Production Ready**: Customer merge system operational with comprehensive data transfer and proper cleanup
 - **Help Documentation**: Comprehensive customer merge guide added to Help tab for self-service support (July 21, 2025)
+- **SEARCH ENHANCEMENT COMPLETED**: ✅ Enhanced customer merge with advanced search capabilities (July 21, 2025)
+- **Dropdown Menu Interface**: Added dropdown with "Auto-Detect Duplicates" and "Search & Select Customers" options for flexible merge approaches
+- **Manual Customer Selection**: Comprehensive search interface allowing users to find and select specific customers to merge beyond automatic duplicate detection
+- **Real-time Search**: Search functionality by name, phone number, or email with visual checkbox selection and smart counter
+- **Enhanced Merge Dialog**: Dynamic interface with mode-specific titles, descriptions, and prominent merge action buttons
+- **Primary Account Logic**: Automatic determination of primary account based on order count with clear visual indicators
 
 ## Outstanding Issues (July 20, 2025)
 
