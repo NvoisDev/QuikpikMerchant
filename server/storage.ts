@@ -3470,7 +3470,7 @@ export class DatabaseStorage implements IStorage {
       for (const duplicateId of duplicateCustomerIds) {
         console.log(`🔄 Processing duplicate customer: ${duplicateId}`);
         
-        // 1. Transfer all orders from duplicate to primary customer
+        // 1. Transfer all orders where duplicate is the retailer
         const orderUpdateResult = await db
           .update(orders)
           .set({ retailerId: primaryCustomerId })
@@ -3478,16 +3478,106 @@ export class DatabaseStorage implements IStorage {
           .returning({ id: orders.id });
         
         mergedOrdersCount += orderUpdateResult.length;
-        console.log(`📦 Transferred ${orderUpdateResult.length} orders from ${duplicateId} to ${primaryCustomerId}`);
+        console.log(`📦 Transferred ${orderUpdateResult.length} retailer orders from ${duplicateId} to ${primaryCustomerId}`);
         
-        // 2. Remove duplicate from all customer groups
+        // Also transfer orders where duplicate is the wholesaler
+        const wholesalerOrderUpdateResult = await db
+          .update(orders)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(orders.wholesalerId, duplicateId))
+          .returning({ id: orders.id });
+        
+        mergedOrdersCount += wholesalerOrderUpdateResult.length;
+        console.log(`📦 Transferred ${wholesalerOrderUpdateResult.length} wholesaler orders from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 2. Transfer message templates to primary customer (if any)
+        await db
+          .update(messageTemplates)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(messageTemplates.wholesalerId, duplicateId));
+        
+        console.log(`📧 Transferred message templates from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 3. Transfer broadcasts to primary customer (if any)
+        await db
+          .update(broadcasts)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(broadcasts.wholesalerId, duplicateId));
+        
+        console.log(`📢 Transferred broadcasts from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 4. Transfer customer groups to primary customer (if any)
+        await db
+          .update(customerGroups)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(customerGroups.wholesalerId, duplicateId));
+        
+        console.log(`👥 Transferred customer groups from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 5. Remove duplicate from all customer groups as a member
         await db
           .delete(customerGroupMembers)
           .where(eq(customerGroupMembers.customerId, duplicateId));
         
-        console.log(`👥 Removed ${duplicateId} from all customer groups`);
+        console.log(`👥 Removed ${duplicateId} from all customer group memberships`);
         
-        // 3. Delete the duplicate user record
+        // 6. Transfer products to primary customer (if any)
+        await db
+          .update(products)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(products.wholesalerId, duplicateId));
+        
+        console.log(`📦 Transferred products from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 7. Transfer template campaigns to primary customer (if any)
+        await db
+          .update(templateCampaigns)
+          .set({ wholesalerId: primaryCustomerId })
+          .where(eq(templateCampaigns.wholesalerId, duplicateId));
+        
+        console.log(`📋 Transferred template campaigns from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 8. Transfer stock movements to primary customer (if any)
+        await db.execute(sql`UPDATE stock_movements SET wholesaler_id = ${primaryCustomerId} WHERE wholesaler_id = ${duplicateId}`);
+        
+        console.log(`📈 Transferred stock movements from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 9. Transfer negotiations where duplicate is the retailer (if any)
+        await db.execute(sql`UPDATE negotiations SET retailer_id = ${primaryCustomerId} WHERE retailer_id = ${duplicateId}`);
+        
+        console.log(`🤝 Transferred negotiations from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 10. Transfer stock alerts to primary customer (if any)
+        await db.execute(sql`UPDATE stock_alerts SET wholesaler_id = ${primaryCustomerId} WHERE wholesaler_id = ${duplicateId}`);
+        
+        console.log(`🚨 Transferred stock alerts from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 11. Transfer stock update notifications to primary customer (if any)
+        await db.execute(sql`UPDATE stock_update_notifications SET wholesaler_id = ${primaryCustomerId} WHERE wholesaler_id = ${duplicateId}`);
+        
+        console.log(`📢 Transferred stock update notifications from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 12. Transfer tab permissions to primary customer (if any)
+        await db.execute(sql`UPDATE tab_permissions SET wholesaler_id = ${primaryCustomerId} WHERE wholesaler_id = ${duplicateId}`);
+        
+        console.log(`🔐 Transferred tab permissions from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 13. Transfer team members to primary customer (if any)
+        await db.execute(sql`UPDATE team_members SET wholesaler_id = ${primaryCustomerId} WHERE wholesaler_id = ${duplicateId}`);
+        
+        console.log(`👨‍💼 Transferred team members from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 14. Transfer user badges (if any)
+        await db.execute(sql`UPDATE user_badges SET user_id = ${primaryCustomerId} WHERE user_id = ${duplicateId}`);
+        
+        console.log(`🏆 Transferred user badges from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 15. Transfer onboarding milestones (if any)
+        await db.execute(sql`UPDATE onboarding_milestones SET user_id = ${primaryCustomerId} WHERE user_id = ${duplicateId}`);
+        
+        console.log(`🎯 Transferred onboarding milestones from ${duplicateId} to ${primaryCustomerId}`);
+        
+        // 16. Delete the duplicate user record
         await db
           .delete(users)
           .where(eq(users.id, duplicateId));
