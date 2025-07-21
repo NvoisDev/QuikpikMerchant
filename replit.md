@@ -2,6 +2,26 @@
 
 ## Payment System Status - FULLY OPERATIONAL ✅ (July 21, 2025)
 
+### CUSTOMER LOGOUT REDIRECT FIX - COMPLETED ✅ (July 21, 2025)
+- **Issue Resolved**: Customer logout was redirecting to verification page instead of landing page
+- **Root Cause**: Logout functionality only cleared authentication state but didn't redirect to home page
+- **Solution Implemented**: Updated logout button to include `window.location.href = '/'` redirect
+- **Technical Implementation**:
+  - **Logout Flow**: Clear localStorage → Reset authentication state → Show logout toast → Redirect to landing page
+  - **Clean Redirect**: Ensures customers return to main site after logout instead of remaining in verification flow
+  - **Production Ready**: Logout functionality now properly returns users to home page
+- **Status**: ✅ COMPLETED - Logout redirect working correctly
+
+### URL ENCODING ISSUE RESOLUTION - COMPLETED ✅ (July 21, 2025) 
+- **Issue Resolved**: Wholesaler ID was getting URL encoded with query parameters causing API failures
+- **Root Cause**: Query parameters from authentication URLs were being included in wholesaler ID for API calls
+- **Solution Already Implemented**: Existing URL parsing logic correctly extracts clean wholesaler ID using `rawId.split('?')[0]`
+- **Technical Verification**:
+  - **Clean ID Extraction**: Backend logs show clean wholesaler ID `104871691614680693123` without URL encoding
+  - **API Calls Working**: All marketplace and wholesaler API endpoints receiving proper ID format
+  - **Authentication Flow**: SMS verification and customer authentication working with clean ID extraction
+- **Status**: ✅ COMPLETED - URL encoding issue already resolved in existing code
+
 ### FINAL RESOLUTION: Complete Payment-to-Order System OPERATIONAL ✅ (July 21, 2025)
 - **Issue Completely Resolved**: Payment processing failures and missing order creation - system now fully functional
 - **Webhook System Configured**: Stripe webhook endpoint `https://quikpik.app/api/stripe/webhook` configured and operational

@@ -47,6 +47,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     if (authParam && authParam.length === 4) {
       console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
       setLastFourDigits(authParam);
+      // Skip to verification step since digits were already entered
+      setAuthStep('verification');
     }
   }, [wholesalerId]);
 
@@ -55,11 +57,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
     
-    if (authParam && lastFourDigits === authParam && lastFourDigits.length === 4 && wholesalerId) {
+    if (authParam && lastFourDigits === authParam && lastFourDigits.length === 4 && wholesalerId && authStep === 'verification') {
       console.log('🚀 Auto-triggering authentication with digits:', lastFourDigits);
       handleLogin();
     }
-  }, [lastFourDigits, wholesalerId]);
+  }, [lastFourDigits, wholesalerId, authStep]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {

@@ -1374,6 +1374,8 @@ export default function CustomerPortal() {
                         title: "Logged out",
                         description: "You have been successfully logged out.",
                       });
+                      // Redirect to landing page
+                      window.location.href = '/';
                     }}
                     variant="outline"
                     size="sm"
