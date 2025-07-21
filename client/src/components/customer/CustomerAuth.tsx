@@ -39,6 +39,21 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const { toast } = useToast();
 
+  // Check for auth query parameter (from CustomerLogin page)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get('auth');
+    
+    if (authParam && authParam.length === 4) {
+      console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
+      setLastFourDigits(authParam);
+      // Auto-trigger authentication after component loads
+      setTimeout(() => {
+        handleLogin();
+      }, 1000);
+    }
+  }, []);
+
   // Fetch wholesaler data for personalization
   useEffect(() => {
     const fetchWholesaler = async () => {

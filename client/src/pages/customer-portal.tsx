@@ -584,7 +584,7 @@ export default function CustomerPortal() {
   // Get authenticated user only for preview mode
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
-    enabled: isPreviewMode, // Only fetch user data in preview mode
+    enabled: isPreviewMode, // Only enabled in preview mode
     retry: 1,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
