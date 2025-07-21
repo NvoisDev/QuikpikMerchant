@@ -612,79 +612,12 @@ export default function CustomerPortal() {
 
 
 
-  // Customer authentication state with localStorage persistence
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check for stored authentication in both preview and regular mode
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (stored) {
-        const authData = JSON.parse(stored);
-        // Check if authentication is not expired (24 hours)
-        if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
-          return authData.isAuthenticated || false;
-        }
-      }
-    } catch {
-      // Clear corrupted data
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
-    }
-    return false;
-  });
-  
-  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(() => {
-    // Check for stored customer data in both preview and regular mode
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (stored) {
-        const authData = JSON.parse(stored);
-        // Check if authentication is not expired (24 hours)
-        if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
-          return authData.customer || null;
-        }
-      }
-    } catch {
-      // Clear corrupted data
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
-    }
-    return null;
-  });
-  
+  // Customer authentication state - initialize with default values, load from localStorage in useEffect
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showHomePage, setShowHomePage] = useState(true);
-  const [showAuth, setShowAuth] = useState(() => {
-    // Check stored auth state for both preview and regular mode
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (stored) {
-        const authData = JSON.parse(stored);
-        // Check if authentication is not expired (24 hours)
-        if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
-          return !authData.isAuthenticated;
-        }
-      }
-    } catch {
-      // Clear corrupted data
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
-    }
-    return true;
-  });
-  
-  const [isGuestMode, setIsGuestMode] = useState(() => {
-    // Check stored guest mode state for both preview and regular mode
-    try {
-      const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (stored) {
-        const authData = JSON.parse(stored);
-        // Check if authentication is not expired (24 hours)
-        if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
-          return !authData.isAuthenticated;
-        }
-      }
-    } catch {
-      // Clear corrupted data
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
-    }
-    return true;
-  });
+  const [showAuth, setShowAuth] = useState(true);
+  const [isGuestMode, setIsGuestMode] = useState(true);
 
   // Persist authentication state to localStorage for both preview and regular mode
   useEffect(() => {
@@ -698,26 +631,53 @@ export default function CustomerPortal() {
     }
   }, [isAuthenticated, authenticatedCustomer, wholesalerId]);
 
-  // Clear expired authentication data on component mount
+  // Initialize authentication state from localStorage when wholesalerId is available
   useEffect(() => {
     if (wholesalerId) {
       try {
         const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
         if (stored) {
           const authData = JSON.parse(stored);
-          // Clear if older than 24 hours
-          if (Date.now() - authData.timestamp > 24 * 60 * 60 * 1000) {
+          
+          // Check if authentication is not expired (24 hours)
+          if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
+            // Load valid authentication data
+            setIsAuthenticated(authData.isAuthenticated || false);
+            setAuthenticatedCustomer(authData.customer || null);
+            setShowAuth(!authData.isAuthenticated);
+            setIsGuestMode(!authData.isAuthenticated);
+            console.log(`✅ Loaded valid auth data for ${wholesalerId}:`, {
+              isAuthenticated: authData.isAuthenticated,
+              customerName: authData.customer?.name
+            });
+          } else {
+            // Clear expired authentication data
+            console.log(`🕒 Clearing expired auth data for ${wholesalerId}`);
             localStorage.removeItem(`customer_auth_${wholesalerId}`);
             setIsAuthenticated(false);
             setAuthenticatedCustomer(null);
             setShowAuth(true);
             setIsGuestMode(true);
           }
+        } else {
+          // No stored data, show auth screen
+          console.log(`❌ No stored auth data found for ${wholesalerId}, showing auth`);
+          setIsAuthenticated(false);
+          setAuthenticatedCustomer(null);
+          setShowAuth(true);
+          setIsGuestMode(true);
         }
-      } catch {
+      } catch (error) {
         // Clear corrupted data
+        console.error(`⚠️ Corrupted auth data for ${wholesalerId}:`, error);
         localStorage.removeItem(`customer_auth_${wholesalerId}`);
+        setIsAuthenticated(false);
+        setAuthenticatedCustomer(null);
+        setShowAuth(true);
+        setIsGuestMode(true);
       }
+    } else {
+      console.log(`⏳ Waiting for wholesalerId to be available...`);
     }
   }, [wholesalerId]);
 
@@ -1295,24 +1255,47 @@ export default function CustomerPortal() {
 
   // Authentication is now always required (no guest mode)
   useEffect(() => {
-    if (!isAuthenticated && !isPreviewMode) {
+    if (!isAuthenticated && !isPreviewMode && wholesalerId) {
       setShowAuth(true);
-    } else if (isAuthenticated && !isPreviewMode) {
+    } else if (isAuthenticated && !isPreviewMode && wholesalerId) {
       setShowAuth(false);
-    }
-  }, [isAuthenticated, isPreviewMode]);
-
-  // Disable guest mode in preview mode
-  useEffect(() => {
-    if (isPreviewMode) {
+    } else if (isPreviewMode) {
+      // In preview mode, skip authentication
+      setShowAuth(false);
       setIsGuestMode(false);
     }
-  }, [isPreviewMode]);
+  }, [isAuthenticated, isPreviewMode, wholesalerId]);
 
 
+
+  console.log('🔄 Customer Portal Render State:', {
+    wholesalerId,
+    showAuth,
+    isPreviewMode,
+    isAuthenticated,
+    showHomePage,
+    showAllProducts,
+    featuredProductId,
+    featuredLoading,
+    wholesalerLoading
+  });
+
+  // Show loading screen if wholesalerId is not available yet
+  if (!wholesalerId && !isPreviewMode) {
+    console.log('⏳ Waiting for wholesalerId...');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading store...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show authentication screen
-  if (showAuth && !isPreviewMode) {
+  if (showAuth && !isPreviewMode && wholesalerId) {
+    console.log('🔐 Showing authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
@@ -1320,7 +1303,8 @@ export default function CustomerPortal() {
   }
 
   // Show home page
-  if (showHomePage && !showAllProducts && !isPreviewMode) {
+  if (showHomePage && !showAllProducts && !isPreviewMode && isAuthenticated) {
+    console.log('🏠 Showing customer home page');
     return <CustomerHome 
       wholesaler={wholesaler}
       featuredProduct={featuredProduct}
@@ -1342,8 +1326,9 @@ export default function CustomerPortal() {
     />;
   }
 
-  // Early loading state
-  if (featuredProductId && featuredLoading) {
+  // Early loading state only for authenticated users with featured products
+  if (featuredProductId && featuredLoading && isAuthenticated) {
+    console.log('📦 Loading featured product...');
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8 space-y-8">
