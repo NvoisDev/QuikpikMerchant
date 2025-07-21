@@ -1626,8 +1626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const orderItems = items.map((item: any) => ({
             productId: item.productId,
             quantity: item.quantity,
-            unitPrice: item.unitPrice.toFixed(2),
-            total: (item.unitPrice * item.quantity).toFixed(2)
+            unitPrice: parseFloat(item.unitPrice).toFixed(2),
+            total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
           }));
 
           const order = await storage.createOrder(orderData, orderItems);
