@@ -429,17 +429,18 @@ This approach gives customers control over delivery speed and cost while ensurin
 - **Security Flow**: 1) Wholesaler adds customer to group, 2) Customer authenticates with last 4 digits + SMS, 3) Customer can access order history for that wholesaler only
 - **Production Ready**: Complete security implementation preventing unauthorized order access while maintaining smooth user experience for registered customers
 
-### Complete Payment Fee Structure Update - PRODUCTION READY (July 20, 2025):
-- **Updated Payment Structure**: Implemented new fee structure - wholesalers pay 5.4% (1% + 4.4%), customers pay 3.3% transaction fee
-- **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 3.3% transaction fee
-- **Wholesaler Receives**: Wholesalers now receive 94.6% of product value (down from 97.5%)
-- **Customer Transparency**: Updated transaction fee display in checkout showing "Transaction Fee (3.3%)" as separate line item
-- **Settings Page Update**: Updated wholesaler settings to show "You keep 94.6% of order value" with new fee breakdown
-- **API Response Enhancement**: Payment intent creation returns updated fee breakdown including totalAmount, transactionFee (3.3%), platformFee (5.4%), totalAmountWithFee, and wholesalerReceives (94.6%)
+### Complete Payment Fee Structure Update - PRODUCTION READY (July 21, 2025):
+- **Updated Payment Structure**: Implemented new fee structure - wholesalers pay 3.3%, customers pay 5.5% + £0.50 transaction fee
+- **Backend Payment Processing**: Updated all payment intent creation endpoints to charge customers product total + 5.5% + £0.50 transaction fee
+- **Wholesaler Receives**: Wholesalers now receive 96.7% of product value (increased from 94.6%)
+- **Customer Transparency**: Updated transaction fee display in checkout showing "Transaction Fee (5.5% + £0.50)" as separate line item
+- **Settings Page Update**: Updated wholesaler settings to show "You keep 96.7% of order value" with new fee breakdown
+- **API Response Enhancement**: Payment intent creation returns updated fee breakdown including totalAmount, transactionFee (5.5% + £0.50), platformFee (3.3%), totalAmountWithFee, and wholesalerReceives (96.7%)
 - **Metadata Storage**: Enhanced payment intent metadata to include updated platform_fee and transaction_fee fields
-- **Fee Calculation**: Platform collects 5.4% from product total, customers pay additional 3.3% transaction fee
+- **Fee Calculation**: Platform collects 3.3% from product total, customers pay additional 5.5% + £0.50 transaction fee
 - **Connect Account Integration**: Both regular payment intents and Stripe Connect payment intents properly handle updated fee structure
-- **Frontend Update**: Customer portal checkout calculations updated to reflect 3.3% transaction fee in total amount
+- **Frontend Update**: Customer portal checkout calculations updated to reflect 5.5% + £0.50 transaction fee in total amount
+- **Customer Order History**: Updated transaction fee display label from "Platform Fee" to "Transaction Fee" for clarity
 - **Production Ready**: Complete end-to-end implementation with updated fee structure across all payment endpoints
 
 ### Automatic Stripe Receipt System Implementation - PRODUCTION READY (July 20, 2025):

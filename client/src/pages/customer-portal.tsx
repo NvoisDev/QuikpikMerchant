@@ -3202,8 +3202,8 @@ export default function CustomerPortal() {
                     </div>
                   )}
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Transaction Fee (3.3%):</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue * 0.033).toFixed(2)}</span>
+                    <span>Transaction Fee (5.5% + £0.50):</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue * 0.055 + 0.50).toFixed(2)}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
