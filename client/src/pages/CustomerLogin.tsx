@@ -128,8 +128,7 @@ export default function CustomerLogin() {
   const handleWholesalerSelect = (wholesaler: Wholesaler) => {
     setSelectedWholesaler(wholesaler);
     setOpen(false);
-    // Skip the duplicate digits entry page and go directly to customer portal authentication
-    window.location.href = `/store/${wholesaler.id}`;
+    setStep(2); // Go to step 2 (digits entry page) after wholesaler selection
   };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
