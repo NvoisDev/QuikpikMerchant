@@ -1275,9 +1275,9 @@ function StripeConnectSection() {
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium mb-2">How Payment Processing Works</h4>
                   <div className="space-y-2 text-sm text-gray-600">
-                    <p>• Customers pay the product total + £6.00 platform fee</p>
-                    <p>• Quikpik collects £6.00 platform fee to maintain and improve the platform</p>
-                    <p>• You receive 100% of the product value directly to your bank account</p>
+                    <p>• Customers pay the product total + transaction fee (5.5% + £0.50)</p>
+                    <p>• Quikpik collects 3.3% platform fee to maintain and improve the platform</p>
+                    <p>• You receive 96.7% of the product value directly to your bank account</p>
                     <p>• All transactions are secure and PCI-compliant through Stripe</p>
                   </div>
                 </div>
@@ -1285,12 +1285,12 @@ function StripeConnectSection() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="text-sm text-green-600">You Keep</div>
-                    <div className="font-bold text-green-900">100%</div>
+                    <div className="font-bold text-green-900">96.7%</div>
                     <div className="text-xs text-green-700">of product value</div>
                   </div>
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="text-sm text-blue-600">Platform Fee</div>
-                    <div className="font-bold text-blue-900">£6.00</div>
+                    <div className="font-bold text-blue-900">3.3%</div>
                     <div className="text-xs text-blue-700">for platform services</div>
                   </div>
                 </div>

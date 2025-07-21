@@ -61,7 +61,7 @@ export default function OrderSummaryModal({
       });
       onClose();
       // Redirect to checkout with order ID
-      window.location.href = `/checkout?orderId=${orderData.id}`;
+      window.location.href = `/checkout?orderId=${orderData.order.id}`;
     },
     onError: (error: Error) => {
       toast({
@@ -76,14 +76,14 @@ export default function OrderSummaryModal({
     const subtotal = cartItems.reduce((total, item) => {
       return total + (parseFloat(item.product.price) * item.quantity);
     }, 0);
-    // Simple platform fee: £6.00
-    const platformFee = 6.00;
-    const total = subtotal + platformFee;
+    // Customer transaction fee: 5.5% + £0.50
+    const transactionFee = (subtotal * 0.055) + 0.50;
+    const total = subtotal + transactionFee;
 
-    return { subtotal, platformFee, total };
+    return { subtotal, transactionFee, total };
   };
 
-  const { subtotal, platformFee, total } = calculateTotals();
+  const { subtotal, transactionFee, total } = calculateTotals();
 
   const handleProceedToPayment = () => {
     if (!deliveryAddress.trim()) {
@@ -252,9 +252,9 @@ export default function OrderSummaryModal({
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Platform Fee:</span>
+                <span className="text-gray-600">Transaction Fee (5.5% + £0.50):</span>
                 <span className="font-medium text-gray-900">
-                  {formatCurrency(6.00)}
+                  {formatCurrency(transactionFee)}
                 </span>
               </div>
               <Separator />

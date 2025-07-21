@@ -2,6 +2,23 @@
 
 ## Outstanding Issues (July 21, 2025) - ALL RESOLVED ✅
 
+### FINAL Payment Structure Correction - COMPLETED ✅ (July 21, 2025)
+- **Critical Issue Resolved**: Completed comprehensive correction of payment fee structure across entire platform after user escalation
+- **Root Cause**: Inconsistent fee calculations between backend APIs and frontend components causing user frustration
+- **Solution Implemented**: 
+  - **Backend API Correction**: Updated all marketplace payment endpoints to use correct 5.5% + £0.50 customer transaction fee and 3.3% platform fee
+  - **Frontend Component Updates**: Fixed order-summary-modal.tsx to calculate and display transaction fees correctly instead of flat £6.00
+  - **Response Structure**: Updated API responses to include customerTransactionFee, platformFee, and wholesalerReceives fields
+  - **Currency Consistency**: Maintained GBP currency across all payment processing
+- **Verified Results**:
+  - **£100 Order**: Customer pays £6.00 transaction fee (5.5% + £0.50), Platform collects £3.30, Wholesaler receives £96.70
+  - **£50 Order**: Customer pays £3.25 transaction fee (5.5% + £0.50), Platform collects £1.65, Wholesaler receives £48.35
+- **Technical Implementation**:
+  - **Marketplace Endpoints**: All marketplace payment creation endpoints now use percentage-based calculations
+  - **Frontend Display**: Order summary modal shows "Transaction Fee (5.5% + £0.50)" with calculated amounts
+  - **API Testing**: Confirmed correct fee breakdown in payment intent responses
+- **Status**: ✅ COMPLETED - Payment structure now correctly implemented across all endpoints and components
+
 ### Currency Consistency and Payment Processing Fix - COMPLETED ✅ (July 21, 2025)
 - **Issue Identified**: Payment processing errors due to inconsistent currency settings (USD vs GBP) and outdated transactionFee references
 - **Root Cause**: Multiple payment endpoints using inconsistent currency settings and deprecated transaction fee variables
