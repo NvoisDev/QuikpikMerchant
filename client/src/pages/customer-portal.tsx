@@ -3425,8 +3425,8 @@ export default function CustomerPortal() {
                           : 'border-gray-300'
                       }`} />
                       <div>
-                        <h4 className="font-medium">Collection</h4>
-                        <p className="text-sm text-gray-600">Courier collection service to your address</p>
+                        <h4 className="font-medium">Delivery</h4>
+                        <p className="text-sm text-gray-600">Courier delivery service to your address</p>
                         <p className="text-sm font-medium text-blue-600">Select service below</p>
                       </div>
                     </div>
@@ -3436,7 +3436,7 @@ export default function CustomerPortal() {
                 {/* Shipping Services Selection */}
                 {customerData.shippingOption === 'collection' && (
                   <div className="space-y-3">
-                    <h4 className="font-medium">Choose Collection Service</h4>
+                    <h4 className="font-medium">Choose Delivery Service</h4>
                     
                     {loadingShippingQuotes ? (
                       <div className="text-center py-4">
