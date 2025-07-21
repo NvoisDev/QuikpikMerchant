@@ -18,7 +18,13 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: () => apiRequest("/api/auth/logout", "POST"),
     onSuccess: () => {
+      // Immediately set user query data to null to clear authentication state
+      queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
+      // Clear all localStorage and sessionStorage to ensure clean state
+      localStorage.clear();
+      sessionStorage.clear();
+      // Force a complete page reload to ensure clean state
       window.location.href = "/";
     },
   });
