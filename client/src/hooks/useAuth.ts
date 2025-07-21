@@ -7,8 +7,9 @@ export function useAuth() {
   
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
+    enabled: false, // DISABLED to stop infinite authentication loops
     retry: false,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchInterval: false,
