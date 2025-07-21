@@ -1152,7 +1152,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const firstProduct = validatedItems[0].product;
       const wholesaler = await storage.getUser(firstProduct.wholesalerId);
       
+      console.log(`🔍 Customer payment - Wholesaler lookup for ID: ${firstProduct.wholesalerId}`);
+      console.log(`🔍 Customer payment - Wholesaler data:`, wholesaler ? {
+        id: wholesaler.id,
+        businessName: wholesaler.businessName,
+        stripeAccountId: wholesaler.stripeAccountId,
+        email: wholesaler.email
+      } : 'null');
+      
       if (!wholesaler || !wholesaler.stripeAccountId) {
+        console.log(`❌ Customer payment - Stripe setup validation failed: wholesaler=${!!wholesaler}, stripeAccountId=${wholesaler?.stripeAccountId}`);
         return res.status(400).json({ 
           message: "Payment processing not available. The business owner needs to complete Stripe setup.",
           errorType: "stripe_setup_required",
@@ -1164,6 +1173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
+      
+      console.log(`✅ Customer payment - Stripe validation passed for account: ${wholesaler.stripeAccountId}`)
 
       // Create Stripe payment intent with Connect account 
       const paymentIntent = await stripe.paymentIntents.create({
@@ -1321,8 +1332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerEmail, // Store customer email
           customerPhone, // Store customer phone
           subtotal: totalAmount, // Product subtotal (what wholesaler gets)
-          platformFee: platformFee.toFixed(2), // 3.3% platform fee
-          transactionFee: customerTransactionFee.toFixed(2), // Customer transaction fee (5.5% + £0.50)
+          platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
+          transactionFee: parseFloat(customerTransactionFee).toFixed(2), // Customer transaction fee (5.5% + £0.50)
           total: totalAmountWithFee, // Total = subtotal + customer transaction fee
           status: 'paid',
           stripePaymentIntentId: paymentIntent.id,
@@ -1333,8 +1344,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const orderItems = items.map((item: any) => ({
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice.toFixed(2),
-          total: (item.unitPrice * item.quantity).toFixed(2)
+          unitPrice: parseFloat(item.unitPrice).toFixed(2),
+          total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
         }));
 
         const order = await storage.createOrder(orderData, orderItems);
@@ -3881,6 +3892,33 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("Error fetching marketplace wholesalers:", error);
       res.status(500).json({ message: "Failed to fetch marketplace wholesalers" });
+    }
+  });
+
+  // Test endpoint for Stripe account checking
+  app.get("/api/test-stripe-account/:wholesalerId", async (req: any, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      console.log(`🔍 Test - Looking up wholesaler: ${wholesalerId}`);
+      
+      const wholesaler = await storage.getUser(wholesalerId);
+      console.log(`🔍 Test - Wholesaler result:`, wholesaler ? {
+        id: wholesaler.id,
+        businessName: wholesaler.businessName,
+        stripeAccountId: wholesaler.stripeAccountId,
+        email: wholesaler.email
+      } : 'null');
+      
+      res.json({
+        wholesalerId,
+        found: !!wholesaler,
+        hasStripeAccount: !!(wholesaler?.stripeAccountId),
+        stripeAccountId: wholesaler?.stripeAccountId,
+        businessName: wholesaler?.businessName
+      });
+    } catch (error: any) {
+      console.error("Test endpoint error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
