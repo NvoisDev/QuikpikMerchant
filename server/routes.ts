@@ -1546,6 +1546,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test webhook endpoint (no signature verification for testing)
+  app.post('/api/stripe/webhook-test', async (req, res) => {
+    console.log('🧪 Test webhook received - bypassing signature verification');
+    const event = req.body;
+    
+    if (event.type === 'payment_intent.succeeded') {
+      console.log('💳 Processing test payment_intent.succeeded for:', event.data.object.id);
+      return await processPaymentIntentSucceeded(event.data.object, res);
+    }
+    
+    res.json({ received: true });
+  });
+
   // Webhook to handle successful payments
   app.post('/api/stripe/webhook', async (req, res) => {
     console.log('📨 Webhook received from Stripe');
@@ -1569,21 +1582,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
-      console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
-      
-      try {
-        // Extract order data from metadata with fallback handling
-        const metadata = paymentIntent.metadata;
-        const customerName = metadata.customerName;
-        const customerEmail = metadata.customerEmail;
-        const customerPhone = metadata.customerPhone;
-        const productSubtotal = metadata.productSubtotal || metadata.totalAmount;
-        const customerTransactionFee = metadata.customerTransactionFee || '0';
-        const wholesalerPlatformFee = metadata.wholesalerPlatformFee || metadata.platformFee || '0';
-        const wholesalerReceives = metadata.wholesalerReceives || '0';
-        const totalCustomerPays = metadata.totalCustomerPays || metadata.totalAmountWithFee || '0';
-        const wholesalerId = metadata.wholesalerId;
-        const orderType = metadata.orderType;
+      return await processPaymentIntentSucceeded(paymentIntent, res);
+    }
+
+    res.json({ received: true });
+  });
+
+  // Shared function to process payment_intent.succeeded events
+  async function processPaymentIntentSucceeded(paymentIntent: any, res: any) {
+    console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
+    
+    try {
+      // Extract order data from metadata with fallback handling
+      const metadata = paymentIntent.metadata;
+      const customerName = metadata.customerName;
+      const customerEmail = metadata.customerEmail;
+      const customerPhone = metadata.customerPhone;
+      const productSubtotal = metadata.productSubtotal || metadata.totalAmount;
+      const customerTransactionFee = metadata.customerTransactionFee || '0';
+      const wholesalerPlatformFee = metadata.wholesalerPlatformFee || metadata.platformFee || '0';
+      const wholesalerReceives = metadata.wholesalerReceives || '0';
+      const totalCustomerPays = metadata.totalCustomerPays || metadata.totalAmountWithFee || '0';
+      const wholesalerId = metadata.wholesalerId;
+      const orderType = metadata.orderType;
 
         if (orderType === 'customer_portal') {
           // Extract customer and order data from metadata
@@ -1739,13 +1760,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Customer invoice email sent to: ${customerEmail}`);
           console.log(`✅ Stripe invoice created and sent to: ${customerEmail}`);
         }
+
+        return res.json({ received: true, processed: true });
       } catch (error) {
         console.error('Error processing payment success:', error);
+        return res.status(500).json({ error: 'Payment processing failed' });
       }
-    }
-
-    res.json({ received: true });
-  });
+  }
 
   app.patch('/api/orders/:id/status', requireAuth, async (req: any, res) => {
     try {
