@@ -47,10 +47,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     if (authParam && authParam.length === 4) {
       console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
       setLastFourDigits(authParam);
-      // Auto-trigger authentication after component loads
-      setTimeout(() => {
-        handleLogin();
-      }, 1000);
+      // DO NOT auto-trigger - let user manually click login to prevent loops
     }
   }, []);
 

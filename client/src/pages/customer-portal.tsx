@@ -621,67 +621,17 @@ export default function CustomerPortal() {
   const [showAuth, setShowAuth] = useState(true);
   const [isGuestMode, setIsGuestMode] = useState(true);
 
-  // Persist authentication state to localStorage for both preview and regular mode
+  // SIMPLIFIED: Initialize authentication state without localStorage loops
   useEffect(() => {
-    if (wholesalerId) {
-      const authData = {
-        isAuthenticated,
-        customer: authenticatedCustomer,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify(authData));
+    if (wholesalerId && !isPreviewMode) {
+      // For regular customer access, always start with authentication required
+      console.log(`🔐 Customer portal initialized for wholesaler ${wholesalerId}`);
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(true);
+      setIsGuestMode(true);
     }
-  }, [isAuthenticated, authenticatedCustomer, wholesalerId]);
-
-  // Initialize authentication state from localStorage when wholesalerId is available
-  useEffect(() => {
-    if (wholesalerId) {
-      try {
-        const stored = localStorage.getItem(`customer_auth_${wholesalerId}`);
-        if (stored) {
-          const authData = JSON.parse(stored);
-          
-          // Check if authentication is not expired (24 hours)
-          if (Date.now() - authData.timestamp < 24 * 60 * 60 * 1000) {
-            // Load valid authentication data
-            setIsAuthenticated(authData.isAuthenticated || false);
-            setAuthenticatedCustomer(authData.customer || null);
-            setShowAuth(!authData.isAuthenticated);
-            setIsGuestMode(!authData.isAuthenticated);
-            console.log(`✅ Loaded valid auth data for ${wholesalerId}:`, {
-              isAuthenticated: authData.isAuthenticated,
-              customerName: authData.customer?.name
-            });
-          } else {
-            // Clear expired authentication data
-            console.log(`🕒 Clearing expired auth data for ${wholesalerId}`);
-            localStorage.removeItem(`customer_auth_${wholesalerId}`);
-            setIsAuthenticated(false);
-            setAuthenticatedCustomer(null);
-            setShowAuth(true);
-            setIsGuestMode(true);
-          }
-        } else {
-          // No stored data, show auth screen
-          console.log(`❌ No stored auth data found for ${wholesalerId}, showing auth`);
-          setIsAuthenticated(false);
-          setAuthenticatedCustomer(null);
-          setShowAuth(true);
-          setIsGuestMode(true);
-        }
-      } catch (error) {
-        // Clear corrupted data
-        console.error(`⚠️ Corrupted auth data for ${wholesalerId}:`, error);
-        localStorage.removeItem(`customer_auth_${wholesalerId}`);
-        setIsAuthenticated(false);
-        setAuthenticatedCustomer(null);
-        setShowAuth(true);
-        setIsGuestMode(true);
-      }
-    } else {
-      console.log(`⏳ Waiting for wholesalerId to be available...`);
-    }
-  }, [wholesalerId]);
+  }, [wholesalerId, isPreviewMode]);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);

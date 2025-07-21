@@ -96,7 +96,11 @@ export default function CustomerLogin() {
         const response = await fetch('/api/wholesalers/all');
         if (response.ok) {
           const data = await response.json();
-          setWholesalers(data);
+          // Remove duplicates by business name and ID
+          const uniqueWholesalers = data.filter((wholesaler: Wholesaler, index: number, array: Wholesaler[]) => 
+            array.findIndex(w => w.id === wholesaler.id || w.businessName === wholesaler.businessName) === index
+          );
+          setWholesalers(uniqueWholesalers);
           
           // If accessing via direct URL, automatically select wholesaler and go to step 2
           if (wholesalerIdFromUrl) {
