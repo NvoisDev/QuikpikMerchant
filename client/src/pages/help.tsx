@@ -255,6 +255,83 @@ The "connected" status confirms your customer group is ready for WhatsApp market
         `
       },
       {
+        title: "Customer Merge System",
+        content: `
+### Customer Account Merging
+
+The customer merge functionality helps you consolidate duplicate customer accounts that may have been created with slightly different information.
+
+#### When to Use Customer Merge
+- Multiple customer records for the same person
+- Customers with similar phone numbers (+44 vs 07 format)
+- Different spellings of the same customer name
+- Duplicate accounts affecting order history accuracy
+
+#### Two Merge Methods Available
+
+**1. Auto-Detect Duplicates**
+- Automatically finds customers with matching phone number patterns
+- Identifies customers with similar names and contact information
+- Suggests likely duplicate accounts for quick merging
+
+**2. Search & Select Customers**
+- Manual search interface for finding specific customers
+- Search by name, phone number, or email address
+- Select exactly which customers you want to merge
+- Useful when duplicates aren't automatically detected
+
+#### How to Merge Customers
+
+1. **Navigate to Customer Groups** in the sidebar
+2. **Click "Merge Customers"** button at the top
+3. **Choose your merge method**:
+   - Select "Auto-Detect Duplicates" for automatic detection
+   - Select "Search & Select Customers" for manual selection
+
+**For Auto-Detect Method:**
+4. Review the suggested duplicate groups
+5. Click "Merge Accounts" on any group you want to consolidate
+
+**For Manual Selection Method:**
+4. **Search for customers** using the search bar
+5. **Select customers** by clicking the checkboxes
+6. **Click "Merge X Customers"** when ready to proceed
+
+#### Primary Account Selection
+- The customer with the **most orders** automatically becomes the primary account
+- Primary account retains the best available information (name, email, etc.)
+- All other customer data is consolidated into the primary account
+
+#### What Happens During Merge
+- **All orders** from duplicate accounts transferred to primary account
+- **Customer group memberships** consolidated
+- **Duplicate records** permanently deleted
+- **Primary account** updated with best available contact information
+- **Order history** becomes unified under one customer profile
+
+#### After Merge Benefits
+- **Unified customer experience**: Customer sees all their orders in one portal
+- **Accurate analytics**: Complete customer spending and order history
+- **Simplified management**: One customer record instead of multiple duplicates
+- **Better communication**: Single contact point for each customer
+
+#### Customer Portal Impact
+After merging, when the customer authenticates with their phone number:
+- They will see **all orders** from their previously separate accounts
+- **Complete order history** is available in one place
+- **Total spending** reflects all purchases across merged accounts
+- **Authentication works** with any of the previously used phone number formats
+
+#### Important Notes
+- **Merging is permanent** - duplicate records are deleted after consolidation
+- **Order data is preserved** - no order information is lost during merge
+- **Customer contact information** is updated to use the best available data
+- **Phone number authentication** continues to work after merge
+
+This system ensures your customers have a seamless experience while helping you maintain clean, accurate customer records.
+        `
+      },
+      {
         title: "Managing Group Members",
         content: `
 ### Group Member Management

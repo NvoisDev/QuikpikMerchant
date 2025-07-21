@@ -33,6 +33,8 @@
 - **Real-time Search**: Search functionality by name, phone number, or email with visual checkbox selection and smart counter
 - **Enhanced Merge Dialog**: Dynamic interface with mode-specific titles, descriptions, and prominent merge action buttons
 - **Primary Account Logic**: Automatic determination of primary account based on order count with clear visual indicators
+- **Scrollable Interface Fix**: Fixed dialog accessibility issue preventing users from reaching merge button
+- **Comprehensive Help Documentation**: Complete customer merge guide added to Help Center with step-by-step instructions for both merge methods
 
 ## Outstanding Issues (July 20, 2025)
 
