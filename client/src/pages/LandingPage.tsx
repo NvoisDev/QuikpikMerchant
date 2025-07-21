@@ -52,26 +52,29 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">Quikpik Merchant</span>
+              <span className="text-lg sm:text-2xl font-bold text-gray-900">Quikpik Merchant</span>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1 sm:space-x-3">
               <Button 
                 variant="ghost" 
                 onClick={handleCustomerLogin}
-                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm sm:text-base px-2 sm:px-4"
               >
-                Customer Login
+                <span className="hidden sm:inline">Customer Login</span>
+                <span className="sm:hidden">Customer</span>
               </Button>
               <Button 
                 variant="ghost" 
                 onClick={handleWholesaleLogin}
-                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm sm:text-base px-2 sm:px-4"
               >
-                Wholesale Login
+                <span className="hidden sm:inline">Wholesale Login</span>
+                <span className="sm:hidden">Business</span>
               </Button>
-              <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90">
-                Sign Up Free
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm sm:text-base px-3 sm:px-4">
+                <span className="hidden sm:inline">Sign Up Free</span>
+                <span className="sm:hidden">Sign Up</span>
+                <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </div>
@@ -79,120 +82,122 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 bg-gradient-to-br from-primary/5 via-white to-green-50">
+      <section className="pt-12 sm:pt-20 pb-12 sm:pb-16 bg-gradient-to-br from-primary/5 via-white to-green-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm px-4 py-2">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs sm:text-sm px-3 sm:px-4 py-2">
                 🚀 Built for Modern Businesses
               </Badge>
               
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
                 Connect
                 <span className="block text-primary">Wholesalers</span>
                 with Retailers
               </h1>
               
-              <p className="text-xl text-gray-600 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
                 The modern B2B marketplace designed for wholesale businesses. 
                 Streamline your operations, reach more retailers, and grow your business 
                 with automated communication and instant payments.
               </p>
               
-              <div className="flex items-center space-x-6 text-sm text-gray-600">
-                <span className="flex items-center">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-6 text-sm text-gray-600">
+                <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                   Easy setup
                 </span>
-                <span className="flex items-center">
+                <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  Starting at £10.99/month
+                  <span className="hidden sm:inline">Starting at £10.99/month</span>
+                  <span className="sm:hidden">From £10.99/mo</span>
                 </span>
-                <span className="flex items-center">
+                <span className="flex items-center justify-center lg:justify-start">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                   Cancel anytime
                 </span>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Button 
                   onClick={handleGetStarted}
                   size="lg" 
-                  className="text-lg px-8 py-4 bg-primary hover:bg-primary/90"
+                  className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 >
                   Start Selling Today
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button 
                   variant="outline" 
                   size="lg"
                   onClick={handleWholesaleLogin}
-                  className="text-lg px-8 py-4 border-2"
+                  className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 border-2 w-full sm:w-auto"
                 >
-                  Already have an account? Log In
+                  <span className="hidden sm:inline">Already have an account? Log In</span>
+                  <span className="sm:hidden">Log In</span>
                 </Button>
               </div>
               
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center bg-gradient-to-r from-emerald-50 to-emerald-100 px-4 py-2 rounded-full border border-emerald-200">
-                  <CheckCircle className="h-5 w-5 text-emerald-500 mr-2" />
+              <div className="flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4 text-xs sm:text-sm">
+                <div className="flex items-center bg-gradient-to-r from-emerald-50 to-emerald-100 px-3 sm:px-4 py-2 rounded-full border border-emerald-200">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-2" />
                   <span className="font-semibold text-emerald-700">Easy setup</span>
                 </div>
-                <div className="flex items-center bg-gradient-to-r from-sky-50 to-sky-100 px-4 py-2 rounded-full border border-sky-200">
-                  <MessageSquare className="h-5 w-5 text-sky-500 mr-2" />
+                <div className="flex items-center bg-gradient-to-r from-sky-50 to-sky-100 px-3 sm:px-4 py-2 rounded-full border border-sky-200">
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500 mr-2" />
                   <span className="font-semibold text-sky-700">WhatsApp integrated</span>
                 </div>
-                <div className="flex items-center bg-gradient-to-r from-yellow-50 to-yellow-100 px-4 py-2 rounded-full border border-yellow-200">
-                  <CreditCard className="h-5 w-5 text-yellow-500 mr-2" />
+                <div className="flex items-center bg-gradient-to-r from-yellow-50 to-yellow-100 px-3 sm:px-4 py-2 rounded-full border border-yellow-200">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mr-2" />
                   <span className="font-semibold text-yellow-700">Instant payments</span>
                 </div>
               </div>
             </div>
             
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 border">
-                <div className="space-y-6">
+            <div className="relative mt-12 lg:mt-0">
+              <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border mx-auto max-w-sm lg:max-w-none">
+                <div className="space-y-4 sm:space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Metro Wholesale Hub</h3>
-                    <Badge className="bg-green-100 text-green-800">Online</Badge>
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Metro Wholesale Hub</h3>
+                    <Badge className="bg-green-100 text-green-800 text-xs">Online</Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 sm:p-4 rounded-lg border border-emerald-200">
                       <div className="flex items-center mb-2">
-                        <TrendingUp className="h-5 w-5 text-emerald-500 mr-2" />
-                        <span className="text-sm font-medium text-emerald-700">Revenue</span>
+                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-1 sm:mr-2" />
+                        <span className="text-xs sm:text-sm font-medium text-emerald-700">Revenue</span>
                       </div>
-                      <div className="text-2xl font-bold text-emerald-800">£24K</div>
-                      <div className="text-sm text-emerald-600">This month</div>
+                      <div className="text-lg sm:text-2xl font-bold text-emerald-800">£24K</div>
+                      <div className="text-xs sm:text-sm text-emerald-600">This month</div>
                     </div>
-                    <div className="bg-gradient-to-br from-sky-50 to-sky-100 p-4 rounded-lg border border-sky-200">
+                    <div className="bg-gradient-to-br from-sky-50 to-sky-100 p-3 sm:p-4 rounded-lg border border-sky-200">
                       <div className="flex items-center mb-2">
-                        <Users className="h-5 w-5 text-sky-500 mr-2" />
-                        <span className="text-sm font-medium text-sky-700">Customers</span>
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500 mr-1 sm:mr-2" />
+                        <span className="text-xs sm:text-sm font-medium text-sky-700">Customers</span>
                       </div>
-                      <div className="text-2xl font-bold text-sky-800">156</div>
-                      <div className="text-sm text-sky-600">Active retailers</div>
+                      <div className="text-lg sm:text-2xl font-bold text-sky-800">156</div>
+                      <div className="text-xs sm:text-sm text-sky-600">Active retailers</div>
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-lg border border-yellow-200">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-3 sm:p-4 rounded-lg border border-yellow-200">
                       <div className="flex items-center">
-                        <div className="flex items-center">
-                          <MessageSquare className="h-5 w-5 text-yellow-500 mr-2" />
-                          <span className="text-yellow-700 font-medium">New stock alert sent</span>
+                        <div className="flex items-center flex-1 min-w-0">
+                          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mr-2 flex-shrink-0" />
+                          <span className="text-yellow-700 font-medium text-xs sm:text-sm truncate">New stock alert sent</span>
                         </div>
-                        <span className="ml-auto text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">2m ago</span>
+                        <span className="ml-2 text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full whitespace-nowrap">2m ago</span>
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
+                    <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-3 sm:p-4 rounded-lg border border-emerald-200">
                       <div className="flex items-center">
-                        <div className="flex items-center">
-                          <Package className="h-5 w-5 text-emerald-500 mr-2" />
-                          <span className="text-emerald-700 font-medium">Order from Kano received</span>
+                        <div className="flex items-center flex-1 min-w-0">
+                          <Package className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-2 flex-shrink-0" />
+                          <span className="text-emerald-700 font-medium text-xs sm:text-sm truncate">Order from Kano received</span>
                         </div>
-                        <span className="ml-auto text-sm text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">5m ago</span>
+                        <span className="ml-2 text-xs text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full whitespace-nowrap">5m ago</span>
                       </div>
                     </div>
                   </div>
@@ -200,11 +205,11 @@ export default function LandingPage() {
               </div>
               
               {/* Floating stats */}
-              <div className="absolute -top-4 -right-4 bg-white rounded-lg shadow-lg p-4 border">
-                <div className="flex items-center space-x-2">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="font-semibold">4.9/5</span>
-                  <span className="text-sm text-gray-600">rating</span>
+              <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 bg-white rounded-lg shadow-lg p-2 sm:p-4 border">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-current" />
+                  <span className="font-semibold text-sm sm:text-base">4.9/5</span>
+                  <span className="text-xs sm:text-sm text-gray-600">rating</span>
                 </div>
               </div>
             </div>
@@ -213,40 +218,40 @@ export default function LandingPage() {
       </section>
 
       {/* Key Benefits Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-12 sm:py-16 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
               Everything You Need to Scale
             </h2>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-sky-50 to-sky-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-sky-400 to-sky-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <MessageSquare className="h-8 w-8 text-white" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-sky-50 to-sky-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-sky-400 to-sky-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-sky-800">Instant Broadcasting</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-sky-800">Instant Broadcasting</h3>
               <p className="text-sky-700 text-sm font-medium">
                 Send stock updates to all retailers instantly via WhatsApp
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Shield className="h-8 w-8 text-white" />
+            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-yellow-800">Secure Payments</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-yellow-800">Secure Payments</h3>
               <p className="text-yellow-700 text-sm font-medium">
                 Get paid instantly with integrated payment processing
               </p>
             </Card>
             
-            <Card className="p-6 text-center border-0 shadow-lg bg-gradient-to-br from-rose-50 to-rose-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-rose-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <BarChart3 className="h-8 w-8 text-white" />
+            <Card className="p-4 sm:p-6 text-center border-0 shadow-lg bg-gradient-to-br from-rose-50 to-rose-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-rose-400 to-rose-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-rose-800">Smart Analytics</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-rose-800">Smart Analytics</h3>
               <p className="text-rose-700 text-sm font-medium">
                 Track sales and inventory with detailed insights
               </p>
@@ -256,99 +261,99 @@ export default function LandingPage() {
       </section>
 
       {/* Free Support Section */}
-      <section className="py-20 bg-gradient-to-br from-emerald-50 via-white to-green-50">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-emerald-50 via-white to-green-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-sm px-4 py-2 mb-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-xs sm:text-sm px-3 sm:px-4 py-2 mb-4 sm:mb-6">
               💬 Premium Support Included
             </Badge>
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
               Free In-Person Support & Training
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
               Get personalized help from our experts. We'll guide you through setup, 
               answer your questions, and help you maximize your wholesale business potential.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Video className="h-6 w-6 text-white" />
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8">
+              <div className="flex items-start space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Video className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">One-on-One Setup Sessions</h3>
-                  <p className="text-gray-600">Personal video calls to help you configure your account, upload products, and set up customer groups.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">One-on-One Setup Sessions</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Personal video calls to help you configure your account, upload products, and set up customer groups.</p>
                 </div>
               </div>
               
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Phone className="h-6 w-6 text-white" />
+              <div className="flex items-start space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Priority Phone Support</h3>
-                  <p className="text-gray-600">Direct access to our support team for urgent questions and technical assistance.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Priority Phone Support</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Direct access to our support team for urgent questions and technical assistance.</p>
                 </div>
               </div>
               
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users2 className="h-6 w-6 text-white" />
+              <div className="flex items-start space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Team Training Sessions</h3>
-                  <p className="text-gray-600">Group training for your entire team to ensure everyone knows how to use the platform effectively.</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Team Training Sessions</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Group training for your entire team to ensure everyone knows how to use the platform effectively.</p>
                 </div>
               </div>
               
-              <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-200">
+              <div className="bg-emerald-50 p-4 sm:p-6 rounded-xl border border-emerald-200">
                 <div className="flex items-center mb-3">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 mr-2" />
-                  <span className="font-semibold text-emerald-800">100% Free</span>
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 mr-2" />
+                  <span className="font-semibold text-emerald-800 text-sm sm:text-base">100% Free</span>
                 </div>
-                <p className="text-emerald-700 text-sm">
+                <p className="text-emerald-700 text-xs sm:text-sm">
                   All support services are included with your subscription at no extra cost. 
                   We're committed to your success.
                 </p>
               </div>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-8 w-8 text-white" />
+            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-100 mt-8 md:mt-0">
+              <div className="text-center mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Book Your Free Session</h3>
-                <p className="text-gray-600">Choose a time that works for you</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Book Your Free Session</h3>
+                <p className="text-gray-600 text-sm sm:text-base">Choose a time that works for you</p>
               </div>
               
               {/* Calendly Integration */}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Button 
                   onClick={() => window.open('https://calendly.com/quikpik-support/setup-session', '_blank')}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 text-lg font-medium"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 sm:py-4 text-base sm:text-lg font-medium"
                 >
-                  <Calendar className="mr-2 h-5 w-5" />
+                  <Calendar className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Schedule Setup Session
                 </Button>
                 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button 
                     variant="outline" 
                     onClick={() => window.open('https://calendly.com/quikpik-support/training-session', '_blank')}
-                    className="py-3 text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   >
-                    <Users2 className="mr-2 h-4 w-4" />
+                    <Users2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Team Training
                   </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => window.open('https://calendly.com/quikpik-support/quick-help', '_blank')}
-                    className="py-3 text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    className="py-3 text-xs sm:text-sm border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                   >
-                    <Phone className="mr-2 h-4 w-4" />
+                    <Phone className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Quick Help
                   </Button>
                 </div>
