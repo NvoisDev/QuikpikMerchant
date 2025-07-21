@@ -17,7 +17,12 @@
   - ✅ **Stripe Receipts**: Automatic customer receipts enabled for all successful payments
 - **Production Ready Status**: ✅ CONFIRMED - Complete payment system operational and ready for live customer transactions
 - **Automatic Order Flow**: When customers complete payments, system automatically creates orders, sends notifications, and processes all order details
-- **Real Testing Results**: Payment intent `pi_3RnNrDBLkKweDa5P32cgz605` successfully created with correct £6.83 total, £6.00 subtotal, £0.83 customer fee structure
+- **REVERTED TO SIMPLIFIED STRUCTURE**: Successfully reverted to working simplified fee structure per user request (July 21, 2025)
+  - **Customer Payment**: Product subtotal + £6.00 fixed platform fee
+  - **Wholesaler Receives**: 100% of product value (full product amount)  
+  - **Platform Collects**: £6.00 fixed fee from customer
+  - **Example**: £50 product → Customer pays £56 → Wholesaler gets £50 → Platform gets £6
+- **Real Testing Results**: Payment intent `pi_3RnO1hBLkKweDa5P0ymWBiuT` successfully created with simplified £12.00 total (£6.00 product + £6.00 platform fee)
 
 ### CRITICAL RESOLUTION: Complete Payment Flow Verification - COMPLETED ✅ (July 21, 2025)
 - **Issue Resolved**: Customer unable to see expected Order #50, suspecting payment processing failures

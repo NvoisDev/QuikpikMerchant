@@ -1141,12 +1141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Customer pays 5.5% + £0.50 transaction fee
-      const customerTransactionFee = (calculatedTotal * 0.055) + 0.50;
-      const totalAmountWithFee = calculatedTotal + customerTransactionFee;
-      
-      // Platform collects 3.3% from wholesaler
-      const platformFee = calculatedTotal * 0.033;
+      // Simple fee structure - Customer pays product total + £6 platform fee
+      // Wholesaler receives full product amount
 
       // Get first product's wholesaler for Stripe Connect account
       const firstProduct = validatedItems[0].product;
@@ -1178,22 +1174,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create Stripe payment intent with Connect account 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee (5.5% + £0.50)
-        currency: 'gbp', // Always use GBP for platform
-        application_fee_amount: Math.round(platformFee * 100), // Platform collects 3.3% from wholesaler
-        transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler receives product total minus 3.3% platform fee
-        },
-        receipt_email: customerEmail, // ✅ Automatically send Stripe receipt to customer
+        amount: Math.round((calculatedTotal + 6) * 100), // Customer pays product total + £6 platform fee
+        currency: 'gbp',
+        receipt_email: customerEmail,
         metadata: {
           customerName,
           customerEmail,
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
-          totalAmount: calculatedTotal.toFixed(2),
-          customerTransactionFee: customerTransactionFee.toFixed(2),
-          platformFee: platformFee.toFixed(2),
-          totalAmountWithFee: totalAmountWithFee.toFixed(2),
+          totalAmount: calculatedTotal.toFixed(2), // Product subtotal (what wholesaler gets)
+          platformFee: '6.00', // Fixed £6 platform fee
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
           items: JSON.stringify(validatedItems.map(item => ({
@@ -1208,10 +1198,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         totalAmount: calculatedTotal.toFixed(2), // Product subtotal
-        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50
-        platformFee: platformFee.toFixed(2), // Platform collects 3.3% from wholesaler
-        totalAmountWithFee: totalAmountWithFee.toFixed(2), // Total customer payment
-        wholesalerReceives: (calculatedTotal - platformFee).toFixed(2) // Wholesaler receives product total minus 3.3%
+        platformFee: '6.00', // Fixed £6 platform fee
+        totalAmountWithFee: (calculatedTotal + 6).toFixed(2) // Total customer payment
       });
 
     } catch (error) {
@@ -1632,9 +1620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             wholesalerId: wholesalerId,
             retailerId: customer.id,
             subtotal: parseFloat(totalAmount).toFixed(2), // Product subtotal (what wholesaler gets)
-            platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
-            transactionFee: parseFloat(customerTransactionFee || transactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-            total: (parseFloat(totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2), // Total = subtotal + customer transaction fee
+            platformFee: parseFloat(platformFee).toFixed(2), // £6 platform fee
+            total: (parseFloat(totalAmount) + parseFloat(platformFee)).toFixed(2), // Total = subtotal + platform fee
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
