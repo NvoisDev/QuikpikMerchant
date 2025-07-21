@@ -46,8 +46,7 @@ function PublicRoutes() {
     <Switch>
       <Route path="/campaign/:id" component={CampaignPreview} />
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
-      <Route path="/customer/:id" component={CustomerLogin} />
-      <Route path="/store/:id" component={CustomerPortal} />
+      <Route path="/customer/:id" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
