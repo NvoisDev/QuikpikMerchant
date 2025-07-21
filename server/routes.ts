@@ -1593,18 +1593,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
     
     try {
-      // Extract order data from metadata with fallback handling
+      // Debug metadata fields being received
+      console.log('📋 Received metadata fields:', Object.keys(paymentIntent.metadata));
+      console.log('📋 Full metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+      
+      // Extract order data from metadata with comprehensive fallback handling
       const metadata = paymentIntent.metadata;
       const customerName = metadata.customerName;
       const customerEmail = metadata.customerEmail;
       const customerPhone = metadata.customerPhone;
-      const productSubtotal = metadata.productSubtotal || metadata.totalAmount;
-      const customerTransactionFee = metadata.customerTransactionFee || '0';
-      const wholesalerPlatformFee = metadata.wholesalerPlatformFee || metadata.platformFee || '0';
+      const productSubtotal = metadata.productSubtotal || metadata.totalAmount || '0';
+      
+      // Handle multiple possible field names for transaction fee
+      const customerTransactionFee = metadata.customerTransactionFee || 
+                                   metadata.transactionFee || 
+                                   metadata.customer_transaction_fee ||
+                                   '0';
+      
+      const wholesalerPlatformFee = metadata.wholesalerPlatformFee || 
+                                  metadata.platformFee || 
+                                  metadata.wholesaler_platform_fee ||
+                                  '0';
+      
       const wholesalerReceives = metadata.wholesalerReceives || '0';
-      const totalCustomerPays = metadata.totalCustomerPays || metadata.totalAmountWithFee || '0';
+      const totalCustomerPays = metadata.totalCustomerPays || 
+                              metadata.totalAmountWithFee || 
+                              metadata.total_amount_with_fee ||
+                              (paymentIntent.amount / 100).toString();
       const wholesalerId = metadata.wholesalerId;
       const orderType = metadata.orderType;
+      
+      console.log('📊 Extracted values:', {
+        productSubtotal,
+        customerTransactionFee,
+        wholesalerPlatformFee,
+        totalCustomerPays,
+        paymentIntentAmount: (paymentIntent.amount / 100).toString()
+      });
 
         if (orderType === 'customer_portal') {
           // Extract customer and order data from metadata
