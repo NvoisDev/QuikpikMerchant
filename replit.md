@@ -2,6 +2,19 @@
 
 ## Outstanding Issues (July 21, 2025) - ALL RESOLVED ✅
 
+### Transaction Fee Calculation Fix - COMPLETED ✅ (July 21, 2025)
+- **Issue Identified**: Customer checkout showed different total amount vs payment button amount due to incorrect fee calculations
+- **Root Cause**: Frontend had three separate fee calculations - checkout display (wrong), payment prop (incomplete), and payment button (wrong)
+- **Solution Implemented**: Unified transaction fee calculation across all customer-facing elements
+- **Technical Fixes**:
+  - Fixed checkout modal total calculation (line 3214) - now correctly shows Product subtotal + Transaction fee (5.5% + £0.50)  
+  - Fixed payment form total amount prop (line 3515) - now passes correct total including transaction fees to Stripe
+  - Fixed payment button calculation (line 506) - now displays exact total amount without adding extra fees
+  - Updated payment description text to show correct "5.5% + £0.50" transaction fee instead of incorrect "2.5%"
+- **Fee Structure Verified**: Customer pays Product subtotal + Transaction fee (5.5% + £0.50), Wholesaler pays 3.3% platform fee
+- **Production Ready**: For £400 order, customer now pays exactly £422.50 in both checkout total and payment button
+- **Status**: ✅ COMPLETED - Total amount and pay amount now match perfectly
+
 ### Customer Orders Display Issue - RESOLVED ✅ (July 21, 2025)
 - **Issue Fixed**: Michael Ogunjemilua couldn't see his 17 orders including Order #45 (£100) due to customer group restrictions
 - **Root Cause**: Customer orders API required customers to be pre-registered in customer groups before viewing orders
