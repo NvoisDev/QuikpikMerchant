@@ -25,9 +25,9 @@
   - **Immediate State Clear**: `queryClient.setQueryData(["/api/auth/user"], null)` to instantly clear authentication
   - **Complete Cache Clear**: `queryClient.clear()` to remove all cached data
   - **Storage Cleanup**: `localStorage.clear()` and `sessionStorage.clear()` to ensure no persistent state
-  - **Force Redirect**: `window.location.href = "/"` for clean page reload
+  - **Force Redirect**: `window.location.href = "/customer-login"` for clean page reload to Find Your Store page
   - **Clean Router Logic**: Router now properly detects unauthenticated state and shows landing page
-- **Status**: ✅ COMPLETED - Logout now properly shows landing page without authentication artifacts
+- **Status**: ✅ COMPLETED - Logout now properly shows CustomerLogin page without authentication artifacts
 
 ### CUSTOMER LOGOUT REDIRECT FIX - COMPLETED ✅ (July 21, 2025)
 - **Issue Resolved**: Customer logout was redirecting to verification page instead of landing page

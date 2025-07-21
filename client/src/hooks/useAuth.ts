@@ -24,8 +24,8 @@ export function useAuth() {
       // Clear all localStorage and sessionStorage to ensure clean state
       localStorage.clear();
       sessionStorage.clear();
-      // Force a complete page reload to ensure clean state
-      window.location.href = "/";
+      // Redirect to customer login page (Find Your Store page)
+      window.location.href = "/customer-login";
     },
   });
 
