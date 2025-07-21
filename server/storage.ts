@@ -67,6 +67,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getAllWholesalers(): Promise<{ id: string; businessName: string; email: string }[]>;
   createUser(user: Partial<UpsertUser>): Promise<User>;
   updateUser(id: string, updates: Partial<UpsertUser>): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
@@ -300,6 +301,24 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getAllWholesalers(): Promise<{ id: string; businessName: string; email: string }[]> {
+    const wholesalers = await db
+      .select({
+        id: users.id,
+        businessName: users.businessName,
+        email: users.email
+      })
+      .from(users)
+      .where(eq(users.role, 'wholesaler'))
+      .orderBy(users.businessName);
+    
+    return wholesalers.map(w => ({
+      id: w.id,
+      businessName: w.businessName || 'Business',
+      email: w.email || ''
+    }));
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {

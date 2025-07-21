@@ -3936,6 +3936,17 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Get all wholesalers for customer login dropdown
+  app.get("/api/wholesalers/all", async (req, res) => {
+    try {
+      const wholesalers = await storage.getAllWholesalers();
+      res.json(wholesalers);
+    } catch (error) {
+      console.error("Error fetching all wholesalers:", error);
+      res.status(500).json({ message: "Failed to fetch wholesalers" });
+    }
+  });
+
   // Wholesaler lookup endpoint for customer login
   app.get("/api/wholesaler/:id", async (req, res) => {
     try {

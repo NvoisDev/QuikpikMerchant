@@ -119,7 +119,7 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   
   // Check if current route is public (doesn't need authentication)
-  const publicRoutes = ['/login', '/landing', '/signup', '/team-invitation'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
