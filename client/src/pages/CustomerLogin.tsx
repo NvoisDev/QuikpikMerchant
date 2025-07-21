@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation, useRouter } from "wouter";
 import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users } from "lucide-react";
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty, CommandGroup } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -69,6 +69,7 @@ const FloatingIcons = () => {
 };
 
 export default function CustomerLogin() {
+  const [location] = useLocation();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedWholesaler, setSelectedWholesaler] = useState<Wholesaler | null>(null);
   const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
@@ -78,13 +79,16 @@ export default function CustomerLogin() {
   const [isLoadingWholesalers, setIsLoadingWholesalers] = useState(false);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Extract wholesaler ID from URL if accessing directly via /customer/:id
+  const wholesalerIdFromUrl = location.includes('/customer/') ? location.split('/customer/')[1]?.split('?')[0] : null;
 
   // Brand green theme colors
   const getThemeColors = () => {
     return "bg-green-500";
   };
 
-  // Load all wholesalers when component mounts
+  // Load wholesalers and handle direct URL access
   useEffect(() => {
     const loadWholesalers = async () => {
       setIsLoadingWholesalers(true);
@@ -93,6 +97,15 @@ export default function CustomerLogin() {
         if (response.ok) {
           const data = await response.json();
           setWholesalers(data);
+          
+          // If accessing via direct URL, automatically select wholesaler and go to step 2
+          if (wholesalerIdFromUrl) {
+            const targetWholesaler = data.find((w: Wholesaler) => w.id === wholesalerIdFromUrl);
+            if (targetWholesaler) {
+              setSelectedWholesaler(targetWholesaler);
+              setStep(2); // Skip to the beautiful welcome screen
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to load wholesalers:", error);
@@ -102,7 +115,7 @@ export default function CustomerLogin() {
     };
     
     loadWholesalers();
-  }, []);
+  }, [wholesalerIdFromUrl]);
 
   const filteredWholesalers = wholesalers.filter(wholesaler =>
     wholesaler.businessName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -138,8 +151,8 @@ export default function CustomerLogin() {
     setIsLoading(true);
     
     try {
-      // Redirect to customer portal with phone authentication
-      window.location.href = `/customer/${selectedWholesaler.id}?phone=${lastFourDigits}`;
+      // Redirect to customer portal for authentication and store access
+      window.location.href = `/store/${selectedWholesaler.id}?auth=${lastFourDigits}`;
     } catch (error) {
       toast({
         title: "Connection Error",
