@@ -1588,6 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalAmount,
           platformFee,
           transactionFee,
+          customerTransactionFee,
           wholesalerId,
           orderType
         } = paymentIntent.metadata;
@@ -1622,8 +1623,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             retailerId: customer.id,
             subtotal: parseFloat(totalAmount).toFixed(2), // Product subtotal (what wholesaler gets)
             platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
-            transactionFee: parseFloat(transactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-            total: (parseFloat(totalAmount) + parseFloat(transactionFee || '0')).toFixed(2), // Total = subtotal + customer transaction fee
+            transactionFee: parseFloat(customerTransactionFee || transactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+            total: (parseFloat(totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2), // Total = subtotal + customer transaction fee
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
