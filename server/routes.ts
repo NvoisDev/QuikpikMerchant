@@ -1607,11 +1607,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Create order
           const orderData = {
-            wholesalerId,
+            wholesalerId: parseInt(wholesalerId),
             retailerId: customer.id,
-            subtotal: totalAmount, // Product subtotal (what wholesaler gets)
-            platformFee: platformFee, // 3.3% platform fee
-            transactionFee: transactionFee, // Customer transaction fee (5.5% + £0.50)
+            subtotal: parseFloat(totalAmount).toFixed(2), // Product subtotal (what wholesaler gets)
+            platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
+            transactionFee: parseFloat(transactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
             total: (parseFloat(totalAmount) + parseFloat(transactionFee || '0')).toFixed(2), // Total = subtotal + customer transaction fee
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
@@ -1696,7 +1696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   (customerAddress ? JSON.stringify(customerAddress) : undefined),
                 total: totalAmount,
                 subtotal: (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2),
-                platformFee,
+                platformFee: parseFloat(platformFee).toFixed(2),
                 shippingTotal: orderData.deliveryCost,
                 fulfillmentType: orderData.fulfillmentType,
                 items: enrichedItemsForEmail,
