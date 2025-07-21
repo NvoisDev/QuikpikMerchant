@@ -581,13 +581,15 @@ export default function CustomerPortal() {
   // Detect if this is preview mode (accessed via /preview-store)
   const isPreviewMode = location === '/preview-store';
   
-  // Get authenticated user only for preview mode
+  // Get authenticated user only for preview mode - TEMPORARILY DISABLED
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
-    enabled: isPreviewMode, // Only enabled in preview mode
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
+    enabled: false, // DISABLED to prevent infinite loops
+    retry: false,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchInterval: false,
   });
   
   // Use authenticated user's ID in preview mode, but if user is team member, use parent wholesaler ID
