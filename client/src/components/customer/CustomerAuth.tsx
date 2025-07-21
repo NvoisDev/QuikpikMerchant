@@ -41,7 +41,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
   // Reset authentication state on component mount (after logout)
   useEffect(() => {
-    // Clear any persisted authentication state and reset to phone entry
+    // Always start fresh - clear authentication state
     setAuthStep('phone');
     setLastFourDigits("");
     setSmsCode("");
@@ -51,32 +51,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     setSmsExpiry(null);
     setCountdown(0);
     
-    // Check for auth query parameter only if not coming from logout
-    const urlParams = new URLSearchParams(window.location.search);
-    const authParam = urlParams.get('auth');
-    
-    // Only use auth parameter if there's no indication of a fresh logout
-    if (authParam && authParam.length === 4 && !sessionStorage.getItem('justLoggedOut')) {
-      console.log('🔗 Found auth parameter from CustomerLogin page:', authParam);
-      setLastFourDigits(authParam);
-      // Skip to verification step since digits were already entered
-      setAuthStep('verification');
-    }
-    
-    // Clear logout indicator
-    sessionStorage.removeItem('justLoggedOut');
+    console.log('🔄 Authentication component reset to phone entry step');
   }, [wholesalerId]);
-
-  // Auto-trigger login when lastFourDigits is set from URL parameter
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const authParam = urlParams.get('auth');
-    
-    if (authParam && lastFourDigits === authParam && lastFourDigits.length === 4 && wholesalerId && authStep === 'verification') {
-      console.log('🚀 Auto-triggering authentication with digits:', lastFourDigits);
-      handleLogin();
-    }
-  }, [lastFourDigits, wholesalerId, authStep]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
