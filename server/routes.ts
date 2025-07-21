@@ -3139,18 +3139,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Send confirmation email to customer  
               if (customer?.email) {
-                const orderItems = await storage.getOrderItems(orderId);
-                const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
-                  const product = await storage.getProduct(item.productId);
-                  return {
-                    ...item,
-                    productName: product?.name || `Product #${item.productId}`,
-                    product: product ? { name: product.name } : null
-                  };
-                }));
-                
-                await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
-                console.log(`📧 Order confirmation sent to customer: ${customer.email}`);
+                try {
+                  const orderItems = await storage.getOrderItems(orderId);
+                  const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+                    const product = await storage.getProduct(item.productId);
+                    return {
+                      ...item,
+                      productName: product?.name || `Product #${item.productId}`,
+                      product: product ? { name: product.name } : null
+                    };
+                  }));
+                  
+                  await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
+                  console.log(`📧 Order confirmation sent to customer: ${customer.email}`);
+                } catch (customerEmailError) {
+                  console.error(`Failed to send customer confirmation email:`, customerEmailError);
+                }
+              } else {
+                console.log(`⚠️ No customer email found for Order #${orderId} - customer ID: ${order.retailerId}`);
               }
             }
           } catch (emailError) {
