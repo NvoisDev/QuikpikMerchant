@@ -67,6 +67,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   }, [countdown]);
 
   const handleLogin = async () => {
+    console.log('🚀 Starting streamlined authentication...', { wholesalerId, lastFourDigits });
+    
     if (!lastFourDigits) {
       setError("Please enter the last 4 digits of your phone number");
       return;
@@ -81,8 +83,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     setError("");
 
     try {
+      console.log('📡 Verifying customer and sending SMS...');
+      
       // First verify the customer exists with these last 4 digits
-      const response = await fetch('/api/customer-auth/verify', {
+      const verifyResponse = await fetch('/api/customer-auth/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,27 +97,53 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         }),
       });
 
-      const data = await response.json();
+      const verifyData = await verifyResponse.json();
 
-      if (response.ok) {
-        // Store customer data for verification step
-        setCustomerData(data.customer);
+      if (verifyResponse.ok) {
+        console.log('✅ Customer found, sending SMS immediately...');
+        setCustomerData(verifyData.customer);
         
-        // Determine verification method based on customer email
-        if (data.customer.email && data.customer.email.includes('@')) {
-          setVerificationMethod('both'); // Customer has email, offer both options
+        // Immediately send SMS code without going to verification step
+        const smsResponse = await fetch('/api/customer-auth/request-sms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            wholesalerId,
+            lastFourDigits: lastFourDigits.trim()
+          }),
+        });
+
+        const smsData = await smsResponse.json();
+
+        if (smsResponse.ok) {
+          console.log('📱 SMS sent successfully, moving to SMS verification...');
+          // Determine verification method
+          if (verifyData.customer.email && verifyData.customer.email.includes('@')) {
+            setVerificationMethod('both');
+          } else {
+            setVerificationMethod('sms');
+          }
+          
+          setAuthStep('verification');
+          setCountdown(300); // 5 minutes
+          setSmsExpiry(Date.now() + 300000);
+          
+          toast({
+            title: "SMS Sent!",
+            description: `A verification code has been sent to your phone, ${verifyData.customer.name}.`,
+          });
         } else {
-          setVerificationMethod('sms'); // No email, SMS only
+          console.error('❌ SMS sending failed:', smsData);
+          setError(smsData.error || "Failed to send SMS code. Please try again.");
         }
-        
-        setAuthStep('verification');
-        // Automatically request SMS code as default
-        await handleRequestSMS();
       } else {
-        setError(data.error || "Customer not found. Please check the last 4 digits of your phone number.");
+        console.error('❌ Customer verification failed:', verifyData);
+        setError(verifyData.error || "Customer not found. Please check the last 4 digits of your phone number.");
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      console.error('⚠️ Authentication error:', error);
       setError("Connection error. Please try again.");
     } finally {
       setIsLoading(false);
@@ -686,12 +716,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                         {isLoading ? (
                           <>
                             <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                            Verifying your access...
+                            Sending verification code...
                           </>
                         ) : (
                           <>
-                            <span>Continue to SMS Verification</span>
-                            <span className="ml-2 text-xl">📱</span>
+                            <span>Access Store</span>
+                            <span className="ml-2 text-xl">🔓</span>
                           </>
                         )}
                       </Button>
