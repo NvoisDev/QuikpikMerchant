@@ -15,6 +15,19 @@
 - **Production Ready**: For £400 order, customer now pays exactly £422.50 in both checkout total and payment button
 - **Status**: ✅ COMPLETED - Total amount and pay amount now match perfectly
 
+### UI Text Update - "Delivery" to "Collection" - COMPLETED ✅ (July 21, 2025)
+- **User Request**: Change "delivery" text to "collection" throughout customer-facing interfaces
+- **Implementation**: Comprehensive text updates across customer portal and order history
+- **Changes Made**:
+  - Customer portal shipping option changed from "delivery" to "collection"
+  - Order history section headers updated: "Delivery Information" → "Collection Information"  
+  - Label updates: "Delivery Carrier" → "Collection Carrier", "Delivery Address" → "Collection Address"
+  - Customer messaging updated: "delivery options" → "collection options"
+  - Form placeholders updated: "delivery instructions" → "collection instructions"
+  - Warning messages updated for consistency across all customer touchpoints
+- **Data Structure**: Updated shipping option values from "delivery" to "collection" for new orders
+- **Status**: ✅ COMPLETED - All customer-facing text now uses "collection" terminology
+
 ### Customer Orders Display Issue - RESOLVED ✅ (July 21, 2025)
 - **Issue Fixed**: Michael Ogunjemilua couldn't see his 17 orders including Order #45 (£100) due to customer group restrictions
 - **Root Cause**: Customer orders API required customers to be pre-registered in customer groups before viewing orders

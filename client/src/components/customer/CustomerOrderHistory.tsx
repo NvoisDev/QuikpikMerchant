@@ -178,11 +178,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         )}
 
-        {/* Delivery Information */}
+        {/* Collection Information */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center">
             <Truck className="h-4 w-4 mr-2" />
-            Delivery Information
+            Collection Information
           </h3>
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
@@ -191,13 +191,13 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             </div>
             {order.deliveryCarrier && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Delivery Carrier:</span>
+                <span className="text-gray-600">Collection Carrier:</span>
                 <span className="font-medium">{order.deliveryCarrier}</span>
               </div>
             )}
             {order.customerAddress && (
               <div>
-                <span className="text-gray-600 text-sm">Delivery Address:</span>
+                <span className="text-gray-600 text-sm">Collection Address:</span>
                 <p className="font-medium text-sm mt-1">{order.customerAddress}</p>
               </div>
             )}

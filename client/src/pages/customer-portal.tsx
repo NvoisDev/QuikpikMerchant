@@ -218,7 +218,7 @@ interface CustomerData {
   postalCode: string;
   country: string;
   notes: string;
-  shippingOption: "pickup" | "delivery";
+  shippingOption: "pickup" | "collection";
   selectedShippingService?: {
     serviceId: string;
     serviceName: string;
@@ -805,7 +805,7 @@ export default function CustomerPortal() {
         setAvailableShippingServices(data.quotes);
         toast({
           title: data.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
-          description: `Found ${data.quotes.length} delivery options for your location${data.demoMode ? ' (demo mode)' : ''}`,
+          description: `Found ${data.quotes.length} collection options for your location${data.demoMode ? ' (demo mode)' : ''}`,
         });
       } else {
         console.log("No quotes found in response");
@@ -1015,7 +1015,7 @@ export default function CustomerPortal() {
     
     // Calculate shipping cost (consider free shipping promotions)
     let shippingCost = 0;
-    if (customerData.shippingOption === 'delivery' && customerData.selectedShippingService) {
+    if (customerData.shippingOption === 'collection' && customerData.selectedShippingService) {
       if (freeShippingApplied) {
         shippingCost = 0;
         if (!appliedPromotions.includes('Free Shipping')) {
@@ -1456,7 +1456,7 @@ export default function CustomerPortal() {
                 </h3>
                 <p className="text-blue-700 mb-4">
                   To view pricing and place orders, you need to be added as a contact by the wholesaler first. 
-                  Once added, you'll be able to sign in and access all features including pricing, ordering, and delivery options.
+                  Once added, you'll be able to sign in and access all features including pricing, ordering, and collection options.
                 </p>
                 <div className="flex items-center space-x-4">
                   <Button
@@ -2676,7 +2676,7 @@ export default function CustomerPortal() {
                 )}
               </div>
               
-              {/* Delivery Exclusion Warning */}
+              {/* Collection Exclusion Warning */}
               {selectedProduct.deliveryExcluded && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-start space-x-2">
@@ -2686,7 +2686,7 @@ export default function CustomerPortal() {
                     <div className="flex-1">
                       <h4 className="font-medium text-red-800 text-sm">🚚 Pickup Only Product</h4>
                       <p className="text-red-700 text-sm mt-1">
-                        This product requires pickup from the supplier location. Delivery is not available for this item.
+                        This product requires pickup from the supplier location. Collection is not available for this item.
                       </p>
                     </div>
                   </div>
@@ -3107,7 +3107,7 @@ export default function CustomerPortal() {
                               <span className="text-blue-500 text-lg">🚚</span>
                               <div className="flex-1">
                                 <div className="text-sm font-semibold text-blue-800">Free Shipping Applied!</div>
-                                <div className="text-sm text-blue-700">Delivery cost waived for this order</div>
+                                <div className="text-sm text-blue-700">Collection cost waived for this order</div>
                               </div>
                             </div>
                           </div>
@@ -3181,7 +3181,7 @@ export default function CustomerPortal() {
                       return (
                         <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                           ⚠️ {totalWeight > 1000 
-                            ? "Orders over 1 tonne require pallet delivery service" 
+                            ? "Orders over 1 tonne require pallet collection service" 
                             : "Heavy order - specialized shipping required"}
                         </div>
                       );
@@ -3189,7 +3189,7 @@ export default function CustomerPortal() {
                     return null;
                   })()}
                   
-                  {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
+                  {customerData.shippingOption === 'collection' && customerData.selectedShippingService && (
                     <div className="flex justify-between">
                       <span>Shipping ({customerData.selectedShippingService.serviceName}):</span>
                       <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
@@ -3213,7 +3213,7 @@ export default function CustomerPortal() {
                 </div>
               </div>
 
-              {/* Delivery Exclusion Alert for Cart Items */}
+              {/* Collection Exclusion Alert for Cart Items */}
               {(() => {
                 const deliveryExcludedItems = cart.filter(item => item.product.deliveryExcluded);
                 if (deliveryExcludedItems.length > 0) {
@@ -3261,7 +3261,7 @@ export default function CustomerPortal() {
                       )}
                       
                       <div className="text-xs text-red-600 bg-red-100 rounded p-2">
-                        💡 <strong>Important:</strong> After completing your order, please contact the supplier to arrange pickup time for these items. Other items in your order may still be eligible for delivery.
+                        💡 <strong>Important:</strong> After completing your order, please contact the supplier to arrange pickup time for these items. Other items in your order may still be eligible for collection.
                       </div>
                     </div>
                   );
@@ -3365,7 +3365,7 @@ export default function CustomerPortal() {
                     id="customerNotes"
                     value={customerData.notes}
                     onChange={(e) => setCustomerData({...customerData, notes: e.target.value})}
-                    placeholder="Any special delivery instructions or notes..."
+                    placeholder="Any special collection instructions or notes..."
                     className="min-h-[80px]"
                   />
                 </div>
@@ -3407,12 +3407,12 @@ export default function CustomerPortal() {
 
                   <div 
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      customerData.shippingOption === 'delivery' 
+                      customerData.shippingOption === 'collection' 
                         ? 'border-green-500 bg-green-50' 
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                     onClick={() => {
-                      setCustomerData({...customerData, shippingOption: 'delivery'});
+                      setCustomerData({...customerData, shippingOption: 'collection'});
                       if (customerData.address && customerData.city && customerData.postalCode) {
                         fetchShippingQuotes();
                       }
@@ -3420,13 +3420,13 @@ export default function CustomerPortal() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
-                        customerData.shippingOption === 'delivery' 
+                        customerData.shippingOption === 'collection' 
                           ? 'border-green-500 bg-green-500' 
                           : 'border-gray-300'
                       }`} />
                       <div>
-                        <h4 className="font-medium">Delivery</h4>
-                        <p className="text-sm text-gray-600">Courier delivery to your address</p>
+                        <h4 className="font-medium">Collection</h4>
+                        <p className="text-sm text-gray-600">Courier collection service to your address</p>
                         <p className="text-sm font-medium text-blue-600">Select service below</p>
                       </div>
                     </div>
@@ -3434,9 +3434,9 @@ export default function CustomerPortal() {
                 </div>
 
                 {/* Shipping Services Selection */}
-                {customerData.shippingOption === 'delivery' && (
+                {customerData.shippingOption === 'collection' && (
                   <div className="space-y-3">
-                    <h4 className="font-medium">Choose Delivery Service</h4>
+                    <h4 className="font-medium">Choose Collection Service</h4>
                     
                     {loadingShippingQuotes ? (
                       <div className="text-center py-4">
