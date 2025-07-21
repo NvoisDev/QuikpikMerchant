@@ -282,6 +282,115 @@ Each member profile includes:
 - Regularly review and update member lists
 - Use descriptive group names and descriptions
         `
+      },
+      {
+        title: "Merging Duplicate Customers",
+        content: `
+### Customer Merge Functionality
+
+Fix duplicate customer accounts that can cause authentication conflicts and data confusion.
+
+#### Why Merge Customers?
+Duplicate customer accounts occur when:
+- Same customer has multiple entries with different emails
+- Similar phone numbers (e.g., +44 vs 07 format) create separate accounts
+- Manual data entry creates variations in names or contact info
+- Import processes create multiple records for same person
+
+Problems caused by duplicates:
+- Authentication conflicts with shared phone digits
+- Fragmented order history across multiple accounts
+- Inaccurate customer analytics and reporting
+- Confusion during order management
+
+#### How to Merge Customers
+
+**Step 1: Access Merge Tool**
+1. Go to **Customer Groups** in the sidebar
+2. Click the **"Merge Duplicates"** button in the toolbar
+3. System automatically scans for potential duplicates
+
+**Step 2: Review Duplicate Detection**
+The system finds duplicates by:
+- Matching phone numbers (different formats)
+- Similar names with same phone number
+- Email variations for same contact
+
+**Step 3: Select Primary Account**
+- Review suggested primary account (usually most orders)
+- Verify customer details are correct
+- Choose which account should remain active
+
+**Step 4: Confirm Data Transfer**
+Before merging, review what will be transferred:
+- All order history and purchase data
+- Customer group memberships
+- Product interactions and preferences
+- Campaign history and responses
+- Contact information (best version retained)
+
+**Step 5: Execute Merge**
+- Click **"Merge Accounts"** to combine records
+- System transfers all data to primary account
+- Duplicate accounts are permanently deleted
+- Process typically completes in 5-10 seconds
+
+#### What Gets Merged
+The merge process handles all database relationships:
+- **Orders**: All purchase history consolidated
+- **Customer Groups**: Memberships combined
+- **Campaigns**: All broadcast history preserved
+- **Products**: Viewing and interaction history
+- **Contact Info**: Best available data retained
+- **Analytics**: Accurate customer metrics restored
+
+#### Merge Results
+After merging:
+- Single customer account with complete history
+- All orders appear under primary account
+- Customer authentication works correctly
+- Analytics reflect accurate customer value
+- Clean database without duplicates
+
+#### Manual vs Automatic Detection
+**Automatic Detection** (Recommended):
+- Click "Merge Duplicates" for system detection
+- Finds customers with matching phone numbers
+- Suggests best primary account automatically
+
+**Manual Selection**:
+- Select specific customers to merge
+- Useful for complex duplicate scenarios
+- Choose your own primary account
+
+#### Best Practices
+- **Regular Cleanup**: Run merge detection monthly
+- **Verify First**: Always review suggested merges before executing
+- **Backup Approach**: Export customer data before major merge operations
+- **Team Coordination**: Inform team members about merge activities
+- **Customer Communication**: Notify customers if their login details change
+
+#### Troubleshooting
+**Problem**: Can't find duplicate customers
+- **Solution**: Check for variations in phone number format (+44 vs 07)
+
+**Problem**: Merge button is disabled
+- **Solution**: Select at least 2 customers with same phone number
+
+**Problem**: Wrong primary account selected
+- **Solution**: You can manually choose different primary account before merging
+
+**Problem**: Order history missing after merge
+- **Solution**: Contact support - all order data should transfer automatically
+
+#### Safety Features
+- **Confirmation Dialog**: Always confirms before permanent deletion
+- **Data Validation**: Verifies all relationships before transfer
+- **Error Handling**: Rolls back if any issues occur during merge
+- **Audit Trail**: Logs all merge activities for reference
+
+The merge system handles all foreign key constraints automatically, ensuring your data remains intact throughout the process.
+        `
       }
     ]
   },

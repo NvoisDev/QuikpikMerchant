@@ -26,6 +26,7 @@
 - **Foreign Key Handling**: Transfers data from orders, customer groups, products, campaigns, message templates, broadcasts, stock movements, negotiations, team members, and all other related tables
 - **Successful Testing**: Michael Ogunjemilua duplicate accounts successfully merged - consolidated 4 duplicate accounts into single primary account with all 16 orders transferred
 - **Production Ready**: Customer merge system operational with comprehensive data transfer and proper cleanup
+- **Help Documentation**: Comprehensive customer merge guide added to Help tab for self-service support (July 21, 2025)
 
 ## Outstanding Issues (July 20, 2025)
 
