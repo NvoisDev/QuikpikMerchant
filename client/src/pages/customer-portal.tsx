@@ -486,7 +486,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             <ShieldCheck className="w-4 h-4" />
             <span className="font-semibold">Secure Payment Processing</span>
           </div>
-          <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
+          <p>Your payment is processed securely through Stripe. Platform fee (£6.00) is included in the total.</p>
         </div>
 
         <Button
