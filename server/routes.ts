@@ -539,56 +539,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id);
 
-      // Find ALL wholesalers where this customer is registered
-      console.log('🔍 Finding all wholesalers where customer is registered...');
-      
-      const customerWholesalers = await db
-        .select({
-          wholesalerId: customerGroups.wholesalerId,
-          wholesalerName: users.businessName,
-          wholesalerEmail: users.email,
-          wholesalerPhone: users.businessPhone,
-        })
-        .from(customerGroupMembers)
-        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
-        .innerJoin(users, eq(customerGroups.wholesalerId, users.id))
-        .where(eq(customerGroupMembers.customerId, customer.id));
+      // REMOVED: Customer group requirement - customers can see orders even without pre-registration
 
-      console.log('🔍 Customer is registered with wholesalers:', customerWholesalers.map(w => w.wholesalerName));
-
-      if (customerWholesalers.length === 0) {
-        return res.json([]);
-      }
-
-      // Get orders from ALL wholesalers where customer is registered
-      const wholesalerIds = customerWholesalers.map(w => w.wholesalerId);
-      console.log('🔍 Looking for orders across wholesaler IDs:', wholesalerIds);
+      // NEW: Allow access to orders even if customer is not in customer groups
+      // This fixes the issue where customers can't see their orders unless pre-registered
+      console.log('🔍 Searching for all orders by customer regardless of group membership...');
       
-      // Normalize customer phone number for matching
-      const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
-      const customerPhoneVariants = [
-        customer.phone, // Original format
-        normalizedCustomerPhone, // UK format (07...)
-        '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
-      ];
-      
-      console.log('🔍 Searching with phone variants:', customerPhoneVariants);
-      
-      // Search by retailer ID first (most reliable)
+      // Search by retailer ID first (most reliable) - remove wholesaler restriction
       let orderResults = await db
         .select()
         .from(orders)
-        .where(
-          and(
-            eq(orders.retailerId, customer.id),
-            inArray(orders.wholesalerId, wholesalerIds)
-          )
-        )
+        .where(eq(orders.retailerId, customer.id))
         .orderBy(desc(orders.createdAt));
+        
+      console.log('🔍 Found orders by retailer ID:', orderResults.length);
       
-      // If no orders found by retailer ID, search by all phone number variants
+      // If no orders found by retailer ID, search by phone number variants (without wholesaler restriction)
       if (orderResults.length === 0) {
         console.log('🔍 No orders found by retailer ID, searching by phone number variants...');
+        
+        // Normalize customer phone number for matching
+        const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+        const customerPhoneVariants = [
+          customer.phone, // Original format
+          normalizedCustomerPhone, // UK format (07...)
+          '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
+        ];
+        
+        console.log('🔍 Searching with phone variants:', customerPhoneVariants);
         
         const phoneConditions = customerPhoneVariants.map(phone => 
           eq(orders.customerPhone, phone)
@@ -597,12 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderResults = await db
           .select()
           .from(orders)
-          .where(
-            and(
-              or(...phoneConditions),
-              inArray(orders.wholesalerId, wholesalerIds)
-            )
-          )
+          .where(or(...phoneConditions))
           .orderBy(desc(orders.createdAt));
       }
       
@@ -627,8 +600,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .leftJoin(products, eq(orderItems.productId, products.id))
           .where(eq(orderItems.orderId, order.id));
 
-        // Get wholesaler details from the mapped data
-        const wholesalerDetails = customerWholesalers.find(w => w.wholesalerId === order.wholesalerId);
+        // Get wholesaler details directly from database
+        const wholesalerUser = await storage.getUser(order.wholesalerId);
+        const wholesalerDetails = wholesalerUser ? {
+          wholesalerId: order.wholesalerId,
+          wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName}`,
+          wholesalerEmail: wholesalerUser.email || '',
+          wholesalerPhone: wholesalerUser.businessPhone || ''
+        } : null;
 
         return {
           ...order,
@@ -3095,6 +3074,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Update order status to processing
           await storage.updateOrderStatus(orderId, 'processing');
+          
+          // Send email notifications for new order
+          try {
+            const order = await storage.getOrder(orderId);
+            if (order) {
+              const wholesaler = await storage.getUser(order.wholesalerId);
+              const customer = await storage.getUser(order.retailerId);
+              
+              // Send notification email to wholesaler
+              if (wholesaler?.email) {
+                const orderItems = await storage.getOrderItems(orderId);
+                const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+                  const product = await storage.getProduct(item.productId);
+                  return {
+                    productName: product?.name || `Product #${item.productId}`,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice || '0.00',
+                    total: item.total || (parseFloat(item.unitPrice || '0') * item.quantity).toFixed(2)
+                  };
+                }));
+
+                const { generateWholesalerOrderNotificationEmail } = await import('./email-templates');
+                const { sendEmail } = await import('./sendgrid-service');
+                
+                const customerName = customer && (customer.firstName && customer.lastName 
+                  ? `${customer.firstName} ${customer.lastName}` 
+                  : customer.firstName || customer.businessName || 'Customer');
+
+                const emailData = {
+                  orderNumber: `#${order.id}`,
+                  customerName: customerName || 'Customer',
+                  customerEmail: customer?.email || '',
+                  customerPhone: customer?.phoneNumber || customer?.businessPhone || '',
+                  customerAddress: order.deliveryAddress,
+                  total: order.total || '0.00',
+                  subtotal: order.subtotal || '0.00',
+                  platformFee: order.platformFee || '0.00',
+                  shippingTotal: order.shippingTotal || '0.00',
+                  fulfillmentType: order.fulfillmentType || 'pickup',
+                  items: enrichedItems,
+                  wholesaler: {
+                    businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
+                    firstName: wholesaler.firstName || '',
+                    lastName: wholesaler.lastName || '',
+                    email: wholesaler.email
+                  },
+                  orderDate: new Date(order.createdAt).toISOString(),
+                  paymentMethod: 'Card Payment'
+                };
+
+                const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
+                
+                await sendEmail({
+                  to: wholesaler.email,
+                  from: 'orders@quikpik.app',
+                  subject: emailTemplate.subject,
+                  html: emailTemplate.html,
+                  text: emailTemplate.text
+                });
+
+                console.log(`📧 Order notification sent to wholesaler: ${wholesaler.email}`);
+              }
+              
+              // Send confirmation email to customer  
+              if (customer?.email) {
+                const orderItems = await storage.getOrderItems(orderId);
+                const enrichedItems = await Promise.all(orderItems.map(async (item: any) => {
+                  const product = await storage.getProduct(item.productId);
+                  return {
+                    ...item,
+                    productName: product?.name || `Product #${item.productId}`,
+                    product: product ? { name: product.name } : null
+                  };
+                }));
+                
+                await sendCustomerInvoiceEmail(customer, order, enrichedItems, wholesaler);
+                console.log(`📧 Order confirmation sent to customer: ${customer.email}`);
+              }
+            }
+          } catch (emailError) {
+            console.error('Failed to send order emails:', emailError);
+          }
           
           // Log successful payment and platform fee collection
           console.log(`Order ${orderId} paid successfully. Platform fee: $${paymentIntent.application_fee_amount / 100}`);
