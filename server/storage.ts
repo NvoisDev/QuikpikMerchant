@@ -847,16 +847,10 @@ export class DatabaseStorage implements IStorage {
         WHERE u.phone_number IS NOT NULL AND u.phone_number != ''
       `);
       
-      console.log(`Found ${allUsersWithPhones.rows.length} users with phone numbers`);
-      
       // Find all users whose phone number ends with the provided last 4 digits
       const matchingCustomers = allUsersWithPhones.rows.filter((customer: any) => {
         const phoneLastFour = customer.phone?.slice(-4);
-        const match = phoneLastFour === lastFourDigits;
-        if (match) {
-          console.log(`Found match: ${customer.name} (${customer.phone}) - role: ${customer.role}`);
-        }
-        return match;
+        return phoneLastFour === lastFourDigits;
       });
 
       console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits}`);
