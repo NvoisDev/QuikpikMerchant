@@ -185,6 +185,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       return;
     }
 
+    // Prevent multiple simultaneous authentication attempts
+    if (isLoading) {
+      console.log('⏳ Authentication already in progress, ignoring duplicate request');
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
@@ -286,6 +292,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
     if (lastFourDigits.length !== 4) {
       setError("Please enter exactly 4 digits");
+      return;
+    }
+
+    // Prevent multiple simultaneous SMS requests
+    if (isSMSLoading) {
+      console.log('⏳ SMS request already in progress, ignoring duplicate request');
       return;
     }
 
