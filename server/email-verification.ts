@@ -119,7 +119,7 @@ async function sendVerificationEmail(email: string, code: string): Promise<void>
 
   await sendEmail({
     to: email,
-    from: "noreply@quikpik.app",
+    from: "hello@quikpik.co",
     subject: subject,
     html: htmlContent,
     text: textContent
