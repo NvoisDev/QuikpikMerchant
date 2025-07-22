@@ -41,10 +41,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
   // Handle automatic authentication when coming from CustomerLogin
   const handleAuthenticationFromLogin = async (digits: string) => {
-    console.log('🚀 Starting automatic authentication...', { wholesalerId, digits });
+    console.log('🚀 HANDLE_AUTHENTICATION_FROM_LOGIN START', { 
+      wholesalerId, 
+      digits,
+      currentAuthStep: authStep,
+      customerData: customerData ? 'EXISTS' : 'NULL'
+    });
     
     try {
       // Verify customer exists with these last 4 digits
+      console.log('📡 SENDING VERIFY REQUEST...');
       const verifyResponse = await fetch('/api/customer-auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,30 +58,42 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       });
 
       const verifyData = await verifyResponse.json();
+      console.log('📡 VERIFY RESPONSE:', { ok: verifyResponse.ok, data: verifyData });
 
       if (verifyResponse.ok) {
-        console.log('✅ Customer found, sending SMS immediately...');
+        console.log('✅ CUSTOMER FOUND - SETTING CUSTOMER DATA');
         setCustomerData(verifyData.customer);
         
         // Send SMS code
+        console.log('📱 SENDING SMS REQUEST...');
         const smsResponse = await fetch('/api/customer-auth/request-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
         });
 
+        const smsData = await smsResponse.json();
+        console.log('📱 SMS RESPONSE:', { ok: smsResponse.ok, data: smsData });
+
         if (smsResponse.ok) {
-          console.log('📱 SMS sent successfully, ready for verification');
+          console.log('✅ SMS SENT - SETTING VERIFICATION STATE');
           setVerificationMethod(verifyData.customer.email ? 'both' : 'sms');
           setSmsExpiry(Date.now() + 5 * 60 * 1000);
           setCountdown(300);
+          // CRITICAL: Ensure we stay in verification step
+          setAuthStep('verification');
+          console.log('🔧 FORCED AUTH STEP TO VERIFICATION');
+        } else {
+          console.log('❌ SMS FAILED - STAYING IN VERIFICATION');
+          setError('Failed to send SMS. Please try again.');
         }
       } else {
+        console.log('❌ CUSTOMER VERIFY FAILED - BACK TO PHONE');
         setError(verifyData.error || 'Customer not found');
         setAuthStep('phone'); // Fall back to phone entry
       }
     } catch (error) {
-      console.error('Auto-authentication failed:', error);
+      console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
       setError('Authentication failed. Please try again.');
       setAuthStep('phone'); // Fall back to phone entry
     }
@@ -83,21 +101,45 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
   // Handle authentication flow with URL parameter processing
   useEffect(() => {
+    console.log('🔧 AUTHENTICATION EFFECT TRIGGERED', {
+      wholesalerId,
+      currentAuthStep: authStep,
+      currentLastFourDigits: lastFourDigits,
+      url: window.location.href
+    });
+    
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
     
-    console.log('🔍 Checking URL parameters:', { authParam, length: authParam?.length });
+    console.log('🔍 URL PARAMETER CHECK:', { 
+      authParam, 
+      length: authParam?.length,
+      isValid: authParam && authParam.length === 4 && /^\d{4}$/.test(authParam),
+      currentStep: authStep 
+    });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
       // Customer came from CustomerLogin with phone digits - skip phone entry
-      console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
+      console.log('🔗 AUTO-AUTHENTICATION TRIGGERED:', authParam);
+      console.log('🔧 SETTING STATE:', { 
+        lastFourDigits: authParam,
+        authStep: 'verification' 
+      });
+      
       setLastFourDigits(authParam);
+      setAuthStep('verification');
+      
       // Immediately trigger authentication
+      console.log('🚀 CALLING handleAuthenticationFromLogin...');
       handleAuthenticationFromLogin(authParam);
     } else {
       // Fresh start - show phone entry
-      console.log('🔄 No valid auth parameter, showing phone entry');
+      console.log('🔄 FALLBACK TO PHONE ENTRY:', { 
+        reason: !authParam ? 'No auth param' : 
+                authParam.length !== 4 ? 'Wrong length' : 
+                'Invalid format' 
+      });
       setAuthStep('phone');
       setLastFourDigits("");
       setSmsCode("");
