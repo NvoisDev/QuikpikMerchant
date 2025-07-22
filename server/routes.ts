@@ -1678,6 +1678,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentIntentAmount: (paymentIntent.amount / 100).toString()
       });
 
+      // Validate all required fields are defined
+      if (!customerTransactionFee) {
+        console.error('❌ customerTransactionFee is undefined, setting default value');
+      }
+      if (!wholesalerPlatformFee) {
+        console.error('❌ wholesalerPlatformFee is undefined, setting default value');
+      }
+
         if (orderType === 'customer_portal') {
           // Extract customer and order data from metadata
           const {
@@ -1715,14 +1723,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`📞 Using existing customer with phone: ${customerPhone}`);
           }
 
-          // Create order with proper field parsing
+          // Create order with proper field parsing and safe defaults
+          const safeCustomerTransactionFee = customerTransactionFee || '0';
+          const safeWholesalerPlatformFee = wholesalerPlatformFee || '0';
+          const safeTotalCustomerPays = totalCustomerPays || (paymentIntent.amount / 100).toString();
+          
+          console.log('🔧 Safe values for order creation:', {
+            safeCustomerTransactionFee,
+            safeWholesalerPlatformFee,
+            safeTotalCustomerPays
+          });
+
           const orderData = {
             wholesalerId: wholesalerId,
             retailerId: customer.id,
             subtotal: parseFloat(productSubtotal || '0').toFixed(2), // Product subtotal
-            platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee (deducted from wholesaler)
-            customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-            total: parseFloat(totalCustomerPays || '0').toFixed(2), // Total amount customer paid
+            platformFee: parseFloat(safeWholesalerPlatformFee).toFixed(2), // 3.3% platform fee (deducted from wholesaler)
+            customerTransactionFee: parseFloat(safeCustomerTransactionFee).toFixed(2), // Customer transaction fee (5.5% + £0.50)
+            total: parseFloat(safeTotalCustomerPays).toFixed(2), // Total amount customer paid
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
