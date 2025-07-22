@@ -87,15 +87,20 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
     
-    if (authParam && authParam.length === 4) {
+    console.log('🔍 Checking URL parameters:', { authParam, length: authParam?.length });
+    
+    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
       // Customer came from CustomerLogin with phone digits - skip phone entry
       console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
       setLastFourDigits(authParam);
       setAuthStep('verification');
-      // Auto-trigger SMS verification
-      handleAuthenticationFromLogin(authParam);
+      // Auto-trigger SMS verification with delay to ensure state is set
+      setTimeout(() => {
+        handleAuthenticationFromLogin(authParam);
+      }, 100);
     } else {
       // Fresh start - show phone entry
+      console.log('🔄 No valid auth parameter, showing phone entry');
       setAuthStep('phone');
       setLastFourDigits("");
       setSmsCode("");
@@ -104,7 +109,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       setError("");
       setSmsExpiry(null);
       setCountdown(0);
-      console.log('🔄 Authentication component reset to phone entry step');
     }
   }, [wholesalerId]);
 
