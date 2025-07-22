@@ -1251,6 +1251,10 @@ export default function CustomerPortal() {
           title: "Logged out",
           description: "You have been successfully logged out.",
         });
+        // Redirect to customer login page (Find Your Store)
+        window.location.href = "/customer-login";
+        // Redirect to customer login page (Find Your Store)
+        window.location.href = "/customer-login";
       }}
     />;
   }
