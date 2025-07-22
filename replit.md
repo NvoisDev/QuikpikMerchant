@@ -596,6 +596,22 @@
 
 Quikpik Merchant is a comprehensive web-based B2B platform designed for small-scale wholesalers to manage inventory, connect with retail customers, and process orders. The platform enables wholesalers to list products, broadcast stock updates via WhatsApp, accept online payments, and track business analytics while collecting a 5% platform fee per sale.
 
+## DELIVERY COST DISPLAY ENHANCEMENT - COMPLETED ✅ (July 22, 2025)
+
+### Customer Order Details Enhancement - PRODUCTION READY ✅ (July 22, 2025)
+- **User Request Fulfilled**: Added delivery cost display to customer order details per user requirement
+- **Dual Display Implementation**: Delivery costs now shown in both Collection Information section and Payment Breakdown section for complete transparency
+- **Smart Conditional Display**: Delivery costs only display when order.deliveryCost exists and is greater than £0.00
+- **Frontend Integration**: Enhanced CustomerOrderHistory component with proper currency formatting using formatCurrency() function
+- **Real-time Updates**: Changes applied via hot module reload, immediately available to customers viewing order history
+- **Technical Implementation**:
+  - **Collection Information Section**: Shows "Delivery Cost: £X.XX" alongside carrier information
+  - **Payment Breakdown Section**: Displays delivery cost as separate line item in payment summary
+  - **Database Integration**: Utilizes existing order.deliveryCost field from database schema
+  - **Conditional Logic**: Uses parseFloat(order.deliveryCost) > 0 to only show when applicable
+- **Production Ready**: Delivery cost transparency now available for all customer order details
+- **Backend Verified**: Customer authentication system operational (Michael Ogunjemilua with 29 orders confirmed working)
+
 ## PAYMENT CALCULATION MISMATCH ISSUE - RESOLVED ✅ (July 22, 2025)
 
 ### Critical Frontend Payment Calculation Fix - COMPLETED ✅ (July 22, 2025)

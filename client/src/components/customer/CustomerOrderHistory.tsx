@@ -224,6 +224,12 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 <span className="font-medium">{order.deliveryCarrier}</span>
               </div>
             )}
+            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Delivery Cost:</span>
+                <span className="font-medium">{formatCurrency(parseFloat(order.deliveryCost))}</span>
+              </div>
+            )}
             {order.customerAddress && (
               <div>
                 <span className="text-gray-600 text-sm">Collection Address:</span>
@@ -250,6 +256,12 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Subtotal:</span>
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
+            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>Delivery Cost:</span>
+                <span>{formatCurrency(parseFloat(order.deliveryCost))}</span>
+              </div>
+            )}
             {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
               <div className="flex justify-between text-sm">
                 <span>Shipping:</span>
