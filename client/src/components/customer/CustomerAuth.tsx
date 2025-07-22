@@ -224,17 +224,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             description: `A verification code has been sent to your phone, ${verifyData.customer.name}.`,
           });
           
-          // Show debug code immediately in development mode
+          // Always show debug code in development mode due to SMS delivery issues
           if (smsData.debugCode) {
             console.log('🚨 DEVELOPMENT DEBUG CODE:', smsData.debugCode);
             
             // Show prominent alert with the code
             setTimeout(() => {
-              alert(`SMS VERIFICATION CODE: ${smsData.debugCode}\n\nSMS delivery failed. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
-            }, 1000);
+              alert(`SMS VERIFICATION CODE: ${smsData.debugCode}\n\nSMS delivery is unreliable. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
+            }, 500);
             
             toast({
-              title: "🚨 SMS FAILED - USE THIS CODE",
+              title: "📱 SMS CODE (Delivery Unreliable)",
               description: `Verification Code: ${smsData.debugCode}`,
               duration: 60000, // Show for 60 seconds
             });
@@ -291,17 +291,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         setCountdown(300); // 5 minutes
         setSmsExpiry(Date.now() + 300000); // 5 minutes
         
-        // Show debug code immediately in development mode
+        // Always show debug code in development mode due to SMS delivery issues
         if (data.debugCode) {
           console.log('🚨 DEVELOPMENT DEBUG CODE:', data.debugCode);
           
           // Show prominent alert with the code
           setTimeout(() => {
-            alert(`SMS VERIFICATION CODE: ${data.debugCode}\n\nSMS delivery failed. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
-          }, 1000);
+            alert(`SMS VERIFICATION CODE: ${data.debugCode}\n\nSMS delivery is unreliable. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
+          }, 500);
           
           toast({
-            title: "🚨 SMS FAILED - USE THIS CODE",
+            title: "📱 SMS CODE (Delivery Unreliable)",
             description: `Verification Code: ${data.debugCode}`,
             duration: 60000, // Show for 60 seconds
           });
