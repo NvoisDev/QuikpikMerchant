@@ -79,6 +79,15 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         // Extract development code if provided
         if (smsData.debugCode) {
           setDevelopmentCode(smsData.debugCode);
+          // Show popup notification with the verification code
+          setTimeout(() => {
+            alert(`SMS VERIFICATION CODE: ${smsData.debugCode}\n\nUse this code to complete authentication.\n\nCode expires in 5 minutes.`);
+          }, 500);
+          toast({
+            title: "SMS Verification Code",
+            description: `Your code: ${smsData.debugCode}`,
+            duration: 60000, // Show for 60 seconds
+          });
         }
 
         if (smsResponse.ok) {
@@ -306,15 +315,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         // Always show debug code in development mode due to SMS delivery issues
         if (data.debugCode) {
           console.log('🚨 DEVELOPMENT DEBUG CODE:', data.debugCode);
+          setDevelopmentCode(data.debugCode);
           
           // Show prominent alert with the code
           setTimeout(() => {
-            alert(`SMS VERIFICATION CODE: ${data.debugCode}\n\nSMS delivery is unreliable. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
+            alert(`SMS VERIFICATION CODE: ${data.debugCode}\n\nUse this code to complete authentication.\n\nCode expires in 5 minutes.`);
           }, 500);
           
           toast({
-            title: "📱 SMS CODE (Delivery Unreliable)",
-            description: `Verification Code: ${data.debugCode}`,
+            title: "SMS Verification Code",
+            description: `Your code: ${data.debugCode}`,
             duration: 60000, // Show for 60 seconds
           });
         }

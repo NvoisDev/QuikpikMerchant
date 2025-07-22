@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { TemporaryAdvertisingBanner } from "@/components/temporary-advertising-banner";
+
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
@@ -166,10 +166,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <OnboardingProvider>
-            <TemporaryAdvertisingBanner />
-            <div className="pt-16">
-              <Router />
-            </div>
+            <Router />
             <Toaster />
           </OnboardingProvider>
         </TooltipProvider>
