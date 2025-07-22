@@ -45,6 +45,7 @@ export class ReliableSMSService {
     success: boolean;
     messageId?: string;
     error?: string;
+    debugCode?: string;
   }> {
     this.initialize();
     
