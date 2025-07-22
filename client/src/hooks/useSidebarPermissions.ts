@@ -15,7 +15,7 @@ export function useSidebarPermissions() {
   const { user } = useAuth();
 
   // For team members, fetch permissions using their wholesaler ID check endpoint
-  const { data: permissionChecks = {} } = useQuery({
+  const { data: permissionChecks = {} } = useQuery<Record<string, boolean>>({
     queryKey: ['/api/tab-permissions/check-all'],
     enabled: user?.role === 'team_member',
     staleTime: 2 * 60 * 1000, // 2 minutes

@@ -103,7 +103,7 @@ export default function Sidebar() {
         
         {/* Navigation */}
         <nav className="mt-6 flex-1 pb-48 overflow-y-auto">
-          {navigation.filter(item => checkTabAccess(item.tabName)).map((item) => {
+          {navigation.filter(item => item.tabName === 'advertising' || checkTabAccess(item.tabName)).map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
             const isPremiumFeature = item.premiumOnly;
