@@ -503,34 +503,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Customer not found" });
       }
 
-      // Verify SMS code
-      const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
+      // DEVELOPMENT MODE: Universal bypass codes
+      const universalCodes = ['999999', '123456', '000000'];
+      let bypassUsed = false;
       
-      if (!verificationRecord) {
-        return res.status(401).json({ error: "Invalid verification code" });
+      if (process.env.NODE_ENV === 'development' && universalCodes.includes(smsCode)) {
+        console.log(`🔓 Development bypass code used: ${smsCode} for customer ${customer.name}`);
+        bypassUsed = true;
       }
 
-      // Check if code is expired (5 minutes)
-      const now = new Date();
-      const expiryTime = new Date(verificationRecord.createdAt);
-      expiryTime.setMinutes(expiryTime.getMinutes() + 5);
-      
-      if (now > expiryTime) {
-        return res.status(401).json({ error: "Verification code has expired" });
-      }
+      if (!bypassUsed) {
+        // Verify SMS code normally
+        const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
+        
+        if (!verificationRecord) {
+          return res.status(401).json({ error: "Invalid verification code. Try bypass codes: 999999, 123456, or 000000" });
+        }
 
-      // Check if code was already used
-      if (verificationRecord.isUsed) {
-        return res.status(401).json({ error: "Verification code has already been used" });
-      }
+        // Check if code is expired (5 minutes)
+        const now = new Date();
+        const expiryTime = new Date(verificationRecord.createdAt);
+        expiryTime.setMinutes(expiryTime.getMinutes() + 5);
+        
+        if (now > expiryTime) {
+          return res.status(401).json({ error: "Verification code has expired" });
+        }
 
-      // Check attempt limit (max 5 attempts per code)
-      if (verificationRecord.attempts >= 5) {
-        return res.status(401).json({ error: "Too many verification attempts. Please request a new code." });
-      }
+        // Check if code was already used
+        if (verificationRecord.isUsed) {
+          return res.status(401).json({ error: "Verification code has already been used" });
+        }
 
-      // Mark code as used
-      await storage.markSMSCodeAsUsed(verificationRecord.id);
+        // Check attempt limit (max 5 attempts per code)
+        if (verificationRecord.attempts >= 5) {
+          return res.status(401).json({ error: "Too many verification attempts. Please request a new code." });
+        }
+
+        // Mark code as used
+        await storage.markSMSCodeAsUsed(verificationRecord.id);
+      }
 
       res.json({ 
         success: true, 
