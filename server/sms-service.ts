@@ -69,7 +69,8 @@ export class ReliableSMSService {
         console.log('✅ SMS simulated (no Twilio client)');
         return {
           success: true,
-          messageId: `dev_${Date.now()}`
+          messageId: `dev_${Date.now()}`,
+          debugCode: code
         };
       }
       return {
@@ -84,7 +85,8 @@ export class ReliableSMSService {
         console.log('✅ SMS simulated (no phone number configured)');
         return {
           success: true,
-          messageId: `dev_${Date.now()}`
+          messageId: `dev_${Date.now()}`,
+          debugCode: code
         };
       }
       return {
@@ -107,7 +109,8 @@ export class ReliableSMSService {
       
       return {
         success: true,
-        messageId: message.sid
+        messageId: message.sid,
+        debugCode: isDevelopment ? code : undefined
       };
     } catch (error: any) {
       console.error('❌ SMS sending failed:', error.message);
@@ -134,7 +137,8 @@ export class ReliableSMSService {
         console.log('✅ SMS simulated (Twilio error occurred)');
         return {
           success: true,
-          messageId: `dev_error_${Date.now()}`
+          messageId: `dev_error_${Date.now()}`,
+          debugCode: code
         };
       }
 
