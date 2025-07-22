@@ -269,7 +269,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount: totalAmount || 0, // This is the total amount WITH transaction fee included
+            totalAmount: cartStats.subtotal || 0, // Send ONLY product subtotal - backend will add transaction fees
             shippingInfo: {
               option: customerData.shippingOption,
               service: customerData.selectedShippingService
