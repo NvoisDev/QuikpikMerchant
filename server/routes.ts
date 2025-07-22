@@ -1689,14 +1689,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);
           if (!customer) {
-            const { firstName, lastName } = parseCustomerName(customerName);
-            customer = await storage.createCustomer({
-              phoneNumber: customerPhone,
-              firstName,
-              lastName,
-              role: 'retailer',
-              email: customerEmail
-            });
+            // Also check by email to avoid duplicates
+            const existingEmailUser = customerEmail ? await storage.getUserByEmail(customerEmail) : null;
+            
+            if (existingEmailUser) {
+              // Use existing customer with this email
+              customer = existingEmailUser;
+              console.log(`📧 Using existing customer with email: ${customerEmail}`);
+            } else {
+              // Create new customer
+              const { firstName, lastName } = parseCustomerName(customerName);
+              customer = await storage.createCustomer({
+                phoneNumber: customerPhone,
+                firstName,
+                lastName,
+                role: 'retailer',
+                email: customerEmail
+              });
+              console.log(`👤 Created new customer: ${customerName} (${customerPhone})`);
+            }
+          } else {
+            console.log(`📞 Using existing customer with phone: ${customerPhone}`);
           }
 
           // Create order with proper field parsing
