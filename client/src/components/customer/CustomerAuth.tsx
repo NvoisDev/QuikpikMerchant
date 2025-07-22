@@ -341,49 +341,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         });
         onAuthSuccess(data.customer);
       } else {
-        // If verification fails, automatically request a fresh code
-        setError(data.error || "Invalid verification code. Requesting fresh code...");
-        
-        // Auto-request fresh SMS code when verification fails
-        setTimeout(async () => {
-          try {
-            const freshCodeResponse = await fetch('/api/customer-auth/request-sms', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                wholesalerId,
-                lastFourDigits: lastFourDigits.trim()
-              }),
-            });
-
-            const freshCodeData = await freshCodeResponse.json();
-            
-            if (freshCodeResponse.ok && freshCodeData.debugCode) {
-              console.log('🆕 FRESH DEBUG CODE:', freshCodeData.debugCode);
-              
-              // Clear the SMS input for fresh attempt
-              setSmsCode('');
-              setError('');
-              
-              // Show new code immediately
-              alert(`FRESH VERIFICATION CODE: ${freshCodeData.debugCode}\n\nPrevious code failed. Use this new code.\n\nCode expires in 5 minutes.`);
-              
-              toast({
-                title: "🆕 FRESH CODE SENT",
-                description: `New Code: ${freshCodeData.debugCode}`,
-                duration: 60000,
-              });
-              
-              // Reset countdown for new code
-              setCountdown(300);
-              setSmsExpiry(Date.now() + 300000);
-            }
-          } catch (error) {
-            console.error('Failed to request fresh code:', error);
-          }
-        }, 1000);
+        setError(data.error || "Invalid verification code. Please try again.");
+        // Clear the input for retry
+        setSmsCode('');
       }
     } catch (error) {
       console.error('SMS verification error:', error);
