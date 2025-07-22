@@ -73,6 +73,7 @@ export function getTabNameFromPath(path: string): string {
     'customers': 'customers',
     'campaigns': 'campaigns',
     'business-performance': 'analytics',
+    'advertising': 'advertising',
     'marketplace': 'marketplace',
     'team-management': 'team-management',
     'subscription': 'subscription',
