@@ -269,7 +269,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount: cartStats.subtotal || 0, // Send ONLY product subtotal - backend will add transaction fees
+            totalAmount: cart.reduce((total, item) => {
+              if (item.sellingType === "pallets") {
+                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+              } else {
+                const basePrice = parseFloat(item.product.price) || 0;
+                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                  basePrice,
+                  item.quantity,
+                  item.product.promotionalOffers || [],
+                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                  item.product.promoActive
+                );
+                return total + pricing.totalCost;
+              }
+            }, 0), // Send ONLY product subtotal - backend will add transaction fees
             shippingInfo: {
               option: customerData.shippingOption,
               service: customerData.selectedShippingService

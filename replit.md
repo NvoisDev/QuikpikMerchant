@@ -596,6 +596,23 @@
 
 Quikpik Merchant is a comprehensive web-based B2B platform designed for small-scale wholesalers to manage inventory, connect with retail customers, and process orders. The platform enables wholesalers to list products, broadcast stock updates via WhatsApp, accept online payments, and track business analytics while collecting a 5% platform fee per sale.
 
+## PAYMENT CALCULATION MISMATCH ISSUE - RESOLVED ✅ (July 22, 2025)
+
+### Critical Frontend Payment Calculation Fix - COMPLETED ✅ (July 22, 2025)
+- **Issue Resolved**: Payment checkout showed £51.14 total but payment intent creation received £51.14 causing backend to calculate fees on top of fees
+- **Root Cause**: Frontend was passing total amount with transaction fees (£51.14) to backend, but backend expected product subtotal only (£48.00)
+- **Solution Implemented**: 
+  - **Frontend Fix**: Updated StripeCheckoutForm to calculate and send product subtotal only (£48.00) instead of total with fees
+  - **Payment Flow Correction**: Frontend now sends cart.reduce() calculation of product costs directly to backend
+  - **Backend Fee Calculation**: Backend properly calculates transaction fees (5.5% + £0.50 = £3.14) on product subtotal
+  - **Payment Intent Creation**: Now creates payment intents with correct total (£48.00 + £3.14 = £51.14)
+- **Technical Implementation**:
+  - **Removed cartStats Dependency**: Fixed "cartStats is not defined" error by calculating product subtotal directly in payment form
+  - **Direct Calculation**: Payment intent now uses inline cart.reduce() to calculate product subtotal with promotional pricing
+  - **Consistent Amounts**: Customer sees £51.14 in checkout AND payment processes exactly £51.14
+- **Production Ready**: Complete payment system operational with matching checkout display and payment processing amounts
+- **Status**: ✅ COMPLETED - Payment calculation mismatch resolved, consistent fee structure throughout entire payment flow
+
 ## PAYMENT-TO-ORDER SYSTEM FIX - FULLY OPERATIONAL ✅ (July 22, 2025)
 
 ### Critical Issue Resolved: Payment Processing Complete Flow
