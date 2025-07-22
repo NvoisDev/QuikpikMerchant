@@ -93,11 +93,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       // Customer came from CustomerLogin with phone digits - skip phone entry
       console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
       setLastFourDigits(authParam);
-      setAuthStep('verification');
-      // Auto-trigger SMS verification with delay to ensure state is set
-      setTimeout(() => {
-        handleAuthenticationFromLogin(authParam);
-      }, 100);
+      // Immediately trigger authentication
+      handleAuthenticationFromLogin(authParam);
     } else {
       // Fresh start - show phone entry
       console.log('🔄 No valid auth parameter, showing phone entry');
