@@ -15,7 +15,7 @@ import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
-import { SMSService, sendSMSVerificationCode } from "./sms-service";
+import { ReliableSMSService } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
@@ -452,7 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesaler = await storage.getWholesalerProfile(wholesalerId);
       
       // Generate and send SMS code
-      const result = await sendSMSVerificationCode(customer.phone, wholesaler?.businessName || 'Business');
+      const code = ReliableSMSService.generateVerificationCode();
+      const result = await ReliableSMSService.sendVerificationSMS(customer.phone, code, wholesaler?.businessName || 'Business');
       
       if (result.success) {
         // Store verification code in database with proper structure
