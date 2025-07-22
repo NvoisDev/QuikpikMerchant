@@ -726,10 +726,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   return (
     <div className="min-h-screen flex">
       {/* Left Side - White Background with Authentication Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-4 lg:p-8">
-        <div className="w-full max-w-md mx-auto">
+      <div className="w-full lg:w-1/2 bg-white flex items-start justify-center p-2 lg:p-4 overflow-y-auto">
+        <div className="w-full max-w-md mx-auto py-2">
           {/* Back Button */}
-          <div className="mb-6">
+          <div className="mb-3">
             <Button
               onClick={() => window.history.back()}
               variant="ghost"
@@ -743,17 +743,17 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           </div>
 
           {/* Wholesaler Logo/Initials Header */}
-          <div className="text-center mb-4">
-            <div className="mx-auto mb-6 relative">
+          <div className="text-center mb-3">
+            <div className="mx-auto mb-3 relative">
               {wholesaler?.logoUrl ? (
                 <img 
                   src={wholesaler.logoUrl} 
                   alt={wholesaler.businessName}
-                  className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-gray-200 shadow-lg"
+                  className="w-16 h-16 rounded-full object-cover mx-auto border-3 border-gray-200 shadow-lg"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-4 border-gray-200 shadow-lg">
-                  <span className="text-2xl font-bold text-white">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-3 border-gray-200 shadow-lg">
+                  <span className="text-xl font-bold text-white">
                     {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
                   </span>
                 </div>
@@ -766,15 +766,15 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
           {/* Unified Authentication Card */}
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-            <CardContent className="p-8">
-              <div className="space-y-6">
+            <CardContent className="p-4">
+              <div className="space-y-4">
                 {/* Security Notice Header */}
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
                     🛡️ Secure access for registered customers only
                   </h3>
-                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-6 mb-3 border border-blue-100">
-                    <p className="text-sm text-blue-900 font-semibold mb-3">
+                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-3 mb-2 border border-blue-100">
+                    <p className="text-sm text-blue-900 font-semibold mb-2">
                       Secure Two-Step Authentication:
                     </p>
                     <p className="text-sm text-blue-800 leading-relaxed">
@@ -802,7 +802,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                           value={lastFourDigits}
                           onChange={handleLastFourChange}
                           maxLength={4}
-                          className="text-center text-3xl tracking-[1rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
+                          className="text-center text-2xl tracking-[0.8rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
                         />
                         <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
                       </div>
@@ -817,7 +817,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     <div className="space-y-3">
                       <Button 
                         onClick={handleLogin} 
-                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                         disabled={isLoading || lastFourDigits.length !== 4}
                       >
                         {isLoading ? (
@@ -846,11 +846,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 {/* Step 2: Verification (SMS or Email) */}
                 {authStep === 'verification' && customerData && (
                   <>
-                    <div className="text-center mb-6">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                    <div className="text-center mb-4">
+                      <h4 className="text-base font-semibold text-gray-800 mb-1">
                         🔐 Verification Required
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-gray-600 mb-2">
                         Hello {customerData.name}! Please verify your identity:
                       </p>
                       <div className="flex items-center justify-center space-x-2 my-4">
@@ -904,7 +904,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             value={smsCode}
                             onChange={handleSMSCodeChange}
                             maxLength={6}
-                            className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
+                            className="text-center text-xl tracking-[0.4rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
                           />
                           <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
                         </div>
@@ -948,7 +948,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             value={emailCode}
                             onChange={handleEmailCodeChange}
                             maxLength={6}
-                            className="text-center text-2xl tracking-[0.5rem] font-mono h-16 border-2 border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
+                            className="text-center text-xl tracking-[0.4rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
                           />
                           <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📧</div>
                         </div>
@@ -965,7 +965,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       {verificationMethod === 'sms' || verificationMethod === 'both' ? (
                         <Button 
                           onClick={handleSMSVerification}
-                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                           disabled={isLoading || smsCode.length !== 6}
                         >
                           {isLoading ? (
@@ -983,7 +983,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       ) : (
                         <Button 
                           onClick={handleEmailVerification}
-                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-16 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                           disabled={isLoading || emailCode.length !== 6}
                         >
                           {isLoading ? (
