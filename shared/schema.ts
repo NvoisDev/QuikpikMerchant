@@ -294,7 +294,7 @@ export const products = pgTable("products", {
   moq: integer("moq").notNull().default(1), // minimum order quantity
   stock: integer("stock").notNull().default(0),
   imageUrl: varchar("image_url"), // Primary image (for backward compatibility)
-  images: jsonb("images").default([]), // Array of image URLs for multiple images
+  images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for multiple images
   category: varchar("category"),
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock'
   priceVisible: boolean("price_visible").notNull().default(true),

@@ -596,7 +596,11 @@ export default function CustomerPortal() {
   const isPreviewMode = location === '/preview-store';
   
   // Get authenticated user only for preview mode - TEMPORARILY DISABLED
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<{
+    id?: string;
+    role?: string;
+    wholesalerId?: string;
+  }>({
     queryKey: ["/api/auth/user"],
     enabled: false, // DISABLED to prevent infinite loops
     retry: false,
