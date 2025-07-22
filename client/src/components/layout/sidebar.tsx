@@ -40,8 +40,8 @@ const navigation = [
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
-  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
   { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: false, tabName: "advertising" },
+  { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
@@ -103,7 +103,7 @@ export default function Sidebar() {
         
         {/* Navigation */}
         <nav className="mt-6 flex-1 pb-48 overflow-y-auto">
-          {navigation.filter(item => item.tabName === 'advertising' || checkTabAccess(item.tabName)).map((item) => {
+          {navigation.map((item) => {
             const IconComponent = item.icon;
             const isActive = location === item.href;
             const isPremiumFeature = item.premiumOnly;
