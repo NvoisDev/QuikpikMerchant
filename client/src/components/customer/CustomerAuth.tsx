@@ -290,6 +290,22 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         });
         setCountdown(300); // 5 minutes
         setSmsExpiry(Date.now() + 300000); // 5 minutes
+        
+        // Show debug code immediately in development mode
+        if (data.debugCode) {
+          console.log('🚨 DEVELOPMENT DEBUG CODE:', data.debugCode);
+          
+          // Show prominent alert with the code
+          setTimeout(() => {
+            alert(`SMS VERIFICATION CODE: ${data.debugCode}\n\nSMS delivery failed. Use this code to authenticate.\n\nCode expires in 5 minutes.`);
+          }, 1000);
+          
+          toast({
+            title: "🚨 SMS FAILED - USE THIS CODE",
+            description: `Verification Code: ${data.debugCode}`,
+            duration: 60000, // Show for 60 seconds
+          });
+        }
       } else {
         setError(data.error || "Failed to send SMS code. Please try again.");
         // If SMS fails, go back to phone step
