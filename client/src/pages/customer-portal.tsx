@@ -3230,7 +3230,7 @@ export default function CustomerPortal() {
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total Amount:</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue + (cartStats.totalValue * 0.055) + 0.50).toFixed(2)}</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -3531,7 +3531,7 @@ export default function CustomerPortal() {
                     cart={cart}
                     customerData={customerData}
                     wholesaler={wholesaler}
-                    totalAmount={cartStats.totalValue + (cartStats.totalValue * 0.055) + 0.50}
+                    totalAmount={cartStats.totalValue}
                     onSuccess={() => {
                       setCart([]);
                       setShowCheckout(false);
