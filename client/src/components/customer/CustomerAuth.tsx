@@ -39,33 +39,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const { toast } = useToast();
 
-  // Handle authentication flow with URL parameter processing
-  useEffect(() => {
-    // Check for auth parameter from CustomerLogin
-    const urlParams = new URLSearchParams(window.location.search);
-    const authParam = urlParams.get('auth');
-    
-    if (authParam && authParam.length === 4) {
-      // Customer came from CustomerLogin with phone digits - skip phone entry
-      console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
-      setLastFourDigits(authParam);
-      setAuthStep('verification');
-      // Auto-trigger SMS verification
-      handleAuthenticationFromLogin(authParam);
-    } else {
-      // Fresh start - show phone entry
-      setAuthStep('phone');
-      setLastFourDigits("");
-      setSmsCode("");
-      setEmailCode("");
-      setCustomerData(null);
-      setError("");
-      setSmsExpiry(null);
-      setCountdown(0);
-      console.log('🔄 Authentication component reset to phone entry step');
-    }
-  }, [wholesalerId]);
-
   // Handle automatic authentication when coming from CustomerLogin
   const handleAuthenticationFromLogin = async (digits: string) => {
     console.log('🚀 Starting automatic authentication...', { wholesalerId, digits });
@@ -107,6 +80,33 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       setAuthStep('phone'); // Fall back to phone entry
     }
   };
+
+  // Handle authentication flow with URL parameter processing
+  useEffect(() => {
+    // Check for auth parameter from CustomerLogin
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get('auth');
+    
+    if (authParam && authParam.length === 4) {
+      // Customer came from CustomerLogin with phone digits - skip phone entry
+      console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
+      setLastFourDigits(authParam);
+      setAuthStep('verification');
+      // Auto-trigger SMS verification
+      handleAuthenticationFromLogin(authParam);
+    } else {
+      // Fresh start - show phone entry
+      setAuthStep('phone');
+      setLastFourDigits("");
+      setSmsCode("");
+      setEmailCode("");
+      setCustomerData(null);
+      setError("");
+      setSmsExpiry(null);
+      setCountdown(0);
+      console.log('🔄 Authentication component reset to phone entry step');
+    }
+  }, [wholesalerId]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
