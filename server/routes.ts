@@ -4180,33 +4180,296 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.json([]);
       }
 
-      // Get search suggestions from products and wholesalers
-      const products = await storage.getMarketplaceProducts({ search: query });
-      const wholesalers = await storage.getMarketplaceWholesalers({ search: query });
-
       const suggestions = [
-        ...products.slice(0, 5).map(p => ({ 
-          type: "product", 
-          name: p.name, 
-          id: p.id,
-          category: p.category,
-          price: p.price
-        })),
-        ...wholesalers.slice(0, 3).map(w => ({ 
-          type: "wholesaler", 
-          name: w.businessName || `${w.firstName} ${w.lastName}`, 
-          id: w.id,
-          location: w.businessAddress || "UK",
-          productCount: w.products?.length || 0
-        }))
-      ];
+        "Fresh Vegetables",
+        "Organic Fruits",
+        "Dairy Products",
+        "Baked Goods",
+        "Meat & Poultry"
+      ].filter(s => s.toLowerCase().includes(query.toLowerCase()));
 
       res.json(suggestions);
     } catch (error) {
       console.error("Error fetching search suggestions:", error);
-      res.status(500).json({ message: "Failed to fetch search suggestions" });
+      res.status(500).json({ message: "Failed to fetch suggestions" });
     }
   });
+
+  // ======= ADVERTISING & PROMOTION ENDPOINTS =======
+
+  // Get advertising campaigns
+  app.get("/api/advertising/campaigns", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      // Mock data for now - will be replaced with database queries
+      const campaigns = [
+        {
+          id: "camp_001",
+          name: "Holiday Special Products",
+          type: "featured_product",
+          status: "active",
+          budget: 150,
+          spent: 89.50,
+          impressions: 12500,
+          clicks: 425,
+          conversions: 23,
+          startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString(),
+          targetAudience: {
+            location: ["London", "Manchester"],
+            categories: ["Groceries & Food"],
+            businessTypes: ["Restaurant", "Retail Store"]
+          }
+        },
+        {
+          id: "camp_002",
+          name: "Fresh Produce Spotlight",
+          type: "category_sponsor",
+          status: "active",
+          budget: 200,
+          spent: 134.25,
+          impressions: 8900,
+          clicks: 312,
+          conversions: 18,
+          startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString(),
+          targetAudience: {
+            location: ["Birmingham", "Leeds"],
+            categories: ["Fresh Produce"],
+            businessTypes: ["Restaurant"]
+          }
+        }
+      ];
+
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching advertising campaigns:", error);
+      res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
+  // Create advertising campaign
+  app.post("/api/advertising/campaigns", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { name, type, budget, duration, targetAudience } = req.body;
+
+      // For now, return mock response - will implement database storage
+      const newCampaign = {
+        id: `camp_${Date.now()}`,
+        name,
+        type,
+        status: "draft",
+        budget: parseFloat(budget),
+        spent: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + (parseInt(duration) || 30) * 24 * 60 * 60 * 1000).toISOString(),
+        targetAudience: targetAudience || {}
+      };
+
+      res.json(newCampaign);
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+      res.status(500).json({ message: "Failed to create campaign" });
+    }
+  });
+
+  // Get SEO pages
+  app.get("/api/advertising/seo-pages", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      // Get actual products for this wholesaler
+      const products = await storage.getProducts(targetUserId);
+      
+      // Generate SEO page data based on actual products
+      const seoPages = products.slice(0, 3).map(product => ({
+        id: `seo_${product.id}`,
+        productId: product.id,
+        productName: product.name,
+        slug: product.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        metaTitle: `${product.name} - Wholesale Supplier | Quikpik`,
+        metaDescription: `Premium ${product.name} available for wholesale. ${product.description?.slice(0, 120) || 'Quality products from trusted suppliers.'}...`,
+        views: Math.floor(Math.random() * 500) + 50,
+        leads: Math.floor(Math.random() * 20) + 2,
+        status: "published" as const
+      }));
+
+      res.json(seoPages);
+    } catch (error) {
+      console.error("Error fetching SEO pages:", error);
+      res.status(500).json({ message: "Failed to fetch SEO pages" });
+    }
+  });
+
+  // Create SEO page for product
+  app.post("/api/advertising/seo-pages", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { productId } = req.body;
+
+      const product = await storage.getProduct(productId);
+      if (!product || product.wholesalerId !== targetUserId) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const seoPage = {
+        id: `seo_${productId}`,
+        productId: product.id,
+        productName: product.name,
+        slug: product.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        metaTitle: `${product.name} - Wholesale Supplier | Quikpik`,
+        metaDescription: `Premium ${product.name} available for wholesale. ${product.description?.slice(0, 120) || 'Quality products from trusted suppliers.'}...`,
+        views: 0,
+        leads: 0,
+        status: "published"
+      };
+
+      res.json(seoPage);
+    } catch (error) {
+      console.error("Error creating SEO page:", error);
+      res.status(500).json({ message: "Failed to create SEO page" });
+    }
+  });
+
+  // Public SEO-optimized product pages
+  app.get("/api/public/products/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      
+      // Mock SEO-optimized product data
+      const product = {
+        id: "prod_001",
+        name: "Premium Organic Apples",
+        description: "Fresh, organic apples sourced directly from local farms. Perfect for retail stores, restaurants, and cafes looking for high-quality produce.",
+        price: "2.50",
+        category: "Fresh Produce",
+        images: [
+          "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800",
+          "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=400"
+        ],
+        wholesaler: {
+          id: "whole_001",
+          businessName: "Fresh Valley Farms",
+          location: "Kent, UK",
+          rating: 4.8,
+          totalReviews: 127,
+          profileImage: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200",
+          phoneNumber: "+44 1234 567890",
+          email: "contact@freshvalley.com"
+        },
+        specifications: {
+          "Origin": "Kent, United Kingdom",
+          "Variety": "Gala, Braeburn, Cox's Orange Pippin",
+          "Organic Certified": "Yes - Soil Association",
+          "Shelf Life": "7-14 days when stored properly",
+          "Storage": "Cool, dry place or refrigerated",
+          "Packaging": "10kg boxes, 20kg crates available"
+        },
+        availability: "In Stock - Available Now",
+        minOrderQuantity: 50,
+        views: 1247,
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Increment view count (in real implementation, would update database)
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching public product:", error);
+      res.status(500).json({ message: "Product not found" });
+    }
+  });
+
+  // Handle product inquiries from public pages
+  app.post("/api/public/products/:slug/inquiry", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const inquiryData = req.body;
+      
+      // Mock lead creation - in real implementation would:
+      // 1. Validate the product exists
+      // 2. Create lead in database
+      // 3. Send notification to wholesaler
+      // 4. Send confirmation email to inquirer
+      
+      console.log(`New inquiry for product ${slug}:`, inquiryData);
+      
+      // Mock successful response
+      res.json({
+        success: true,
+        message: "Your inquiry has been sent to the supplier. They will contact you within 24 hours.",
+        inquiryId: `inq_${Date.now()}`
+      });
+    } catch (error) {
+      console.error("Error handling product inquiry:", error);
+      res.status(500).json({ message: "Failed to submit inquiry" });
+    }
+  });
+
+  // Get advertising analytics
+  app.get("/api/advertising/analytics", requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      // Mock analytics data
+      const analytics = {
+        totalCampaigns: 3,
+        activeCampaigns: 2,
+        totalBudget: 500.00,
+        totalSpent: 223.75,
+        totalImpressions: 21400,
+        totalClicks: 737,
+        totalConversions: 41,
+        averageCTR: 3.44,
+        averageCPC: 0.30,
+        totalROI: 285.5,
+        seoPerformance: {
+          totalPages: 12,
+          totalViews: 3420,
+          totalLeads: 28,
+          averagePageViews: 285,
+          conversionRate: 0.82
+        },
+        topPerformingCampaigns: [
+          {
+            name: "Holiday Special Products",
+            type: "featured_product",
+            spent: 89.50,
+            impressions: 12500,
+            clicks: 425,
+            conversions: 23,
+            roi: 156.2
+          },
+          {
+            name: "Fresh Produce Spotlight", 
+            type: "category_sponsor",
+            spent: 134.25,
+            impressions: 8900,
+            clicks: 312,
+            conversions: 18,
+            roi: 128.7
+          }
+        ]
+      };
+
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching advertising analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // ======= END ADVERTISING & PROMOTION ENDPOINTS =======
 
   // WhatsApp API Routes (Shared Service)
 

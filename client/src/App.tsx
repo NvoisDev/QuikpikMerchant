@@ -19,6 +19,8 @@ import CustomerGroups from "@/pages/customer-groups";
 import SubscriptionSettings from "@/pages/subscription-settings";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
+import Advertising from "@/pages/advertising";
+import PublicProductPage from "@/pages/public-product";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
@@ -46,6 +48,7 @@ function PublicRoutes() {
     <Switch>
       <Route path="/campaign/:id" component={CampaignPreview} />
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
+      <Route path="/product/:slug" component={PublicProductPage} />
       <Route path="/customer/:id" component={CustomerLogin} />
       <Route path="/store/:id" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
@@ -80,6 +83,7 @@ function AuthenticatedRoutes() {
     <AppLayout>
       <Switch>
         <Route path="/marketplace" component={Marketplace} />
+        <Route path="/advertising" component={Advertising} />
         {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
           <>
             <Route path="/" component={WholesalerDashboard} />

@@ -24,7 +24,8 @@ import {
   AlertTriangle,
   Truck,
   Book,
-  Contact
+  Contact,
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -40,6 +41,7 @@ const navigation = [
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: BarChart3, premiumOnly: true, tabName: "analytics" },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
+  { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: true, tabName: "advertising" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
