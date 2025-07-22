@@ -17,6 +17,8 @@ import {
   userBadges,
   onboardingMilestones,
   smsVerificationCodes,
+  teamMembers,
+  tabPermissions,
   type User,
   type UpsertUser,
   type Product,
@@ -45,13 +47,10 @@ import {
   type InsertStockMovement,
   type StockAlert,
   type InsertStockAlert,
-  teamMembers,
   type TeamMember,
   type InsertTeamMember,
-  tabPermissions,
   type TabPermission,
   type InsertTabPermission,
-  customerGroupMembers,
   type UserBadge,
   type InsertUserBadge,
   type OnboardingMilestone,
@@ -790,6 +789,45 @@ export class DatabaseStorage implements IStorage {
     return updatedOrder;
   }
 
+  async getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
+    // Get orders by phone number
+    const orderResults = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.customerPhone, phoneNumber))
+      .orderBy(desc(orders.createdAt));
+
+    // Get detailed order information with items, retailer and wholesaler
+    const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
+      // Get order items with product details
+      const items = await db
+        .select()
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, order.id));
+
+      const orderItemsWithProducts = items.map(item => ({
+        ...item.order_items,
+        product: item.products!
+      }));
+
+      // Get retailer and wholesaler information
+      const [retailer, wholesaler] = await Promise.all([
+        this.getUser(order.retailerId),
+        this.getUser(order.wholesalerId)
+      ]);
+
+      return {
+        ...order,
+        items: orderItemsWithProducts,
+        retailer: retailer!,
+        wholesaler: wholesaler!
+      };
+    }));
+
+    return ordersWithDetails;
+  }
+
   // Customer authentication
   async findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any> {
     try {
@@ -808,19 +846,20 @@ export class DatabaseStorage implements IStorage {
       // Find customer in any of the wholesaler's groups
       const customers = await db
         .select({
-          id: customerGroupsMembers.id,
-          name: customerGroupsMembers.firstName,
-          email: customerGroupsMembers.email,
-          phone: customerGroupsMembers.phone,
-          groupId: customerGroupsMembers.groupId,
+          id: users.id,
+          name: users.firstName,
+          email: users.email,
+          phone: users.phoneNumber,
+          groupId: customerGroupMembers.groupId,
           groupName: customerGroups.name,
         })
-        .from(customerGroupsMembers)
-        .innerJoin(customerGroups, eq(customerGroupsMembers.groupId, customerGroups.id))
+        .from(customerGroupMembers)
+        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+        .innerJoin(users, eq(customerGroupMembers.customerId, users.id))
         .where(
           and(
             eq(customerGroups.wholesalerId, wholesalerId),
-            eq(customerGroupsMembers.phone, formattedPhone)
+            eq(users.phoneNumber, formattedPhone)
           )
         )
         .limit(1);
@@ -1282,7 +1321,7 @@ export class DatabaseStorage implements IStorage {
             .from(customerGroupMembers)
             .where(
               and(
-                eq(customerGroupMembers.customerGroupId, membership.customerGroupId),
+                eq(customerGroupMembers.groupId, membership.groupId),
                 eq(customerGroupMembers.customerId, primaryCustomerId)
               )
             );
@@ -1291,9 +1330,9 @@ export class DatabaseStorage implements IStorage {
             await db
               .insert(customerGroupMembers)
               .values({
-                customerGroupId: membership.customerGroupId,
+                groupId: membership.groupId,
                 customerId: primaryCustomerId,
-                addedAt: new Date()
+                createdAt: new Date()
               });
           }
         }

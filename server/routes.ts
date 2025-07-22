@@ -27,7 +27,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
+  apiVersion: "2025-06-30.basil",
 }) : null;
 
 // Subscription price IDs for monthly plans in GBP
@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Find the latest SMS verification code for this customer
-      const customer = await findCustomerByLastFourDigits(lastFourDigits, wholesalerId);
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
       if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
       }
@@ -616,7 +616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderResults = await db
           .select()
           .from(orders)
-          .where(or(...phoneConditions))
+          .where(or.apply(null, phoneConditions))
           .orderBy(desc(orders.createdAt));
       }
       
