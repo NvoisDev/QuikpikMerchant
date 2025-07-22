@@ -37,6 +37,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [smsExpiry, setSmsExpiry] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
+  const [developmentCode, setDevelopmentCode] = useState<string>("");
   const { toast } = useToast();
 
   // Handle automatic authentication when coming from CustomerLogin
@@ -74,6 +75,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
         const smsData = await smsResponse.json();
         console.log('📱 SMS RESPONSE:', { ok: smsResponse.ok, data: smsData });
+        
+        // Extract development code if provided
+        if (smsData.debugCode) {
+          setDevelopmentCode(smsData.debugCode);
+        }
 
         if (smsResponse.ok) {
           console.log('✅ SMS SENT - SETTING VERIFICATION STATE');
@@ -205,6 +211,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         });
 
         const smsData = await smsResponse.json();
+        
+        // Extract development code if provided
+        if (smsData.debugCode) {
+          setDevelopmentCode(smsData.debugCode);
+        }
 
         if (smsResponse.ok) {
           console.log('📱 SMS sent successfully, moving to SMS verification...');
@@ -227,6 +238,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           // Always show debug code in development mode due to SMS delivery issues
           if (smsData.debugCode) {
             console.log('🚨 DEVELOPMENT DEBUG CODE:', smsData.debugCode);
+            setDevelopmentCode(smsData.debugCode);
             
             // Show prominent alert with the code
             setTimeout(() => {
@@ -924,6 +936,33 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                           />
                           <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
                         </div>
+                        
+                        {/* Development SMS Code Display */}
+                        {developmentCode && (
+                          <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl">
+                            <div className="flex items-center justify-center space-x-3">
+                              <div className="text-2xl">🚨</div>
+                              <div className="text-center">
+                                <p className="text-sm font-semibold text-yellow-800 mb-1">DEVELOPMENT MODE</p>
+                                <p className="text-xs text-yellow-700 mb-2">SMS Code (Auto-Generated):</p>
+                                <div className="bg-white px-4 py-2 rounded-lg border border-yellow-300">
+                                  <span className="text-2xl font-mono font-bold text-green-600 tracking-[0.3rem]">
+                                    {developmentCode}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSmsCode(developmentCode);
+                                    setDevelopmentCode("");
+                                  }}
+                                  className="mt-2 text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors"
+                                >
+                                  Use This Code
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
