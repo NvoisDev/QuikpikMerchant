@@ -1184,18 +1184,53 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
-  // Simple authentication state management
+  // Enhanced authentication state management with persistence
   useEffect(() => {
     if (isPreviewMode) {
       // In preview mode, skip authentication
       setShowAuth(false);
       setIsGuestMode(false);
     } else if (isAuthenticated) {
+      // User is authenticated - always show main content
       setShowAuth(false);
+      setIsGuestMode(false);
+      // Save authentication state to localStorage for session persistence
+      localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify({
+        isAuthenticated: true,
+        customer: authenticatedCustomer,
+        timestamp: Date.now()
+      }));
     } else {
+      // Check for existing authentication in localStorage before showing auth screen
+      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      if (savedAuth) {
+        try {
+          const authData = JSON.parse(savedAuth);
+          // Check if auth is still valid (within 24 hours)
+          const isValid = authData.isAuthenticated && 
+                          authData.timestamp && 
+                          (Date.now() - authData.timestamp) < (24 * 60 * 60 * 1000);
+          
+          if (isValid && authData.customer) {
+            // Restore authentication state
+            console.log('🔄 Restoring saved authentication for:', authData.customer.name);
+            setAuthenticatedCustomer(authData.customer);
+            setIsAuthenticated(true);
+            setShowAuth(false);
+            setIsGuestMode(false);
+            return;
+          }
+        } catch (error) {
+          console.warn('Invalid saved auth data, clearing...');
+          localStorage.removeItem(`customer_auth_${wholesalerId}`);
+        }
+      }
+      
+      // No valid saved auth - show authentication screen
       setShowAuth(true);
+      setIsGuestMode(true);
     }
-  }, [isAuthenticated, isPreviewMode]);
+  }, [isAuthenticated, isPreviewMode, wholesalerId, authenticatedCustomer]);
 
 
 
@@ -2838,7 +2873,14 @@ export default function CustomerPortal() {
 
       {/* Checkout Modal with Stripe Integration */}
       {showCheckout && (
-        <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+        <Dialog open={showCheckout} onOpenChange={(open) => {
+          setShowCheckout(open);
+          // When checkout dialog closes, ensure user returns to products view instead of auth screen
+          if (!open) {
+            setShowAllProducts(true);
+            setShowHomePage(false);
+          }
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center space-x-2">
@@ -3493,6 +3535,9 @@ export default function CustomerPortal() {
                     onSuccess={() => {
                       setCart([]);
                       setShowCheckout(false);
+                      // Preserve authentication state and navigate to products view
+                      setShowAllProducts(true);
+                      setShowHomePage(false);
                       toast({
                         title: "Order Placed Successfully!",
                         description: "You will receive an email confirmation shortly.",
