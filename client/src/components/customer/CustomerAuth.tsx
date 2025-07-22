@@ -96,6 +96,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           setSmsExpiry(Date.now() + 5 * 60 * 1000);
           setCountdown(300);
           console.log('🔧 SMS VERIFICATION READY - STAYING IN VERIFICATION STEP');
+          // Always stay in verification step - don't auto-complete
+          setAuthStep('verification');
         } else {
           console.log('❌ SMS FAILED - STAYING IN VERIFICATION');
           setError('Failed to send SMS. Please try again.');
@@ -132,7 +134,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       setLastFourDigits(authParam);
       setAuthStep('verification');
       
-      // Start authentication process after state is set
+      // Start authentication process after state is set - BUT DO NOT AUTO COMPLETE
       setTimeout(() => {
         handleAuthenticationFromLogin(authParam);
       }, 100);
@@ -241,7 +243,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           
           toast({
             title: "SMS Sent!",
-            description: `A verification code has been sent to your phone, ${verifyData.customer.name}.`,
+            description: `A verification code has been sent to your phone, ${verifyData.customer.name}. Please enter the code below.`,
           });
           
           // Always show debug code in development mode due to SMS delivery issues

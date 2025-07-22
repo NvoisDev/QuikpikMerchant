@@ -1201,30 +1201,9 @@ export default function CustomerPortal() {
         timestamp: Date.now()
       }));
     } else {
-      // Check for existing authentication in localStorage before showing auth screen
-      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (savedAuth) {
-        try {
-          const authData = JSON.parse(savedAuth);
-          // Check if auth is still valid (within 24 hours)
-          const isValid = authData.isAuthenticated && 
-                          authData.timestamp && 
-                          (Date.now() - authData.timestamp) < (24 * 60 * 60 * 1000);
-          
-          if (isValid && authData.customer) {
-            // Restore authentication state
-            console.log('🔄 Restoring saved authentication for:', authData.customer.name);
-            setAuthenticatedCustomer(authData.customer);
-            setIsAuthenticated(true);
-            setShowAuth(false);
-            setIsGuestMode(false);
-            return;
-          }
-        } catch (error) {
-          console.warn('Invalid saved auth data, clearing...');
-          localStorage.removeItem(`customer_auth_${wholesalerId}`);
-        }
-      }
+      // Always require fresh authentication - no localStorage persistence
+      console.log('🔐 Always requiring fresh authentication, clearing any saved auth state');
+      localStorage.removeItem(`customer_auth_${wholesalerId}`);
       
       // No valid saved auth - show authentication screen
       setShowAuth(true);
