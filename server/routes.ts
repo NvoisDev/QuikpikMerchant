@@ -1842,9 +1842,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
               
+              const { sendEmail } = await import('./sendgrid-service');
               await sendEmail({
                 to: wholesaler.email,
-                from: 'orders@quikpik.app',
+                from: 'hello@quikpik.co',
                 subject: emailTemplate.subject,
                 html: emailTemplate.html,
                 text: emailTemplate.text
@@ -6600,8 +6601,26 @@ Please contact the customer to confirm this order.
             </tbody>
           </table>
 
-          <div style="text-align: right; font-size: 18px; font-weight: bold; margin: 20px 0;">
-            <p>Total: ${currencySymbol}${order.total}</p>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+            <h4>Payment Breakdown</h4>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+              <span>Product Subtotal:</span>
+              <span>${currencySymbol}${order.subtotal || '0.00'}</span>
+            </div>
+            ${order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+              <span>Shipping:</span>
+              <span>${currencySymbol}${order.deliveryCost}</span>
+            </div>` : ''}
+            <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span>${currencySymbol}${order.customerTransactionFee || '0.00'}</span>
+            </div>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
+              <span>Total Paid:</span>
+              <span>${currencySymbol}${order.total}</span>
+            </div>
           </div>
 
           <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">

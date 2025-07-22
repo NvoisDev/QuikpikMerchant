@@ -9,6 +9,8 @@ export interface OrderEmailData {
   total: string;
   subtotal: string;
   platformFee: string;
+  customerTransactionFee: string;
+  wholesalerPlatformFee: string;
   shippingTotal?: string;
   fulfillmentType: string;
   items: Array<{
@@ -111,12 +113,17 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 
         <div class="total-section">
             <h2 style="margin-top: 0; color: #d97706;">💰 Payment Breakdown</h2>
-            <p><strong>Subtotal:</strong> £${data.subtotal}</p>
+            <p><strong>Product Subtotal:</strong> £${data.subtotal}</p>
             ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `<p><strong>Shipping:</strong> £${data.shippingTotal}</p>` : ''}
-            <p><strong>Platform Fee (3.3%):</strong> £${data.platformFee}</p>
+            <p><strong>Customer Transaction Fee:</strong> £${data.customerTransactionFee || '0.00'} <small style="color: #666;">(paid by customer)</small></p>
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #f59e0b;">
             <p style="font-size: 18px;"><strong>Total Paid by Customer:</strong> <span style="color: #d97706; font-weight: bold;">£${data.total}</span></p>
-            <p style="color: #059669; font-weight: bold;">💰 You will receive: £${(parseFloat(data.subtotal) * 0.967).toFixed(2)} (96.7% of product value)</p>
+            <div style="margin-top: 15px; padding: 15px; background-color: rgba(16, 185, 129, 0.1); border-radius: 6px; border-left: 4px solid #10b981;">
+                <h3 style="margin: 0 0 8px 0; color: #059669;">💰 Your Earnings</h3>
+                <p><strong>Platform Fee (3.3%):</strong> -£${data.wholesalerPlatformFee || data.platformFee || '0.00'}</p>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #059669;">
+                <p style="color: #059669; font-weight: bold;">You will receive: £${(parseFloat(data.subtotal) - parseFloat(data.wholesalerPlatformFee || data.platformFee || '0')).toFixed(2)} (96.7% of product value)</p>
+            </div>
         </div>
 
         <div class="action-buttons">
@@ -166,11 +173,13 @@ ${data.customerAddress ? `Address: ${data.customerAddress}` : ''}
 ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
 
 💰 PAYMENT BREAKDOWN
-Subtotal: £${data.subtotal}
-${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Platform Fee (3.3%): £${data.platformFee}
+Product Subtotal: £${data.subtotal}
+${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Customer Transaction Fee: £${data.customerTransactionFee || '0.00'} (paid by customer)
 Total Paid by Customer: £${data.total}
 
-💰 You will receive: £${(parseFloat(data.subtotal) * 0.967).toFixed(2)} (96.7% of product value)
+💰 YOUR EARNINGS
+Platform Fee (3.3%): £${data.wholesalerPlatformFee || data.platformFee || '0.00'} (deducted)
+You will receive: £${(parseFloat(data.subtotal) - parseFloat(data.wholesalerPlatformFee || data.platformFee || '0')).toFixed(2)} (96.7% of product value)
 
 📱 NEXT STEPS
 1. Review the order details in your Quikpik dashboard
