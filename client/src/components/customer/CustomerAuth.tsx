@@ -27,7 +27,7 @@ interface Wholesaler {
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'phone' | 'verification'>('phone');
+  const [authStep, setAuthStep] = useState<'phone' | 'verification' | 'success'>('phone');
   const [customerData, setCustomerData] = useState<any>(null);
   const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
   const [emailCode, setEmailCode] = useState("");
@@ -97,63 +97,36 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   };
 
-  // Handle authentication flow with URL parameter processing - run only once on mount
+  // Initialize authentication flow once on component mount
   useEffect(() => {
-    console.log('🔧 AUTHENTICATION EFFECT TRIGGERED', {
-      wholesalerId,
-      currentAuthStep: authStep,
-      currentLastFourDigits: lastFourDigits,
-      url: window.location.href
-    });
-    
-    // Prevent running if we're already in verification or success step
-    if (authStep === 'verification' || authStep === 'success') {
-      console.log('🚫 SKIPPING - Already in step:', authStep);
-      return;
-    }
+    console.log('🔧 COMPONENT MOUNT - Initializing authentication');
     
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
     
-    console.log('🔍 URL PARAMETER CHECK:', { 
+    console.log('🔍 URL Parameter Check on Mount:', { 
       authParam, 
-      length: authParam?.length,
       isValid: authParam && authParam.length === 4 && /^\d{4}$/.test(authParam),
-      currentStep: authStep 
+      wholesalerId 
     });
     
-    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam) && authStep === 'phone') {
-      // Customer came from CustomerLogin with phone digits - skip phone entry
-      console.log('🔗 AUTO-AUTHENTICATION TRIGGERED:', authParam);
-      console.log('🔧 SETTING STATE:', { 
-        lastFourDigits: authParam,
-        authStep: 'verification' 
-      });
-      
+    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
+      // Customer came from CustomerLogin with phone digits
+      console.log('🔗 AUTO-AUTHENTICATION: Setting up verification with', authParam);
       setLastFourDigits(authParam);
       setAuthStep('verification');
       
-      // Immediately trigger authentication
-      console.log('🚀 CALLING handleAuthenticationFromLogin...');
-      handleAuthenticationFromLogin(authParam);
-    } else if (!authParam && authStep !== 'phone') {
+      // Start authentication process after state is set
+      setTimeout(() => {
+        handleAuthenticationFromLogin(authParam);
+      }, 100);
+    } else {
       // Fresh start - show phone entry
-      console.log('🔄 FALLBACK TO PHONE ENTRY:', { 
-        reason: !authParam ? 'No auth param' : 
-                authParam.length !== 4 ? 'Wrong length' : 
-                'Invalid format' 
-      });
+      console.log('🔄 FRESH START: No auth param, showing phone entry');
       setAuthStep('phone');
-      setLastFourDigits("");
-      setSmsCode("");
-      setEmailCode("");
-      setCustomerData(null);
-      setError("");
-      setSmsExpiry(null);
-      setCountdown(0);
     }
-  }, [wholesalerId, authStep]);
+  }, []); // Run only once on mount
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
@@ -1061,8 +1034,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </>
                 )}
 
-                {/* Maintain existing structure for any remaining SMS-only references */}
-                {authStep === 'sms' && (
+                {/* Legacy SMS step - should not be reached */}
+                {false && (
                   <>
                     <div className="text-center mb-6">
                       <h4 className="text-lg font-semibold text-gray-800 mb-2">
