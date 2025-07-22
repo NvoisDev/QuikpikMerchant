@@ -269,7 +269,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             })),
             customerData,
             wholesalerId: wholesaler.id,
-            totalAmount: totalAmount || 0,
+            totalAmount: totalAmount || 0, // This is the total amount WITH transaction fee included
             shippingInfo: {
               option: customerData.shippingOption,
               service: customerData.selectedShippingService
@@ -3230,7 +3230,7 @@ export default function CustomerPortal() {
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total Amount:</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}</span>
+                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(cartStats.totalValue + (cartStats.totalValue * 0.055 + 0.50)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

@@ -6059,13 +6059,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: 'Wholesaler not found' });
       }
 
-      // Customer pays 5.5% + £0.50 transaction fee
+      // validatedTotalAmount is the product subtotal (without transaction fee)
+      // Customer pays 5.5% + £0.50 transaction fee on TOP of subtotal
       const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
       const totalAmountWithFee = validatedTotalAmount + customerTransactionFee;
       
-      // Platform collects 3.3% from wholesaler
+      // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
-      const wholesalerAmount = validatedTotalAmount.toFixed(2);
+      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
