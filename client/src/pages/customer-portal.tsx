@@ -641,6 +641,13 @@ export default function CustomerPortal() {
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
+    // Initialize from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlFeatured = urlParams.get('featured');
+    return urlFeatured ? parseInt(urlFeatured, 10) : null;
+  });
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   // Early return if no wholesaler ID
   if (!wholesalerId) {
@@ -784,9 +791,7 @@ export default function CustomerPortal() {
     }
   };
 
-  // Get featured product ID from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const featuredProductId = urlParams.get('featured');
+  // Featured product ID is now managed by state initialized from URL
 
   // Fetch wholesaler data
   const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({

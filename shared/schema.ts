@@ -289,7 +289,7 @@ export const products = pgTable("products", {
   promoActive: boolean("promo_active").default(false), // Whether the promo is currently active
   
   // Multiple promotional offers system
-  // promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
+  promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
   currency: varchar("currency").default("GBP"), // ISO currency code
   moq: integer("moq").notNull().default(1), // minimum order quantity
   stock: integer("stock").notNull().default(0),
@@ -301,10 +301,19 @@ export const products = pgTable("products", {
   negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
-  lowStockThreshold: integer("low_stock_threshold").notNull().default(50), // Alert when stock falls below this number
   
-  // Global fulfillment exclusion - if true, this product cannot be delivered (pickup only)
-  deliveryExcluded: boolean("delivery_excluded").default(false),
+  // Pallet selling format fields
+  sellingFormat: varchar("selling_format").default("units"), // 'units' | 'pallets' | 'both'
+  palletPrice: decimal("pallet_price", { precision: 10, scale: 2 }), // Price per pallet
+  palletMoq: integer("pallet_moq").default(1), // Minimum order quantity for pallets
+  palletStock: integer("pallet_stock").default(0), // Stock in pallets
+  unitsPerPallet: integer("units_per_pallet").default(1), // How many units per pallet
+  palletWeight: decimal("pallet_weight", { precision: 10, scale: 2 }), // Weight per pallet in kg
+  unitWeight: decimal("unit_weight", { precision: 10, scale: 2 }), // Weight per unit in kg
+  unit_weight: decimal("unit_weight_legacy", { precision: 10, scale: 2 }), // Legacy field for compatibility
+  pallet_weight: decimal("pallet_weight_legacy", { precision: 10, scale: 2 }), // Legacy field for compatibility
+  deliveryExcluded: boolean("delivery_excluded").default(false), // Whether item can be delivered or pickup only
+  lowStockThreshold: integer("low_stock_threshold").notNull().default(50), // Alert when stock falls below this number
   
   // Units and measurements
   unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)
@@ -316,7 +325,7 @@ export const products = pgTable("products", {
   unitSize: decimal("unit_size", { precision: 10, scale: 3 }), // e.g., 250 (for "24 x 250ml")
   
   // Weight and dimensions for shipping (based on flexible unit configuration)
-  unitWeight: decimal("unit_weight", { precision: 10, scale: 3 }), // Weight per individual unit in kg
+  unitWeightKg: decimal("unit_weight_kg", { precision: 10, scale: 3 }), // Weight per individual unit in kg
   totalPackageWeight: decimal("total_package_weight", { precision: 10, scale: 3 }), // Total weight of full package (packQuantity * unitSize * unitWeight)
   packageDimensions: jsonb("package_dimensions").default({}), // {length: cm, width: cm, height: cm} for the complete package
   
