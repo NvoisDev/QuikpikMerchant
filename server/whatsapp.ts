@@ -90,26 +90,39 @@ export class WhatsAppService {
       // Use custom message if provided, otherwise generate default message
       const productMessage = message || this.generateProductMessage(product, undefined, wholesaler, promotionalOffers);
 
-      // Check if Twilio WhatsApp is configured for this wholesaler
-      console.log(`Checking Twilio config for ${wholesalerId}:`, {
-        accountSid: !!wholesaler.twilioAccountSid,
-        authToken: !!wholesaler.twilioAuthToken, 
-        phoneNumber: !!wholesaler.twilioPhoneNumber
-      });
+      // Check if Twilio WhatsApp is configured (use system credentials)
+      const systemAccountSid = process.env.TWILIO_ACCOUNT_SID;
+      const systemAuthToken = process.env.TWILIO_AUTH_TOKEN;
+      const systemPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
       
-      if (!wholesaler.twilioAccountSid || !wholesaler.twilioAuthToken || !wholesaler.twilioPhoneNumber) {
-        console.log(`Twilio WhatsApp not configured for wholesaler ${wholesalerId}`);
+      console.log(`🔧 WhatsApp Broadcast Debug for ${wholesalerId}:`);
+      console.log(`Recipients: ${recipientCount} members in group ${customerGroupId}`);
+      console.log(`System Twilio Config:`, {
+        hasAccountSid: !!systemAccountSid,
+        hasAuthToken: !!systemAuthToken,
+        hasPhoneNumber: !!systemPhoneNumber,
+        phoneNumber: systemPhoneNumber
+      });
+      console.log(`Message Preview: ${productMessage.substring(0, 150)}...`);
+      
+      if (!systemAccountSid || !systemAuthToken || !systemPhoneNumber) {
+        console.log(`System Twilio WhatsApp not configured`);
         
-        // Return test mode success (don't actually send messages)
+        // In development mode, show debug message but return success
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🚨 DEVELOPMENT MODE - WhatsApp broadcast would be sent to ${recipientCount} recipients`);
+          console.log(`Message: ${productMessage.substring(0, 100)}...`);
+        }
+        
         return {
           success: true,
           recipientCount: recipientCount,
-          messageId: `test_${Date.now()}`
+          messageId: `dev_${Date.now()}`
         };
       }
       
-      // Send WhatsApp messages using Twilio
-      const twilioClient = twilio(wholesaler.twilioAccountSid!, wholesaler.twilioAuthToken!);
+      // Send WhatsApp messages using system Twilio credentials
+      const twilioClient = twilio(systemAccountSid!, systemAuthToken!);
       
       const promises = members.map(async (member) => {
         // Use phoneNumber field from users table
@@ -129,7 +142,7 @@ export class WhatsAppService {
           
           // Always use the full product message (user wants preview message format)
           messageData = {
-            from: `whatsapp:${wholesaler.twilioPhoneNumber}`,
+            from: `whatsapp:${systemPhoneNumber}`,
             to: `whatsapp:${formattedPhone}`,
             body: productMessage
           };

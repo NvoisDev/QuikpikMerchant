@@ -461,7 +461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const smsData = {
           customerId: customer.id,
           wholesalerId: wholesalerId,
-          code: result.code || '',
+          code: code, // Use the generated code directly
           phoneNumber: customer.phone,
           expiresAt: expiresAt
         };
@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({ 
             success: true, 
             message: "SMS verification code sent",
-            debugCode: result.code
+            debugCode: code
           });
         } else {
           res.json({ success: true, message: "SMS verification code sent" });
@@ -3438,6 +3438,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error processing webhook:", error);
       res.status(500).json({ message: "Webhook error: " + error.message });
+    }
+  });
+
+  // WhatsApp diagnostic endpoint
+  app.get('/api/test-whatsapp-credentials', async (req, res) => {
+    try {
+      console.log('🔧 WhatsApp Credentials Check:');
+      console.log('Twilio SID:', !!process.env.TWILIO_ACCOUNT_SID);
+      console.log('Twilio Token:', !!process.env.TWILIO_AUTH_TOKEN);  
+      console.log('Twilio Phone:', !!process.env.TWILIO_PHONE_NUMBER);
+      
+      res.json({
+        hasCredentials: {
+          twilioSID: !!process.env.TWILIO_ACCOUNT_SID,
+          twilioToken: !!process.env.TWILIO_AUTH_TOKEN,
+          twilioPhone: !!process.env.TWILIO_PHONE_NUMBER
+        },
+        environment: process.env.NODE_ENV
+      });
+    } catch (error) {
+      console.error('WhatsApp credentials check error:', error);
+      res.status(500).json({ error: 'Credentials check failed' });
     }
   });
 
