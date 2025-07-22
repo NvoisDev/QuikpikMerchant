@@ -39,20 +39,74 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const { toast } = useToast();
 
-  // Reset authentication state on component mount (after logout)
+  // Handle authentication flow with URL parameter processing
   useEffect(() => {
-    // Always start fresh - clear authentication state
-    setAuthStep('phone');
-    setLastFourDigits("");
-    setSmsCode("");
-    setEmailCode("");
-    setCustomerData(null);
-    setError("");
-    setSmsExpiry(null);
-    setCountdown(0);
+    // Check for auth parameter from CustomerLogin
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get('auth');
     
-    console.log('🔄 Authentication component reset to phone entry step');
+    if (authParam && authParam.length === 4) {
+      // Customer came from CustomerLogin with phone digits - skip phone entry
+      console.log('🔗 Auto-authentication from CustomerLogin:', authParam);
+      setLastFourDigits(authParam);
+      setAuthStep('verification');
+      // Auto-trigger SMS verification
+      handleAuthenticationFromLogin(authParam);
+    } else {
+      // Fresh start - show phone entry
+      setAuthStep('phone');
+      setLastFourDigits("");
+      setSmsCode("");
+      setEmailCode("");
+      setCustomerData(null);
+      setError("");
+      setSmsExpiry(null);
+      setCountdown(0);
+      console.log('🔄 Authentication component reset to phone entry step');
+    }
   }, [wholesalerId]);
+
+  // Handle automatic authentication when coming from CustomerLogin
+  const handleAuthenticationFromLogin = async (digits: string) => {
+    console.log('🚀 Starting automatic authentication...', { wholesalerId, digits });
+    
+    try {
+      // Verify customer exists with these last 4 digits
+      const verifyResponse = await fetch('/api/customer-auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyResponse.ok) {
+        console.log('✅ Customer found, sending SMS immediately...');
+        setCustomerData(verifyData.customer);
+        
+        // Send SMS code
+        const smsResponse = await fetch('/api/customer-auth/request-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
+        });
+
+        if (smsResponse.ok) {
+          console.log('📱 SMS sent successfully, ready for verification');
+          setVerificationMethod(verifyData.customer.email ? 'both' : 'sms');
+          setSmsExpiry(Date.now() + 5 * 60 * 1000);
+          setCountdown(300);
+        }
+      } else {
+        setError(verifyData.error || 'Customer not found');
+        setAuthStep('phone'); // Fall back to phone entry
+      }
+    } catch (error) {
+      console.error('Auto-authentication failed:', error);
+      setError('Authentication failed. Please try again.');
+      setAuthStep('phone'); // Fall back to phone entry
+    }
+  };
 
   // Fetch wholesaler data for personalization
   useEffect(() => {

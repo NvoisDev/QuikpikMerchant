@@ -155,8 +155,8 @@ export default function CustomerLogin() {
     setIsLoading(true);
     
     try {
-      // Redirect to customer portal for authentication and store access
-      window.location.href = `/store/${selectedWholesaler.id}?auth=${lastFourDigits}`;
+      // Redirect to customer portal - authentication component will handle the SMS flow
+      window.location.href = `/customer/${selectedWholesaler.id}?auth=${lastFourDigits}`;
     } catch (error) {
       toast({
         title: "Connection Error",
