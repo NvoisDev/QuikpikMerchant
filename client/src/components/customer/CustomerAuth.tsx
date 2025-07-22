@@ -80,9 +80,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           setVerificationMethod(verifyData.customer.email ? 'both' : 'sms');
           setSmsExpiry(Date.now() + 5 * 60 * 1000);
           setCountdown(300);
-          // CRITICAL: Ensure we stay in verification step
-          setAuthStep('verification');
-          console.log('🔧 FORCED AUTH STEP TO VERIFICATION');
+          console.log('🔧 SMS VERIFICATION READY - STAYING IN VERIFICATION STEP');
         } else {
           console.log('❌ SMS FAILED - STAYING IN VERIFICATION');
           setError('Failed to send SMS. Please try again.');
@@ -99,7 +97,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   };
 
-  // Handle authentication flow with URL parameter processing
+  // Handle authentication flow with URL parameter processing - run only once on mount
   useEffect(() => {
     console.log('🔧 AUTHENTICATION EFFECT TRIGGERED', {
       wholesalerId,
@@ -107,6 +105,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       currentLastFourDigits: lastFourDigits,
       url: window.location.href
     });
+    
+    // Prevent running if we're already in verification or success step
+    if (authStep === 'verification' || authStep === 'success') {
+      console.log('🚫 SKIPPING - Already in step:', authStep);
+      return;
+    }
     
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
@@ -119,7 +123,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       currentStep: authStep 
     });
     
-    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
+    if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam) && authStep === 'phone') {
       // Customer came from CustomerLogin with phone digits - skip phone entry
       console.log('🔗 AUTO-AUTHENTICATION TRIGGERED:', authParam);
       console.log('🔧 SETTING STATE:', { 
@@ -133,7 +137,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       // Immediately trigger authentication
       console.log('🚀 CALLING handleAuthenticationFromLogin...');
       handleAuthenticationFromLogin(authParam);
-    } else {
+    } else if (!authParam && authStep !== 'phone') {
       // Fresh start - show phone entry
       console.log('🔄 FALLBACK TO PHONE ENTRY:', { 
         reason: !authParam ? 'No auth param' : 
@@ -149,7 +153,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       setSmsExpiry(null);
       setCountdown(0);
     }
-  }, [wholesalerId]);
+  }, [wholesalerId, authStep]);
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
