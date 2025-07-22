@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/components/OnboardingProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { TemporaryAdvertisingBanner } from "@/components/temporary-advertising-banner";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import LandingPage from "@/pages/LandingPage";
@@ -20,6 +21,7 @@ import SubscriptionSettings from "@/pages/subscription-settings";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Advertising from "@/pages/advertising";
+import AdvertisingPreview from "@/pages/advertising-preview";
 import PublicProductPage from "@/pages/public-product";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
@@ -56,6 +58,7 @@ function PublicRoutes() {
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
       <Route path="/customer-login" component={CustomerLogin} />
+      <Route path="/advertising-preview" component={AdvertisingPreview} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />
@@ -124,7 +127,7 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   
   // Check if current route is public (doesn't need authentication)
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
@@ -163,8 +166,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <OnboardingProvider>
+            <TemporaryAdvertisingBanner />
+            <div className="pt-16">
+              <Router />
+            </div>
             <Toaster />
-            <Router />
           </OnboardingProvider>
         </TooltipProvider>
       </QueryClientProvider>
