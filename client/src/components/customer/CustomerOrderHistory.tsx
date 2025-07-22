@@ -36,6 +36,8 @@ interface Order {
   };
   fulfillmentType: string;
   deliveryCarrier: string;
+  deliveryCost?: string;
+  customerTransactionFee?: string;
   shippingTotal: string;
   shippingStatus: string;
   customerName?: string;

@@ -713,6 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentStatus: order.paymentStatus,
           fulfillmentType: order.fulfillmentType,
           deliveryCarrier: order.deliveryCarrier,
+          deliveryCost: order.deliveryCost || '0.00',
           shippingStatus: order.shippingStatus,
           shippingTotal: order.shippingTotal,
           notes: order.notes,
