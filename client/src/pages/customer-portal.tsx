@@ -614,24 +614,12 @@ export default function CustomerPortal() {
 
 
 
-  // Customer authentication state - initialize with default values, load from localStorage in useEffect
+  // Customer authentication state - simpler initialization
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showHomePage, setShowHomePage] = useState(true);
-  const [showAuth, setShowAuth] = useState(true);
+  const [showAuth, setShowAuth] = useState(!isPreviewMode);
   const [isGuestMode, setIsGuestMode] = useState(true);
-
-  // SIMPLIFIED: Initialize authentication state without localStorage loops
-  useEffect(() => {
-    if (wholesalerId && !isPreviewMode) {
-      // For regular customer access, always start with authentication required
-      console.log(`🔐 Customer portal initialized for wholesaler ${wholesalerId}`);
-      setIsAuthenticated(false);
-      setAuthenticatedCustomer(null);
-      setShowAuth(true);
-      setIsGuestMode(true);
-    }
-  }, [wholesalerId, isPreviewMode]);
 
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1176,16 +1164,7 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(customer);
     setIsAuthenticated(true);
     setShowAuth(false);
-    setIsGuestMode(false); // Disable guest mode when authenticated
-    
-    // Store authentication data in localStorage immediately
-    const authData = {
-      isAuthenticated: true,
-      customer: customer,
-      timestamp: Date.now()
-    };
-    localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify(authData));
-    console.log("💾 Authentication data stored in localStorage");
+    setIsGuestMode(false);
     
     toast({
       title: "Welcome!",
@@ -1205,18 +1184,18 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
-  // Authentication is now always required (no guest mode)
+  // Simple authentication state management
   useEffect(() => {
-    if (!isAuthenticated && !isPreviewMode && wholesalerId) {
-      setShowAuth(true);
-    } else if (isAuthenticated && !isPreviewMode && wholesalerId) {
-      setShowAuth(false);
-    } else if (isPreviewMode) {
+    if (isPreviewMode) {
       // In preview mode, skip authentication
       setShowAuth(false);
       setIsGuestMode(false);
+    } else if (isAuthenticated) {
+      setShowAuth(false);
+    } else {
+      setShowAuth(true);
     }
-  }, [isAuthenticated, isPreviewMode, wholesalerId]);
+  }, [isAuthenticated, isPreviewMode]);
 
 
 
@@ -1264,8 +1243,6 @@ export default function CustomerPortal() {
       onViewFeaturedProduct={handleViewFeaturedProduct}
       customerData={authenticatedCustomer}
       onLogout={() => {
-        // Clear localStorage
-        localStorage.removeItem(`customer_auth_${wholesalerId}`);
         setIsAuthenticated(false);
         setAuthenticatedCustomer(null);
         setShowAuth(true);
