@@ -469,41 +469,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           message: errorMessage
         });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded, now create the order
-        try {
-          const response = await apiRequest("POST", "/api/marketplace/create-order", {
-            paymentIntentId: paymentIntent.id
-          });
-          const orderResult = await response.json();
-          
-          toast({
-            title: "Payment Successful!",
-            description: `Order #${orderResult.orderId} created successfully. Transaction fee applied as shown on receipt.`,
-          });
-          onSuccess();
-        } catch (orderError: any) {
-          console.error('Error creating order:', orderError);
-          
-          // Enhanced error handling for order creation after successful payment
-          let errorMessage = "Payment completed but order creation failed. Please contact support with your payment confirmation.";
-          let errorTitle = "Order Creation Failed";
-          
-          if (orderError.response?.status === 400) {
-            errorMessage = "Payment completed but order details are invalid. Please contact support immediately.";
-          } else if (orderError.response?.status === 409) {
-            errorMessage = "Payment completed but order already exists. Please check your order history.";
-          } else if (orderError.response?.status >= 500) {
-            errorMessage = "Payment completed but our order system is temporarily unavailable. Please contact support.";
-          } else if (orderError.message) {
-            errorMessage = `Payment completed but order creation failed: ${orderError.message}. Please contact support.`;
-          }
-          
-          toast({
-            title: errorTitle,
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
+        // Payment succeeded - webhook automatically handles order creation and emails
+        toast({
+          title: "Payment Successful!",
+          description: "Your order has been placed successfully. You'll receive a confirmation email shortly.",
+        });
+        onSuccess();
       }
     } catch (error: any) {
       console.error('Unexpected payment error:', error);

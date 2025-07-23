@@ -48,6 +48,21 @@
 - **Current Status**: ✅ FULLY OPERATIONAL - Complete email verification system working with verified SendGrid sender
 - **SMS Verification**: Primary SMS verification system remains fully operational as main authentication method
 
+### CRITICAL WEBHOOK EMAIL RACE CONDITION FIX - COMPLETED ✅ (July 23, 2025)
+- **Issue Resolved**: Wholesaler emails were being sent even when order creation failed, causing confusion when orders failed to appear in dashboard
+- **Root Cause**: Duplicate order creation processes - webhook handler (working) + customer portal endpoint (failing) creating race condition
+- **Solution Implemented**: 
+  - **Webhook Order Creation**: Stripe webhook automatically creates orders and sends emails when payments succeed (lines 1767-1863)
+  - **Duplicate Process Removed**: Eliminated redundant order creation call from customer portal (was calling `/api/marketplace/create-order` unnecessarily)
+  - **Clean Payment Flow**: Payment success now relies solely on webhook-based order creation for consistency
+- **Technical Implementation**:
+  - **Fixed Variables**: Added missing metadata fields (`productSubtotal`, `customerTransactionFee`, `totalCustomerPays`) to order creation endpoint for fallback scenarios
+  - **Removed Race Condition**: Customer portal no longer calls separate order creation endpoint after payment success
+  - **Webhook-Only Processing**: Single order creation path through Stripe webhook prevents duplicate attempts and email sending before order verification
+- **User Experience**: Customers see "Payment Successful! Your order has been placed successfully" without confusing error messages
+- **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
+- **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
+
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
 - **Root Cause**: CustomerLogin component was redirecting to `/customer/:id` instead of `/store/:id`, creating infinite redirect loop
