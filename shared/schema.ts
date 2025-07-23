@@ -375,6 +375,7 @@ export const stockMovements = pgTable("stock_movements", {
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
+  orderNumber: varchar("order_number").notNull(), // Unique order number per wholesaler (e.g., "QP-001", "QP-002")
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   retailerId: varchar("retailer_id").notNull().references(() => users.id),
   customerName: varchar("customer_name"), // Store customer name for guest checkouts
