@@ -20,7 +20,7 @@ import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { db } from "./db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, or } from "drizzle-orm";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
