@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation, useRouter } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users } from "lucide-react";
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty, CommandGroup } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -69,8 +69,7 @@ const FloatingIcons = () => {
 };
 
 export default function CustomerLogin() {
-  const [location] = useLocation();
-  const router = useRouter();
+  const [location, setLocation] = useLocation();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedWholesaler, setSelectedWholesaler] = useState<Wholesaler | null>(null);
   const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
@@ -156,8 +155,8 @@ export default function CustomerLogin() {
     setIsLoading(true);
     
     try {
-      // Use client-side navigation instead of window.location.href to prevent routing conflicts
-      router.push(`/store/${selectedWholesaler.id}?auth=${lastFourDigits}`);
+      // Use Wouter's setLocation for proper client-side navigation
+      setLocation(`/store/${selectedWholesaler.id}?auth=${lastFourDigits}`);
     } catch (error) {
       toast({
         title: "Connection Error",

@@ -148,7 +148,7 @@
 - **Solution Implemented**: Replaced window.location.href with proper client-side routing using router.push()
 - **Technical Implementation**:
   - **Route Structure**: /customer/:id → CustomerLogin (store selection), /store/:id → CustomerPortal (authentication)  
-  - **Navigation Fix**: Updated CustomerLogin to use router.push() instead of window.location.href for seamless transitions
+  - **Navigation Fix**: Updated CustomerLogin to use Wouter's setLocation() instead of window.location.href for seamless transitions
   - **Client-Side Routing**: Prevents browser from showing multiple components simultaneously during route transitions
   - **User Experience**: Clean single-screen authentication flow without UI duplication
 - **Production Ready**: Authentication flow now displays single screen at a time with proper route transitions
