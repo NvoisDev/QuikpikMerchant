@@ -207,7 +207,7 @@ export default function CustomerLogin() {
                 <div className={`h-0.5 w-8 transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
                 <div className={`h-3 w-3 rounded-full transition-all duration-300 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
               </div>
-              <p className="text-sm text-gray-500">Step {step} of 2</p>
+              <p className="text-sm text-gray-500">Step {step} of 3</p>
             </CardHeader>
             
             <CardContent className="space-y-6">
