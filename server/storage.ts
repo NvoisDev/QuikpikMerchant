@@ -701,8 +701,42 @@ export class DatabaseStorage implements IStorage {
     return orderList;
   }
 
+  // Generate unique order number for wholesaler
+  async generateOrderNumber(wholesalerId: string): Promise<string> {
+    // Get wholesaler's prefix
+    const wholesaler = await this.getUser(wholesalerId);
+    const prefix = wholesaler?.orderNumberPrefix || "ORD";
+    
+    // Get the highest order number for this wholesaler
+    const [latestOrder] = await db
+      .select({ orderNumber: orders.orderNumber })
+      .from(orders)
+      .where(eq(orders.wholesalerId, wholesalerId))
+      .orderBy(desc(orders.id))
+      .limit(1);
+    
+    let nextNumber = 1;
+    if (latestOrder?.orderNumber) {
+      // Extract number from existing order number (e.g., "SF-005" -> 5)
+      const numberMatch = latestOrder.orderNumber.match(/(\d+)$/);
+      if (numberMatch) {
+        nextNumber = parseInt(numberMatch[1]) + 1;
+      }
+    }
+    
+    // Format with leading zeros (e.g., "SF-001", "SF-002")
+    const formattedNumber = nextNumber.toString().padStart(3, '0');
+    return `${prefix}-${formattedNumber}`;
+  }
+
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
-    const [newOrder] = await db.insert(orders).values(order).returning();
+    // Generate unique order number for this wholesaler
+    const orderNumber = await this.generateOrderNumber(order.wholesalerId);
+    
+    const [newOrder] = await db.insert(orders).values({
+      ...order,
+      orderNumber
+    }).returning();
     
     // Insert order items and reduce stock
     for (const item of items) {

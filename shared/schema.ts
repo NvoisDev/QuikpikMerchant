@@ -170,6 +170,7 @@ export const users = pgTable("users", {
   }),
   
   storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
+  orderNumberPrefix: varchar("order_number_prefix").default("ORD"), // Prefix for order numbers (e.g., "SF", "QP")
   
   // Marketplace settings
   showPricesToWholesalers: boolean("show_prices_to_wholesalers").default(false), // Whether to show prices to other wholesalers in marketplace

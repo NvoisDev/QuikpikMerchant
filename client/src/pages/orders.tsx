@@ -564,7 +564,7 @@ export default function Orders() {
                                 <div className="flex items-center gap-3">
                                   <Checkbox />
                                   <div>
-                                    <div className="font-medium">#{order.id}</div>
+                                    <div className="font-medium">{order.orderNumber || `#${order.id}`}</div>
                                     <div className="text-sm text-gray-500">
                                       {new Date(order.createdAt).toLocaleDateString('en-GB', {
                                         year: 'numeric',
@@ -691,7 +691,7 @@ export default function Orders() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-semibold text-lg">Order #{order.id}</h3>
+                          <h3 className="font-semibold text-lg">{order.orderNumber || `Order #${order.id}`}</h3>
                           {getStatusBadge(order.status)}
                           
                           {/* Show shipping status */}
@@ -821,7 +821,7 @@ export default function Orders() {
             <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Order #{selectedOrder.id} Details</DialogTitle>
+                  <DialogTitle>{selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Details</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
