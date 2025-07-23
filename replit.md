@@ -63,19 +63,20 @@
 - **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
 - **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
 
-### CUSTOMER ORDER HISTORY TRANSACTION FEE FIX - COMPLETED ✅ (July 23, 2025)
-- **Issue Resolved**: Customer order history showing incorrect transaction fee amounts (£22.00 instead of £22.50 for £400 order)
-- **Root Cause**: API was recalculating transaction fees instead of using stored database values, causing £0.50 rounding error
+### CUSTOMER ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
+- **Issue Resolved**: Customer order history should display only product cost, not total amount paid including fees
+- **User Request**: "The amount should just be the product cost" - show £400.00 instead of £422.50 for Order #77
 - **Solution Implemented**: 
-  - **API Fixed**: Updated customer orders endpoint to use stored `customerTransactionFee` from database instead of recalculating
-  - **Database Values Verified**: Database correctly stores £22.50 for £400 orders (£400 × 0.055 + £0.50 = £22.50)
-  - **Frontend Fallback Maintained**: Kept frontend fallback calculation for orders without stored transaction fees
+  - **Main Display Fixed**: Updated order cards to show `formatCurrency(order.subtotal)` instead of calculated total with fees
+  - **Removed Total Row**: Eliminated "Total:" breakdown line showing £422.50 with all fees included
+  - **Maintained Transparency**: Kept detailed payment breakdown showing transaction fees and shipping costs separately
 - **Technical Implementation**:
-  - **Backend API Fix**: `const transactionFee = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : (subtotal * 0.055) + 0.50`
-  - **Removed Platform Fee Reference**: Eliminated confusion between customer transaction fee (5.5% + £0.50) and wholesaler platform fee (3.3%)
-  - **API Response Verified**: API now returns correct £22.50 transaction fee for £400 orders
-- **Customer Experience**: Order history now shows accurate transaction fee calculations matching actual charged amounts
-- **Example**: £400 order now correctly shows £400.00 + £22.50 transaction fee = £422.50 total ✅
+  - **Frontend Display Fix**: Changed main amount from complex calculation to simple `order.subtotal` display
+  - **Simplified Card Layout**: Removed total calculation in compact summary section
+  - **Preserved Detail Modal**: Complete payment breakdown still available in detailed view
+- **Customer Experience**: Order history now prominently displays product cost (£400.00) with fees shown separately
+- **Backend API**: Fixed transaction fee calculation to use stored database values (£22.50) instead of recalculating
+- **Example**: Order #77 now shows £400.00 as main amount with transaction fee details available in breakdown ✅
 
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
