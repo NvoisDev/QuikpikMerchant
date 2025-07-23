@@ -120,10 +120,11 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin - start at step 2
-      console.log('🔗 FROM CUSTOMER LOGIN: Starting at step 2 with digits', authParam);
+      // Customer came from CustomerLogin - skip directly to step 3 (SMS verification)
+      console.log('🔗 FROM CUSTOMER LOGIN: Skipping to step 3 with digits', authParam);
       setLastFourDigits(authParam);
-      setAuthStep('step2');
+      // Automatically verify customer and send SMS, then go to step 3
+      handleLogin();
     } else {
       // Fresh start - show step 1
       console.log('🔄 FRESH START: Starting at step 1');
@@ -158,15 +159,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   }, [countdown]);
 
-  const handleLogin = async () => {
-    console.log('🚀 Starting streamlined authentication...', { wholesalerId, lastFourDigits });
+  const handleLogin = async (overrideDigits?: string) => {
+    const phoneDigits = overrideDigits || lastFourDigits;
+    console.log('🚀 Starting streamlined authentication...', { wholesalerId, lastFourDigits: phoneDigits });
     
-    if (!lastFourDigits) {
+    if (!phoneDigits) {
       setError("Please enter the last 4 digits of your phone number");
       return;
     }
 
-    if (lastFourDigits.length !== 4) {
+    if (phoneDigits.length !== 4) {
       setError("Please enter exactly 4 digits");
       return;
     }
@@ -191,7 +193,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         },
         body: JSON.stringify({
           wholesalerId,
-          lastFourDigits: lastFourDigits.trim()
+          lastFourDigits: phoneDigits.trim()
         }),
       });
 
@@ -209,7 +211,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           },
           body: JSON.stringify({
             wholesalerId,
-            lastFourDigits: lastFourDigits.trim()
+            lastFourDigits: phoneDigits.trim()
           }),
         });
 
