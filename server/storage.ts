@@ -1414,10 +1414,10 @@ export class DatabaseStorage implements IStorage {
     const previousMonthStart = new Date(currentMonthStart);
     previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
     
-    // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)  
+    // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)
     const [revenueStats] = await db
       .select({
-        totalRevenue: sum(orders.subtotal),
+        totalRevenue: sum(orders.total),
         ordersCount: count(orders.id)
       })
       .from(orders)
@@ -1429,7 +1429,7 @@ export class DatabaseStorage implements IStorage {
     // Get current month stats
     const [currentMonthStats] = await db
       .select({
-        currentRevenue: sum(orders.subtotal),
+        currentRevenue: sum(orders.total),
         currentOrders: count(orders.id)
       })
       .from(orders)
@@ -1442,7 +1442,7 @@ export class DatabaseStorage implements IStorage {
     // Get previous month stats
     const [previousMonthStats] = await db
       .select({
-        previousRevenue: sum(orders.subtotal),
+        previousRevenue: sum(orders.total),
         previousOrders: count(orders.id)
       })
       .from(orders)
@@ -1503,7 +1503,7 @@ export class DatabaseStorage implements IStorage {
     // Get revenue and order count for the specified date range
     const [revenueStats] = await db
       .select({
-        totalRevenue: sum(orders.subtotal),
+        totalRevenue: sum(orders.total),
         ordersCount: count(orders.id)
       })
       .from(orders)

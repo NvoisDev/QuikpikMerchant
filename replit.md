@@ -63,22 +63,24 @@
 - **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
 - **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
 
-### SYSTEM-WIDE ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
-- **Issue Resolved**: Both customer portal and wholesaler dashboard should display only product cost, not total amount paid including fees
-- **User Request**: "The amount should just be the product cost" - show £400.00 instead of £422.50 for Order #77 across all interfaces
+### TARGETED ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
+- **Issue Resolved**: Wholesaler dashboard should display only product cost, while customer portal should show total amount paid including fees
+- **User Clarification**: "The amount should just be the product cost" applies only to wholesaler dashboard - show £400.00 instead of £422.50 for Order #77
 - **Solution Implemented**: 
-  - **Customer Portal Fixed**: Updated order cards to show `formatCurrency(order.subtotal)` instead of calculated total with fees
+  - **Customer Portal Corrected**: Reverted to show full total with fees (£422.50) - customers see what they actually paid
   - **Wholesaler Dashboard Fixed**: Updated both table and card views to show `parseFloat(order.subtotal || order.total)` instead of `order.total`
-  - **Backend Analytics Updated**: Changed all revenue calculations from `sum(orders.total)` to `sum(orders.subtotal)` for consistency
-  - **Maintained Transparency**: Kept detailed payment breakdown showing transaction fees and shipping costs separately
+  - **Backend Analytics Maintained**: Kept revenue calculations using `sum(orders.total)` for accurate business reporting
+  - **Clear Separation**: Customer-facing vs wholesaler-facing displays now serve different purposes
 - **Technical Implementation**:
-  - **Customer Frontend**: Changed main amount from complex calculation to simple `order.subtotal` display
+  - **Customer Frontend**: Shows calculated total including transaction fees and shipping costs
   - **Wholesaler Frontend**: Updated orders.tsx table and card views to prioritize subtotal over total
-  - **Backend Analytics**: Modified getWholesalerStats and getWholesalerStatsForDateRange to use subtotal-based revenue
-  - **System-wide Consistency**: All order displays now show product cost only with fees available separately
-- **User Experience**: Complete platform consistency - Order #77 shows £400.00 in both customer portal and wholesaler dashboard
-- **Business Analytics**: Revenue stats now reflect product sales value rather than total payments including fees
-- **Example**: Order #77 now consistently shows £400.00 across customer portal, wholesaler dashboard, and analytics ✅
+  - **Backend Analytics**: Maintained actual revenue calculations including all fees for business intelligence
+  - **Appropriate Context**: Each interface displays information relevant to its user type
+- **User Experience**: 
+  - **Customers**: See total amount paid (£422.50) matching their payment confirmation
+  - **Wholesalers**: See product cost only (£400.00) for inventory/pricing management
+  - **Business Analytics**: Show actual revenue including transaction fees for accurate reporting
+- **Example**: Order #77 shows £422.50 in customer portal and £400.00 in wholesaler dashboard ✅
 
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access

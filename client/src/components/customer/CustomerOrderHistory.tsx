@@ -544,12 +544,25 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         </div>
                       ) : null}
 
+                      <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
+                        <span>Total:</span>
+                        <span>{formatCurrency((
+                          parseFloat(order.subtotal) + 
+                          parseFloat(order.deliveryCost || order.shippingTotal || '0') +
+                          parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                        ).toFixed(2))}</span>
+                      </div>
+
                     </div>
                   </div>
                   
                   {/* Right side - Price and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg">{formatCurrency(order.subtotal)}</div>
+                    <div className="font-semibold text-lg">{formatCurrency((
+                      parseFloat(order.subtotal) + 
+                      parseFloat(order.deliveryCost || order.shippingTotal || '0') +
+                      parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                    ).toFixed(2))}</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(order.date), 'MMM d, yyyy')}
