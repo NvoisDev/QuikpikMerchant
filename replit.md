@@ -63,6 +63,20 @@
 - **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
 - **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
 
+### CUSTOMER ORDER HISTORY TRANSACTION FEE FIX - COMPLETED ✅ (July 23, 2025)
+- **Issue Resolved**: Customer order history showing incorrect transaction fee amounts (£13.20 instead of £22.00 for £400 order)
+- **Root Cause**: Transaction fee calculation was incorrectly using `order.platformFee` (3.3% wholesaler fee) as fallback instead of calculating customer transaction fee
+- **Solution Implemented**: 
+  - **Removed Incorrect Fallback**: Eliminated `order.platformFee` from customer transaction fee calculations
+  - **Correct Calculation**: Now uses only `order.customerTransactionFee` or proper fallback: `(subtotal × 0.055) + 0.50`
+  - **Consistent Display**: All customer order displays now show correct "Transaction Fee (5.5% + £0.50)" amounts
+- **Technical Implementation**:
+  - **Updated Fallback Logic**: `customerTransactionFee || ((parseFloat(subtotal) * 0.055) + 0.50)`
+  - **Removed Platform Fee Reference**: Eliminated confusion between customer transaction fee (5.5% + £0.50) and wholesaler platform fee (3.3%)
+  - **Fixed All Display Locations**: Updated detailed view, compact cards, and summary calculations
+- **Customer Experience**: Order history now shows accurate transaction fee calculations matching actual charged amounts
+- **Example**: £400 order now correctly shows £400.00 + £22.00 transaction fee = £422.00 total instead of incorrect £413.20
+
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
 - **Root Cause**: CustomerLogin component was redirecting to `/customer/:id` instead of `/store/:id`, creating infinite redirect loop

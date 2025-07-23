@@ -267,14 +267,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             )}
             <div className="flex justify-between text-sm">
               <span>Transaction Fee (5.5% + £0.50):</span>
-              <span>{formatCurrency(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
+              <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-2">
               <span>Total Paid:</span>
               <span>{formatCurrency((
                 parseFloat(order.subtotal) + 
                 parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
               ).toFixed(2))}</span>
             </div>
           </div>
@@ -534,7 +534,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       </div>
                       <div className="flex justify-between text-xs">
                         <span>Transaction Fee:</span>
-                        <span>{formatCurrency(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
+                        <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
                       </div>
                       {/* Show shipping cost if applicable */}
                       {(order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0) ? (
@@ -548,7 +548,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>{formatCurrency((
                           parseFloat(order.subtotal) + 
                           parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                          parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                          parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
                         ).toFixed(2))}</span>
                       </div>
                     </div>
@@ -559,7 +559,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     <div className="font-semibold text-lg">{formatCurrency((
                       parseFloat(order.subtotal) + 
                       parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                      parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                      parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
                     ).toFixed(2))}</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end">
                       <Calendar className="h-3 w-3 mr-1" />
