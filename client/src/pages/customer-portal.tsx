@@ -1265,18 +1265,9 @@ export default function CustomerPortal() {
     );
   }
 
-  // Show authentication screen only if not coming from CustomerLogin
-  if (showAuth && !isPreviewMode && wholesalerId && !hasAuthParam) {
-    console.log('🔐 Showing authentication screen');
-    return <CustomerAuth 
-      wholesalerId={wholesalerId} 
-      onAuthSuccess={handleAuthSuccess}
-    />;
-  }
-  
-  // If coming from CustomerLogin with auth param, show customer portal directly with auth screen from CustomerAuth
-  if (hasAuthParam && !isAuthenticated && !isPreviewMode && wholesalerId) {
-    console.log('🔗 Coming from CustomerLogin - showing embedded auth');
+  // Show authentication screen (3-step process)
+  if (showAuth && !isPreviewMode && wholesalerId) {
+    console.log('🔐 Showing 3-step authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}

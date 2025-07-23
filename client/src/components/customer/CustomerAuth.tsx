@@ -31,7 +31,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   
   const [lastFourDigits, setLastFourDigits] = useState(authParam || "");
   const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'phone' | 'verification' | 'success'>(authParam ? 'phone' : 'phone');
+  const [authStep, setAuthStep] = useState<'step1' | 'step2' | 'step3' | 'success'>('step1');
   const [customerData, setCustomerData] = useState<any>(null);
   const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
   const [emailCode, setEmailCode] = useState("");
@@ -83,26 +83,25 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
 
         if (smsResponse.ok) {
-          console.log('✅ SMS SENT - SETTING VERIFICATION STATE');
+          console.log('✅ SMS SENT - MOVING TO STEP 3');
           setVerificationMethod(verifyData.customer.email ? 'both' : 'sms');
           setSmsExpiry(Date.now() + 5 * 60 * 1000);
           setCountdown(300);
-          console.log('🔧 SMS VERIFICATION READY - STAYING IN VERIFICATION STEP');
-          // Always stay in verification step - don't auto-complete
-          setAuthStep('verification');
+          setAuthStep('step3'); // SMS verification step
         } else {
-          console.log('❌ SMS FAILED - STAYING IN VERIFICATION');
+          console.log('❌ SMS FAILED - BACK TO STEP 2');
           setError('Failed to send SMS. Please try again.');
+          setAuthStep('step2');
         }
       } else {
-        console.log('❌ CUSTOMER VERIFY FAILED - BACK TO PHONE');
+        console.log('❌ CUSTOMER VERIFY FAILED - BACK TO STEP 1');
         setError(verifyData.error || 'Customer not found');
-        setAuthStep('phone'); // Fall back to phone entry
+        setAuthStep('step1');
       }
     } catch (error) {
       console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
       setError('Authentication failed. Please try again.');
-      setAuthStep('phone'); // Fall back to phone entry
+      setAuthStep('step1');
     }
   };
 
@@ -121,14 +120,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin with phone digits - PRE-FILL but don't auto-send SMS
-      console.log('🔗 PRE-FILL: Setting up phone digits without auto-SMS', authParam);
+      // Customer came from CustomerLogin - start at step 2
+      console.log('🔗 FROM CUSTOMER LOGIN: Starting at step 2 with digits', authParam);
       setLastFourDigits(authParam);
-      setAuthStep('phone'); // Stay on phone entry step - don't auto-send SMS
+      setAuthStep('step2');
     } else {
-      // Fresh start - show phone entry
-      console.log('🔄 FRESH START: No auth param, showing phone entry');
-      setAuthStep('phone');
+      // Fresh start - show step 1
+      console.log('🔄 FRESH START: Starting at step 1');
+      setAuthStep('step1');
     }
   }, []); // Run only once on mount
 
@@ -227,7 +226,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             setVerificationMethod('sms');
           }
           
-          setAuthStep('verification');
+          setAuthStep('step3');
           setCountdown(300); // 5 minutes
           setSmsExpiry(Date.now() + 300000);
           
@@ -299,13 +298,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       } else {
         setError(data.error || "Failed to send SMS code. Please try again.");
         // If SMS fails, go back to phone step
-        setAuthStep('phone');
+        setAuthStep('step1');
         setCustomerData(null);
       }
     } catch (error) {
       console.error('SMS request error:', error);
       setError("Connection error. Please try again.");
-      setAuthStep('phone');
+      setAuthStep('step1');
     } finally {
       setIsSMSLoading(false);
     }
@@ -793,10 +792,45 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </p>
                 </div>
 
-                {/* Step 1: Phone Number Verification */}
-                {authStep === 'phone' && (
+                {/* Step 1: Store Introduction */}
+                {authStep === 'step1' && (
+                  <>
+                    <div className="text-center space-y-4">
+                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl p-6 border border-blue-100">
+                        <h4 className="text-xl font-bold text-gray-800 mb-2">
+                          Welcome to {wholesaler?.businessName || 'Our Store'}
+                        </h4>
+                        <p className="text-gray-600 mb-4">
+                          Step 1 of 3: Getting Started
+                        </p>
+                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-white text-2xl">🏪</span>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => setAuthStep('step2')} 
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl"
+                      >
+                        Continue to Authentication
+                        <span className="ml-2">→</span>
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 2: Phone Number Entry */}
+                {authStep === 'step2' && (
                   <>
                     <div className="space-y-4">
+                      <div className="text-center mb-4">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                          Step 2 of 3: Phone Authentication
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Enter the last 4 digits of your phone number
+                        </p>
+                      </div>
                       <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
                         Last 4 digits of your phone number
                       </Label>
@@ -849,8 +883,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </>
                 )}
 
-                {/* Step 2: Verification (SMS or Email) */}
-                {authStep === 'verification' && customerData && (
+                {/* Step 3: SMS Verification */}
+                {authStep === 'step3' && customerData && (
                   <>
                     <div className="text-center mb-4">
                       <h4 className="text-base font-semibold text-gray-800 mb-1">
@@ -864,7 +898,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       </div>
                       <p className="text-xs text-gray-600 font-medium">
-                        Step 2 of 2: Identity Verification
+                        Step 3 of 3: SMS Verification
                       </p>
                       {countdown > 0 && (
                         <p className="text-xs text-blue-600 mt-2">
