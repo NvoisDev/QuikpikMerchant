@@ -70,6 +70,7 @@ const FloatingIcons = () => {
 
 export default function CustomerLogin() {
   const [location] = useLocation();
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedWholesaler, setSelectedWholesaler] = useState<Wholesaler | null>(null);
   const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
@@ -155,8 +156,8 @@ export default function CustomerLogin() {
     setIsLoading(true);
     
     try {
-      // Redirect to customer portal - authentication component will handle the SMS flow
-      window.location.href = `/store/${selectedWholesaler.id}?auth=${lastFourDigits}`;
+      // Use client-side navigation instead of window.location.href to prevent routing conflicts
+      router.push(`/store/${selectedWholesaler.id}?auth=${lastFourDigits}`);
     } catch (error) {
       toast({
         title: "Connection Error",
