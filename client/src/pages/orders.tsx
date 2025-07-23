@@ -831,7 +831,7 @@ export default function Orders() {
                         <div><strong>Name:</strong> {selectedOrder.retailer ? `${selectedOrder.retailer.firstName} ${selectedOrder.retailer.lastName}` : 'Unknown'}</div>
                         <div><strong>Email:</strong> {selectedOrder.retailer?.email || 'N/A'}</div>
                         <div><strong>Phone:</strong> {selectedOrder.retailer?.phoneNumber || 'N/A'}</div>
-                        <div><strong>Order Total:</strong> {formatCurrency(parseFloat(selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</div>
+                        <div><strong>Order Total:</strong> {formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</div>
                       </div>
                     </div>
                     <div>

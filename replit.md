@@ -69,18 +69,19 @@
 - **Solution Implemented**: 
   - **Customer Portal Corrected**: Reverted to show full total with fees (£422.50) - customers see what they actually paid
   - **Wholesaler Dashboard Fixed**: Updated both table and card views to show `parseFloat(order.subtotal || order.total)` instead of `order.total`
+  - **Order Details Modal Fixed**: Updated order details modal "Order Total" field to show subtotal instead of total (July 23, 2025)
   - **Backend Analytics Maintained**: Kept revenue calculations using `sum(orders.total)` for accurate business reporting
   - **Clear Separation**: Customer-facing vs wholesaler-facing displays now serve different purposes
 - **Technical Implementation**:
   - **Customer Frontend**: Shows calculated total including transaction fees and shipping costs
-  - **Wholesaler Frontend**: Updated orders.tsx table and card views to prioritize subtotal over total
+  - **Wholesaler Frontend**: Updated orders.tsx table, card views, and order details modal to prioritize subtotal over total
   - **Backend Analytics**: Maintained actual revenue calculations including all fees for business intelligence
   - **Appropriate Context**: Each interface displays information relevant to its user type
 - **User Experience**: 
   - **Customers**: See total amount paid (£422.50) matching their payment confirmation
-  - **Wholesalers**: See product cost only (£400.00) for inventory/pricing management
+  - **Wholesalers**: See product cost only (£400.00) for inventory/pricing management in all views
   - **Business Analytics**: Show actual revenue including transaction fees for accurate reporting
-- **Example**: Order #77 shows £422.50 in customer portal and £400.00 in wholesaler dashboard ✅
+- **Example**: Order #77 shows £422.50 in customer portal and £400.00 in wholesaler dashboard and order details ✅
 
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
