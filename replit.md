@@ -63,20 +63,22 @@
 - **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
 - **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
 
-### CUSTOMER ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
-- **Issue Resolved**: Customer order history should display only product cost, not total amount paid including fees
-- **User Request**: "The amount should just be the product cost" - show £400.00 instead of £422.50 for Order #77
+### SYSTEM-WIDE ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
+- **Issue Resolved**: Both customer portal and wholesaler dashboard should display only product cost, not total amount paid including fees
+- **User Request**: "The amount should just be the product cost" - show £400.00 instead of £422.50 for Order #77 across all interfaces
 - **Solution Implemented**: 
-  - **Main Display Fixed**: Updated order cards to show `formatCurrency(order.subtotal)` instead of calculated total with fees
-  - **Removed Total Row**: Eliminated "Total:" breakdown line showing £422.50 with all fees included
+  - **Customer Portal Fixed**: Updated order cards to show `formatCurrency(order.subtotal)` instead of calculated total with fees
+  - **Wholesaler Dashboard Fixed**: Updated both table and card views to show `parseFloat(order.subtotal || order.total)` instead of `order.total`
+  - **Backend Analytics Updated**: Changed all revenue calculations from `sum(orders.total)` to `sum(orders.subtotal)` for consistency
   - **Maintained Transparency**: Kept detailed payment breakdown showing transaction fees and shipping costs separately
 - **Technical Implementation**:
-  - **Frontend Display Fix**: Changed main amount from complex calculation to simple `order.subtotal` display
-  - **Simplified Card Layout**: Removed total calculation in compact summary section
-  - **Preserved Detail Modal**: Complete payment breakdown still available in detailed view
-- **Customer Experience**: Order history now prominently displays product cost (£400.00) with fees shown separately
-- **Backend API**: Fixed transaction fee calculation to use stored database values (£22.50) instead of recalculating
-- **Example**: Order #77 now shows £400.00 as main amount with transaction fee details available in breakdown ✅
+  - **Customer Frontend**: Changed main amount from complex calculation to simple `order.subtotal` display
+  - **Wholesaler Frontend**: Updated orders.tsx table and card views to prioritize subtotal over total
+  - **Backend Analytics**: Modified getWholesalerStats and getWholesalerStatsForDateRange to use subtotal-based revenue
+  - **System-wide Consistency**: All order displays now show product cost only with fees available separately
+- **User Experience**: Complete platform consistency - Order #77 shows £400.00 in both customer portal and wholesaler dashboard
+- **Business Analytics**: Revenue stats now reflect product sales value rather than total payments including fees
+- **Example**: Order #77 now consistently shows £400.00 across customer portal, wholesaler dashboard, and analytics ✅
 
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access

@@ -593,7 +593,7 @@ export default function Orders() {
                               </td>
                               <td className="p-4">
                                 <div className="font-medium">
-                                  {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                                  {formatCurrency(parseFloat(order.subtotal || order.total), order.wholesaler?.preferredCurrency || 'GBP')}
                                 </div>
                               </td>
                               <td className="p-4">
@@ -745,7 +745,7 @@ export default function Orders() {
                           <div>
                             <span className="text-muted-foreground">Total:</span>
                             <div className="font-medium text-lg">
-                              {formatCurrency(parseFloat(order.total), order.wholesaler?.preferredCurrency || 'GBP')}
+                              {formatCurrency(parseFloat(order.subtotal || order.total), order.wholesaler?.preferredCurrency || 'GBP')}
                             </div>
                           </div>
                           
