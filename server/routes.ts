@@ -1271,7 +1271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         wholesalerId,
         orderType,
         items: itemsJson,
-        connectAccountUsed
+        connectAccountUsed,
+        productSubtotal,
+        customerTransactionFee,
+        totalCustomerPays,
+        wholesalerPlatformFee,
+        wholesalerReceives
       } = paymentIntent.metadata;
 
       if (orderType === 'customer_portal') {
@@ -1349,7 +1354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : totalAmount;
 
         // Use the correct total from metadata instead of recalculating
-        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal) + parseFloat(customerTransactionFee || '0')).toFixed(2);
+        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
 
         // Create order with customer details
         const orderData = {
