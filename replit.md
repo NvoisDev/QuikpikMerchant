@@ -133,12 +133,13 @@
 - **Production Ready**: Complete payment system operational with matching checkout display and payment processing amounts
 
 ### DATABASE SCHEMA FIX - COMPLETED ✅ (July 23, 2025)
-- **Critical Issue Resolved**: Order creation failing with "column unit_weight_legacy does not exist" database error
+- **Critical Issue Resolved**: Order creation failing with "column unit_weight_kg does not exist" database error
 - **Root Cause**: Missing database columns referenced in schema but not present in production database
 - **Solution Implemented**: Added missing columns to products table to match schema definition
 - **Technical Implementation**:
-  - **Database Update**: Added `unit_weight_legacy` and `pallet_weight_legacy` columns to products table
-  - **Schema Compatibility**: Ensured database structure matches schema.ts definitions
+  - **Database Update**: Added `unit_weight_kg` column to products table with proper decimal precision
+  - **Data Migration**: Updated existing products with default weight values for order calculation
+  - **Schema Compatibility**: Ensured database structure matches schema.ts definitions with unitWeightKg field
   - **Order Creation Fixed**: Order creation now completes successfully after payment processing
 - **Production Ready**: Complete payment-to-order flow operational without database schema errors
 
