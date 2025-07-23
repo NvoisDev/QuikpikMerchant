@@ -143,6 +143,18 @@
   - **Order Creation Fixed**: Order creation now completes successfully after payment processing
 - **Production Ready**: Complete payment-to-order flow operational without database schema errors
 
+### CUSTOMER ORDER DISPLAY FIX - COMPLETED ✅ (July 23, 2025)
+- **Critical Issue Resolved**: Customer order history showing incorrect "Total Paid" (£48.00 instead of £51.14) and wrong transaction fee (£6.00 instead of £3.14)
+- **Root Cause**: CustomerOrderHistory component using hardcoded £6.00 platform fee and incorrect database total field instead of calculating proper transaction fees
+- **Solution Implemented**: Updated customer order history display to calculate correct transaction fees and totals
+- **Technical Implementation**:
+  - **Transaction Fee Calculation**: Updated to use 5.5% + £0.50 formula: £48.00 * 0.055 + £0.50 = £3.14
+  - **Correct Total Display**: Shows £48.00 + £3.14 = £51.14 instead of incorrect £48.00 database value
+  - **Webhook Processing Fixed**: Updated webhook to use `totalCustomerPays` metadata field instead of recalculating
+  - **Dual Display Fix**: Fixed both compact order cards and detailed order dialog payment breakdowns
+  - **Fallback Logic**: Added proper fallback using `customerTransactionFee || platformFee || calculated value`
+- **Production Ready**: Customer order history now displays accurate payment calculations matching actual charged amounts
+
 ### 3-STEP AUTHENTICATION SYSTEM IMPLEMENTATION - COMPLETED ✅ (July 23, 2025)
 - **Critical Issue Resolved**: Completely redesigned authentication flow to eliminate duplicate screens with clear 3-step process
 - **Root Cause**: Complex authentication state management causing multiple authentication screens to render simultaneously
