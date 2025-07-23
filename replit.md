@@ -174,6 +174,8 @@
 - **Technical Implementation**:
   - **Checkout Page Fix**: Updated checkout.tsx to display "Transaction Fee:" instead of "Platform Fee:" during purchase
   - **Customer Portal Consistency**: CustomerOrderHistory already correctly shows "Transaction Fee" in order history
+  - **Backup File Fix**: Updated customer-portal-broken.tsx to show "Transaction fee (5.5% + £0.50):" instead of "Platform fee (5%):"
+  - **Comprehensive Search**: Verified no remaining "Platform Fee" references in any customer-facing components
   - **Terminology Standardization**: All customer-facing components now use "Transaction Fee" terminology
   - **Wholesaler Context Preserved**: Help documentation and wholesaler interfaces still correctly reference "Platform Fee"
 - **Customer Experience**: Clear, consistent terminology where customers see "Transaction Fee" for what they pay, wholesalers see "Platform Fee" for business context

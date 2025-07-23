@@ -1372,8 +1372,8 @@ export default function CustomerPortal() {
                   <span>{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{getTotalAmount().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>Platform fee (5%):</span>
-                  <span>{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{(getTotalAmount() * 0.05).toFixed(2)}</span>
+                  <span>Transaction fee (5.5% + £0.50):</span>
+                  <span>{getCurrencySymbol(wholesaler?.defaultCurrency || "GBP")}{((getTotalAmount() * 0.055) + 0.50).toFixed(2)}</span>
                 </div>
               </div>
             </div>
