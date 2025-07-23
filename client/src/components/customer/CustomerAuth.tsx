@@ -773,24 +773,6 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
             <CardContent className="p-4">
               <div className="space-y-4">
-                {/* Security Notice Header */}
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    🛡️ Secure access for registered customers only
-                  </h3>
-                  <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-3 mb-2 border border-blue-100">
-                    <p className="text-sm text-blue-900 font-semibold mb-2">
-                      Secure Two-Step Authentication:
-                    </p>
-                    <p className="text-sm text-blue-800 leading-relaxed">
-                      1. Enter your last 4 digits<br/>
-                      2. Verify with SMS code (mandatory for security)
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium">
-                    SMS verification is required for all customers
-                  </p>
-                </div>
 
                 {/* Step 1: Store Introduction */}
                 {authStep === 'step1' && (
