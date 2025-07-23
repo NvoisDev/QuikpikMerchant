@@ -53,14 +53,14 @@ export class ReliableSMSService {
     
     // Always show debug info in development
     if (isDevelopment) {
-      console.log('\n🚨 SMS DELIVERY BLOCKED - TWILIO EMERGENCY ADDRESS ISSUE');
+      console.log('\n📱 SMS VERIFICATION - TWILIO RISKCHECK DISABLED');
       console.log('🚀 DEVELOPMENT MODE - SMS VERIFICATION CODE');
       console.log('=' .repeat(50));
       console.log(`📱 Phone: ${phoneNumber}`);
       console.log(`🔐 Code: ${code}`);
       console.log(`🏢 Business: ${businessName}`);
       console.log(`⏰ Expires: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
-      console.log('💡 Use this code - SMS delivery may fail due to carrier blocking');
+      console.log('✅ RiskCheck disabled - SMS delivery should work properly');
       console.log('=' .repeat(50));
     }
 
@@ -103,7 +103,8 @@ export class ReliableSMSService {
       const message = await this.twilioClient.messages.create({
         body: `Your ${businessName} verification code: ${code}. This code expires in 5 minutes.`,
         from: process.env.TWILIO_PHONE_NUMBER,
-        to: phoneNumber
+        to: phoneNumber,
+        riskCheck: 'disable' // Prevent legitimate messages from being blocked by spam filtering
       });
 
       console.log(`✅ SMS sent successfully: ${message.sid}`);
