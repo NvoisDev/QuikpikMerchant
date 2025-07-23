@@ -51,45 +51,19 @@ export class ReliableSMSService {
     
     const isDevelopment = process.env.NODE_ENV === 'development';
     
-    // Always show debug info in development
-    if (isDevelopment) {
-      console.log('\n📱 SMS VERIFICATION - TWILIO RISKCHECK DISABLED');
-      console.log('🚀 DEVELOPMENT MODE - SMS VERIFICATION CODE');
-      console.log('=' .repeat(50));
-      console.log(`📱 Phone: ${phoneNumber}`);
-      console.log(`🔐 Code: ${code}`);
-      console.log(`🏢 Business: ${businessName}`);
-      console.log(`⏰ Expires: ${new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString()}`);
-      console.log('✅ RiskCheck disabled - SMS delivery should work properly');
-      console.log('=' .repeat(50));
-    }
+    // Clean SMS logging for production
+    console.log(`📤 Sending SMS verification to ${phoneNumber}`);
 
-    // If no Twilio client, return success in development mode
+    // If no Twilio client configured, return error
     if (!this.twilioClient) {
-      if (isDevelopment) {
-        console.log('✅ SMS simulated (no Twilio client)');
-        return {
-          success: true,
-          messageId: `dev_${Date.now()}`,
-          debugCode: code
-        };
-      }
       return {
         success: false,
         error: 'SMS service not configured'
       };
     }
 
-    // If no phone number configured, return success in development mode
+    // If no phone number configured, return error
     if (!process.env.TWILIO_PHONE_NUMBER) {
-      if (isDevelopment) {
-        console.log('✅ SMS simulated (no phone number configured)');
-        return {
-          success: true,
-          messageId: `dev_${Date.now()}`,
-          debugCode: code
-        };
-      }
       return {
         success: false,
         error: 'SMS phone number not configured'
@@ -111,8 +85,7 @@ export class ReliableSMSService {
       
       return {
         success: true,
-        messageId: message.sid,
-        debugCode: isDevelopment ? code : undefined
+        messageId: message.sid
       };
     } catch (error: any) {
       console.error('❌ SMS sending failed:', error.message);
@@ -134,15 +107,7 @@ export class ReliableSMSService {
         }
       }
 
-      // In development mode, simulate success even on error
-      if (isDevelopment) {
-        console.log('✅ SMS simulated (Twilio error occurred)');
-        return {
-          success: true,
-          messageId: `dev_error_${Date.now()}`,
-          debugCode: code
-        };
-      }
+      // Return actual error for proper error handling
 
       return {
         success: false,
