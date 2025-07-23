@@ -258,16 +258,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Subtotal:</span>
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
-            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 && (
+            {/* Show shipping/delivery cost - prefer deliveryCost over shippingTotal */}
+            {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
               <div className="flex justify-between text-sm">
-                <span>Delivery Cost:</span>
-                <span>{formatCurrency(parseFloat(order.deliveryCost))}</span>
-              </div>
-            )}
-            {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>Shipping:</span>
-                <span>{formatCurrency(order.shippingTotal)}</span>
+                <span>{order.fulfillmentType === 'delivery' ? 'Delivery Cost:' : 'Shipping:'}</span>
+                <span>{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -276,7 +271,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-2">
               <span>Total Paid:</span>
-              <span>{formatCurrency((parseFloat(order.subtotal) + parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))).toFixed(2))}</span>
+              <span>{formatCurrency((
+                parseFloat(order.subtotal) + 
+                parseFloat(order.deliveryCost || order.shippingTotal || '0') +
+                parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+              ).toFixed(2))}</span>
             </div>
           </div>
         </div>
@@ -537,16 +536,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
                       </div>
+                      {/* Show shipping cost if applicable */}
+                      {(order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0) ? (
+                        <div className="flex justify-between text-xs">
+                          <span>Shipping:</span>
+                          <span>{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
+                        </div>
+                      ) : null}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total:</span>
-                        <span>{formatCurrency((parseFloat(order.subtotal) + parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))).toFixed(2))}</span>
+                        <span>{formatCurrency((
+                          parseFloat(order.subtotal) + 
+                          parseFloat(order.deliveryCost || order.shippingTotal || '0') +
+                          parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                        ).toFixed(2))}</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Right side - Price and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg">{formatCurrency(order.total)}</div>
+                    <div className="font-semibold text-lg">{formatCurrency((
+                      parseFloat(order.subtotal) + 
+                      parseFloat(order.deliveryCost || order.shippingTotal || '0') +
+                      parseFloat(order.customerTransactionFee || order.platformFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
+                    ).toFixed(2))}</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(order.date), 'MMM d, yyyy')}

@@ -155,6 +155,18 @@
   - **Fallback Logic**: Added proper fallback using `customerTransactionFee || platformFee || calculated value`
 - **Production Ready**: Customer order history now displays accurate payment calculations matching actual charged amounts
 
+### ORDER DISPLAY CONSISTENCY FIX - COMPLETED ✅ (July 23, 2025)
+- **Critical Issue Resolved**: Customer portal order details showed inconsistent totals across different sections and missing shipping costs in calculations
+- **Root Cause**: Multiple display locations showed different total amounts and payment breakdown calculations excluded shipping/delivery costs
+- **Solution Implemented**: Unified all order total calculations to include subtotal + shipping + transaction fees consistently
+- **Technical Implementation**:
+  - **Consistent Total Calculation**: All display sections now use same formula: subtotal + shipping/delivery + transaction fee
+  - **Shipping Display Consolidation**: Eliminated duplicate shipping fields, now shows single shipping cost using deliveryCost || shippingTotal
+  - **Smart Shipping Labels**: Shows "Delivery Cost" for delivery orders, "Shipping" for other fulfillment types
+  - **Three-Way Consistency**: Order list view, detailed dialog, and large total display all show identical calculated amounts
+  - **Comprehensive Calculation**: All totals now include shipping costs when applicable, not just subtotal + transaction fee
+- **Production Ready**: Complete order display consistency achieved across all customer portal sections
+
 ### 3-STEP AUTHENTICATION SYSTEM IMPLEMENTATION - COMPLETED ✅ (July 23, 2025)
 - **Critical Issue Resolved**: Completely redesigned authentication flow to eliminate duplicate screens with clear 3-step process
 - **Root Cause**: Complex authentication state management causing multiple authentication screens to render simultaneously
