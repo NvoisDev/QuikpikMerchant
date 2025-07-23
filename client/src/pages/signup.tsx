@@ -141,6 +141,11 @@ export default function Signup() {
   };
 
   const onSubmit = async (data: SignupForm) => {
+    // Only allow submission on step 3 (address page)
+    if (currentStep !== 3) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const response = await fetch('/api/auth/signup', {
@@ -312,7 +317,12 @@ export default function Signup() {
                 </div>
 
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" onKeyDown={(e) => {
+                    // Prevent form submission on Enter key press - users must click buttons
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}>
                     {currentStep === 1 && (
                       <>
                         <div className="flex items-center space-x-2 text-primary mb-4">
