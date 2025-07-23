@@ -122,6 +122,16 @@
 - **Development Mode Cleanup**: Removed all development mode fallback code from frontend and backend since SMS is now working properly
 - **Auto-SMS Prevention**: Disabled automatic SMS sending on page load to prevent SMS spam - customers now manually request verification codes
 
+### PAYMENT CALCULATION MISMATCH ISSUE - RESOLVED ✅ (July 23, 2025)
+- **Critical Issue Resolved**: Payment button was displaying product subtotal (£48.00) instead of total amount including transaction fees (£51.14)
+- **Root Cause**: StripeCheckoutForm was receiving `cartStats.totalValue` (subtotal + shipping) but payment button should show total amount that customer actually pays
+- **Solution Implemented**: Updated payment button to calculate and display total amount including transaction fees (5.5% + £0.50)
+- **Technical Implementation**: 
+  - **Corrected Calculation**: Payment button now uses subtotal + transaction fee (5.5% + £0.50) + shipping cost
+  - **Consistent Amounts**: Customer checkout displays £51.14 total AND payment button processes exactly £51.14
+  - **Frontend Fix**: Updated StripeCheckoutForm totalAmount parameter to include all fees that customer will pay
+- **Production Ready**: Complete payment system operational with matching checkout display and payment processing amounts
+
 ### COMPLETE SMS SYSTEM REBUILD - COMPLETED ✅ (July 21, 2025)
 - **Previous Issue**: SMS delivery failures preventing customer authentication despite working Twilio integration
 - **Legacy Root Cause**: Twilio emergency address registration failure (error 30453 - "Phone number requires a verified Caller ID") causing carrier delivery blocking despite successful API acceptance

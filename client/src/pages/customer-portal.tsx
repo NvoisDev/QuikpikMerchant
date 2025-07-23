@@ -3585,7 +3585,27 @@ export default function CustomerPortal() {
                     cart={cart}
                     customerData={customerData}
                     wholesaler={wholesaler}
-                    totalAmount={cartStats.totalValue}
+                    totalAmount={(() => {
+                      // Calculate the total amount that customer will pay (including transaction fees)
+                      const subtotal = cart.reduce((total, item) => {
+                        if (item.sellingType === "pallets") {
+                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                        } else {
+                          const basePrice = parseFloat(item.product.price) || 0;
+                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                            basePrice,
+                            item.quantity,
+                            item.product.promotionalOffers || [],
+                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                            item.product.promoActive
+                          );
+                          return total + pricing.totalCost;
+                        }
+                      }, 0);
+                      const transactionFee = subtotal * 0.055 + 0.50;
+                      const shippingCost = cartStats.shippingCost || 0;
+                      return subtotal + transactionFee + shippingCost;
+                    })()}
                     onSuccess={() => {
                       setCart([]);
                       setShowCheckout(false);
