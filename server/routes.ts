@@ -1348,8 +1348,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
           : totalAmount;
 
-        // Calculate total amount with transaction fee
-        const totalAmountWithFee = (parseFloat(totalAmount) + parseFloat(transactionFee || '0')).toFixed(2);
+        // Use the correct total from metadata instead of recalculating
+        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal) + parseFloat(customerTransactionFee || '0')).toFixed(2);
 
         // Create order with customer details
         const orderData = {
@@ -1358,10 +1358,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName, // Store customer name
           customerEmail, // Store customer email
           customerPhone, // Store customer phone
-          subtotal: totalAmount, // Product subtotal (what wholesaler gets)
-          platformFee: parseFloat(platformFee).toFixed(2), // 3.3% platform fee
-          transactionFee: parseFloat(transactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-          total: totalAmountWithFee, // Total = subtotal + customer transaction fee
+          subtotal: productSubtotal, // Product subtotal (what wholesaler gets)
+          platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
+          customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+          total: correctTotal, // Total = subtotal + customer transaction fee
           status: 'paid',
           stripePaymentIntentId: paymentIntent.id,
           deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
