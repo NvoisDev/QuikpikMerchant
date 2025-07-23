@@ -117,15 +117,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin with phone digits
-      console.log('🔗 AUTO-AUTHENTICATION: Setting up verification with', authParam);
+      // Customer came from CustomerLogin with phone digits - PRE-FILL but don't auto-send SMS
+      console.log('🔗 PRE-FILL: Setting up phone digits without auto-SMS', authParam);
       setLastFourDigits(authParam);
-      setAuthStep('verification');
-      
-      // Start authentication process after state is set - BUT DO NOT AUTO COMPLETE
-      setTimeout(() => {
-        handleAuthenticationFromLogin(authParam);
-      }, 100);
+      setAuthStep('phone'); // Stay on phone entry step - don't auto-send SMS
     } else {
       // Fresh start - show phone entry
       console.log('🔄 FRESH START: No auth param, showing phone entry');

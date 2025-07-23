@@ -120,6 +120,7 @@
 - **Reference Documentation**: Implemented per Twilio guidelines: https://www.twilio.com/docs/messaging/api/message-resource
 - **Production Ready**: SMS verification codes now deliver successfully without carrier blocking
 - **Development Mode Cleanup**: Removed all development mode fallback code from frontend and backend since SMS is now working properly
+- **Auto-SMS Prevention**: Disabled automatic SMS sending on page load to prevent SMS spam - customers now manually request verification codes
 
 ### COMPLETE SMS SYSTEM REBUILD - COMPLETED ✅ (July 21, 2025)
 - **Previous Issue**: SMS delivery failures preventing customer authentication despite working Twilio integration
