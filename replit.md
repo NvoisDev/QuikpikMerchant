@@ -167,6 +167,18 @@
   - **Comprehensive Calculation**: All totals now include shipping costs when applicable, not just subtotal + transaction fee
 - **Production Ready**: Complete order display consistency achieved across all customer portal sections
 
+### CUSTOMER TERMINOLOGY CONSISTENCY FIX - COMPLETED ✅ (July 23, 2025)
+- **Critical Issue Resolved**: Customer-facing components were showing "Platform Fee" instead of "Transaction Fee" causing confusion about what customers pay
+- **Root Cause**: Mixed terminology where some customer interfaces showed "Platform Fee" while others showed "Transaction Fee"
+- **Solution Implemented**: Standardized all customer-facing fee displays to show "Transaction Fee" consistently
+- **Technical Implementation**:
+  - **Checkout Page Fix**: Updated checkout.tsx to display "Transaction Fee:" instead of "Platform Fee:" during purchase
+  - **Customer Portal Consistency**: CustomerOrderHistory already correctly shows "Transaction Fee" in order history
+  - **Terminology Standardization**: All customer-facing components now use "Transaction Fee" terminology
+  - **Wholesaler Context Preserved**: Help documentation and wholesaler interfaces still correctly reference "Platform Fee"
+- **Customer Experience**: Clear, consistent terminology where customers see "Transaction Fee" for what they pay, wholesalers see "Platform Fee" for business context
+- **Production Ready**: Complete terminology consistency achieved across all customer-facing interfaces
+
 ### 3-STEP AUTHENTICATION SYSTEM IMPLEMENTATION - COMPLETED ✅ (July 23, 2025)
 - **Critical Issue Resolved**: Completely redesigned authentication flow to eliminate duplicate screens with clear 3-step process
 - **Root Cause**: Complex authentication state management causing multiple authentication screens to render simultaneously
