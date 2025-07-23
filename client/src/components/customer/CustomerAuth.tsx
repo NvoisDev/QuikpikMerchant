@@ -25,9 +25,13 @@ interface Wholesaler {
 }
 
 export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: CustomerAuthProps) {
-  const [lastFourDigits, setLastFourDigits] = useState("");
+  // Check for auth parameter from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const authParam = urlParams.get('auth');
+  
+  const [lastFourDigits, setLastFourDigits] = useState(authParam || "");
   const [smsCode, setSmsCode] = useState("");
-  const [authStep, setAuthStep] = useState<'phone' | 'verification' | 'success'>('phone');
+  const [authStep, setAuthStep] = useState<'phone' | 'verification' | 'success'>(authParam ? 'phone' : 'phone');
   const [customerData, setCustomerData] = useState<any>(null);
   const [verificationMethod, setVerificationMethod] = useState<'sms' | 'email' | 'both'>('sms');
   const [emailCode, setEmailCode] = useState("");

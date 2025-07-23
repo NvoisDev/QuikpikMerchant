@@ -636,7 +636,11 @@ export default function CustomerPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showHomePage, setShowHomePage] = useState(true);
-  const [showAuth, setShowAuth] = useState(!isPreviewMode);
+  // Check if coming from CustomerLogin with auth parameter
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const hasAuthParam = urlParams.has('auth');
+  
+  const [showAuth, setShowAuth] = useState(!isPreviewMode && !hasAuthParam);
   const [isGuestMode, setIsGuestMode] = useState(true);
 
   // State management
@@ -1261,9 +1265,18 @@ export default function CustomerPortal() {
     );
   }
 
-  // Show authentication screen
-  if (showAuth && !isPreviewMode && wholesalerId) {
+  // Show authentication screen only if not coming from CustomerLogin
+  if (showAuth && !isPreviewMode && wholesalerId && !hasAuthParam) {
     console.log('🔐 Showing authentication screen');
+    return <CustomerAuth 
+      wholesalerId={wholesalerId} 
+      onAuthSuccess={handleAuthSuccess}
+    />;
+  }
+  
+  // If coming from CustomerLogin with auth param, show customer portal directly with auth screen from CustomerAuth
+  if (hasAuthParam && !isAuthenticated && !isPreviewMode && wholesalerId) {
+    console.log('🔗 Coming from CustomerLogin - showing embedded auth');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
