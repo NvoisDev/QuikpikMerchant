@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
+import LoadingSkeleton from "@/components/ui/loading-skeleton";
+import PageLoader from "@/components/ui/page-loader";
+import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home } from "lucide-react";
 import Logo from "@/components/ui/logo";
@@ -516,20 +519,16 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
         </div>
 
-        <Button
-          type="submit"
-          disabled={!stripe || isProcessing}
+        <ButtonLoader
+          isLoading={isProcessing}
+          variant="success"
+          size="lg"
+          disabled={!stripe}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+          type="submit"
         >
-          {isProcessing ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Processing Payment...</span>
-            </div>
-          ) : (
-            `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${totalAmount.toFixed(2)}`
-          )}
-        </Button>
+          Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
+        </ButtonLoader>
       </form>
 
       {/* Payment Failure Dialog */}

@@ -29,6 +29,8 @@ import { currencies, formatCurrency } from "@/lib/currencies";
 import { UNITS, COMMON_WHOLESALE_FORMATS, formatUnitDisplay, BASE_UNITS } from "@shared/units";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import LoadingSkeleton from "@/components/ui/loading-skeleton";
+import ButtonLoader from "@/components/ui/button-loader";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -1260,17 +1262,16 @@ export default function ProductManagement() {
                           <FormItem>
                             <div className="flex items-center justify-between">
                               <FormLabel>Description</FormLabel>
-                              <Button
-                                type="button"
-                                variant="outline"
+                              <ButtonLoader
+                                isLoading={isGeneratingDescription}
+                                variant="processing"
                                 size="sm"
-                                onClick={generateDescription}
-                                disabled={isGeneratingDescription}
                                 className="h-8"
+                                onClick={generateDescription}
                               >
                                 <Sparkles className="h-4 w-4 mr-1" />
-                                {isGeneratingDescription ? "Generating..." : "AI Generate"}
-                              </Button>
+                                AI Generate
+                              </ButtonLoader>
                             </div>
                             <FormControl>
                               <Textarea placeholder="Enter product description" {...field} />
@@ -1861,9 +1862,14 @@ export default function ProductManagement() {
                         >
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={createProductMutation.isPending || updateProductMutation.isPending}>
-                          {createProductMutation.isPending || updateProductMutation.isPending ? "Saving..." : "Save Product"}
-                        </Button>
+                        <ButtonLoader
+                          isLoading={createProductMutation.isPending || updateProductMutation.isPending}
+                          variant={editingProduct ? "processing" : "default"}
+                          size="md"
+                          onClick={form.handleSubmit(onSubmit)}
+                        >
+                          {editingProduct ? "Update Product" : "Save Product"}
+                        </ButtonLoader>
                       </div>
                     </form>
                   </Form>
@@ -1937,7 +1943,13 @@ export default function ProductManagement() {
 
           {/* Products Grid/List */}
           {isLoading ? (
-            <ProductGridSkeleton count={8} />
+            <LoadingSkeleton 
+              variant="page" 
+              count={6} 
+              showMascot={true}
+              mascotMessage="Loading your product inventory..."
+              className="p-6"
+            />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product: any) => (
