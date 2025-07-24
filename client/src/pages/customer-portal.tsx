@@ -686,6 +686,8 @@ export default function CustomerPortal() {
 
     setLoadingShippingQuotes(true);
     try {
+      // Enhanced shipping request with precise unit configuration
+      console.log("📦 Sending enhanced shipping request with cart items for precise calculation");
       const response = await apiRequest("POST", "/api/marketplace/shipping/quotes", {
         collectionAddress: {
           contactName: wholesaler?.businessName || "Business Pickup",
@@ -703,6 +705,26 @@ export default function CustomerPortal() {
           postcode: customerData.postalCode,
           countryIsoCode: 'GBR'
         },
+        // Send cart items for precise shipping calculation
+        cartItems: cart.map(item => ({
+          product: {
+            // Unit configuration fields for precise calculation
+            packQuantity: item.product.packQuantity,
+            unitOfMeasure: item.product.unitOfMeasure,
+            sizePerUnit: item.product.sizePerUnit,
+            individualUnitWeight: item.product.individualUnitWeight,
+            totalPackageWeight: item.product.totalPackageWeight,
+            packageDimensions: item.product.packageDimensions,
+            // Fallback fields for compatibility
+            unitWeight: item.product.unitWeight || item.product.unit_weight,
+            palletWeight: item.product.palletWeight || item.product.pallet_weight,
+            price: item.product.price
+          },
+          quantity: item.quantity,
+          sellingType: item.sellingType,
+          unitPrice: item.sellingType === "pallets" ? item.product.palletPrice : item.product.price
+        })),
+        // Fallback parcels for backward compatibility
         parcels: [{
           weight: Math.max(2, cart.reduce((totalWeight, item) => {
             // Calculate weight based on actual product unit weights and quantities
@@ -720,13 +742,6 @@ export default function CustomerPortal() {
               itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
             }
             
-            console.log(`📦 Item: ${item.product.name}, Quantity: ${item.quantity}, Unit Weight: ${unitWeight}kg, Item Weight: ${itemWeight}kg`);
-            console.log(`📦 Product weight fields:`, { 
-              unitWeight: item.product.unitWeight, 
-              unit_weight: item.product.unit_weight,
-              palletWeight: item.product.palletWeight,
-              pallet_weight: item.product.pallet_weight
-            });
             return totalWeight + itemWeight;
           }, 0)),
           length: 30,
@@ -744,11 +759,30 @@ export default function CustomerPortal() {
       
       if (data.quotes && data.quotes.length > 0) {
         console.log("Setting available shipping services:", data.quotes);
+        console.log("📦 Enhanced shipping calculation:", {
+          preciseCalculation: data.preciseCalculation,
+          totalWeight: data.totalWeight,
+          recommendations: data.recommendations
+        });
+        
         setAvailableShippingServices(data.quotes);
+        
+        const calculationType = data.preciseCalculation ? "precise unit configuration" : "estimated";
+        const weightInfo = data.totalWeight ? ` (${data.totalWeight}kg total)` : '';
+        
         toast({
           title: data.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
-          description: `Found ${data.quotes.length} collection options for your location${data.demoMode ? ' (demo mode)' : ''}`,
+          description: `Found ${data.quotes.length} delivery options using ${calculationType}${weightInfo}${data.demoMode ? ' - demo mode' : ''}`,
         });
+        
+        // Show recommendations if available
+        if (data.recommendations && data.recommendations.warnings.length > 0) {
+          toast({
+            title: "Shipping Information",
+            description: data.recommendations.warnings.join(', '),
+            variant: "default"
+          });
+        }
       } else {
         console.log("No quotes found in response");
         setAvailableShippingServices([]);

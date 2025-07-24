@@ -10,6 +10,7 @@ import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
+import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator.js";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -9310,23 +9311,51 @@ The Quikpik Team
         }
       ];
       
-      console.log(`📦 Returning weight-based demo quotes for ${totalWeight}kg package`);
-      res.json({ quotes: demoQuotes, demoMode: true });
+      // Add service recommendations and precise calculation info
+      const recommendations = PreciseShippingCalculator.getServiceRecommendations(totalWeight);
+      
+      console.log(`📦 Returning enhanced demo quotes for ${totalWeight}kg package (${preciseCalculation ? 'precise' : 'estimated'} calculation)`);
+      res.json({ 
+        quotes: demoQuotes, 
+        demoMode: true, 
+        preciseCalculation,
+        totalWeight,
+        recommendations
+      });
     }
   });
 
-  // Public shipping quotes endpoint for customer portal (no authentication required)
+  // Enhanced marketplace shipping quotes endpoint with precise unit configuration
   app.post('/api/marketplace/shipping/quotes', async (req: any, res) => {
     try {
-      const { collectionAddress, deliveryAddress, parcels } = req.body;
+      const { collectionAddress, deliveryAddress, parcels, cartItems } = req.body;
       
-      console.log("📦 MARKETPLACE: Getting shipping quotes:", { collectionAddress, deliveryAddress, parcels });
+      console.log("📦 MARKETPLACE: Getting enhanced shipping quotes with precise calculation");
+      console.log("Request data:", { collectionAddress, deliveryAddress, parcels: parcels?.length, cartItems: cartItems?.length });
       
       // Check if we have valid addresses
-      if (!collectionAddress || !deliveryAddress || !parcels) {
+      if (!collectionAddress || !deliveryAddress) {
         return res.status(400).json({ 
           error: "Missing required data", 
-          required: ["collectionAddress", "deliveryAddress", "parcels"] 
+          required: ["collectionAddress", "deliveryAddress"] 
+        });
+      }
+
+      let preciseParcels = parcels;
+
+      // If cart items are provided, use precise shipping calculator
+      if (cartItems && cartItems.length > 0) {
+        console.log("📦 Using precise unit configuration for shipping calculation");
+        preciseParcels = PreciseShippingCalculator.createPreciseParcel(cartItems);
+        console.log("📦 Precise parcels calculated:", preciseParcels);
+        
+        const totalWeight = preciseParcels.reduce((sum, p) => sum + p.weight, 0);
+        const recommendations = PreciseShippingCalculator.getServiceRecommendations(totalWeight);
+        console.log("📦 Service recommendations:", recommendations);
+      } else if (!parcels || parcels.length === 0) {
+        return res.status(400).json({ 
+          error: "Missing required data", 
+          required: ["parcels or cartItems"] 
         });
       }
 
@@ -9344,24 +9373,46 @@ The Quikpik Team
         const quotes = await parcel2goService.getQuotes({
           collectionAddress,
           deliveryAddress,
-          parcels
+          parcels: preciseParcels
         });
         
         console.log("📦 Got real marketplace quotes:", quotes.length, "services");
-        res.json({ quotes, demoMode: false });
+        
+        // Add precise weight information to response
+        const totalWeight = preciseParcels.reduce((sum, p) => sum + p.weight, 0);
+        const recommendations = PreciseShippingCalculator.getServiceRecommendations(totalWeight);
+        
+        res.json({ 
+          quotes, 
+          demoMode: false, 
+          preciseCalculation: !!cartItems,
+          totalWeight,
+          recommendations 
+        });
       } catch (apiError) {
-        console.log("📦 Parcel2Go API unavailable, falling back to demo quotes for marketplace");
+        console.log("📦 Parcel2Go API unavailable, falling back to enhanced demo quotes");
         throw apiError; // Fall through to demo quotes
       }
     } catch (error: any) {
       console.error("Error getting marketplace shipping quotes:", error.message);
       
-      // Get parcels from request body for demo quotes
-      const { parcels } = req.body;
+      // Get parcels and cart items from request body for enhanced demo quotes
+      const { parcels, cartItems } = req.body;
+      
+      // Use precise calculation if cart items are available
+      let finalParcels = parcels;
+      if (cartItems && cartItems.length > 0) {
+        console.log("📦 DEMO: Using precise unit configuration for fallback quotes");
+        finalParcels = PreciseShippingCalculator.createPreciseParcel(cartItems);
+        console.log("📦 DEMO: Precise parcels calculated:", finalParcels);
+      }
       
       // Calculate weight-based pricing aligned with Parcel2Go limits
-      const totalWeight = parcels ? parcels.reduce((sum, parcel) => sum + parcel.weight, 0) : 1;
-      const maxParcelWeight = parcels ? Math.max(...parcels.map(p => p.weight)) : 1;
+      const totalWeight = finalParcels ? finalParcels.reduce((sum, parcel) => sum + parcel.weight, 0) : 1;
+      const maxParcelWeight = finalParcels ? Math.max(...finalParcels.map(p => p.weight)) : 1;
+      const preciseCalculation = !!(cartItems && cartItems.length > 0);
+      
+      console.log(`📦 DEMO: Total weight: ${totalWeight}kg, Max parcel: ${maxParcelWeight}kg, Precise: ${preciseCalculation}`);
       
       let demoQuotes = [];
       

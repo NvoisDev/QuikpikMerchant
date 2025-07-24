@@ -320,15 +320,22 @@ export const products = pgTable("products", {
   unit: varchar("unit").default("units"), // Base unit of measure (kg, g, l, ml, cl, pieces, boxes, etc.)
   unitFormat: varchar("unit_format"), // Display format like "12 x 24g", "6 x 500ml", "24 pieces"
   
-  // New flexible unit system
-  packQuantity: integer("pack_quantity"), // e.g., 24 (for "24 x 250ml")
-  unitOfMeasure: varchar("unit_of_measure", { length: 20 }), // e.g., "ml", "g", "pieces"
-  unitSize: decimal("unit_size", { precision: 10, scale: 3 }), // e.g., 250 (for "24 x 250ml")
+  // Enhanced flexible unit system for precise shipping calculations
+  packQuantity: integer("pack_quantity"), // e.g., 20 (for "20 x 100g")
+  unitOfMeasure: varchar("unit_of_measure", { length: 20 }), // e.g., "g", "ml", "pieces", "kg", "litres"
+  sizePerUnit: decimal("size_per_unit", { precision: 12, scale: 3 }), // e.g., 100.000 (for "20 x 100g")
   
-  // Weight and dimensions for shipping (based on flexible unit configuration)
+  // Calculated fields for accurate shipping
+  totalPackageWeight: decimal("total_package_weight", { precision: 10, scale: 3 }), // Calculated from packQuantity * sizePerUnit (when unit is weight)
+  individualUnitWeight: decimal("individual_unit_weight", { precision: 10, scale: 3 }), // Weight per single unit (for non-weight measures)
+  packageDimensions: jsonb("package_dimensions").default({}), // {length: cm, width: cm, height: cm} for shipping quotes
+  
+  // Enhanced unit configuration for any combination
+  unitConfiguration: jsonb("unit_configuration").default({}), // {packQuantity: 20, unitOfMeasure: "g", sizePerUnit: 100.000, example: "20 x 100g"}
+  
+  // Legacy fields maintained for compatibility
+  unitSize: decimal("unit_size", { precision: 10, scale: 3 }), // e.g., 250 (for "24 x 250ml")
   unitWeightKg: decimal("unit_weight_kg", { precision: 10, scale: 3 }), // Weight per individual unit in kg
-  totalPackageWeight: decimal("total_package_weight", { precision: 10, scale: 3 }), // Total weight of full package (packQuantity * unitSize * unitWeight)
-  packageDimensions: jsonb("package_dimensions").default({}), // {length: cm, width: cm, height: cm} for the complete package
   
   // Temperature and special handling requirements
   temperatureRequirement: varchar("temperature_requirement").default("ambient"), // 'frozen', 'chilled', 'ambient'

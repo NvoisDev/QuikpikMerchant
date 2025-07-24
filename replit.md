@@ -63,6 +63,28 @@
 - **Email Logic**: Wholesaler emails now only send when orders are successfully created through webhook, preventing premature notifications
 - **Production Ready**: Complete payment-to-order flow operational without duplicate processing or premature email notifications
 
+### PRECISE SHIPPING CALCULATOR IMPLEMENTATION - COMPLETED ✅ (July 24, 2025)
+- **Enhancement**: Implemented precise shipping calculation system using flexible unit configuration instead of basic weight estimates
+- **Issue Resolved**: Replaced fallback weight calculations with accurate product unit data for more precise Parcel2Go shipping quotes
+- **Solution Implemented**: 
+  - **PreciseShippingCalculator**: Created comprehensive utility class handling flexible unit formats (e.g., "20 x 100.000g")
+  - **Unit Configuration Support**: Full support for packQuantity, unitOfMeasure, sizePerUnit, individualUnitWeight, totalPackageWeight fields
+  - **Enhanced Marketplace Endpoint**: Updated `/api/marketplace/shipping/quotes` to accept cartItems for precise calculation
+  - **Customer Portal Integration**: Modified shipping request to send detailed cart item data with unit configuration
+  - **Smart Fallback System**: Maintains backward compatibility with basic parcel data when unit config unavailable
+- **Technical Implementation**:
+  - **Precise Weight Calculation**: Calculates actual package weights based on unit configuration (g/kg/ml/l/pieces/cans/bottles)
+  - **Dimension Estimation**: Intelligent package dimension calculation based on product type and quantity
+  - **Service Recommendations**: Provides shipping service recommendations based on total weight (Royal Mail ≤20kg, DPD ≤30kg, Pallet >1000kg)
+  - **Enhanced Demo Quotes**: Demo fallback system also uses precise calculation when cart items available
+  - **Real-time Feedback**: Customer portal shows calculation type (precise vs estimated) and total weight in shipping notifications
+- **User Experience**: 
+  - **Accurate Quotes**: Customers receive more accurate shipping quotes based on actual product weights and dimensions
+  - **Weight Transparency**: Clear indication of calculation method and total package weight
+  - **Service Warnings**: Automatic notifications for heavy orders requiring special handling or pallet services
+  - **Intelligent Recommendations**: System suggests appropriate shipping services based on order characteristics
+- **Production Ready**: Complete precise shipping calculation system operational with enhanced accuracy for all shipping quotes ✅
+
 ### TARGETED ORDER DISPLAY UPDATE - COMPLETED ✅ (July 23, 2025)
 - **Issue Resolved**: Wholesaler dashboard should display only product cost, while customer portal should show total amount paid including fees
 - **User Clarification**: "The amount should just be the product cost" applies only to wholesaler dashboard - show £400.00 instead of £422.50 for Order #77
