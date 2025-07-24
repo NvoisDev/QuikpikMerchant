@@ -831,6 +831,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const updateData = { ...req.body };
       
+      // Debug logging for logo upload
+      console.log("🔧 Settings update request:");
+      console.log("- User ID:", userId);
+      console.log("- Update data keys:", Object.keys(updateData));
+      console.log("- Logo type:", updateData.logoType);
+      console.log("- Logo URL length:", updateData.logoUrl?.length || 0);
+      console.log("- Has logo data:", updateData.logoUrl ? "YES" : "NO");
+      
       // Auto-format phone numbers to international format
       if (updateData.businessPhone) {
         updateData.businessPhone = formatPhoneToInternational(updateData.businessPhone);
@@ -840,9 +848,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedUser = await storage.updateUserSettings(userId, updateData);
+      console.log("✅ Settings updated successfully for user:", userId);
+      console.log("- Updated logo type:", updatedUser.logoType);
+      console.log("- Updated logo URL length:", updatedUser.logoUrl?.length || 0);
       res.json(updatedUser);
     } catch (error) {
-      console.error("Error updating settings:", error);
+      console.error("❌ Error updating settings:", error);
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
