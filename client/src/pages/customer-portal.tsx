@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
+import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
+import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
+import { WhimsicalError, NetworkError, PaymentError, NotFoundError } from "@/components/ui/whimsical-error";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
@@ -515,6 +518,9 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           <div className="flex items-center space-x-2 mb-2">
             <ShieldCheck className="w-4 h-4" />
             <span className="font-semibold">Secure Payment Processing</span>
+            <InfoTooltip content="All payments are processed securely through Stripe, a trusted payment platform used by millions of businesses worldwide. Your card details are never stored on our servers.">
+              <HelpCircle className="w-3 h-3 text-blue-600 cursor-help" />
+            </InfoTooltip>
           </div>
           <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
         </div>
@@ -533,24 +539,14 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
 
       {/* Payment Failure Dialog */}
       <Dialog open={paymentFailureDialog.isOpen} onOpenChange={(open) => setPaymentFailureDialog(prev => ({ ...prev, isOpen: open }))}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center space-x-2">
-              <CreditCard className="w-5 h-5" />
-              <span>{paymentFailureDialog.title}</span>
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 mt-2">
-              {paymentFailureDialog.message}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button 
-              onClick={() => setPaymentFailureDialog(prev => ({ ...prev, isOpen: false }))}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-            >
-              Try Again
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+          <PaymentError
+            title={paymentFailureDialog.title}
+            message={paymentFailureDialog.message}
+            onRetry={() => setPaymentFailureDialog(prev => ({ ...prev, isOpen: false }))}
+            showHome={false}
+            className="border-0 bg-transparent"
+          />
         </DialogContent>
       </Dialog>
     </>

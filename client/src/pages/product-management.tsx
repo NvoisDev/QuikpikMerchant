@@ -31,6 +31,9 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import ButtonLoader from "@/components/ui/button-loader";
+import { DynamicTooltip, HelpTooltip, WarningTooltip, FeatureTooltip } from "@/components/ui/dynamic-tooltip";
+import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
+import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whimsical-error";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -1021,7 +1024,15 @@ export default function ProductManagement() {
             {/* Header Section */}
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Product Management</h1>
+                <div className="flex items-center space-x-3">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Product Management</h1>
+                  <ContextualHelp
+                    context="product-management"
+                    resources={[]}
+                    position="bottom-left"
+                    trigger="icon"
+                  />
+                </div>
                 <ContextualHelpBubble
                   topic="product management"
                   title="Managing Your Products"
