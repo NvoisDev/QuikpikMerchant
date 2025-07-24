@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -127,6 +127,57 @@ export default function ProductManagement() {
   
   const { canCreateProduct, canEditProduct, currentTier } = useSubscription();
 
+  // Auto-calculation for total package weight
+  const calculateTotalPackageWeight = useCallback((packQuantity: string, unitOfMeasure: string, unitSize: string): number => {
+    const quantity = parseFloat(packQuantity) || 0;
+    const size = parseFloat(unitSize) || 0;
+    
+    if (quantity <= 0 || size <= 0 || !unitOfMeasure) {
+      return 0;
+    }
+
+    let weightInKg = 0;
+
+    switch (unitOfMeasure.toLowerCase()) {
+      case 'g':
+      case 'grams':
+        weightInKg = (quantity * size) / 1000;
+        break;
+        
+      case 'kg':
+      case 'kilograms':
+        weightInKg = quantity * size;
+        break;
+        
+      case 'ml':
+      case 'millilitres':
+        weightInKg = (quantity * size) / 1000;
+        break;
+        
+      case 'l':
+      case 'litres':
+        weightInKg = quantity * size;
+        break;
+        
+      case 'cl':
+      case 'centilitres':
+        weightInKg = (quantity * size) / 100;
+        break;
+        
+      case 'pieces':
+      case 'units':
+      case 'cans':
+      case 'bottles':
+        weightInKg = quantity * 0.1; // Estimate 100g per unit
+        break;
+        
+      default:
+        weightInKg = quantity * 0.1;
+    }
+
+    return Math.round(weightInKg * 1000) / 1000;
+  }, []);
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
@@ -170,6 +221,34 @@ export default function ProductManagement() {
       },
     },
   });
+
+  // Auto-calculate total package weight when unit configuration changes
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name === 'packQuantity' || name === 'unitOfMeasure' || name === 'unitSize') {
+        const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
+        
+        if (packQuantity && unitOfMeasure && unitSize) {
+          const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
+          
+          if (calculatedWeight > 0) {
+            form.setValue('totalPackageWeight', calculatedWeight.toString(), { shouldValidate: false });
+            
+            // Show calculation info in toast for user feedback
+            if (name) { // Only show toast when user is actively editing
+              toast({
+                title: "Weight Auto-Calculated",
+                description: `Total package weight: ${calculatedWeight}kg (${packQuantity} × ${unitSize}${unitOfMeasure})`,
+                duration: 2000,
+              });
+            }
+          }
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, calculateTotalPackageWeight, toast]);
 
   const generateDescription = async () => {
     try {
@@ -1502,11 +1581,20 @@ export default function ProductManagement() {
                                 <FormItem>
                                   <FormLabel>Total Package Weight (kg)</FormLabel>
                                   <FormControl>
-                                    <Input type="number" step="0.001" placeholder="Auto-calculated" {...field} />
+                                    <Input 
+                                      type="number" 
+                                      step="0.001" 
+                                      placeholder="Auto-calculated" 
+                                      {...field}
+                                      style={{ 
+                                        backgroundColor: field.value ? '#f0f9ff' : 'white',
+                                        border: field.value ? '2px solid #0ea5e9' : '1px solid #d1d5db'
+                                      }}
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                   <div className="text-xs text-muted-foreground">
-                                    Complete package weight for shipping quotes
+                                    {field.value ? `Auto-calculated: ${field.value}kg` : 'Complete package weight for shipping quotes'}
                                   </div>
                                 </FormItem>
                               )}
