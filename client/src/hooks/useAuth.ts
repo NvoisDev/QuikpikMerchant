@@ -7,7 +7,7 @@ export function useAuth() {
   
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
-    enabled: true, // Re-enabled for product management functionality
+    enabled: false, // Disabled to prevent infinite loops in customer portal
     retry: false,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
