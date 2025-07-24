@@ -3457,10 +3457,10 @@ export default function CustomerPortal() {
                   </div>
 
                   <div 
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
                       customerData.shippingOption === 'collection' 
                         ? 'border-green-500 bg-green-50' 
-                        : 'border-gray-200 hover:border-gray-300'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                     onClick={() => {
                       setCustomerData({...customerData, shippingOption: 'collection'});
@@ -3468,6 +3468,7 @@ export default function CustomerPortal() {
                         fetchShippingQuotes();
                       }
                     }}
+                    title="Click to refresh delivery options and get updated shipping quotes"
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
@@ -3476,7 +3477,15 @@ export default function CustomerPortal() {
                           : 'border-gray-300'
                       }`} />
                       <div>
-                        <h4 className="font-medium">Delivery</h4>
+                        <h4 className="font-medium flex items-center gap-2">
+                          Delivery
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Click to refresh
+                          </div>
+                        </h4>
                         <p className="text-sm text-gray-600">Courier delivery service to your address</p>
                         <p className="text-sm font-medium text-blue-600">Select service below</p>
                       </div>
