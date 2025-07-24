@@ -1189,7 +1189,7 @@ export default function CustomerPortal() {
       setShowAuth(false);
       setIsGuestMode(false);
     } else if (isAuthenticated) {
-      // User is authenticated - always show main content
+      // User is authenticated - show main content and save state
       setShowAuth(false);
       setIsGuestMode(false);
       // Save authentication state to localStorage for session persistence
@@ -1199,15 +1199,59 @@ export default function CustomerPortal() {
         timestamp: Date.now()
       }));
     } else {
-      // Always require fresh authentication - no localStorage persistence
-      console.log('🔐 Always requiring fresh authentication, clearing any saved auth state');
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
+      // Check for saved authentication state first
+      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      if (savedAuth) {
+        try {
+          const authData = JSON.parse(savedAuth);
+          // Check if auth is less than 24 hours old
+          const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+          
+          if (authData.isAuthenticated && authData.customer && isRecent) {
+            console.log('🔄 Restoring authentication from localStorage');
+            setIsAuthenticated(true);
+            setAuthenticatedCustomer(authData.customer);
+            setShowAuth(false);
+            setIsGuestMode(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing saved auth:', error);
+        }
+      }
       
       // No valid saved auth - show authentication screen
+      console.log('🔐 No valid saved authentication, showing auth screen');
       setShowAuth(true);
       setIsGuestMode(true);
     }
   }, [isAuthenticated, isPreviewMode, wholesalerId, authenticatedCustomer]);
+
+  // Initialize authentication on component mount
+  useEffect(() => {
+    if (!isPreviewMode && wholesalerId && !isAuthenticated) {
+      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+      if (savedAuth) {
+        try {
+          const authData = JSON.parse(savedAuth);
+          // Check if auth is less than 24 hours old
+          const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+          
+          if (authData.isAuthenticated && authData.customer && isRecent) {
+            console.log('🔄 Initializing with saved authentication');
+            setIsAuthenticated(true);
+            setAuthenticatedCustomer(authData.customer);
+          } else {
+            console.log('🔐 Saved authentication expired, clearing');
+            localStorage.removeItem(`customer_auth_${wholesalerId}`);
+          }
+        } catch (error) {
+          console.error('Error parsing saved auth on init:', error);
+          localStorage.removeItem(`customer_auth_${wholesalerId}`);
+        }
+      }
+    }
+  }, [wholesalerId, isPreviewMode]); // Only run when wholesalerId or preview mode changes
 
 
 
@@ -1303,7 +1347,33 @@ export default function CustomerPortal() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             {/* Store Info - Mobile Optimized */}
             <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-              <Logo variant="icon-only" size="sm" className="flex-shrink-0" />
+              {/* Wholesaler Logo */}
+              {wholesaler?.logoUrl ? (
+                <img 
+                  src={wholesaler.logoUrl} 
+                  alt={wholesaler.businessName || "Business logo"} 
+                  className="h-8 w-8 rounded-lg object-contain flex-shrink-0"
+                />
+              ) : wholesaler?.logoType === "business" && wholesaler?.businessName ? (
+                <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-white">
+                    {wholesaler.businessName
+                      .split(' ')
+                      .map((word: string) => word.charAt(0).toUpperCase())
+                      .join('')
+                      .substring(0, 2)}
+                  </span>
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-white">
+                    {wholesaler?.businessName ? (
+                      wholesaler.businessName.charAt(0).toUpperCase() + 
+                      (wholesaler.businessName.split(' ')[1]?.charAt(0).toUpperCase() || wholesaler.businessName.charAt(1).toUpperCase())
+                    ) : 'QP'}
+                  </span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                   {wholesalerLoading ? (
