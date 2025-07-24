@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const { toast } = useToast();
 
   // Handle automatic authentication when coming from CustomerLogin
-  const handleAuthenticationFromLogin = async (digits: string) => {
+  const handleAuthenticationFromLogin = useCallback(async (digits: string) => {
     console.log('🚀 HANDLE_AUTHENTICATION_FROM_LOGIN START', { 
       wholesalerId, 
       digits,
@@ -103,7 +103,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       setError('Authentication failed. Please try again.');
       setAuthStep('step1');
     }
-  };
+  }, [wholesalerId]);
 
   // Initialize authentication flow once on component mount
   useEffect(() => {
@@ -151,13 +151,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       console.log('🔗 FROM CUSTOMER LOGIN: Skipping to step 3 with digits', authParam);
       setLastFourDigits(authParam);
       // Automatically verify customer and send SMS, then go to step 3
-      handleLogin();
+      handleAuthenticationFromLogin(authParam);
     } else {
       // Fresh start - show step 1
       console.log('🔄 FRESH START: Starting at step 1');
       setAuthStep('step1');
     }
-  }, [wholesalerId]); // Add wholesalerId as dependency
+  }, [wholesalerId, handleAuthenticationFromLogin]); // Add dependencies
 
   // Fetch wholesaler data for personalization
   useEffect(() => {
