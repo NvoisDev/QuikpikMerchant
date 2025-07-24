@@ -765,7 +765,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           {/* Back Button */}
           <div className="mb-3">
             <Button
-              onClick={() => window.history.back()}
+              onClick={() => window.location.href = '/customer-login'}
               variant="ghost"
               className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-all duration-200 flex items-center space-x-2"
             >
