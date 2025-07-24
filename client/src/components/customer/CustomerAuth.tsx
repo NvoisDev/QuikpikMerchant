@@ -121,9 +121,18 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           // Don't show auth component at all if already authenticated
           onAuthSuccess(authData.customer);
           return;
+        } else if (!isRecent) {
+          console.log('🕐 Authentication expired, clearing localStorage and redirecting to login');
+          // Clear expired authentication
+          localStorage.removeItem(`customer_auth_${wholesalerId}`);
+          // Redirect to customer login page
+          window.location.href = '/customer-login';
+          return;
         }
       } catch (error) {
         console.error('Error checking saved auth:', error);
+        // Clear corrupted auth data
+        localStorage.removeItem(`customer_auth_${wholesalerId}`);
       }
     }
     

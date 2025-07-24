@@ -1244,9 +1244,16 @@ export default function CustomerPortal() {
             setShowAuth(false);
             setIsGuestMode(false);
             return;
+          } else if (!isRecent) {
+            console.log('🕐 Authentication expired in portal, clearing and redirecting');
+            localStorage.removeItem(`customer_auth_${wholesalerId}`);
+            // Redirect to customer login page
+            window.location.href = '/customer-login';
+            return;
           }
         } catch (error) {
           console.error('Error parsing saved auth:', error);
+          localStorage.removeItem(`customer_auth_${wholesalerId}`);
         }
       }
       
@@ -1272,12 +1279,16 @@ export default function CustomerPortal() {
             setIsAuthenticated(true);
             setAuthenticatedCustomer(authData.customer);
           } else {
-            console.log('🔐 Saved authentication expired, clearing');
+            console.log('🔐 Saved authentication expired on init, clearing and redirecting');
             localStorage.removeItem(`customer_auth_${wholesalerId}`);
+            // Redirect to customer login page
+            window.location.href = '/customer-login';
           }
         } catch (error) {
           console.error('Error parsing saved auth on init:', error);
           localStorage.removeItem(`customer_auth_${wholesalerId}`);
+          // Redirect to customer login page
+          window.location.href = '/customer-login';
         }
       }
     }
