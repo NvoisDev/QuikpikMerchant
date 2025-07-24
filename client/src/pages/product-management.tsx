@@ -34,6 +34,7 @@ import ButtonLoader from "@/components/ui/button-loader";
 import { DynamicTooltip, HelpTooltip, WarningTooltip, FeatureTooltip } from "@/components/ui/dynamic-tooltip";
 import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
 import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whimsical-error";
+import { FloatingHelp } from "@/components/ui/floating-help";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -1029,8 +1030,9 @@ export default function ProductManagement() {
                   <ContextualHelp
                     context="product-management"
                     resources={[]}
-                    position="bottom-left"
-                    trigger="icon"
+                    position="bottom-right"
+                    trigger="text"
+                    className="relative z-10"
                   />
                 </div>
                 <ContextualHelpBubble
@@ -2117,6 +2119,9 @@ export default function ProductManagement() {
         reason={upgradeReason}
         currentPlan={currentTier}
       />
+      
+      {/* Floating Help */}
+      <FloatingHelp context="product-management" />
     </div>
   );
 }

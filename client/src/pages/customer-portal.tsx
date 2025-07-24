@@ -17,6 +17,7 @@ import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skele
 import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
 import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
 import { WhimsicalError, NetworkError, PaymentError, NotFoundError } from "@/components/ui/whimsical-error";
+import { FloatingHelp } from "@/components/ui/floating-help";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
@@ -3715,6 +3716,9 @@ export default function CustomerPortal() {
 
       {/* Powered by Quikpik Footer */}
       <Footer className="mt-12" />
+      
+      {/* Floating Help */}
+      <FloatingHelp context="customer-portal" />
     </div>
   );
 }

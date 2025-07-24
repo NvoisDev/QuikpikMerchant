@@ -274,12 +274,12 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
     }
 
     return (
-      <DynamicTooltip content="Get contextual help" type="help">
+      <DynamicTooltip content="Get contextual help and step-by-step guides" type="help">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsOpen(true)}
-          className="w-8 h-8 p-0 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600"
+          className="w-8 h-8 p-0 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 border-2 border-blue-300 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <HelpCircle className="w-4 h-4" />
         </Button>
