@@ -1381,9 +1381,9 @@ export default function ProductManagement() {
                       {/* Flexible Unit Configuration Section */}
                       <div className="space-y-4">
                         <div>
-                          <FormLabel className="text-base">Product Unit Configuration</FormLabel>
+                          <FormLabel className="text-base">📦 Product Unit Configuration & Weight</FormLabel>
                           <div className="text-sm text-muted-foreground mb-3">
-                            Configure how your product is packaged and measured for accurate shipping calculations
+                            Configure packaging, measurements, and weight for accurate shipping calculations
                           </div>
                         </div>
                         
@@ -1476,6 +1476,43 @@ export default function ProductManagement() {
                             />
                           </div>
                           
+                          {/* Weight Fields for Shipping */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                            <FormField
+                              control={form.control}
+                              name="unitWeight"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Individual Unit Weight (kg)</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" step="0.001" placeholder="0.500" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Weight per individual unit for shipping
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name="totalPackageWeight"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Total Package Weight (kg)</FormLabel>
+                                  <FormControl>
+                                    <Input type="number" step="0.001" placeholder="Auto-calculated" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                  <div className="text-xs text-muted-foreground">
+                                    Complete package weight for shipping quotes
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
                           <div className="bg-blue-100 p-3 rounded-lg">
                             <p className="text-sm text-blue-700">
                               <strong>Example:</strong> For "24 x 250ml cans", enter: Quantity = 24, Unit = ml, Size = 250
@@ -1537,50 +1574,16 @@ export default function ProductManagement() {
 
 
 
-                      {/* Weight and Shipping Requirements Section */}
-                      <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
+                      {/* Shipping Requirements Section */}
+                      <div className="space-y-4 border rounded-lg p-4 bg-green-50">
                         <div>
-                          <FormLabel className="text-base font-semibold">📦 Weight & Shipping Information</FormLabel>
+                          <FormLabel className="text-base font-semibold">🚚 Shipping Requirements</FormLabel>
                           <div className="text-sm text-muted-foreground mb-3">
-                            Required for accurate shipping quotes and carrier selection
+                            Additional shipping and handling requirements
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="unitWeight"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit Weight (kg)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" step="0.001" placeholder="0.500" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                <div className="text-xs text-muted-foreground">
-                                  Weight per individual unit
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="totalPackageWeight"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Total Package Weight (kg)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" step="0.001" placeholder="Auto-calculated" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                <div className="text-xs text-muted-foreground">
-                                  Complete package weight for shipping quotes
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                          
                           <FormField
                             control={form.control}
                             name="temperatureRequirement"
@@ -1635,8 +1638,6 @@ export default function ProductManagement() {
                             )}
                           />
                         </div>
-                        
-
                         
                         <div>
                           <FormLabel className="text-sm font-medium">Special Handling Requirements</FormLabel>
