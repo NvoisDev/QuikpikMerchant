@@ -157,26 +157,26 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       console.log('🔄 FRESH START: Starting at step 1');
       setAuthStep('step1');
     }
-  }, [wholesalerId, handleAuthenticationFromLogin]); // Add dependencies
+  }, [wholesalerId]); // Remove handleAuthenticationFromLogin to prevent infinite loop
 
-  // Fetch wholesaler data for personalization
-  useEffect(() => {
-    const fetchWholesaler = async () => {
-      try {
-        const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setWholesaler(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch wholesaler data:', error);
-      }
-    };
+  // DISABLED - Fetch wholesaler data causing infinite loop
+  // useEffect(() => {
+  //   const fetchWholesaler = async () => {
+  //     try {
+  //       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         setWholesaler(data);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch wholesaler data:', error);
+  //     }
+  //   };
 
-    if (wholesalerId) {
-      fetchWholesaler();
-    }
-  }, [wholesalerId]);
+  //   if (wholesalerId) {
+  //     fetchWholesaler();
+  //   }
+  // }, [wholesalerId]);
 
   // Countdown timer for SMS expiry
   useEffect(() => {

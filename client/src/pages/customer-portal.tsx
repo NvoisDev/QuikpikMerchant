@@ -791,7 +791,7 @@ export default function CustomerPortal() {
 
   // Featured product ID is now managed by state initialized from URL
 
-  // TEMPORARILY DISABLE WHOLESALER QUERY TO STOP INFINITE LOOP
+  // Fetch wholesaler data with proper caching
   const { data: wholesaler, isLoading: wholesalerLoading, error: wholesalerError } = useQuery({
     queryKey: ['wholesaler', wholesalerId],
     queryFn: async () => {
@@ -805,9 +805,9 @@ export default function CustomerPortal() {
       console.log('Wholesaler data received:', data);
       return data;
     },
-    enabled: false, // DISABLED TO STOP INFINITE LOOP
+    enabled: !!wholesalerId,
     retry: 1,
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes - very aggressive
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
     gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -834,7 +834,7 @@ export default function CustomerPortal() {
     gcTime: 60 * 60 * 1000
   });
 
-  // TEMPORARILY DISABLE PRODUCTS QUERY TO STOP INFINITE LOOP
+  // Fetch all products for the wholesaler with controlled refresh
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['wholesaler-products', wholesalerId],
     queryFn: async () => {
@@ -852,13 +852,15 @@ export default function CustomerPortal() {
       console.log(`Products received: ${data.length} items`);
       return data;
     },
-    enabled: false, // DISABLED TO STOP INFINITE LOOP
+    enabled: !!wholesalerId,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     retry: 1,
     retryDelay: 500,
     staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Helper function to calculate promotional pricing for display
