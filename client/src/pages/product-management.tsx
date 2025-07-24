@@ -300,7 +300,7 @@ export default function ProductManagement() {
       console.error("Single image upload error:", error);
       toast({
         title: "Upload failed",
-        description: `Failed to process image file: ${error.message || "Unknown error"}`,
+        description: `Failed to process image file: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
     }
@@ -353,7 +353,7 @@ export default function ProductManagement() {
       console.error("Image upload error:", error);
       toast({
         title: "Upload failed",
-        description: `Failed to process image files: ${error.message || "Unknown error"}`,
+        description: `Failed to process image files: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
     }
@@ -781,7 +781,7 @@ export default function ProductManagement() {
           const result = await apiRequest("POST", "/api/products", productData);
           results.push({ success: true, product: result });
         } catch (error) {
-          results.push({ success: false, error: error.message, product: product.name });
+          results.push({ success: false, error: error instanceof Error ? error.message : "Unknown error", product: product.name });
         }
       }
       return results;
@@ -1118,10 +1118,6 @@ export default function ProductManagement() {
                       status: "active",
                       unit: "units",
                       unitsPerPallet: "",
-                      deliveryOptions: {
-                        pickup: true,
-                        delivery: true,
-                      },
                     });
                   }}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -2004,10 +2000,6 @@ export default function ProductManagement() {
                       status: "active",
                       unit: "units",
                       unitsPerPallet: "",
-                      deliveryOptions: {
-                        pickup: true,
-                        delivery: true,
-                      },
                     });
                     setIsDialogOpen(true);
                   }}>
