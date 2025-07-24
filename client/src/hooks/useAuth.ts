@@ -21,8 +21,14 @@ export function useAuth() {
       // Immediately set user query data to null to clear authentication state
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
-      // Clear all localStorage and sessionStorage to ensure clean state
-      localStorage.clear();
+      // Only clear customer-specific localStorage data, not all localStorage
+      // This preserves wholesaler authentication while clearing customer sessions
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('customer_auth_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Clear sessionStorage to ensure clean state
       sessionStorage.clear();
       // Redirect to customer login page (Find Your Store page)
       window.location.href = "/customer-login";
