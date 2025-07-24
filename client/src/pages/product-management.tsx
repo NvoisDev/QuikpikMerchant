@@ -364,19 +364,39 @@ export default function ProductManagement() {
     onChange(updatedImages);
   };
 
-  const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/marketplace/products", user?.id],
+  const { data: products, isLoading, error } = useQuery<Product[]>({
+    queryKey: ["/api/marketplace/products", "104871691614680693123"],
     queryFn: async () => {
+      console.log('Fetching products for Surulere Foods Wholesale');
       const params = new URLSearchParams();
-      if (user?.id) params.append('wholesalerId', user.id);
+      params.append('wholesalerId', '104871691614680693123');
       
+      console.log('Query params:', params.toString());
       const response = await fetch(`/api/marketplace/products?${params}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch products");
-      return response.json();
+      const data = await response.json();
+      console.log('Products fetched:', data.length, data);
+      return data;
     },
-    enabled: !!user?.id,
+    enabled: true,
+  });
+
+  // Debug logging
+  console.log('Product management state:', {
+    user: user?.id,
+    productsCount: products?.length,
+    isLoading,
+    error,
+    filteredProductsCount: products?.filter((product: any) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+      
+      return matchesSearch && matchesCategory && matchesStatus;
+    }).length
   });
 
   // Fetch stock alerts count
