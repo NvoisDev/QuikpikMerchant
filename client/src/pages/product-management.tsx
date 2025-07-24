@@ -85,6 +85,16 @@ const productFormSchema = z.object({
   unitWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   totalPackageWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
+  // Additional missing fields
+  unitsPerPallet: z.string().optional(),
+  palletPrice: z.string().optional(),
+  palletMoq: z.string().optional(),
+  palletStock: z.string().optional(),
+  palletWeight: z.string().optional(),
+  lowStockThreshold: z.string().optional(),
+  shelfLife: z.string().optional(),
+  unit: z.string().optional(),
+  
   // Delivery exclusion
   deliveryExcluded: z.boolean().optional(),
   temperatureRequirement: z.enum(["ambient", "chilled", "frozen"]).optional(),
@@ -94,8 +104,6 @@ const productFormSchema = z.object({
     perishable: z.boolean().optional(),
     hazardous: z.boolean().optional(),
   }).optional(),
-  
-
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -143,6 +151,15 @@ export default function ProductManagement() {
       unitSize: "",
       unitWeight: "",
       totalPackageWeight: "",
+      // Additional fields
+      unitsPerPallet: "",
+      palletPrice: "",
+      palletMoq: "",
+      palletStock: "",
+      palletWeight: "",
+      lowStockThreshold: "",
+      shelfLife: "",
+      unit: "units",
       deliveryExcluded: false,
       temperatureRequirement: "ambient",
       contentCategory: "general",
@@ -348,14 +365,18 @@ export default function ProductManagement() {
   };
 
   const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", user?.id],
+    queryKey: ["/api/marketplace/products", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/products?wholesalerId=${user?.id}`, {
+      const params = new URLSearchParams();
+      if (user?.id) params.append('wholesalerId', user.id);
+      
+      const response = await fetch(`/api/marketplace/products?${params}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
+    enabled: !!user?.id,
   });
 
   // Fetch stock alerts count

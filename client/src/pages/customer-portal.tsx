@@ -617,7 +617,7 @@ export default function CustomerPortal() {
   // State management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
