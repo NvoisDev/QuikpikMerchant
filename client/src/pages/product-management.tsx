@@ -82,7 +82,7 @@ const productFormSchema = z.object({
   unitSize: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Weight and shipping requirements  
-  unitWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
+
   totalPackageWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Additional missing fields
@@ -200,7 +200,7 @@ export default function ProductManagement() {
       packQuantity: "",
       unitOfMeasure: "",
       unitSize: "",
-      unitWeight: "",
+
       totalPackageWeight: "",
       // Additional fields
       unitsPerPallet: "",
@@ -497,7 +497,7 @@ export default function ProductManagement() {
         palletMoq: data.palletMoq ? parseInt(data.palletMoq) : 1,
         palletStock: data.palletStock ? parseInt(data.palletStock) : 0,
         // Weight and shipping fields
-        unitWeight: data.unitWeight || null,
+
         palletWeight: data.palletWeight || null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
@@ -536,7 +536,7 @@ export default function ProductManagement() {
         palletMoq: productData.palletMoq ? parseInt(productData.palletMoq) : 1,
         palletStock: productData.palletStock ? parseInt(productData.palletStock) : 0,
         // Weight and shipping fields
-        unitWeight: productData.unitWeight || null,
+
         palletWeight: productData.palletWeight || null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
@@ -649,7 +649,6 @@ export default function ProductManagement() {
       unitOfMeasure: product.unitOfMeasure || "",
       unitSize: product.unitSize?.toString() || "",
       // Weight and shipping fields
-      unitWeight: product.unitWeight?.toString() || "",
       totalPackageWeight: product.totalPackageWeight?.toString() || "",
       deliveryExcluded: product.deliveryExcluded || false,
       temperatureRequirement: product.temperatureRequirement || "ambient",
@@ -691,7 +690,6 @@ export default function ProductManagement() {
       unitOfMeasure: product.unitOfMeasure || "",
       unitSize: product.unitSize?.toString() || "",
       // Weight and shipping fields
-      unitWeight: product.unitWeight?.toString() || "",
       totalPackageWeight: product.totalPackageWeight?.toString() || "",
       deliveryExcluded: product.deliveryExcluded || false,
       temperatureRequirement: product.temperatureRequirement || "ambient",
@@ -813,7 +811,7 @@ export default function ProductManagement() {
         palletPrice: row.palletPrice || "",
         palletMoq: row.palletMoq || "",
         palletStock: row.palletStock || "",
-        unitWeight: row.unitWeight || "",
+
         palletWeight: row.palletWeight || "",
         temperatureRequirement: row.temperatureRequirement || "ambient",
         contentCategory: row.contentCategory || "general",
@@ -854,7 +852,7 @@ export default function ProductManagement() {
             palletStock: product.palletStock ? parseInt(product.palletStock) : null,
             unit: product.unit || "units",
             unitFormat: product.unitFormat === "" ? "none" : (product.unitFormat || "none"),
-            unitWeight: product.unitWeight || null,
+
             palletWeight: product.palletWeight || null,
           };
           const result = await apiRequest("POST", "/api/products", productData);
@@ -913,7 +911,7 @@ export default function ProductManagement() {
         palletPrice: "950.00",
         palletMoq: "1",
         palletStock: "5",
-        unitWeight: "25",
+
         palletWeight: "1000",
         temperatureRequirement: "ambient",
         contentCategory: "food",
@@ -945,7 +943,7 @@ export default function ProductManagement() {
         palletPrice: "850.00",
         palletMoq: "1",
         palletStock: "2",
-        unitWeight: "0.5",
+
         palletWeight: "60",
         temperatureRequirement: "ambient",
         contentCategory: "food",
@@ -977,7 +975,7 @@ export default function ProductManagement() {
         palletPrice: "600.00",
         palletMoq: "1",
         palletStock: "3",
-        unitWeight: "0.35",
+
         palletWeight: "168",
         temperatureRequirement: "ambient",
         contentCategory: "food",
@@ -1092,7 +1090,7 @@ export default function ProductManagement() {
                         <h4 className="font-semibold">File Format Requirements:</h4>
                         <div className="text-sm text-gray-600 space-y-2">
                           <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, unitWeight, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
+                          <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, negotiationEnabled, minimumBidPrice, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
                           <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
                         </div>
                         <Button variant="link" onClick={downloadTemplate} className="p-0">
@@ -1555,25 +1553,8 @@ export default function ProductManagement() {
                             />
                           </div>
                           
-                          {/* Weight Fields for Shipping */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                            <FormField
-                              control={form.control}
-                              name="unitWeight"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Individual Unit Weight (kg)</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" step="0.001" placeholder="0.500" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                  <div className="text-xs text-muted-foreground">
-                                    Weight per individual unit for shipping
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            
+                          {/* Total Package Weight for Shipping */}
+                          <div className="pt-4 border-t">
                             <FormField
                               control={form.control}
                               name="totalPackageWeight"

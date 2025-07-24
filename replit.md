@@ -146,17 +146,18 @@
   - **Smart Weight Logic**: Calculates weight based on unit type (g→kg conversion, ml→density estimation, pieces→100g estimate)
   - **Visual Feedback**: Total package weight field highlights in blue when auto-calculated with descriptive text
   - **User Notifications**: Toast notifications show calculation details when values change
-  - **Consolidated UI**: Merged redundant weight section into unified "Product Unit Configuration & Weight" section
+  - **Simplified UI**: Removed unnecessary "Individual Unit Weight" field, streamlined to single weight calculation
 - **Technical Implementation**:
   - **useEffect Watcher**: Form watches packQuantity, unitOfMeasure, and unitSize changes for instant calculation
   - **Weight Calculation Logic**: Handles g/kg/ml/l/cl/pieces with proper unit conversions and density assumptions
   - **Form Integration**: Auto-populates totalPackageWeight field with calculated value and visual styling
-  - **Clean UI Structure**: Removed duplicate weight section, consolidated into single logical grouping
+  - **Clean UI Structure**: Single weight field focused on total package weight for shipping quotes
+  - **Schema Cleanup**: Removed unitWeight field from forms, mutations, and bulk upload templates
 - **Calculation Examples**:
   - **24 × 250ml cans**: Auto-calculates to 6.0kg (assumes 1g/ml density)
-  - **20 × 100g packets**: Auto-calculates to 2.0kg (direct weight calculation)
+  - **20 × 100g packets**: Auto-calculates to 2.0kg (direct weight calculation)  
   - **12 × 1kg bags**: Auto-calculates to 12.0kg (direct multiplication)
-- **Production Ready**: Complete auto-calculation system operational for accurate shipping quote generation
+- **Production Ready**: Complete auto-calculation system operational with streamlined interface for accurate shipping quote generation
 
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
