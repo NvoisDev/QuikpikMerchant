@@ -325,10 +325,12 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-    refetchIntervalInBackground: true, // Continue refetching when tab is not active
-    staleTime: 0, // Always consider data stale to ensure fresh data
-    gcTime: 5 * 60 * 1000, // Keep data in cache for 5 minutes
+    refetchInterval: false, // Disable auto-refresh to prevent infinite loops
+    refetchIntervalInBackground: false, // Disable background refetching
+    staleTime: 5 * 60 * 1000, // Keep data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep data in cache for 10 min
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchOnMount: false // Prevent refetch on component mount
   });
 
   // Filter orders based on search term

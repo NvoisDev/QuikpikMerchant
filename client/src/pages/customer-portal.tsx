@@ -577,9 +577,8 @@ export default function CustomerPortal() {
     refetchInterval: false,
   });
   
-  // Use authenticated user's ID in preview mode, but if user is team member, use parent wholesaler ID
-  // Handle cases where ID might be undefined or empty
-  const getPreviewWholesalerId = () => {
+  // Memoize wholesaler ID calculation to prevent infinite re-renders
+  const wholesalerId = useMemo(() => {
     if (!isPreviewMode) {
       // Extract wholesaler ID from URL and remove any query parameters
       const rawId = wholesalerIdParam || location.split('/customer/')[1];
@@ -593,9 +592,7 @@ export default function CustomerPortal() {
     
     // For regular wholesalers, use their own ID
     return user?.id;
-  };
-  
-  const wholesalerId = getPreviewWholesalerId();
+  }, [isPreviewMode, wholesalerIdParam, location, user?.role, user?.wholesalerId, user?.id]);
 
 
 
@@ -817,7 +814,12 @@ export default function CustomerPortal() {
       return data;
     },
     enabled: !!wholesalerId,
-    retry: 1
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchInterval: false,
   });
 
   // Fetch featured product if specified with auto-refresh
@@ -1212,13 +1214,20 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
-  // Enhanced authentication state management with persistence
+  // Single authentication state management effect - prevents infinite loops
   useEffect(() => {
     if (isPreviewMode) {
       // In preview mode, skip authentication
       setShowAuth(false);
       setIsGuestMode(false);
-    } else if (isAuthenticated) {
+      return;
+    }
+
+    if (!wholesalerId) {
+      return; // Wait for wholesalerId to be available
+    }
+
+    if (isAuthenticated && authenticatedCustomer) {
       // User is authenticated - show main content and save state
       setShowAuth(false);
       setIsGuestMode(false);
@@ -1228,85 +1237,57 @@ export default function CustomerPortal() {
         customer: authenticatedCustomer,
         timestamp: Date.now()
       }));
-    } else {
-      // Check for saved authentication state first
-      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (savedAuth) {
-        try {
-          const authData = JSON.parse(savedAuth);
-          // Check if auth is less than 24 hours old
-          const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
-          
-          if (authData.isAuthenticated && authData.customer && isRecent) {
-            console.log('🔄 Restoring authentication from localStorage');
-            setIsAuthenticated(true);
-            setAuthenticatedCustomer(authData.customer);
-            setShowAuth(false);
-            setIsGuestMode(false);
-            return;
-          } else if (!isRecent) {
-            console.log('🕐 Authentication expired in portal, clearing and redirecting');
-            localStorage.removeItem(`customer_auth_${wholesalerId}`);
-            // Redirect to customer login page
-            window.location.href = '/customer-login';
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing saved auth:', error);
-          localStorage.removeItem(`customer_auth_${wholesalerId}`);
-        }
-      }
-      
-      // No valid saved auth - show authentication screen
-      console.log('🔐 No valid saved authentication, showing auth screen');
-      setShowAuth(true);
-      setIsGuestMode(true);
+      return;
     }
-  }, [isAuthenticated, isPreviewMode, wholesalerId, authenticatedCustomer]);
 
-  // Initialize authentication on component mount
-  useEffect(() => {
-    if (!isPreviewMode && wholesalerId && !isAuthenticated) {
-      const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-      if (savedAuth) {
-        try {
-          const authData = JSON.parse(savedAuth);
-          // Check if auth is less than 24 hours old
-          const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
-          
-          if (authData.isAuthenticated && authData.customer && isRecent) {
-            console.log('🔄 Initializing with saved authentication');
-            setIsAuthenticated(true);
-            setAuthenticatedCustomer(authData.customer);
-          } else {
-            console.log('🔐 Saved authentication expired on init, clearing and redirecting');
-            localStorage.removeItem(`customer_auth_${wholesalerId}`);
-            // Redirect to customer login page
-            window.location.href = '/customer-login';
-          }
-        } catch (error) {
-          console.error('Error parsing saved auth on init:', error);
+    // Check for saved authentication state first
+    const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+    if (savedAuth) {
+      try {
+        const authData = JSON.parse(savedAuth);
+        // Check if auth is less than 24 hours old
+        const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+        
+        if (authData.isAuthenticated && authData.customer && isRecent) {
+          console.log('🔄 Restoring authentication from localStorage');
+          setIsAuthenticated(true);
+          setAuthenticatedCustomer(authData.customer);
+          setShowAuth(false);
+          setIsGuestMode(false);
+          return;
+        } else if (!isRecent) {
+          console.log('🕐 Authentication expired in portal, clearing and redirecting');
           localStorage.removeItem(`customer_auth_${wholesalerId}`);
           // Redirect to customer login page
           window.location.href = '/customer-login';
+          return;
         }
+      } catch (error) {
+        console.error('Error parsing saved auth:', error);
+        localStorage.removeItem(`customer_auth_${wholesalerId}`);
       }
     }
-  }, [wholesalerId, isPreviewMode]); // Only run when wholesalerId or preview mode changes
+    
+    // No valid saved auth - show authentication screen
+    console.log('🔐 No valid saved authentication, showing auth screen');
+    setShowAuth(true);
+    setIsGuestMode(true);
+  }, [isAuthenticated, isPreviewMode, wholesalerId]); // Removed authenticatedCustomer to prevent infinite loop
 
 
 
-  console.log('🔄 Customer Portal Render State:', {
-    wholesalerId,
-    showAuth,
-    isPreviewMode,
-    isAuthenticated,
-    showHomePage,
-    showAllProducts,
-    featuredProductId,
-    featuredLoading,
-    wholesalerLoading
-  });
+  // Debug output temporarily disabled to reduce noise
+  // console.log('🔄 Customer Portal Render State:', {
+  //   wholesalerId,
+  //   showAuth,
+  //   isPreviewMode,
+  //   isAuthenticated,
+  //   showHomePage,
+  //   showAllProducts,
+  //   featuredProductId,
+  //   featuredLoading,
+  //   wholesalerLoading
+  // });
 
   // Show loading screen if wholesalerId is not available yet
   if (!wholesalerId && !isPreviewMode) {
