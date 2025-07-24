@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 interface LogoProps {
   className?: string;
@@ -15,6 +16,16 @@ export default function Logo({
 }: LogoProps) {
   const { user: authUser } = useAuth();
   const user = propUser || authUser;
+
+  // Add effect to log when user data changes for debugging
+  useEffect(() => {
+    console.log("🔄 Logo component - user data changed:", {
+      logoType: user?.logoType,
+      hasLogoUrl: !!user?.logoUrl,
+      logoUrlLength: user?.logoUrl?.length || 0,
+      businessName: user?.businessName
+    });
+  }, [user?.logoType, user?.logoUrl, user?.businessName]);
 
   const sizeClasses = {
     sm: "h-6",

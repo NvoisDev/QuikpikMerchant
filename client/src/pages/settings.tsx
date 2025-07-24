@@ -217,12 +217,32 @@ function Settings() {
       const response = await apiRequest("PATCH", "/api/settings", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       toast({
         title: "Business Information Updated",
         description: "Your business information has been successfully updated.",
       });
+      
+      // Force immediate cache update with the new user data
+      queryClient.setQueryData(["/api/auth/user"], updatedUser);
+      
+      // Also invalidate to ensure fresh data fetch
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Reset form with updated values to reflect changes
+      businessForm.reset({
+        businessName: updatedUser.businessName || "Lanre Foods",
+        businessAddress: updatedUser.businessAddress || "",
+        businessPhone: updatedUser.businessPhone || "",
+        preferredCurrency: updatedUser.preferredCurrency || "GBP",
+        streetAddress: updatedUser.streetAddress || "",
+        city: updatedUser.city || "",
+        state: updatedUser.state || "",
+        postalCode: updatedUser.postalCode || "",
+        country: updatedUser.country || "United Kingdom",
+        logoType: (updatedUser.logoType as "custom" | "initials" | "business") || "initials",
+        logoUrl: updatedUser.logoUrl || "",
+      });
     },
     onError: (error: Error) => {
       toast({
