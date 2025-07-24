@@ -505,6 +505,7 @@ export default function ProductManagement() {
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsDialogOpen(false);
       form.reset();
@@ -544,6 +545,7 @@ export default function ProductManagement() {
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsDialogOpen(false);
       setEditingProduct(null);
@@ -576,6 +578,7 @@ export default function ProductManagement() {
       return await apiRequest("DELETE", `/api/products/${id}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -596,6 +599,7 @@ export default function ProductManagement() {
       return await apiRequest("PATCH", `/api/products/${id}`, { status });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
