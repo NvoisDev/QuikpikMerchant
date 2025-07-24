@@ -109,6 +109,24 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   useEffect(() => {
     console.log('🔧 COMPONENT MOUNT - Initializing authentication');
     
+    // First, check if authentication is already restored from localStorage
+    const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+    if (savedAuth) {
+      try {
+        const authData = JSON.parse(savedAuth);
+        const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+        
+        if (authData.isAuthenticated && authData.customer && isRecent) {
+          console.log('🔄 Authentication already restored, bypassing SMS');
+          // Don't show auth component at all if already authenticated
+          onAuthSuccess(authData.customer);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking saved auth:', error);
+      }
+    }
+    
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
@@ -130,7 +148,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       console.log('🔄 FRESH START: Starting at step 1');
       setAuthStep('step1');
     }
-  }, []); // Run only once on mount
+  }, [wholesalerId]); // Add wholesalerId as dependency
 
   // Fetch wholesaler data for personalization
   useEffect(() => {

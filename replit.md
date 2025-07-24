@@ -83,6 +83,23 @@
   - **Business Analytics**: Show actual revenue including transaction fees for accurate reporting
 - **Example**: Order #77 shows £422.50 in customer portal and £400.00 in wholesaler dashboard and order details ✅
 
+### AUTHENTICATION PERSISTENCE & SMS OPTIMIZATION - COMPLETED ✅ (July 24, 2025)
+- **Issue Resolved**: SMS verification codes were being sent on every page refresh instead of respecting 24-hour authentication persistence
+- **Root Cause**: CustomerAuth component initialization didn't check for existing localStorage authentication before triggering SMS flow
+- **Solution Implemented**: 
+  - **Smart Authentication Check**: CustomerAuth now checks localStorage for valid authentication before showing auth screens or sending SMS
+  - **Bypassed SMS Requests**: When valid authentication exists (less than 24 hours old), component immediately calls onAuthSuccess without SMS
+  - **Logo Synchronization Fixed**: Customer portal now displays wholesaler's actual business logo/initials instead of generic "QP"
+  - **Delivery Cost UI Enhancement**: Added "Click to refresh" indicators with hover effects for shipping quotes
+- **Technical Implementation**:
+  - **Authentication Priority**: localStorage check happens first in useEffect before any SMS API calls
+  - **Automatic Success**: Valid saved authentication immediately triggers onAuthSuccess callback
+  - **Logo Display Fix**: Customer portal header uses wholesaler data for proper business branding
+  - **24-Hour Expiry**: Authentication automatically expires and clears after 24 hours for security
+- **User Experience**: Customers stay logged in across page refreshes without unnecessary SMS codes, see proper business branding, and understand delivery refresh functionality
+- **Production Ready**: Complete authentication persistence system with optimized SMS usage and proper branding
+- **Status**: ✅ COMPLETED - No more unnecessary SMS codes on page refresh, proper logo display, enhanced delivery UI
+
 ### CUSTOMER AUTHENTICATION SYSTEM FIXED - COMPLETED ✅ (July 22, 2025)
 - **Issue Resolved**: Fixed infinite redirect loop and blank screen issues preventing customer portal access
 - **Root Cause**: CustomerLogin component was redirecting to `/customer/:id` instead of `/store/:id`, creating infinite redirect loop
