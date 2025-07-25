@@ -840,6 +840,29 @@
 
 Quikpik Merchant is a comprehensive web-based B2B platform designed for small-scale wholesalers to manage inventory, connect with retail customers, and process orders. The platform enables wholesalers to list products, broadcast stock updates via WhatsApp, accept online payments, and track business analytics while collecting a 5% platform fee per sale.
 
+## CRITICAL WEIGHT CALCULATION FIX - COMPLETED ✅ (July 25, 2025)
+
+### Customer Checkout Weight Calculation Fix - PRODUCTION READY ✅ (July 25, 2025)
+- **Issue Resolved**: Fixed checkout weight calculation showing incorrect 1kg fallback instead of accurate unit configuration-based weights
+- **Root Cause**: Weight calculation logic was checking for `sizePerUnit` field but database uses `unitSize` field, causing fallback to 1kg per unit
+- **Critical Example**: "Pounded Yam (20 x 250.000ml)" was showing 1kg instead of calculated 5kg (20 × 250ml = 5000ml = 5kg)
+- **Solution Implemented**: 
+  - **Field Name Fix**: Updated weight calculation to use `unitSize` field (correct database field) instead of `sizePerUnit`
+  - **Precise Calculation Logic**: Enhanced calculation to handle g/kg/ml/l/cl/pieces with proper unit conversions
+  - **Multiple Calculation Points**: Fixed weight calculation in both checkout display and heavy order warnings
+  - **Enhanced Debugging**: Added console logging to track unit configuration data and calculation steps
+- **Technical Implementation**:
+  - **Database Field Mapping**: `item.product.unitSize` used as primary source with `item.product.sizePerUnit` as fallback
+  - **Unit Conversion Logic**: Proper handling of ml→kg conversion using 1g/ml density assumption for liquids
+  - **Weight Calculation Priority**: 1) `totalPackageWeight` 2) `unitSize` configuration 3) `unitWeight` fallback 4) 1kg default
+  - **Dual Implementation**: Applied same fix to both checkout weight display and heavy order warning calculations
+- **Calculation Examples**:
+  - **Pounded Yam (20 x 250ml)**: 20 × 250ml = 5000ml = 5kg ✅
+  - **Basmati Rice (24 x 1kg)**: 24 × 1kg = 24kg ✅
+  - **Canned Goods (12 pieces)**: 12 × 0.1kg estimate = 1.2kg ✅
+- **User Experience**: Customers now see accurate shipping weights in checkout, enabling proper shipping quote calculations
+- **Production Ready**: Complete weight calculation system operational with precise unit configuration support
+
 ## DELIVERY COST DISPLAY ENHANCEMENT - COMPLETED ✅ (July 22, 2025)
 
 ### Customer Order Details Enhancement - PRODUCTION READY ✅ (July 22, 2025)

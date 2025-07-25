@@ -3248,9 +3248,47 @@ export default function CustomerPortal() {
                           if (item.sellingType === "pallets" && palletWeight > 0) {
                             itemWeight = palletWeight * item.quantity;
                             console.log(`Using pallet weight: ${palletWeight} kg x ${item.quantity} = ${itemWeight} kg`);
+                          } else if (item.product.totalPackageWeight && parseFloat(item.product.totalPackageWeight) > 0) {
+                            // Use precise unit configuration weight
+                            itemWeight = parseFloat(item.product.totalPackageWeight) * item.quantity;
+                            console.log(`Using total package weight: ${item.product.totalPackageWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else if (unitWeight > 0) {
                             itemWeight = unitWeight * item.quantity;
                             console.log(`Using unit weight: ${unitWeight} kg x ${item.quantity} = ${itemWeight} kg`);
+                          } else if (item.product.packQuantity && item.product.unitOfMeasure) {
+                            // Calculate weight from unit configuration
+                            const packQuantity = parseFloat(item.product.packQuantity) || 0;
+                            // Use unitSize field (the correct database field)
+                            let sizePerUnit = parseFloat(item.product.unitSize || item.product.sizePerUnit) || 0;
+                            const unitOfMeasure = item.product.unitOfMeasure;
+                            
+                            console.log(`Unit configuration data:`, {
+                              packQuantity,
+                              unitSize: item.product.unitSize,
+                              sizePerUnit: item.product.sizePerUnit,
+                              unitOfMeasure,
+                              calculatedSizePerUnit: sizePerUnit
+                            });
+                            
+                            let packageWeight = 0;
+                            if (unitOfMeasure === 'g') {
+                              packageWeight = (packQuantity * sizePerUnit) / 1000; // Convert grams to kg
+                            } else if (unitOfMeasure === 'kg') {
+                              packageWeight = packQuantity * sizePerUnit;
+                            } else if (unitOfMeasure === 'ml' || unitOfMeasure === 'l' || unitOfMeasure === 'cl') {
+                              // Assume liquid density of 1g/ml
+                              let totalMl = 0;
+                              if (unitOfMeasure === 'ml') totalMl = packQuantity * sizePerUnit;
+                              else if (unitOfMeasure === 'l') totalMl = packQuantity * sizePerUnit * 1000;
+                              else if (unitOfMeasure === 'cl') totalMl = packQuantity * sizePerUnit * 10;
+                              packageWeight = totalMl / 1000; // Convert ml to kg (assuming 1g/ml)
+                            } else if (unitOfMeasure === 'pieces' || unitOfMeasure === 'cans' || unitOfMeasure === 'bottles') {
+                              // Estimate weight for countable items
+                              packageWeight = packQuantity * 0.1; // 100g per piece estimate
+                            }
+                            
+                            itemWeight = packageWeight * item.quantity;
+                            console.log(`Calculated from unit config: ${packQuantity} x ${sizePerUnit}${unitOfMeasure} = ${packageWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else {
                             // Fallback: If no weight data, use 1kg per unit as a reasonable default
                             itemWeight = 1 * item.quantity;
@@ -3275,10 +3313,38 @@ export default function CustomerPortal() {
                       let itemWeight = 0;
                       if (item.sellingType === "pallets" && palletWeight > 0) {
                         itemWeight = palletWeight * item.quantity;
+                      } else if (item.product.totalPackageWeight && parseFloat(item.product.totalPackageWeight) > 0) {
+                        // Use precise unit configuration weight
+                        itemWeight = parseFloat(item.product.totalPackageWeight) * item.quantity;
                       } else if (unitWeight > 0) {
                         itemWeight = unitWeight * item.quantity;
+                      } else if (item.product.packQuantity && item.product.unitOfMeasure) {
+                        // Calculate weight from unit configuration
+                        const packQuantity = parseFloat(item.product.packQuantity) || 0;
+                        // Use unitSize field (the correct database field)
+                        let sizePerUnit = parseFloat(item.product.unitSize || item.product.sizePerUnit) || 0;
+                        const unitOfMeasure = item.product.unitOfMeasure;
+                        
+                        let packageWeight = 0;
+                        if (unitOfMeasure === 'g') {
+                          packageWeight = (packQuantity * sizePerUnit) / 1000; // Convert grams to kg
+                        } else if (unitOfMeasure === 'kg') {
+                          packageWeight = packQuantity * sizePerUnit;
+                        } else if (unitOfMeasure === 'ml' || unitOfMeasure === 'l' || unitOfMeasure === 'cl') {
+                          // Assume liquid density of 1g/ml
+                          let totalMl = 0;
+                          if (unitOfMeasure === 'ml') totalMl = packQuantity * sizePerUnit;
+                          else if (unitOfMeasure === 'l') totalMl = packQuantity * sizePerUnit * 1000;
+                          else if (unitOfMeasure === 'cl') totalMl = packQuantity * sizePerUnit * 10;
+                          packageWeight = totalMl / 1000; // Convert ml to kg (assuming 1g/ml)
+                        } else if (unitOfMeasure === 'pieces' || unitOfMeasure === 'cans' || unitOfMeasure === 'bottles') {
+                          // Estimate weight for countable items
+                          packageWeight = packQuantity * 0.1; // 100g per piece estimate
+                        }
+                        
+                        itemWeight = packageWeight * item.quantity;
                       } else {
-                        itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
+                        itemWeight = 1 * item.quantity; // Fallback
                       }
                       return total + itemWeight;
                     }, 0);
