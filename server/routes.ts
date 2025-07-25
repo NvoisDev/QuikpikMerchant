@@ -454,22 +454,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate and send SMS code
       const code = ReliableSMSService.generateVerificationCode();
+      console.log(`🔄 Generated verification code: ${code}`);
       const result = await ReliableSMSService.sendVerificationSMS(customer.phone, code, wholesaler?.businessName || 'Business');
+      console.log(`📋 SMS service result:`, result);
+      
+      // Always store verification code in database, regardless of SMS success
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+      const smsData = {
+        customerId: customer.id,
+        wholesalerId: wholesalerId,
+        code: code, // Use the generated code directly
+        phoneNumber: customer.phone,
+        expiresAt: expiresAt
+      };
+      console.log("About to create SMS verification with data:", smsData);
+      try {
+        await storage.createSMSVerificationCode(smsData);
+        console.log("✅ SMS verification code stored in database");
+      } catch (dbError) {
+        console.error("❌ Database error storing SMS code:", dbError);
+        throw dbError; // Re-throw to maintain existing error handling
+      }
       
       if (result.success) {
-        // Store verification code in database with proper structure
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
-        const smsData = {
-          customerId: customer.id,
-          wholesalerId: wholesalerId,
-          code: code, // Use the generated code directly
-          phoneNumber: customer.phone,
-          expiresAt: expiresAt
-        };
-        console.log("About to create SMS verification with data:", smsData);
-        await storage.createSMSVerificationCode(smsData);
-        
-        // In development mode, return the code for debugging
+        // SMS sent successfully
         if (process.env.NODE_ENV === 'development') {
           res.json({ 
             success: true, 
@@ -480,7 +488,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({ success: true, message: "SMS verification code sent" });
         }
       } else {
-        res.status(500).json({ error: "Failed to send SMS verification code" });
+        // SMS failed but in development mode, provide fallback
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🧪 SMS failed, using development fallback');
+          res.json({ 
+            success: true, 
+            message: "SMS verification code sent (development mode)",
+            debugCode: code,
+            developmentMode: true
+          });
+        } else {
+          res.status(500).json({ error: "Failed to send SMS verification code" });
+        }
       }
     } catch (error) {
       console.error("SMS request error:", error);
