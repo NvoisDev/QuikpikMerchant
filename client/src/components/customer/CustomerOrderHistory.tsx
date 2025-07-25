@@ -545,13 +545,25 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
                       </div>
-                      {/* Show delivery/shipping cost if applicable */}
-                      {(order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0) ? (
+                      {/* Show delivery/shipping cost if applicable - enhanced styling */}
+                      {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
                         <div className="flex justify-between text-xs">
-                          <span>{order.fulfillmentType === 'delivery' ? 'Delivery:' : 'Shipping:'}</span>
-                          <span>{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
+                          <span className="flex items-center">
+                            {order.fulfillmentType === 'delivery' ? (
+                              <>
+                                <Truck className="h-3 w-3 mr-1 text-blue-600" />
+                                Delivery Cost:
+                              </>
+                            ) : (
+                              <>
+                                <Hand className="h-3 w-3 mr-1 text-green-600" />
+                                Shipping:
+                              </>
+                            )}
+                          </span>
+                          <span className="font-medium">{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
                         </div>
-                      ) : null}
+                      )}
 
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total:</span>
@@ -577,26 +589,29 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       {format(new Date(order.date), 'MMM d, yyyy')}
                     </div>
                     
-                    {/* Collection/Delivery info */}
+                    {/* Collection/Delivery tag with enhanced styling */}
                     <div className="flex items-center justify-end space-x-1 mt-1">
                       {order.fulfillmentType === 'delivery' ? (
-                        <>
-                          <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-.293-.707L15 4.586A1 1 0 0014.293 4H14v3z"/>
-                          </svg>
-                          <span className="text-xs text-gray-600">Delivery</span>
-                        </>
+                        <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Delivery
+                        </Badge>
                       ) : (
-                        <>
-                          <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z"/>
-                            <path fillRule="evenodd" d="M6 7a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V7zm2-1a1 1 0 00-1 1v6a1 1 0 001 1h4a1 1 0 001-1V7a1 1 0 00-1-1H8z" clipRule="evenodd"/>
-                          </svg>
-                          <span className="text-xs text-gray-600">Collection</span>
-                        </>
+                        <Badge variant="outline" className="text-xs px-2 py-1 bg-green-50 text-green-700 border-green-200">
+                          <Hand className="h-3 w-3 mr-1" />
+                          Collection
+                        </Badge>
                       )}
                     </div>
+                    
+                    {/* Show delivery cost prominently if applicable */}
+                    {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
+                      <div className="text-xs text-gray-600 mt-1 flex items-center justify-end">
+                        <span className="font-medium">
+                          {order.fulfillmentType === 'delivery' ? 'Delivery:' : 'Shipping:'} {formatCurrency(order.deliveryCost || order.shippingTotal || '0')}
+                        </span>
+                      </div>
+                    )}
                     
                     {/* View Details Button */}
                     <Dialog>

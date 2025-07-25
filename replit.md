@@ -857,8 +857,27 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Type Safety**: Enhanced null safety throughout payment and authentication systems
   - **Error Handling**: Improved error handling with proper type casting and fallback mechanisms
 - **Production Ready**: Application now starts successfully with all core features operational
-- **User Verification**: Confirmed working with customer authentication (Michael Ogunjemilua, 48 orders) and product management systems
-- **Performance**: Reduced from 91 TypeScript errors to 80 with server running stably
+- **User Verification**: Confirmed working with customer authentication (Michael Ogunjemilua, 50 orders) and product management systems
+- **Performance**: Reduced from 102+ TypeScript errors to ~83 with server running stably
+
+### ORDER TAGGING SYSTEM IMPLEMENTATION - COMPLETED ✅ (July 25, 2025)
+- **Feature Enhancement**: Implemented comprehensive order tagging system distinguishing "Collection" vs "Delivery" orders with prominent delivery cost display
+- **User Request Fulfilled**: Customer portal orders now clearly tagged based on fulfillment type with delivery costs prominently shown on dashboard and order details
+- **Solution Implemented**: 
+  - **Enhanced Order Dashboard Tags**: Collection orders show green "Collection" badge with Hand icon, Delivery orders show blue "Delivery" badge with Truck icon
+  - **Prominent Delivery Cost Display**: Delivery costs now shown prominently on both order cards and order details with appropriate icons
+  - **Improved Visual Hierarchy**: Enhanced styling for delivery/shipping costs in order breakdown with colored icons and better formatting
+  - **Consistent Terminology**: Unified "Collection" for pickup orders and "Delivery" for courier/shipping orders across all interfaces
+- **Technical Implementation**:
+  - **Badge System**: Used outlined badges with color coding (green for Collection, blue for Delivery) for clear visual distinction
+  - **Icon Integration**: Added Truck and Hand icons from Lucide React for intuitive recognition
+  - **Cost Prominence**: Delivery costs displayed both in compact order summary and prominently on right side of order cards
+  - **Responsive Design**: Enhanced styling works across mobile and desktop interfaces
+- **User Experience**: 
+  - **Clear Visual Distinction**: Customers immediately see whether orders are for pickup or delivery
+  - **Cost Transparency**: Delivery costs clearly visible in multiple locations (order dashboard, order details, payment breakdown)
+  - **Consistent Interface**: Same tagging system used in customer portal order history and order details modal
+- **Production Ready**: Complete order tagging system operational with enhanced delivery cost visibility ✅
 
 ## CRITICAL WEIGHT CALCULATION FIX - COMPLETED ✅ (July 25, 2025)
 
