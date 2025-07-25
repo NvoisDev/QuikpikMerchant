@@ -144,15 +144,15 @@ async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: 
     }
 
     // Finalize and send invoice
-    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id!);
     
     // Mark as paid since payment was already processed
-    await stripe.invoices.pay(finalizedInvoice.id, {
+    await stripe.invoices.pay(finalizedInvoice.id!, {
       paid_out_of_band: true
     });
 
     // Send invoice email to customer
-    await stripe.invoices.sendInvoice(finalizedInvoice.id);
+    await stripe.invoices.sendInvoice(finalizedInvoice.id!);
 
     console.log(`📄 Stripe invoice created and sent to ${customer.email || customer.name} for order #${order.id}`);
     return finalizedInvoice;
@@ -354,12 +354,12 @@ The Quikpik Team`,
     }
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending team invitation email:', error);
     if (error.response) {
       console.error('SendGrid error response:', error.response.body);
     }
-    throw new Error('Failed to send invitation email: ' + error.message);
+    throw new Error('Failed to send invitation email: ' + (error.message || 'Unknown error'));
   }
 }
 
@@ -1092,6 +1092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subtotal += itemTotal;
 
         orderItems.push({
+          orderId: 0, // Will be set after order creation
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: effectivePrice.toFixed(2),
@@ -1107,6 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerId = firstProduct!.wholesalerId;
 
       const orderData = insertOrderSchema.parse({
+        orderNumber: `ORD-${Date.now()}`,
         wholesalerId,
         retailerId: userId,
         subtotal: subtotal.toFixed(2),
@@ -1368,6 +1370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create order with customer details
         const orderData = {
+          orderNumber: `ORD-${Date.now()}`,
           wholesalerId,
           retailerId: customer.id,
           customerName, // Store customer name
@@ -1384,6 +1387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create order items with orderId for storage
         const orderItems = items.map((item: any) => ({
+          orderId: 0, // Will be set after order creation
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: parseFloat(item.unitPrice).toFixed(2),
@@ -1444,11 +1448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send email notification to wholesaler
         if (wholesaler && wholesaler.email) {
           try {
-            // Prepare order data for email template
-            const enrichedItemsForEmail = await Promise.all(validatedItems.map(async (item: any) => {
-              const product = await storage.getProduct(item.product.id);
+            // Prepare order data for email template  
+            const enrichedItemsForEmail = await Promise.all(items.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
               return {
-                productName: product?.name || item.product.name || `Product #${item.product.id}`,
+                productName: product?.name || `Product #${item.productId}`,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
@@ -1462,9 +1466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               customerPhone,
               customerAddress: typeof customerAddress === 'string' ? customerAddress : 
                 (customerAddress ? JSON.stringify(customerAddress) : undefined),
-              total: totalAmountWithFee.toFixed(2),
-              subtotal: calculatedTotal.toFixed(2),
-              platformFee: platformFee.toFixed(2),
+              total: correctTotal,
+              subtotal: productSubtotal,
+              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
+              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
+              wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
               shippingTotal: shippingInfo?.service?.price?.toString() || '0.00',
               fulfillmentType: shippingInfo?.option || 'pickup',
               items: enrichedItemsForEmail,
@@ -1569,7 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: wholesaler.lastName || '',
           email: wholesaler.email
         },
-        orderDate: new Date(order.createdAt).toISOString(),
+        orderDate: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
         paymentMethod: 'Card Payment'
       };
 
@@ -1591,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Test email sent to ${wholesaler.email}`,
           emailData: {
             to: wholesaler.email,
-            subject: emailTemplate.subject,
+            subject: `[TEST] New Order #${order.id} - ${customerName}`,
             orderNumber: emailData.orderNumber,
             customerName: emailData.customerName
           }

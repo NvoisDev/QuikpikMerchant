@@ -926,7 +926,6 @@ export type SMSVerificationCode = typeof smsVerificationCodes.$inferSelect;
 // Team Management Schema Types
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   id: true,
-  inviteToken: true,
   invitedAt: true,
   joinedAt: true,
   createdAt: true,
