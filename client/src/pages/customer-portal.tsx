@@ -675,6 +675,16 @@ export default function CustomerPortal() {
     try {
       // Enhanced shipping request with precise unit configuration
       console.log("📦 Sending enhanced shipping request with cart items for precise calculation");
+      
+      // Debug: Log cart items with unit configuration
+      console.log("📦 Cart items for shipping:", cart.map(item => ({
+        name: item.product.name,
+        packQuantity: item.product.packQuantity,
+        unitSize: item.product.unitSize,
+        unitOfMeasure: item.product.unitOfMeasure,
+        quantity: item.quantity
+      })));
+      
       const response = await apiRequest("POST", "/api/marketplace/shipping/quotes", {
         collectionAddress: {
           contactName: wholesaler?.businessName || "Business Pickup",
@@ -698,7 +708,7 @@ export default function CustomerPortal() {
             // Unit configuration fields for precise calculation
             packQuantity: item.product.packQuantity,
             unitOfMeasure: item.product.unitOfMeasure,
-            sizePerUnit: item.product.sizePerUnit,
+            unitSize: item.product.unitSize,
             individualUnitWeight: item.product.individualUnitWeight,
             totalPackageWeight: item.product.totalPackageWeight,
             packageDimensions: item.product.packageDimensions,
@@ -3262,7 +3272,6 @@ export default function CustomerPortal() {
                             console.log(`Unit configuration data:`, {
                               packQuantity,
                               unitSize: item.product.unitSize,
-                              sizePerUnit: item.product.sizePerUnit,
                               unitOfMeasure,
                               calculatedSizePerUnit: sizePerUnit
                             });

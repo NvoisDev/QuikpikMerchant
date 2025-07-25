@@ -863,6 +863,20 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 - **User Experience**: Customers now see accurate shipping weights in checkout, enabling proper shipping quote calculations
 - **Production Ready**: Complete weight calculation system operational with precise unit configuration support
 
+### SHIPPING QUOTE WEIGHT CALCULATION FIX - COMPLETED ✅ (July 25, 2025)
+- **Critical Issue Resolved**: Shipping quotes showing incorrect 0.5kg instead of accurate 5kg for "Pounded Yam (20 x 250ml)" 
+- **Root Cause**: Database field mapping mismatch - `PreciseShippingCalculator` and customer portal using `sizePerUnit` but database field is `unitSize`
+- **Solution Implemented**: 
+  - **Fixed Field Mapping**: Updated `PreciseShippingCalculator.ts` to use `unitSize` as primary field with `sizePerUnit` fallback
+  - **Fixed Shipping Request**: Updated customer portal shipping request to send `unitSize` instead of `sizePerUnit`
+  - **Enhanced Debugging**: Added unit configuration logging to track shipping calculation data
+- **Technical Implementation**:
+  - **Interface Update**: Added `unitSize` field to `ProductUnitConfig` interface while maintaining backward compatibility
+  - **Calculation Logic**: Modified `calculatePackageWeight` to prioritize `unitSize` over `sizePerUnit`
+  - **Data Flow Fix**: Customer portal now sends correct database field names in shipping requests
+- **Result**: Shipping quotes now correctly show weight-based pricing for actual product weights (5kg vs 0.5kg)
+- **Production Ready**: Complete shipping weight calculation system operational with accurate unit configuration support
+
 ## DELIVERY COST DISPLAY ENHANCEMENT - COMPLETED ✅ (July 22, 2025)
 
 ### Customer Order Details Enhancement - PRODUCTION READY ✅ (July 22, 2025)

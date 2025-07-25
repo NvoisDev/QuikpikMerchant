@@ -6,7 +6,8 @@
 interface ProductUnitConfig {
   packQuantity?: number;
   unitOfMeasure?: string;
-  sizePerUnit?: number;
+  unitSize?: number;  // Use unitSize to match database field
+  sizePerUnit?: number;  // Keep as fallback for backward compatibility
   individualUnitWeight?: number;
   totalPackageWeight?: number;
   packageDimensions?: {
@@ -35,8 +36,9 @@ export class PreciseShippingCalculator {
     }
 
     // Calculate based on unit configuration
-    if (config.packQuantity && config.unitOfMeasure && config.sizePerUnit) {
-      const { packQuantity, unitOfMeasure, sizePerUnit } = config;
+    if (config.packQuantity && config.unitOfMeasure && (config.unitSize || config.sizePerUnit)) {
+      const { packQuantity, unitOfMeasure } = config;
+      const sizePerUnit = config.unitSize || config.sizePerUnit || 0;
       
       let weightPerPackage = 0;
 
