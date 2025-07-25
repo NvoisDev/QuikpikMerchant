@@ -10,7 +10,7 @@ import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
-import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator.js";
+import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -1347,13 +1347,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const updateData = {
               firstName,
               lastName,
-              email: emailConflict ? customer.email : (customerEmail || customer.email)
+              email: emailConflict ? customer.email : (customerEmail || customer.email || '')
             };
             
             customer = await storage.updateCustomer(customer.id, {
               firstName,
               lastName,
-              email: emailConflict ? customer.email : (customerEmail || customer.email)
+              email: emailConflict ? customer.email : (customerEmail || customer.email || '')
             });
             
             // Update phone number separately if needed
@@ -3730,14 +3730,14 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json(personalizedMessage);
     } catch (error) {
       console.error("AI personalization error:", error);
-      console.error("Error details:", error.message);
+      console.error("Error details:", (error as Error).message);
       
       // Return fallback message instead of error to ensure UI doesn't break
       const fallbackMessage = {
         greeting: req.body.customerName ? `Hi ${req.body.customerName}!` : "Hello!",
-        mainMessage: req.body.productName ? `New stock: ${req.body.productName} available` : `Fresh stock from ${context.businessName}`,
+        mainMessage: req.body.productName ? `New stock: ${req.body.productName} available` : `Fresh stock available`,
         callToAction: "Order today!",
-        fullMessage: `${req.body.customerName ? `Hi ${req.body.customerName}!` : "Hello!"} ${req.body.productName ? `New stock: ${req.body.productName} available` : `Fresh stock from ${context.businessName}`}. Order today!`
+        fullMessage: `${req.body.customerName ? `Hi ${req.body.customerName}!` : "Hello!"} ${req.body.productName ? `New stock: ${req.body.productName} available` : `Fresh stock available`}. Order today!`
       };
       
       res.json(fallbackMessage);
@@ -7826,7 +7826,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       let customerInfo;
       try {
         // Retrieve payment intent from Stripe to get customer data
-        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        const paymentIntent = await stripe!.paymentIntents.retrieve(order.stripePaymentIntentId);
         
         if (paymentIntent.metadata) {
           customerInfo = {
@@ -7909,7 +7909,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 
       try {
         // Retrieve payment intent from Stripe to get customer data
-        const paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        const paymentIntent = await stripe!.paymentIntents.retrieve(order.stripePaymentIntentId);
         
         const customerData = {
           customerName: paymentIntent.metadata?.customerName || order.customerName || null,
@@ -7982,7 +7982,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       // Create or get Stripe customer
       let customerId = user.stripeCustomerId;
       if (!customerId) {
-        const customer = await stripe.customers.create({
+        const customer = await stripe!.customers.create({
           email: user.email || undefined,
           name: user.businessName || `${user.firstName} ${user.lastName}` || undefined,
           metadata: {
@@ -7994,7 +7994,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }
 
       // Create checkout session
-      const session = await stripe.checkout.sessions.create({
+      const session = await stripe!.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [
@@ -8072,7 +8072,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       }
 
       // Cancel subscription at period end
-      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      await stripe!.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: true
       });
 
@@ -8114,7 +8114,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
 
       // If user has an active subscription, cancel it
       if (user.stripeSubscriptionId && user.subscriptionStatus === 'active') {
-        await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        await stripe!.subscriptions.cancel(user.stripeSubscriptionId);
       }
 
       // Update user subscription to the lower tier
@@ -8601,9 +8601,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
     }
 
     try {
-      const { MailService } = await import('@sendgrid/mail');
-      const mailService = new MailService();
-      mailService.setApiKey(process.env.SENDGRID_API_KEY);
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
       const welcomeEmailHtml = `
         <!DOCTYPE html>
@@ -8709,7 +8707,7 @@ Thank you for choosing Quikpik to power your wholesale business!
 The Quikpik Team
       `;
 
-      await mailService.send({
+      await sgMail.send({
         to: user.email,
         from: {
           email: 'hello@quikpik.co',
@@ -9107,7 +9105,7 @@ The Quikpik Team
       } as any);
 
       // Create session for the new user
-      req.session.user = {
+      (req.session as any).user = {
         id: newUser.id,
         email: newUser.email,
         firstName: newUser.firstName,
@@ -9351,6 +9349,7 @@ The Quikpik Team
       // Add service recommendations and precise calculation info
       const recommendations = PreciseShippingCalculator.getServiceRecommendations(totalWeight);
       
+      const preciseCalculation = cartItems && cartItems.length > 0;
       console.log(`📦 Returning enhanced demo quotes for ${totalWeight}kg package (${preciseCalculation ? 'precise' : 'estimated'} calculation)`);
       res.json({ 
         quotes: demoQuotes, 
