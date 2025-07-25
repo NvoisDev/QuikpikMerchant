@@ -46,30 +46,30 @@ export class PreciseShippingCalculator {
         case 'g':
         case 'grams':
           // Convert grams to kg
-          weightPerPackage = (packQuantity * sizePerUnit) / 1000;
+          weightPerPackage = (packQuantity * unitSize) / 1000;
           break;
           
         case 'kg':
         case 'kilograms':
-          weightPerPackage = packQuantity * sizePerUnit;
+          weightPerPackage = packQuantity * unitSize;
           break;
           
         case 'ml':
         case 'millilitres':
           // Assume density of 1g/ml for liquids (water-based products)
-          weightPerPackage = (packQuantity * sizePerUnit) / 1000;
+          weightPerPackage = (packQuantity * unitSize) / 1000;
           break;
           
         case 'l':
         case 'litres':
           // Assume density of 1kg/l
-          weightPerPackage = packQuantity * sizePerUnit;
+          weightPerPackage = packQuantity * unitSize;
           break;
           
         case 'cl':
         case 'centilitres':
           // Convert cl to kg (assume 1g/ml density)
-          weightPerPackage = (packQuantity * sizePerUnit) / 100;
+          weightPerPackage = (packQuantity * unitSize) / 100;
           break;
           
         case 'pieces':
@@ -81,7 +81,7 @@ export class PreciseShippingCalculator {
             weightPerPackage = packQuantity * config.individualUnitWeight;
           } else {
             // Estimate based on typical weights for different product types
-            const estimatedUnitWeight = this.estimateUnitWeight(unitOfMeasure, sizePerUnit);
+            const estimatedUnitWeight = this.estimateUnitWeight(unitOfMeasure, unitSize);
             weightPerPackage = packQuantity * estimatedUnitWeight;
           }
           break;
@@ -143,12 +143,13 @@ export class PreciseShippingCalculator {
       };
     }
 
-    // Calculate based on unit configuration
-    if (config.packQuantity && config.unitOfMeasure && config.sizePerUnit) {
-      const { packQuantity, unitOfMeasure, sizePerUnit } = config;
+    // Calculate based on unit configuration  
+    if (config.packQuantity && config.unitOfMeasure && (config.unitSize || config.sizePerUnit)) {
+      const { packQuantity, unitOfMeasure } = config;
+      const unitSize = config.unitSize || config.sizePerUnit || 0;
       
       // Estimate dimensions based on product type and size
-      let baseDimensions = this.estimateBaseDimensions(unitOfMeasure, sizePerUnit, packQuantity);
+      let baseDimensions = this.estimateBaseDimensions(unitOfMeasure, unitSize, packQuantity);
       
       // Adjust for quantity
       const packages = Math.ceil(quantity / packQuantity);
@@ -233,7 +234,8 @@ export class PreciseShippingCalculator {
       const config: ProductUnitConfig = {
         packQuantity: item.product?.packQuantity,
         unitOfMeasure: item.product?.unitOfMeasure,
-        sizePerUnit: item.product?.sizePerUnit,
+        unitSize: item.product?.unitSize,  // Fixed: use unitSize to match database field
+        sizePerUnit: item.product?.sizePerUnit,  // Keep as fallback
         individualUnitWeight: item.product?.individualUnitWeight,
         totalPackageWeight: item.product?.totalPackageWeight,
         packageDimensions: item.product?.packageDimensions

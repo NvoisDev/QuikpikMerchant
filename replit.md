@@ -842,6 +842,20 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 
 ## CRITICAL WEIGHT CALCULATION FIX - COMPLETED ✅ (July 25, 2025)
 
+### SHIPPING WEIGHT CALCULATION FIELD MAPPING FIX - COMPLETED ✅ (July 25, 2025)
+- **Critical Issue Resolved**: Fixed shipping quotes showing 0.5kg instead of 5kg for "Pounded Yam (20 x 250ml)" products
+- **Root Cause**: PreciseShippingCalculator was using `sizePerUnit` field but database stores data in `unitSize` field
+- **Solution Implemented**: 
+  - **Field Mapping Fix**: Updated `createPreciseParcel` method to prioritize `unitSize` over `sizePerUnit`
+  - **Calculation Logic Fix**: Modified weight calculation to use correct database field (`item.product.unitSize`)
+  - **Dimension Calculation Fix**: Updated `calculatePackageDimensions` to use unified field mapping
+  - **Backward Compatibility**: Maintained fallback to `sizePerUnit` for legacy data
+- **Technical Implementation**:
+  - **Unified Field Access**: `const unitSize = config.unitSize || config.sizePerUnit || 0`
+  - **Precise Weight Logic**: 20 × 250ml = 5000ml = 5kg calculation now working correctly
+  - **Database Schema Alignment**: All calculations now use `unitSize` field matching database structure
+- **Production Ready**: Shipping quotes now display accurate weights (5kg vs 0.5kg) for precise quote calculations
+
 ### Customer Checkout Weight Calculation Fix - PRODUCTION READY ✅ (July 25, 2025)
 - **Issue Resolved**: Fixed checkout weight calculation showing incorrect 1kg fallback instead of accurate unit configuration-based weights
 - **Root Cause**: Weight calculation logic was checking for `sizePerUnit` field but database uses `unitSize` field, causing fallback to 1kg per unit
