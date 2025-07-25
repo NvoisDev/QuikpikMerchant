@@ -22,7 +22,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home, HelpCircle } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -3252,9 +3252,6 @@ export default function CustomerPortal() {
                             // Use precise unit configuration weight
                             itemWeight = parseFloat(item.product.totalPackageWeight) * item.quantity;
                             console.log(`Using total package weight: ${item.product.totalPackageWeight} kg x ${item.quantity} = ${itemWeight} kg`);
-                          } else if (unitWeight > 0) {
-                            itemWeight = unitWeight * item.quantity;
-                            console.log(`Using unit weight: ${unitWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else if (item.product.packQuantity && item.product.unitOfMeasure) {
                             // Calculate weight from unit configuration
                             const packQuantity = parseFloat(item.product.packQuantity) || 0;
@@ -3289,6 +3286,9 @@ export default function CustomerPortal() {
                             
                             itemWeight = packageWeight * item.quantity;
                             console.log(`Calculated from unit config: ${packQuantity} x ${sizePerUnit}${unitOfMeasure} = ${packageWeight} kg x ${item.quantity} = ${itemWeight} kg`);
+                          } else if (unitWeight > 0) {
+                            itemWeight = unitWeight * item.quantity;
+                            console.log(`Using unit weight fallback: ${unitWeight} kg x ${item.quantity} = ${itemWeight} kg`);
                           } else {
                             // Fallback: If no weight data, use 1kg per unit as a reasonable default
                             itemWeight = 1 * item.quantity;
@@ -3316,8 +3316,6 @@ export default function CustomerPortal() {
                       } else if (item.product.totalPackageWeight && parseFloat(item.product.totalPackageWeight) > 0) {
                         // Use precise unit configuration weight
                         itemWeight = parseFloat(item.product.totalPackageWeight) * item.quantity;
-                      } else if (unitWeight > 0) {
-                        itemWeight = unitWeight * item.quantity;
                       } else if (item.product.packQuantity && item.product.unitOfMeasure) {
                         // Calculate weight from unit configuration
                         const packQuantity = parseFloat(item.product.packQuantity) || 0;
@@ -3343,6 +3341,8 @@ export default function CustomerPortal() {
                         }
                         
                         itemWeight = packageWeight * item.quantity;
+                      } else if (unitWeight > 0) {
+                        itemWeight = unitWeight * item.quantity;
                       } else {
                         itemWeight = 1 * item.quantity; // Fallback
                       }
