@@ -581,8 +581,10 @@ export default function CustomerPortal() {
   const wholesalerId = useMemo(() => {
     // Always prioritize URL parameter extraction for customer portal
     const rawId = wholesalerIdParam || (location.includes('/store/') ? location.split('/store/')[1] : location.split('/customer/')[1]);
-    const cleanId = rawId ? rawId.split('?')[0] : undefined;
-    console.log('🆔 Wholesaler ID calculated:', { rawId, cleanId, location, wholesalerIdParam });
+    // Decode URL encoding and remove query parameters
+    const decodedId = rawId ? decodeURIComponent(rawId) : undefined;
+    const cleanId = decodedId ? decodedId.split('?')[0] : undefined;
+    console.log('🆔 Wholesaler ID calculated:', { rawId, decodedId, cleanId, location, wholesalerIdParam });
     return cleanId;
   }, [wholesalerIdParam, location]);
 
