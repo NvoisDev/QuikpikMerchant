@@ -1214,6 +1214,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create Stripe payment intent
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + transaction fee)
         currency: 'gbp',
@@ -1266,6 +1269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Retrieve payment intent from Stripe to get metadata
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       
       if (paymentIntent.status !== 'succeeded') {
@@ -1341,10 +1347,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const updateData = {
               firstName,
               lastName,
-              email: emailConflict ? customer.email : (customerEmail || customer.email || undefined)
+              email: emailConflict ? customer.email : (customerEmail || customer.email)
             };
             
-            customer = await storage.updateCustomer(customer.id, updateData);
+            customer = await storage.updateCustomer(customer.id, {
+              firstName,
+              lastName,
+              email: emailConflict ? customer.email : (customerEmail || customer.email)
+            });
             
             // Update phone number separately if needed
             if (customerPhone && customer.phoneNumber !== customerPhone) {
@@ -1471,8 +1481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
               wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
-              shippingTotal: (typeof shippingInfo === 'object' && shippingInfo?.service?.price) ? shippingInfo.service.price.toString() : '0.00',
-              fulfillmentType: (typeof shippingInfo === 'object' && shippingInfo?.option) ? shippingInfo.option : 'pickup',
+              shippingTotal: '0.00',
+              fulfillmentType: 'pickup',
               items: enrichedItemsForEmail,
               wholesaler: {
                 businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
@@ -1640,6 +1650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         event = req.body;
         console.log('⚠️ Development mode - processing webhook without signature verification');
       } else {
+        if (!stripe) {
+          throw new Error('Stripe not configured');
+        }
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
         console.log('✅ Webhook signature verified successfully');
       }
@@ -3399,7 +3412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     lastName: wholesaler.lastName || '',
                     email: wholesaler.email
                   },
-                  orderDate: new Date(order.createdAt).toISOString(),
+                  orderDate: new Date(order.createdAt || new Date()).toISOString(),
                   paymentMethod: 'Card Payment'
                 };
 
@@ -3753,15 +3766,15 @@ Write a professional, sales-focused description that highlights the key benefits
 
       const context = {
         businessName: user.businessName || user.firstName || "Your Business",
-        businessType: user.businessType,
+        businessType: user.businessType || "General",
         products: products.map(p => ({
           name: p.name,
-          category: p.category,
-          price: p.price
+          category: p.category || "General",
+          price: parseFloat(p.price || "0")
         })),
         customerGroups: customerGroups.map(g => ({
           name: g.name,
-          memberCount: g.memberCount || 0
+          memberCount: 0
         })),
         recentPerformance
       };
@@ -3780,6 +3793,7 @@ Write a professional, sales-focused description that highlights the key benefits
       
       const timing = await optimizeMessageTiming({
         customerGroup: customerGroup || 'General',
+        businessType: req.user.businessType || 'General',
         previousCampaignData: previousCampaignData || []
       });
       
@@ -5371,7 +5385,7 @@ Write a professional, sales-focused description that highlights the key benefits
         const broadcastData = {
           wholesalerId: targetUserId,
           productId: productId,
-          customerGroupId: null, // Will be set when sending
+          customerGroupId: 1, // Default customer group
           message: campaignData.customMessage || '',
           specialPrice: specialPrice || null,
           quantity: quantity || 1,
@@ -6601,6 +6615,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       // Create order with customer details  
       const orderData = {
+        orderNumber: `ORD-${Date.now()}`,
         wholesalerId: product.wholesalerId,
         retailerId: customer.id,
         customerName, // Store customer name
@@ -6726,6 +6741,7 @@ Please contact the customer to confirm this order.
       // Create the order with customer details
       const order = await storage.createOrder(
         {
+          orderNumber: `ORD-${Date.now()}`,
           retailerId: customer.id,
           wholesalerId: firstProduct.wholesalerId,
           customerName, // Store customer name
@@ -7163,7 +7179,7 @@ Please contact the customer to confirm this order.
   }
 
   async function sendRefundReceipt(customer: any, order: any, refund: any, wholesaler: any, reason: string) {
-    if (!sendGrid) {
+    if (!sgMail) {
       console.log('SendGrid not configured, skipping refund receipt email');
       return;
     }
@@ -7259,7 +7275,7 @@ Please contact the customer to confirm this order.
 </body>
 </html>`;
 
-      await sendGrid.send({
+      await sgMail.send({
         to: customer.email,
         from: 'invoices@quikpik.co',
         subject: `Refund Receipt for Order #${order.id} - ${businessName}`,
@@ -7749,7 +7765,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
       // Generate PDF using Puppeteer
       const puppeteer = await import('puppeteer');
       const browser = await puppeteer.default.launch({
-        headless: 'new',
+        headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
       
