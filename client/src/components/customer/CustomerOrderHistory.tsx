@@ -209,32 +209,39 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         )}
 
-        {/* Collection Information */}
+        {/* Collection/Delivery Information */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center">
-            <Hand className="h-4 w-4 mr-2" />
-            Collection Information
+            {order.fulfillmentType === 'delivery' ? (
+              <>
+                <Truck className="h-4 w-4 mr-2" />
+                Delivery Information
+              </>
+            ) : (
+              <>
+                <Hand className="h-4 w-4 mr-2" />
+                Collection Information
+              </>
+            )}
           </h3>
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Fulfillment Type:</span>
               <span className="font-medium capitalize">{order.fulfillmentType}</span>
             </div>
-            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Delivery Cost:</span>
-                <span className="font-medium">{formatCurrency(parseFloat(order.deliveryCost))}</span>
-              </div>
-            )}
             {order.deliveryCarrier && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Collection Carrier:</span>
+                <span className="text-gray-600">
+                  {order.fulfillmentType === 'delivery' ? 'Delivery Company:' : 'Collection Carrier:'}
+                </span>
                 <span className="font-medium">{order.deliveryCarrier}</span>
               </div>
             )}
             {order.customerAddress && (
               <div>
-                <span className="text-gray-600 text-sm">Collection Address:</span>
+                <span className="text-gray-600 text-sm">
+                  {order.fulfillmentType === 'delivery' ? 'Delivery Address:' : 'Collection Address:'}
+                </span>
                 <p className="font-medium text-sm mt-1">{formatAddress(order.customerAddress)}</p>
               </div>
             )}
@@ -538,10 +545,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
                       </div>
-                      {/* Show shipping cost if applicable */}
+                      {/* Show delivery/shipping cost if applicable */}
                       {(order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0) ? (
                         <div className="flex justify-between text-xs">
-                          <span>Shipping:</span>
+                          <span>{order.fulfillmentType === 'delivery' ? 'Delivery:' : 'Shipping:'}</span>
                           <span>{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
                         </div>
                       ) : null}
