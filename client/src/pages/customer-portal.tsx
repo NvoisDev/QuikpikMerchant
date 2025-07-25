@@ -30,6 +30,15 @@ import { CustomerHome } from "@/components/customer/CustomerHome";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
+import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
+
+// Use the Product type directly with type assertion to handle missing properties
+type ExtendedProduct = ProductType & {
+  wholesaler?: {
+    businessName: string;
+    businessPhone?: string;
+  };
+};
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -532,7 +541,6 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           size="lg"
           disabled={!stripe}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
-          type="submit"
         >
           Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
         </ButtonLoader>
@@ -1625,11 +1633,11 @@ export default function CustomerPortal() {
                           )}
                           {/* Promotional Offers Badges for Featured Product */}
                           {(() => {
-                            const badges = [];
+                            const badges: JSX.Element[] = [];
                             
                             // Show specific offer badges for promotional offers (only if promo is active)
                             if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers) && featuredProduct.promoActive) {
-                              featuredProduct.promotionalOffers.forEach((offer, index) => {
+                              featuredProduct.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
                                   badges.push(
@@ -1891,7 +1899,7 @@ export default function CustomerPortal() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map((category) => (
+                      {categories.filter(category => category).map((category: string) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
@@ -2016,11 +2024,11 @@ export default function CustomerPortal() {
                           )}
                           {/* Promotional Offers Badges */}
                           {(() => {
-                            const badges = [];
+                            const badges: JSX.Element[] = [];
                             
                             // Only show badges if product has promotional offers AND they're active
                             if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
-                              product.promotionalOffers.forEach((offer, index) => {
+                              product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
                                   badges.push(
@@ -2179,11 +2187,11 @@ export default function CustomerPortal() {
                                 )}
                                 {/* Promotional Offers Badges for List View */}
                                 {(() => {
-                                  const badges = [];
+                                  const badges: JSX.Element[] = [];
                                   
                                   // Only show badges if product has promotional offers AND they're active
                                   if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
-                                    product.promotionalOffers.forEach((offer, index) => {
+                                    product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                       if (offer.isActive) {
                                         const config = getOfferTypeConfig(offer.type);
                                         badges.push(
@@ -2339,15 +2347,19 @@ export default function CustomerPortal() {
 
         {/* All Products View - Shown when no featured product OR when "View All" is clicked */}
         {(!featuredProduct || showAllProducts) && (
-          console.log('🎯 Showing All Products View:', { 
-            featuredProduct: !!featuredProduct, 
-            showAllProducts, 
-            filteredProductsCount: filteredProducts.length,
-            actualProducts: products.length,
-            productsLoading,
-            productsError: productsError?.message
-          }) || 
-          <div className="mb-8">
+          <>
+            {(() => {
+              console.log('🎯 Showing All Products View:', { 
+                featuredProduct: !!featuredProduct, 
+                showAllProducts, 
+                filteredProductsCount: filteredProducts.length,
+                actualProducts: products.length,
+                productsLoading,
+                productsError: productsError?.message
+              });
+              return null;
+            })()}
+            <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
                 {featuredProduct ? "All Products" : "Available Products"}
@@ -2388,7 +2400,7 @@ export default function CustomerPortal() {
                     <p className="text-gray-500">No products available at the moment</p>
                   </div>
                 ) : (
-                  filteredProducts.map((product: Product) => (
+                  filteredProducts.map((product: ExtendedProduct) => (
                     viewMode === "grid" ? (
                       // Grid View
                       <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
@@ -2437,11 +2449,11 @@ export default function CustomerPortal() {
                               )}
                               {/* Promotional Offers Badges for Grid View */}
                               {(() => {
-                                const badges = [];
+                                const badges: JSX.Element[] = [];
                                 
                                 // Show specific offer badges for promotional offers
                                 if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
-                                  product.promotionalOffers.forEach((offer, index) => {
+                                  product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                     if (offer.isActive) {
                                       const config = getOfferTypeConfig(offer.type);
                                       badges.push(
@@ -2553,11 +2565,11 @@ export default function CustomerPortal() {
                                     )}
                                     {/* Promotional Offers Badges for List View */}
                                     {(() => {
-                                      const badges = [];
+                                      const badges: JSX.Element[] = [];
                                       
                                       // Show specific offer badges for promotional offers
                                       if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
-                                        product.promotionalOffers.forEach((offer, index) => {
+                                        product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                           if (offer.isActive) {
                                             const config = getOfferTypeConfig(offer.type);
                                             badges.push(
@@ -2680,6 +2692,7 @@ export default function CustomerPortal() {
               </div>
             )}
           </div>
+          </>
         )}
       </div>
 
@@ -2828,7 +2841,7 @@ export default function CustomerPortal() {
                     onChange={(e) => {
                       const inputValue = e.target.value;
                       // Allow any input during typing - validation happens on blur
-                      setEditQuantity(inputValue === '' ? '' : inputValue);
+                      setEditQuantity(inputValue === '' ? 1 : parseInt(inputValue) || 1);
                     }}
                     onBlur={(e) => {
                       const value = parseInt(e.target.value);
@@ -2853,7 +2866,7 @@ export default function CustomerPortal() {
                       const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
                       setEditQuantity(Math.min(maxQty, editQuantity + 1));
                     }}
-                    disabled={editQuantity >= (selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock)}
+                    disabled={Number(editQuantity) >= (selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock)}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -2862,13 +2875,13 @@ export default function CustomerPortal() {
               
               {/* Stock limit warning */}
               {selectedSellingType === "pallets" ? (
-                parseFloat(editQuantity) >= (selectedProduct.palletStock || 0) && (
+                Number(editQuantity) >= (selectedProduct.palletStock || 0) && (
                   <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
                     ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.palletStock || 0)} pallets)
                   </div>
                 )
               ) : (
-                parseFloat(editQuantity) >= selectedProduct.stock && (
+                Number(editQuantity) >= selectedProduct.stock && (
                   <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
                     ⚠️ Quantity limited to available stock ({formatNumber(selectedProduct.stock)} units)
                   </div>
@@ -2877,13 +2890,13 @@ export default function CustomerPortal() {
               
               {/* MOQ information when below minimum - just informational, not blocking */}
               {selectedSellingType === "pallets" ? (
-                parseFloat(editQuantity) > 0 && parseFloat(editQuantity) < (selectedProduct.palletMoq || 1) && (
+                Number(editQuantity) > 0 && Number(editQuantity) < (selectedProduct.palletMoq || 1) && (
                   <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
                     ℹ️ Note: Typical minimum order is {formatNumber(selectedProduct.palletMoq || 1)} pallets, but you can order any quantity.
                   </div>
                 )
               ) : (
-                parseFloat(editQuantity) > 0 && parseFloat(editQuantity) < selectedProduct.moq && (
+                Number(editQuantity) > 0 && Number(editQuantity) < selectedProduct.moq && (
                   <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
                     ℹ️ Note: Typical minimum order is {formatNumber(selectedProduct.moq)} units, but you can order any quantity.
                   </div>
@@ -2892,7 +2905,7 @@ export default function CustomerPortal() {
               
               {/* MOQ reminder */}
               {selectedSellingType === "pallets" ? (
-                editQuantity === (selectedProduct.palletMoq || 1) && (selectedProduct.palletMoq || 1) > 1 && (
+                Number(editQuantity) === (selectedProduct.palletMoq || 1) && (selectedProduct.palletMoq || 1) > 1 && (
                   <div className="text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
                     ℹ️ Minimum order quantity is {formatNumber(selectedProduct.palletMoq || 1)} pallets
                   </div>

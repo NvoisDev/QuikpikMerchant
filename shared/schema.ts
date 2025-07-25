@@ -18,12 +18,14 @@ import { z } from "zod";
 // Promotional offer types
 export type PromotionalOfferType = 
   | 'percentage_discount'    // 10% off
+  | 'fixed_discount'         // £5 off (alternative name)
   | 'fixed_amount_discount'  // £5 off
+  | 'fixed_price'            // Set fixed promotional price
   | 'bogo'                   // Buy one get one free
   | 'buy_x_get_y_free'       // Buy 2 get 1 free, Buy 3 get 2 free, etc.
   | 'multi_buy'              // Volume discount for multiple purchases
+  | 'bulk_tier'              // Tiered pricing levels
   | 'bulk_discount'          // Tiered pricing: 10+ items = 5% off, 50+ items = 10% off
-  | 'fixed_price'            // Set fixed promotional price
   | 'free_shipping'          // Free delivery on this product
   | 'bundle_deal';           // Special price when bought with other products
 
