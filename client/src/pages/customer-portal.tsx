@@ -301,7 +301,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               }
             }, 0), // Send ONLY product subtotal - backend will add transaction fees
             shippingInfo: {
-              option: customerData.shippingOption,
+              option: customerData.shippingOption === 'collection' ? 'delivery' : customerData.shippingOption,
               service: customerData.selectedShippingService
             }
           });
