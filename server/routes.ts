@@ -1763,18 +1763,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const items = JSON.parse(itemsJson);
           const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
           
-          console.log('🚚 Original shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
+          console.log('🚚 WEBHOOK DEBUG: Raw shippingInfoJson metadata:', shippingInfoJson);
+          console.log('🚚 WEBHOOK DEBUG: Parsed shippingInfo:', JSON.stringify(shippingInfo, null, 2));
           
           // Respect customer's shipping selection directly
           // Customer portal sends 'pickup' for free collection or 'delivery' for paid delivery
           // No mapping needed - use customer's actual choice
           const originalOption = shippingInfo.option;
           
-          console.log('✅ Using customer selection directly:', {
+          console.log('🚚 WEBHOOK DEBUG: Customer selection analysis:', {
             customerChoice: originalOption,
             hasService: !!shippingInfo.service,
             serviceName: shippingInfo.service?.serviceName || 'None',
-            servicePrice: shippingInfo.service?.price || '0.00'
+            servicePrice: shippingInfo.service?.price || '0.00',
+            willSaveAsDelivery: originalOption === 'delivery',
+            willSaveAsPickup: originalOption === 'pickup'
           });
 
           // Create customer if doesn't exist
@@ -1850,11 +1853,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
 
           // Log order data before creation for debugging
-          console.log('🏗️ ORDER DATA BEING SAVED:', JSON.stringify({
+          console.log('🏗️ WEBHOOK DEBUG: ORDER DATA BEING SAVED TO DATABASE:', JSON.stringify({
             fulfillmentType: orderData.fulfillmentType,
             deliveryCarrier: orderData.deliveryCarrier,
             deliveryCost: orderData.deliveryCost,
-            shippingInfoOptionUsed: shippingInfo.option
+            shippingTotal: orderData.shippingTotal,
+            originalShippingOption: shippingInfo.option,
+            hasShippingService: !!shippingInfo.service,
+            shippingServiceName: shippingInfo.service?.serviceName,
+            databaseWillReceive: {
+              fulfillment_type: orderData.fulfillmentType,
+              delivery_carrier: orderData.deliveryCarrier,
+              delivery_cost: orderData.deliveryCost
+            }
           }, null, 2));
 
           const order = await storage.createOrder({
