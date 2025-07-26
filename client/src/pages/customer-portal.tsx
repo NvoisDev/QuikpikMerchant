@@ -698,7 +698,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: undefined as 'pickup' | 'delivery' | undefined,
+    shippingOption: 'pickup',
     selectedShippingService: undefined
   });
   
@@ -3839,6 +3839,17 @@ export default function CustomerPortal() {
                     onSuccess={() => {
                       setCart([]);
                       setShowCheckout(false);
+                      
+                      // Reset shipping state to prevent delivery charges carrying over
+                      setCustomerData(prev => ({
+                        ...prev,
+                        shippingOption: 'pickup',
+                        selectedShippingService: undefined
+                      }));
+                      
+                      // Clear shipping services to force fresh quotes for next order
+                      setAvailableShippingServices([]);
+                      
                       // Preserve authentication state and navigate to products view
                       setShowAllProducts(true);
                       setShowHomePage(false);
