@@ -879,6 +879,25 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Consistent Interface**: Same tagging system used in customer portal order history and order details modal
 - **Production Ready**: Complete order tagging system operational with enhanced delivery cost visibility ✅
 
+### DELIVERY ORDER DISPLAY ISSUE FIXED - COMPLETED ✅ (July 26, 2025)
+- **Critical Issue Resolved**: Delivery orders showing "Collection" badge and missing delivery cost/details in customer order history  
+- **Root Cause**: Data mapping issue where customer portal used 'collection' for delivery but webhook expected 'delivery'
+- **Solution Implemented**: 
+  - **Fixed Shipping Option Mapping**: Updated StripeCheckoutForm to convert 'collection' → 'delivery' before sending to backend
+  - **Enhanced Frontend Display**: Fixed CustomerOrderHistory to use both 'customerAddress' and 'deliveryAddress' fields
+  - **Prominent Delivery Cost Display**: Enhanced order cards and details to show delivery costs with truck/hand icons
+  - **Consistent Badge System**: Delivery orders now show blue "Delivery" badge, collection orders show green "Collection" badge
+- **Technical Implementation**:
+  - **Payment Flow Fix**: `option: customerData.shippingOption === 'collection' ? 'delivery' : customerData.shippingOption`
+  - **Address Field Support**: Order details display supports both address field formats for backward compatibility
+  - **Enhanced Styling**: Delivery costs shown prominently with colored icons and better formatting
+  - **Icon Integration**: Added Truck and Hand icons for visual distinction between delivery types
+- **User Experience**: 
+  - **Clear Visual Distinction**: Orders now properly tagged as "Delivery" vs "Collection" with appropriate icons
+  - **Cost Transparency**: Delivery costs prominently displayed in order cards and breakdown sections
+  - **Address Display**: Customer addresses properly shown in order details regardless of backend field naming
+- **Production Ready**: Complete delivery order display system operational with proper tagging and cost visibility ✅
+
 ### CHECKOUT TOTAL CALCULATION FIX - COMPLETED ✅ (July 26, 2025)
 - **Critical Issue Resolved**: Customer checkout showing incorrect total amount (£164.03 instead of £252.03) due to missing shipping cost in calculation
 - **Root Cause**: "Total Amount" calculation in checkout only included subtotal + transaction fee, missing shipping cost component
