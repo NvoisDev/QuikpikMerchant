@@ -229,12 +229,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span className="text-gray-600">Fulfillment Type:</span>
               <span className="font-medium capitalize">{order.fulfillmentType}</span>
             </div>
-            {order.deliveryCarrier && (
+            {(order.deliveryCarrier || order.fulfillmentType === 'delivery') && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">
                   {order.fulfillmentType === 'delivery' ? 'Delivery Company:' : 'Collection Carrier:'}
                 </span>
-                <span className="font-medium">{order.deliveryCarrier}</span>
+                <span className={`font-medium ${!order.deliveryCarrier ? 'text-gray-500' : ''}`}>
+                  {order.deliveryCarrier || (order.fulfillmentType === 'delivery' ? 'Not specified' : 'N/A')}
+                </span>
               </div>
             )}
             {(order.customerAddress || order.deliveryAddress) && (
@@ -265,11 +267,20 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Subtotal:</span>
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
-            {/* Show shipping/delivery cost - prefer deliveryCost over shippingTotal */}
-            {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
+            {/* Show shipping/delivery cost - always show for delivery orders */}
+            {(order.fulfillmentType === 'delivery' || ((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0))) && (
               <div className="flex justify-between text-sm">
                 <span>{order.fulfillmentType === 'delivery' ? 'Delivery Cost:' : 'Shipping:'}</span>
-                <span>{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
+                <span>
+                  {order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? 
+                    formatCurrency(order.deliveryCost) : 
+                    order.shippingTotal && parseFloat(order.shippingTotal) > 0 ? 
+                      formatCurrency(order.shippingTotal) : 
+                      order.fulfillmentType === 'delivery' ? 
+                        <span className="text-gray-500">No cost recorded</span> : 
+                        formatCurrency('0')
+                  }
+                </span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -545,8 +556,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
                       </div>
-                      {/* Show delivery/shipping cost if applicable - enhanced styling */}
-                      {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
+                      {/* Show delivery/shipping cost - always show for delivery orders */}
+                      {(order.fulfillmentType === 'delivery' || ((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0))) && (
                         <div className="flex justify-between text-xs">
                           <span className="flex items-center">
                             {order.fulfillmentType === 'delivery' ? (
@@ -561,7 +572,16 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                               </>
                             )}
                           </span>
-                          <span className="font-medium">{formatCurrency(order.deliveryCost || order.shippingTotal || '0')}</span>
+                          <span className="font-medium">
+                            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? 
+                              formatCurrency(order.deliveryCost) : 
+                              order.shippingTotal && parseFloat(order.shippingTotal) > 0 ? 
+                                formatCurrency(order.shippingTotal) : 
+                                order.fulfillmentType === 'delivery' ? 
+                                  <span className="text-gray-500">No cost recorded</span> : 
+                                  formatCurrency('0')
+                            }
+                          </span>
                         </div>
                       )}
 
