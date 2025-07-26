@@ -3436,7 +3436,8 @@ export default function CustomerPortal() {
                         }
                       }, 0);
                       const transactionFee = subtotal * 0.055 + 0.50;
-                      return (subtotal + transactionFee).toFixed(2);
+                      const shippingCost = cartStats.shippingCost || 0;
+                      return (subtotal + shippingCost + transactionFee).toFixed(2);
                     })()}</span>
                   </div>
                 </div>

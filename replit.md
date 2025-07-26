@@ -879,6 +879,21 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Consistent Interface**: Same tagging system used in customer portal order history and order details modal
 - **Production Ready**: Complete order tagging system operational with enhanced delivery cost visibility ✅
 
+### CHECKOUT TOTAL CALCULATION FIX - COMPLETED ✅ (July 26, 2025)
+- **Critical Issue Resolved**: Customer checkout showing incorrect total amount (£164.03 instead of £252.03) due to missing shipping cost in calculation
+- **Root Cause**: "Total Amount" calculation in checkout only included subtotal + transaction fee, missing shipping cost component
+- **Example Issue**: £155.00 subtotal + £88.00 shipping + £9.03 transaction fee should equal £252.03, but was showing £164.03
+- **Solution Implemented**: 
+  - **Fixed Total Calculation**: Updated checkout total to properly include subtotal + shipping + transaction fee
+  - **Added Shipping Component**: Integrated `cartStats.shippingCost` into total amount calculation
+  - **Correct Formula**: `(subtotal + shippingCost + transactionFee).toFixed(2)`
+- **Technical Implementation**:
+  - **Line 3442-3443**: Added shipping cost variable and included in total calculation
+  - **Hot Reload Applied**: Changes immediately reflected in customer portal
+  - **Consistent Calculation**: Now matches order history display logic for accurate totals
+- **User Experience**: Customers now see correct total amount that matches actual payment charges
+- **Production Ready**: Complete checkout calculation system operational with accurate total display ✅
+
 ## CRITICAL WEIGHT CALCULATION FIX - COMPLETED ✅ (July 25, 2025)
 
 ### SHIPPING WEIGHT CALCULATION FIELD MAPPING FIX - COMPLETED ✅ (July 25, 2025)
