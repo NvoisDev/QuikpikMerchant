@@ -1173,6 +1173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customer/create-payment', async (req, res) => {
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
+      
+      console.log('🚚 PAYMENT CREATION DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
@@ -1259,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice)
           }))),
-          shippingInfo: shippingInfo ? JSON.stringify(shippingInfo) : JSON.stringify({ option: 'pickup' })
+          shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' })
         }
       });
 
@@ -1762,6 +1764,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const items = JSON.parse(itemsJson);
           const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+          
+          console.log('🚚 WEBHOOK DEBUG: shippingInfoJson exists?', !!shippingInfoJson);
+          console.log('🚚 WEBHOOK DEBUG: shippingInfoJson value:', shippingInfoJson);
           
           console.log('🚚 WEBHOOK DEBUG: Raw shippingInfoJson metadata:', shippingInfoJson);
           console.log('🚚 WEBHOOK DEBUG: Parsed shippingInfo:', JSON.stringify(shippingInfo, null, 2));
