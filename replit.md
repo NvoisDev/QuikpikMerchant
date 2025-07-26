@@ -297,6 +297,19 @@
 - **Testing Confirmed**: Order #146 test confirmed bug existed (saved as pickup despite delivery selection), fix implemented
 - **Production Ready**: Complete delivery order processing operational across all order creation pathways
 
+### DUPLICATE SMS AUTHENTICATION FIX - COMPLETED ✅ (July 26, 2025)
+- **Issue Resolved**: Multiple SMS codes being sent to wholesaler during customer portal authentication causing unnecessary costs
+- **Root Cause**: Authentication component was allowing duplicate SMS requests without proper request deduplication
+- **Solution Implemented**: Added SMS request protection to prevent duplicate authentication requests
+- **Technical Implementation**:
+  - **Request Deduplication**: Added `smsRequestInProgress` state flag to prevent concurrent SMS requests
+  - **Duplicate Prevention**: Authentication flow now checks for in-progress requests before sending new SMS codes
+  - **Clean State Management**: SMS request flag properly reset in finally block to handle all completion scenarios
+  - **Debug Logging**: Enhanced logging to track duplicate request prevention
+- **User Impact**: Wholesalers will no longer receive multiple SMS codes when customers access their store portal
+- **Cost Savings**: Prevents unnecessary Twilio SMS charges from duplicate authentication requests
+- **Production Ready**: Authentication system now sends only one SMS code per legitimate authentication attempt
+
 ### PAYMENT CALCULATION MISMATCH ISSUE - RESOLVED ✅ (July 23, 2025)
 - **Critical Issue Resolved**: Payment button was displaying product subtotal (£48.00) instead of total amount including transaction fees (£51.14)
 - **Root Cause**: StripeCheckoutForm was receiving `cartStats.totalValue` (subtotal + shipping) but payment button should show total amount that customer actually pays

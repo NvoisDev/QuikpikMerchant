@@ -41,11 +41,20 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [smsExpiry, setSmsExpiry] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
+  const [smsRequestInProgress, setSmsRequestInProgress] = useState(false);
 
   const { toast } = useToast();
 
   // Handle automatic authentication when coming from CustomerLogin
   const handleAuthenticationFromLogin = useCallback(async (digits: string) => {
+    // Prevent duplicate SMS requests
+    if (smsRequestInProgress) {
+      console.log('🚫 SMS request already in progress, skipping duplicate');
+      return;
+    }
+    
+    setSmsRequestInProgress(true);
+    
     console.log('🚀 HANDLE_AUTHENTICATION_FROM_LOGIN START', { 
       wholesalerId, 
       digits,
@@ -102,8 +111,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
       setError('Authentication failed. Please try again.');
       setAuthStep('step1');
+    } finally {
+      setSmsRequestInProgress(false);
     }
-  }, [wholesalerId]);
+  }, [wholesalerId, smsRequestInProgress]);
 
   // Initialize authentication flow once on component mount
   useEffect(() => {
