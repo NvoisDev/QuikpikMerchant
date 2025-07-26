@@ -664,7 +664,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'delivery',
+    shippingOption: 'pickup',
     selectedShippingService: undefined
   });
 
