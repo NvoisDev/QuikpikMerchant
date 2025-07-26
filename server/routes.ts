@@ -1756,27 +1756,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log('🚚 Original shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
           
-          // Map shipping options for proper database storage
-          // - 'collection' means paid delivery service (rename to 'delivery')
-          // - 'pickup' means free pickup from supplier (keep as 'pickup')
-          // - If there's a service with price > 0, it's definitely delivery regardless of option name
-          const hasDeliveryService = shippingInfo.service && parseFloat(shippingInfo.service.price || '0') > 0;
+          // Respect customer's shipping selection directly
+          // Customer portal sends 'pickup' for free collection or 'delivery' for paid delivery
+          // No mapping needed - use customer's actual choice
           const originalOption = shippingInfo.option;
           
-          console.log('🔍 Shipping analysis:', {
-            originalOption,
+          console.log('✅ Using customer selection directly:', {
+            customerChoice: originalOption,
             hasService: !!shippingInfo.service,
-            servicePrice: shippingInfo.service?.price,
-            parsedPrice: parseFloat(shippingInfo.service?.price || '0'),
-            hasDeliveryService
+            serviceName: shippingInfo.service?.serviceName || 'None',
+            servicePrice: shippingInfo.service?.price || '0.00'
           });
-          
-          if (originalOption === 'collection' || hasDeliveryService) {
-            shippingInfo.option = 'delivery';
-            console.log('✅ MAPPED TO DELIVERY - Original:', originalOption, 'Service:', hasDeliveryService);
-          } else {
-            console.log('❌ KEEPING AS PICKUP - Original:', originalOption, 'Service:', hasDeliveryService);
-          }
 
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);

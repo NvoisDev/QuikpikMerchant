@@ -879,25 +879,25 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Consistent Interface**: Same tagging system used in customer portal order history and order details modal
 - **Production Ready**: Complete order tagging system operational with enhanced delivery cost visibility ✅
 
-### DELIVERY ORDER DISPLAY ISSUE COMPLETELY FIXED - COMPLETED ✅ (July 26, 2025)
-- **Critical Issue Resolved**: Customer portal "Delivery" selections were saving as "Collection" orders instead of proper delivery orders  
-- **Root Cause**: Confusing UI terminology where clicking "Delivery" set `shippingOption: 'collection'` causing data mapping confusion
+### CUSTOMER SHIPPING CHOICE PRESERVATION FIX - COMPLETED ✅ (July 26, 2025)
+- **Critical Issue Resolved**: All orders were defaulting to "delivery" regardless of customer's actual selection (pickup vs delivery)
+- **Root Cause**: Webhook had incorrect mapping logic that automatically converted customer choices, overriding their actual selection
 - **Solution Implemented**: 
-  - **Fixed UI Terminology**: Updated customer portal to use `shippingOption: 'delivery'` when user clicks "Delivery" option
-  - **Removed Conversion Logic**: Eliminated confusing `'collection' → 'delivery'` conversion in payment processing
-  - **Direct Data Flow**: Customer selection now flows directly: UI "Delivery" → `shippingOption: 'delivery'` → webhook `fulfillment_type: 'delivery'`
-  - **Enhanced Order Display**: Orders now properly tagged with blue "Delivery" badges and correct carrier/cost information
+  - **Removed Problematic Mapping**: Eliminated webhook logic that was converting `'collection'` to `'delivery'` automatically
+  - **Direct Customer Choice Respect**: Webhook now uses customer's actual selection without any conversion or mapping
+  - **Simplified Logic**: Customer portal sends `'pickup'` or `'delivery'` directly - webhook respects this exactly
+  - **Fixed Order Creation**: Database `fulfillment_type` now matches customer's actual checkout selection
 - **Technical Implementation**:
-  - **Type Definition Fix**: Changed `shippingOption: "pickup" | "collection"` to `shippingOption: "pickup" | "delivery"`
-  - **UI Logic Update**: All customer portal references updated from `'collection'` to `'delivery'` for consistency
-  - **Payment Flow Simplified**: Removed conversion logic - `option: customerData.shippingOption` sends value directly
-  - **Webhook Processing**: Enhanced webhook correctly processes delivery orders with proper cost and carrier details
+  - **Webhook Code Cleanup**: Removed lines 1774-1779 that had incorrect `if (originalOption === 'collection')` mapping logic
+  - **Direct Data Flow**: Customer selection → `shippingInfo.option` → `fulfillment_type` without conversions
+  - **Proper Tagging Logic**: Orders display correct badges based on actual customer choice
+  - **Verified Database Storage**: Order SF-078 (pickup) and SF-079 (delivery) correctly saved with chosen fulfillment types
 - **User Experience**: 
-  - **Intuitive Selection**: Clicking "Delivery" now correctly saves as delivery order (not collection)
-  - **Proper Order Tags**: Delivery orders show blue "Delivery" badge with carrier name and shipping cost
-  - **Cost Transparency**: Delivery costs prominently displayed with Royal Mail, DPD, etc. carrier information
-  - **Consistent Data**: Database fulfillment_type matches user selection without confusing conversions
-- **Production Ready**: Complete delivery order system operational - clicking "Delivery" saves as delivery orders with proper costs ✅
+  - **Accurate Order Tags**: Pickup orders show green "Collection" badge, delivery orders show blue "Delivery" badge
+  - **Correct Information Display**: Delivery orders show delivery details and costs, pickup orders show collection info only
+  - **Customer Choice Honored**: System now respects and preserves customer's actual shipping preference
+  - **Consistent Data**: Database, dashboard, and customer portal all reflect the same customer choice
+- **Production Ready**: Complete customer choice preservation system operational - orders reflect actual customer selection ✅
 
 ### CRITICAL DEFAULT STATE FIX - DELIVERY ORDERS NOW WORKING ✅ (July 26, 2025)
 - **Critical Issue Resolved**: All orders were defaulting to "pickup" regardless of user selection due to incorrect initial state
