@@ -305,6 +305,15 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               service: customerData.selectedShippingService
             }
           });
+          
+          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', {
+            option: customerData.shippingOption,
+            service: customerData.selectedShippingService ? {
+              serviceName: customerData.selectedShippingService.serviceName,
+              price: customerData.selectedShippingService.price
+            } : null
+          });
+          
           const data = await response.json();
           setClientSecret(data.clientSecret);
         } catch (error: any) {
@@ -3627,11 +3636,15 @@ export default function CustomerPortal() {
                         ? 'border-green-500 bg-green-50' 
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-                    onClick={() => setCustomerData({
-                      ...customerData, 
-                      shippingOption: 'pickup',
-                      selectedShippingService: undefined
-                    })}
+                    onClick={() => {
+                      console.log('🚚 FRONTEND: User clicked PICKUP option');
+                      setCustomerData({
+                        ...customerData, 
+                        shippingOption: 'pickup',
+                        selectedShippingService: undefined
+                      });
+                      console.log('🚚 FRONTEND: Set shippingOption to PICKUP');
+                    }}
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
@@ -3654,7 +3667,15 @@ export default function CustomerPortal() {
                         : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                     onClick={() => {
+                      console.log('🚚 FRONTEND: User clicked DELIVERY option');
+                      console.log('🚚 FRONTEND: Current state before update:', {
+                        currentShippingOption: customerData.shippingOption,
+                        hasAddress: !!customerData.address,
+                        hasCity: !!customerData.city,
+                        hasPostalCode: !!customerData.postalCode
+                      });
                       setCustomerData({...customerData, shippingOption: 'delivery'});
+                      console.log('🚚 FRONTEND: Set shippingOption to DELIVERY');
                       if (customerData.address && customerData.city && customerData.postalCode) {
                         fetchShippingQuotes();
                       }
