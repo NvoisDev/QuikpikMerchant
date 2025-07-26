@@ -538,22 +538,10 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
         console.log('✅ Triggering webhook manually to ensure delivery order creation');
         
-        // Manually trigger webhook to ensure delivery orders are created correctly
-        try {
-          await apiRequest("POST", "/api/stripe/webhook-test", {
-            type: "payment_intent.succeeded",
-            data: {
-              object: {
-                id: paymentIntent.id,
-                amount: paymentIntent.amount,
-                metadata: paymentIntent.metadata
-              }
-            }
-          });
-          console.log('✅ Manual webhook triggered successfully for delivery order');
-        } catch (webhookError) {
-          console.warn('⚠️ Manual webhook trigger failed, order may be created without delivery data:', webhookError);
-        }
+        // DISABLED: Manual webhook trigger was causing incomplete data processing
+        // Relying on Stripe's automatic webhook system which has complete payment intent data
+        console.log('✅ Payment successful - order will be created by Stripe webhook automatically');
+        console.log('🚚 Delivery data preserved in payment intent metadata for webhook processing');
         
         toast({
           title: "Payment Successful!",
