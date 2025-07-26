@@ -3833,6 +3833,12 @@ export default function CustomerPortal() {
                       // Preserve authentication state and navigate to products view
                       setShowAllProducts(true);
                       setShowHomePage(false);
+                      
+                      // Invalidate customer orders cache to show new orders immediately
+                      queryClient.invalidateQueries({ 
+                        queryKey: [`/api/customer-orders`, wholesalerId, authenticatedCustomer?.phone] 
+                      });
+                      
                       toast({
                         title: "Order Placed Successfully!",
                         description: "You will receive an email confirmation shortly.",
