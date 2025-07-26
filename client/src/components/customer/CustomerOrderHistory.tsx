@@ -508,20 +508,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         </div>
       </CardHeader>
       <CardContent>
-        {/* Debug Info - Remove after testing */}
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-          <div className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</div>
-          <div className="text-blue-700 space-y-1">
-            <div>Orders Array: {Array.isArray(orders) ? 'Yes' : 'No'}</div>
-            <div>Total Orders: {orders?.length || 0}</div>
-            <div>Filtered Orders: {filteredOrders?.length || 0}</div>
-            <div>Paginated Orders: {paginatedOrders?.length || 0}</div>
-            <div>Current Page: {currentPage} of {totalPages}</div>
-            <div>Search Term: "{searchTerm || 'none'}"</div>
-            <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
-            <div>Error: {error ? 'Yes' : 'No'}</div>
-          </div>
-        </div>
+
 
         {/* Search Bar */}
         <div className="mb-4">
