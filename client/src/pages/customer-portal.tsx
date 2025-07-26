@@ -234,7 +234,7 @@ interface CustomerData {
   postalCode: string;
   country: string;
   notes: string;
-  shippingOption: "pickup" | "collection";
+  shippingOption: "pickup" | "delivery";
   selectedShippingService?: {
     serviceId: string;
     serviceName: string;
@@ -301,7 +301,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               }
             }, 0), // Send ONLY product subtotal - backend will add transaction fees
             shippingInfo: {
-              option: customerData.shippingOption === 'collection' ? 'delivery' : customerData.shippingOption,
+              option: customerData.shippingOption,
               service: customerData.selectedShippingService
             }
           });
@@ -1003,7 +1003,7 @@ export default function CustomerPortal() {
     
     // Calculate shipping cost (consider free shipping promotions)
     let shippingCost = 0;
-    if (customerData.shippingOption === 'collection' && customerData.selectedShippingService) {
+    if (customerData.shippingOption === 'delivery' && customerData.selectedShippingService) {
       if (freeShippingApplied) {
         shippingCost = 0;
         if (!appliedPromotions.includes('Free Shipping')) {
@@ -3395,7 +3395,7 @@ export default function CustomerPortal() {
                     return null;
                   })()}
                   
-                  {customerData.shippingOption === 'collection' && customerData.selectedShippingService && (
+                  {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
                     <div className="flex justify-between">
                       <span>Shipping ({customerData.selectedShippingService.serviceName}):</span>
                       <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
@@ -3649,12 +3649,12 @@ export default function CustomerPortal() {
 
                   <div 
                     className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      customerData.shippingOption === 'collection' 
+                      customerData.shippingOption === 'delivery' 
                         ? 'border-green-500 bg-green-50' 
                         : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                     onClick={() => {
-                      setCustomerData({...customerData, shippingOption: 'collection'});
+                      setCustomerData({...customerData, shippingOption: 'delivery'});
                       if (customerData.address && customerData.city && customerData.postalCode) {
                         fetchShippingQuotes();
                       }
@@ -3663,7 +3663,7 @@ export default function CustomerPortal() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
-                        customerData.shippingOption === 'collection' 
+                        customerData.shippingOption === 'delivery' 
                           ? 'border-green-500 bg-green-500' 
                           : 'border-gray-300'
                       }`} />
@@ -3685,7 +3685,7 @@ export default function CustomerPortal() {
                 </div>
 
                 {/* Shipping Services Selection */}
-                {customerData.shippingOption === 'collection' && (
+                {customerData.shippingOption === 'delivery' && (
                   <div className="space-y-3">
                     <h4 className="font-medium">Choose Delivery Service</h4>
                     
