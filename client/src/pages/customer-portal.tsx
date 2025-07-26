@@ -524,9 +524,27 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           message: errorMessage
         });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded - webhook automatically handles order creation and emails
+        // Payment succeeded - ensure order creation with delivery data
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
-        console.log('✅ Webhook should create order automatically for payment:', paymentIntent.id);
+        console.log('✅ Triggering webhook manually to ensure delivery order creation');
+        
+        // Manually trigger webhook to ensure delivery orders are created correctly
+        try {
+          await apiRequest("POST", "/api/stripe/webhook-test", {
+            type: "payment_intent.succeeded",
+            data: {
+              object: {
+                id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                metadata: paymentIntent.metadata
+              }
+            }
+          });
+          console.log('✅ Manual webhook triggered successfully for delivery order');
+        } catch (webhookError) {
+          console.warn('⚠️ Manual webhook trigger failed, order may be created without delivery data:', webhookError);
+        }
+        
         toast({
           title: "Payment Successful!",
           description: "Your order has been placed successfully. You'll receive a confirmation email shortly.",
