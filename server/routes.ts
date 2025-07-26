@@ -1656,6 +1656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Webhook to handle successful payments
   app.post('/api/stripe/webhook', async (req, res) => {
+    console.log('🚀 WEBHOOK ENDPOINT HIT - Starting processing...');
     console.log('📨 Webhook received from Stripe');
     
     const sig = req.headers['stripe-signature'] as string;
@@ -1691,6 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Shared function to process payment_intent.succeeded events
   async function processPaymentIntentSucceeded(paymentIntent: any, res: any) {
+    console.log('=== 💳 WEBHOOK PROCESSING START ===');
     console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
     console.log('🔍 Payment Intent Metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
     
@@ -1754,10 +1756,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log('🚚 Original shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
           
-          // Map 'collection' to 'delivery' for proper database storage (frontend uses 'collection' internally for delivery)
-          if (shippingInfo.option === 'collection') {
+          // Map shipping options for proper database storage
+          // - 'collection' means paid delivery service (rename to 'delivery')
+          // - 'pickup' means free pickup from supplier (keep as 'pickup')
+          // - If there's a service with price > 0, it's definitely delivery regardless of option name
+          const hasDeliveryService = shippingInfo.service && parseFloat(shippingInfo.service.price || '0') > 0;
+          const originalOption = shippingInfo.option;
+          
+          console.log('🔍 Shipping analysis:', {
+            originalOption,
+            hasService: !!shippingInfo.service,
+            servicePrice: shippingInfo.service?.price,
+            parsedPrice: parseFloat(shippingInfo.service?.price || '0'),
+            hasDeliveryService
+          });
+          
+          if (originalOption === 'collection' || hasDeliveryService) {
             shippingInfo.option = 'delivery';
-            console.log('🔄 Mapped collection → delivery');
+            console.log('✅ MAPPED TO DELIVERY - Original:', originalOption, 'Service:', hasDeliveryService);
+          } else {
+            console.log('❌ KEEPING AS PICKUP - Original:', originalOption, 'Service:', hasDeliveryService);
           }
 
           // Create customer if doesn't exist
@@ -1797,6 +1815,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             safeTotalCustomerPays
           });
 
+          console.log('🚚 FINAL shipping values before order creation:', {
+            shippingOption: shippingInfo.option,
+            hasService: !!shippingInfo.service,
+            serviceName: shippingInfo.service?.serviceName,
+            servicePrice: shippingInfo.service?.price,
+            willSetDelivery: shippingInfo.option === 'delivery' && shippingInfo.service,
+            calculatedDeliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+          });
+
           const orderData = {
             wholesalerId: wholesalerId,
             retailerId: customer.id,
@@ -1807,17 +1834,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-            // Add shipping information - use mapped option after collection->delivery conversion
+            notes: customerData.notes || '',
+            // FIXED: Add shipping information with proper mapping
             fulfillmentType: shippingInfo.option || 'pickup',
             deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
             deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
-            // Debug logging for shipping data
-            debugShippingInfo: JSON.stringify({
-              originalOption: shippingInfo.option,
-              hasService: !!shippingInfo.service,
-              serviceName: shippingInfo.service?.serviceName,
-              servicePrice: shippingInfo.service?.price
-            })
+            shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
           };
 
           // Create order items
@@ -1827,6 +1849,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             unitPrice: parseFloat(item.unitPrice).toFixed(2),
             total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
           }));
+
+          // Log order data before creation for debugging
+          console.log('🏗️ ORDER DATA BEING SAVED:', JSON.stringify({
+            fulfillmentType: orderData.fulfillmentType,
+            deliveryCarrier: orderData.deliveryCarrier,
+            deliveryCost: orderData.deliveryCost,
+            shippingInfoOptionUsed: shippingInfo.option
+          }, null, 2));
 
           const order = await storage.createOrder({
             ...orderData,
