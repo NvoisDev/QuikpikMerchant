@@ -6405,6 +6405,9 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     try {
       const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
       
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
+      
       console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
       
       // Validate and recalculate totalAmount to prevent NaN errors
@@ -6522,7 +6525,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerTransactionFee: customerTransactionFee.toFixed(2),
               totalAmountWithFee: totalAmountWithFee.toFixed(2),
               connectAccountUsed: 'false',
-              shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
+              shippingInfo: (() => {
+                console.log('🚚 PAYMENT INTENT DEBUG: shippingInfo value before stringify:', shippingInfo);
+                const finalShipping = shippingInfo || { option: 'pickup' };
+                console.log('🚚 PAYMENT INTENT DEBUG: Final shipping info being stored:', finalShipping);
+                return JSON.stringify(finalShipping);
+              })(),
               items: JSON.stringify(items.map(item => ({
                 ...item,
                 productName: item.productName || 'Product'
@@ -6553,7 +6561,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             customerTransactionFee: customerTransactionFee.toFixed(2),
             totalAmountWithFee: totalAmountWithFee.toFixed(2),
             connectAccountUsed: 'false',
-            shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
+            shippingInfo: (() => {
+              console.log('🚚 PAYMENT INTENT DEBUG (no connect): shippingInfo before stringify:', shippingInfo);
+              const finalShipping = shippingInfo || { option: 'pickup' };
+              console.log('🚚 PAYMENT INTENT DEBUG (no connect): Final shipping info stored:', finalShipping);
+              return JSON.stringify(finalShipping);
+            })(),
             items: JSON.stringify(items.map(item => ({
               ...item,
               productName: item.productName || 'Product'
