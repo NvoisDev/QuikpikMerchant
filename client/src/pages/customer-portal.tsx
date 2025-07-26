@@ -306,6 +306,9 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             }
           });
           
+          console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
+          console.log('🚚 FRONTEND: Current customerData.shippingOption:', customerData.shippingOption);
+          console.log('🚚 FRONTEND: Full customerData:', customerData);
           console.log('🚚 FRONTEND: Sending shippingInfo to backend:', {
             option: customerData.shippingOption,
             service: customerData.selectedShippingService ? {
@@ -313,6 +316,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               price: customerData.selectedShippingService.price
             } : null
           });
+          console.log('🚚 FRONTEND: === END DEBUG ===');
           
           const data = await response.json();
           setClientSecret(data.clientSecret);
@@ -673,9 +677,14 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'pickup',
+    shippingOption: 'delivery',
     selectedShippingService: undefined
   });
+  
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
+  }, [customerData.shippingOption]);
 
   // Fetch shipping quotes for customer delivery
   const fetchShippingQuotes = async () => {
@@ -3676,6 +3685,10 @@ export default function CustomerPortal() {
                       });
                       setCustomerData({...customerData, shippingOption: 'delivery'});
                       console.log('🚚 FRONTEND: Set shippingOption to DELIVERY');
+                      // Force immediate state check
+                      setTimeout(() => {
+                        console.log('🚚 FRONTEND: State after delivery click:', customerData.shippingOption);
+                      }, 100);
                       if (customerData.address && customerData.city && customerData.postalCode) {
                         fetchShippingQuotes();
                       }
