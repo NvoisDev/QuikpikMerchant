@@ -2829,9 +2829,9 @@ export default function CustomerPortal() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setEditQuantity(Math.max(1, editQuantity - 1));
+                      setEditQuantity(Math.max(0, editQuantity - 1));
                     }}
-                    disabled={editQuantity <= 1}
+                    disabled={editQuantity <= 0}
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
@@ -2840,18 +2840,21 @@ export default function CustomerPortal() {
                     value={editQuantity}
                     onChange={(e) => {
                       const inputValue = e.target.value;
-                      // Allow any input during typing - validation happens on blur
-                      setEditQuantity(inputValue === '' ? 1 : parseInt(inputValue) || 1);
+                      // Allow free typing including empty field, 0, and any number
+                      if (inputValue === '' || inputValue === '0' || !isNaN(parseInt(inputValue))) {
+                        setEditQuantity(inputValue === '' ? '' : parseInt(inputValue) || 0);
+                      }
                     }}
                     onBlur={(e) => {
-                      const value = parseInt(e.target.value);
+                      const value = e.target.value;
                       const maxQty = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
                       
-                      // Only enforce that quantity is positive and not more than stock
-                      if (isNaN(value) || value <= 0) {
-                        setEditQuantity(1); // Default to 1 if invalid
-                      } else if (value > maxQty) {
-                        setEditQuantity(maxQty);
+                      // Allow 0 and any positive number, only limit by stock
+                      if (value === '' || isNaN(parseInt(value))) {
+                        setEditQuantity(1); // Default to 1 if empty or invalid
+                      } else {
+                        const numValue = parseInt(value);
+                        setEditQuantity(numValue > maxQty ? maxQty : Math.max(0, numValue));
                       }
                     }}
                     className="w-24 text-center"
@@ -3046,16 +3049,14 @@ export default function CustomerPortal() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const newQuantity = Math.max(1, item.quantity - 1);
-                            if (newQuantity !== item.quantity) {
-                              setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
-                                  ? { ...cartItem, quantity: newQuantity }
-                                  : cartItem
-                              ));
-                            }
+                            const newQuantity = Math.max(0, item.quantity - 1);
+                            setCart(cart.map(cartItem => 
+                              cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
+                                ? { ...cartItem, quantity: newQuantity }
+                                : cartItem
+                            ));
                           }}
-                          disabled={item.quantity <= 1}
+                          disabled={item.quantity <= 0}
                           className="w-8 h-8 p-0"
                         >
                           <Minus className="w-3 h-3" />
@@ -3067,25 +3068,36 @@ export default function CustomerPortal() {
                             value={item.quantity}
                             onChange={(e) => {
                               const inputValue = e.target.value;
-                              // Allow any input during typing - validation happens on blur
-                              const newQuantity = inputValue === '' ? 1 : (parseInt(inputValue) || item.quantity);
-                              setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
-                                  ? { ...cartItem, quantity: newQuantity }
-                                  : cartItem
-                              ));
+                              // Allow free typing including empty field, 0, and any number
+                              if (inputValue === '' || inputValue === '0' || !isNaN(parseInt(inputValue))) {
+                                const newQuantity = inputValue === '' ? '' : parseInt(inputValue) || 0;
+                                setCart(cart.map(cartItem => 
+                                  cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
+                                    ? { ...cartItem, quantity: newQuantity }
+                                    : cartItem
+                                ));
+                              }
                             }}
                             onBlur={(e) => {
+                              const inputValue = e.target.value;
                               const maxQty = item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock;
-                              const newQuantity = parseInt(e.target.value) || 1;
                               
-                              // Only enforce stock limit, not MOQ in checkout
-                              const validQuantity = newQuantity > maxQty ? maxQty : (newQuantity < 1 ? 1 : newQuantity);
-                              setCart(cart.map(cartItem => 
-                                cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
-                                  ? { ...cartItem, quantity: validQuantity }
-                                  : cartItem
-                              ));
+                              // Allow 0 and any positive number, only limit by stock
+                              if (inputValue === '' || isNaN(parseInt(inputValue))) {
+                                setCart(cart.map(cartItem => 
+                                  cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
+                                    ? { ...cartItem, quantity: 1 }
+                                    : cartItem
+                                ));
+                              } else {
+                                const numValue = parseInt(inputValue);
+                                const validQuantity = numValue > maxQty ? maxQty : Math.max(0, numValue);
+                                setCart(cart.map(cartItem => 
+                                  cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
+                                    ? { ...cartItem, quantity: validQuantity }
+                                    : cartItem
+                                ));
+                              }
                             }}
                             min={1}
                             max={item.sellingType === "pallets" ? (item.product.palletStock || 0) : item.product.stock}
