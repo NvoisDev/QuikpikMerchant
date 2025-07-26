@@ -32,24 +32,12 @@ import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/pro
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 
-// Extended Product type that handles all the properties used in the component
+// Use the Product type directly with type assertion to handle missing properties
 type ExtendedProduct = ProductType & {
   wholesaler?: {
     businessName: string;
     businessPhone?: string;
   };
-  // Type assertion for properties that might need special handling
-  images?: string[] | null;
-  palletPrice?: string | null;
-  palletMoq?: number | null;
-  palletStock?: number | null;
-  unitsPerPallet?: number | null;
-  palletWeight?: string | null;
-  pallet_weight?: string | null;
-  sellingFormat?: string | null;
-  sizePerUnit?: string | null;
-  individualUnitWeight?: string | null;
-  packageDimensions?: any;
 };
 
 // Initialize Stripe
@@ -1929,7 +1917,7 @@ export default function CustomerPortal() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      {categories.filter(category => category).map((category: string, index: number) => (
+                      {categories.filter(category => category).map((category: string) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
@@ -2011,7 +1999,7 @@ export default function CustomerPortal() {
               ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" 
               : "space-y-3 sm:space-y-4"
             }`}>
-              {otherProducts.slice(0, 6).map((product: ExtendedProduct) => (
+              {otherProducts.slice(0, 6).map((product: Product) => (
                 viewMode === "grid" ? (
                   // Grid View - Mobile Responsive
                   <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
@@ -2430,7 +2418,7 @@ export default function CustomerPortal() {
                     <p className="text-gray-500">No products available at the moment</p>
                   </div>
                 ) : (
-                  filteredProducts.map((product: ExtendedProduct, productIndex: number) => (
+                  filteredProducts.map((product: ExtendedProduct) => (
                     viewMode === "grid" ? (
                       // Grid View
                       <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
@@ -2785,7 +2773,7 @@ export default function CustomerPortal() {
                         const basePrice = parseFloat(selectedProduct.price) || 0;
                         const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
                           basePrice,
-                          editQuantity || 1,
+                          parseFloat(editQuantity) || 1,
                           selectedProduct.promotionalOffers || [],
                           selectedProduct.promoPrice ? parseFloat(selectedProduct.promoPrice) : undefined,
                           selectedProduct.promoActive
@@ -2872,7 +2860,7 @@ export default function CustomerPortal() {
                       const inputValue = e.target.value;
                       // Allow free typing including empty field, 0, and any number
                       if (inputValue === '' || inputValue === '0' || !isNaN(parseInt(inputValue))) {
-                        setEditQuantity(inputValue === '' ? 0 : parseInt(inputValue) || 0);
+                        setEditQuantity(inputValue === '' ? '' : parseInt(inputValue) || 0);
                       }
                     }}
                     onBlur={(e) => {
@@ -3100,7 +3088,7 @@ export default function CustomerPortal() {
                               const inputValue = e.target.value;
                               // Allow free typing including empty field, 0, and any number
                               if (inputValue === '' || inputValue === '0' || !isNaN(parseInt(inputValue))) {
-                                const newQuantity = inputValue === '' ? 0 : parseInt(inputValue) || 0;
+                                const newQuantity = inputValue === '' ? '' : parseInt(inputValue) || 0;
                                 setCart(cart.map(cartItem => 
                                   cartItem.product.id === item.product.id && cartItem.sellingType === item.sellingType
                                     ? { ...cartItem, quantity: newQuantity }
