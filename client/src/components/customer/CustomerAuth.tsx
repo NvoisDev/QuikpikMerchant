@@ -42,18 +42,25 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [countdown, setCountdown] = useState<number>(0);
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const [smsRequestInProgress, setSmsRequestInProgress] = useState(false);
+  const [lastSmsTime, setLastSmsTime] = useState<number>(0);
 
   const { toast } = useToast();
 
   // Handle automatic authentication when coming from CustomerLogin
   const handleAuthenticationFromLogin = useCallback(async (digits: string) => {
-    // Prevent duplicate SMS requests
-    if (smsRequestInProgress) {
-      console.log('🚫 SMS request already in progress, skipping duplicate');
+    // Prevent duplicate SMS requests with both flag and time-based protection
+    const now = Date.now();
+    if (smsRequestInProgress || (now - lastSmsTime < 30000)) {
+      console.log('🚫 SMS request blocked - either in progress or too recent', {
+        smsRequestInProgress,
+        timeSinceLastSms: now - lastSmsTime,
+        lastSmsTime
+      });
       return;
     }
     
     setSmsRequestInProgress(true);
+    setLastSmsTime(now);
     
     console.log('🚀 HANDLE_AUTHENTICATION_FROM_LOGIN START', { 
       wholesalerId, 
@@ -120,32 +127,23 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   useEffect(() => {
     console.log('🔧 COMPONENT MOUNT - Initializing authentication');
     
-    // First, check if authentication is already restored from localStorage
-    const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-    if (savedAuth) {
-      try {
-        const authData = JSON.parse(savedAuth);
-        const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
-        
-        if (authData.isAuthenticated && authData.customer && isRecent) {
-          console.log('🔄 Authentication already restored, bypassing SMS');
-          // Don't show auth component at all if already authenticated
-          onAuthSuccess(authData.customer);
-          return;
-        } else if (!isRecent) {
-          console.log('🕐 Authentication expired, clearing localStorage and redirecting to login');
-          // Clear expired authentication
-          localStorage.removeItem(`customer_auth_${wholesalerId}`);
-          // Redirect to customer login page
-          window.location.href = '/customer-login';
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking saved auth:', error);
-        // Clear corrupted auth data
-        localStorage.removeItem(`customer_auth_${wholesalerId}`);
-      }
-    }
+    // DISABLED: Automatic authentication bypass - always require SMS verification
+    // const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
+    // if (savedAuth) {
+    //   try {
+    //     const authData = JSON.parse(savedAuth);
+    //     const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+    //     
+    //     if (authData.isAuthenticated && authData.customer && isRecent) {
+    //       console.log('🔄 Authentication already restored, bypassing SMS');
+    //       onAuthSuccess(authData.customer);
+    //       return;
+    //     }
+    //   } catch (error) {
+    //     console.error('Error checking saved auth:', error);
+    //     localStorage.removeItem(`customer_auth_${wholesalerId}`);
+    //   }
+    // }
     
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
@@ -168,7 +166,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       console.log('🔄 FRESH START: Starting at step 1');
       setAuthStep('step1');
     }
-  }, [wholesalerId]); // Remove handleAuthenticationFromLogin to prevent infinite loop
+  }, [wholesalerId]); // Only depend on wholesalerId to prevent infinite loops
 
   // DISABLED - Fetch wholesaler data causing infinite loop
   // useEffect(() => {

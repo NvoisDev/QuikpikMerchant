@@ -299,16 +299,17 @@
 
 ### DUPLICATE SMS AUTHENTICATION FIX - COMPLETED ✅ (July 26, 2025)
 - **Issue Resolved**: Multiple SMS codes being sent to wholesaler during customer portal authentication causing unnecessary costs
-- **Root Cause**: Authentication component was allowing duplicate SMS requests without proper request deduplication
-- **Solution Implemented**: Added SMS request protection to prevent duplicate authentication requests
+- **Root Cause**: Authentication component was allowing duplicate SMS requests without proper request deduplication and automatic bypass was preventing verification screen display
+- **Solution Implemented**: Enhanced SMS request protection and disabled automatic authentication bypass
 - **Technical Implementation**:
-  - **Request Deduplication**: Added `smsRequestInProgress` state flag to prevent concurrent SMS requests
-  - **Duplicate Prevention**: Authentication flow now checks for in-progress requests before sending new SMS codes
+  - **Dual Protection System**: Added `smsRequestInProgress` state flag and 30-second time-based protection to prevent rapid successive requests
+  - **Time-Based Deduplication**: SMS requests blocked for 30 seconds after previous request to prevent unnecessary charges
+  - **Authentication Bypass Disabled**: Removed automatic localStorage authentication bypass to ensure SMS verification screen displays properly
+  - **Enhanced Debug Logging**: Added comprehensive logging to track request blocking with timestamps and status
   - **Clean State Management**: SMS request flag properly reset in finally block to handle all completion scenarios
-  - **Debug Logging**: Enhanced logging to track duplicate request prevention
-- **User Impact**: Wholesalers will no longer receive multiple SMS codes when customers access their store portal
+- **User Experience**: Customers now see proper SMS verification screen instead of automatic bypass, with single SMS code delivery
 - **Cost Savings**: Prevents unnecessary Twilio SMS charges from duplicate authentication requests
-- **Production Ready**: Authentication system now sends only one SMS code per legitimate authentication attempt
+- **Production Ready**: Authentication system sends only one SMS code per legitimate authentication attempt with 30-second cooldown protection
 
 ### PAYMENT CALCULATION MISMATCH ISSUE - RESOLVED ✅ (July 23, 2025)
 - **Critical Issue Resolved**: Payment button was displaying product subtotal (£48.00) instead of total amount including transaction fees (£51.14)
