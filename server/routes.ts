@@ -1692,6 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shared function to process payment_intent.succeeded events
   async function processPaymentIntentSucceeded(paymentIntent: any, res: any) {
     console.log('💳 Processing payment_intent.succeeded for:', paymentIntent.id);
+    console.log('🔍 Payment Intent Metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
     
     try {
       // Debug metadata fields being received
@@ -1750,6 +1751,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const items = JSON.parse(itemsJson);
           const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+          
+          console.log('🚚 Original shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
+          
+          // Map 'collection' to 'delivery' for proper database storage (frontend uses 'collection' internally for delivery)
+          if (shippingInfo.option === 'collection') {
+            shippingInfo.option = 'delivery';
+            console.log('🔄 Mapped collection → delivery');
+          }
 
           // Create customer if doesn't exist
           let customer = await storage.getUserByPhone(customerPhone);
@@ -1798,10 +1807,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-            // Add shipping information
+            // Add shipping information - use mapped option after collection->delivery conversion
             fulfillmentType: shippingInfo.option || 'pickup',
             deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-            deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+            deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
+            // Debug logging for shipping data
+            debugShippingInfo: JSON.stringify({
+              originalOption: shippingInfo.option,
+              hasService: !!shippingInfo.service,
+              serviceName: shippingInfo.service?.serviceName,
+              servicePrice: shippingInfo.service?.price
+            })
           };
 
           // Create order items
