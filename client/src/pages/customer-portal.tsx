@@ -267,13 +267,35 @@ interface StripeCheckoutFormProps {
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+  const [capturedShippingData, setCapturedShippingData] = useState<{
+    option: string;
+    service?: any;
+  } | null>(null);
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
     const createPaymentIntent = async () => {
+      console.log('🚚 PAYMENT INTENT CHECK: About to create payment intent with shipping data:', {
+        shippingOption: customerData.shippingOption,
+        selectedShippingService: customerData.selectedShippingService,
+        hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
+        clientSecretExists: !!clientSecret,
+        isCreatingIntent
+      });
+      
       if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
+        
+        // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
+        const shippingDataAtCreation = {
+          option: customerData.shippingOption,
+          service: customerData.selectedShippingService
+        };
+        setCapturedShippingData(shippingDataAtCreation);
+        
+        console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
+        
         try {
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
             items: cart.map(item => ({
@@ -312,30 +334,18 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                 return total + pricing.totalCost;
               }
             }, 0), // Send ONLY product subtotal - backend will add transaction fees
-            shippingInfo: {
-              option: customerData.shippingOption,
-              service: customerData.selectedShippingService
-            }
+            shippingInfo: shippingDataAtCreation
           });
           
           console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
-          console.log('🚚 FRONTEND: Current customerData.shippingOption:', customerData.shippingOption);
-          console.log('🚚 FRONTEND: Full customerData:', customerData);
-          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', {
-            option: customerData.shippingOption,
-            service: customerData.selectedShippingService ? {
-              serviceName: customerData.selectedShippingService.serviceName,
-              price: customerData.selectedShippingService.price
-            } : null
-          });
+          console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
+          console.log('🚚 FRONTEND: Current customerData.shippingOption (might be different):', customerData.shippingOption);
+          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', shippingDataAtCreation);
           console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
-            shippingInfo: {
-              option: customerData.shippingOption,
-              service: customerData.selectedShippingService
-            },
-            isDeliveryOrder: customerData.shippingOption === 'delivery',
-            hasShippingService: !!customerData.selectedShippingService,
-            willCreateDeliveryOrder: customerData.shippingOption === 'delivery' && !!customerData.selectedShippingService
+            shippingInfo: shippingDataAtCreation,
+            isDeliveryOrder: shippingDataAtCreation.option === 'delivery',
+            hasShippingService: !!shippingDataAtCreation.service,
+            willCreateDeliveryOrder: shippingDataAtCreation.option === 'delivery' && !!shippingDataAtCreation.service
           });
           console.log('🚚 FRONTEND: === END DEBUG ===');
           
