@@ -456,7 +456,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
   console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
   console.log('🎯 CustomerOrderHistory render - filteredOrders length:', filteredOrders?.length || 0);
+  console.log('🎯 CustomerOrderHistory render - paginatedOrders length:', paginatedOrders?.length || 0);
+  console.log('🎯 CustomerOrderHistory render - currentPage:', currentPage);
+  console.log('🎯 CustomerOrderHistory render - totalPages:', totalPages);
   console.log('🎯 CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
+  console.log('🎯 CustomerOrderHistory render - recent orders with delivery info:', Array.isArray(orders) && orders.length > 0 ? orders.slice(0, 3).map(o => ({ id: o.id, orderNumber: o.orderNumber, fulfillmentType: o.fulfillmentType, deliveryCarrier: o.deliveryCarrier, deliveryCost: o.deliveryCost })) : 'No orders');
   
   if (!orders || orders.length === 0) {
     return (
