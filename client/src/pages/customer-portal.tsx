@@ -393,7 +393,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, totalAmount, clientSecret, isCreatingIntent]);
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, customerData.shippingOption, customerData.selectedShippingService?.serviceId, totalAmount, clientSecret, isCreatingIntent]);
 
   if (!clientSecret) {
     return (
