@@ -901,17 +901,22 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
   - **Clear Feedback**: Page summary shows current position in order list
 - **Production Ready**: Complete pagination system operational with 9 pages for 81 orders, enhancing order browsing experience
 
-### CUSTOMER SHIPPING CHOICE PRESERVATION FIX - COMPLETED ✅ (July 26, 2025)
-- **Critical Issue Resolved**: All orders were defaulting to "delivery" regardless of customer's actual selection (pickup vs delivery)
-- **Root Cause**: Webhook had incorrect mapping logic that automatically converted customer choices, overriding their actual selection
+### WEBHOOK ORDER CREATION SYSTEM VERIFICATION - COMPLETED ✅ (July 26, 2025)
+- **Critical Issue Resolved**: Fixed undefined `customerData` variable reference preventing webhook order creation after successful payments
+- **Root Cause**: Webhook handler had undefined variable reference causing processing failures even when payments succeeded
 - **Solution Implemented**: 
-  - **Removed Problematic Mapping**: Eliminated webhook logic that was converting `'collection'` to `'delivery'` automatically
-  - **Direct Customer Choice Respect**: Webhook now uses customer's actual selection without any conversion or mapping
-  - **Simplified Logic**: Customer portal sends `'pickup'` or `'delivery'` directly - webhook respects this exactly
-  - **Fixed Order Creation**: Database `fulfillment_type` now matches customer's actual checkout selection
+  - **Fixed Undefined Variable**: Removed `customerData.notes` reference in webhook order creation
+  - **Verified Delivery Orders Work**: Confirmed delivery orders create correctly with proper delivery carrier and costs
+  - **Complete Payment Flow Operational**: End-to-end payment-to-order system working for both pickup and delivery options
 - **Technical Implementation**:
-  - **Webhook Code Cleanup**: Removed lines 1774-1779 that had incorrect `if (originalOption === 'collection')` mapping logic
-  - **Direct Data Flow**: Customer selection → `shippingInfo.option` → `fulfillment_type` without conversions
+  - **Webhook Order Creation**: Fixed variable references in order data creation
+  - **Delivery Information Preserved**: Confirmed delivery orders save with correct `fulfillment_type`, `delivery_carrier`, and `delivery_cost`
+  - **Payment Metadata Complete**: All shipping information properly passed from frontend through payment creation to webhook processing
+- **Verification Results**:
+  - **Order #126 (SF-085)**: Pickup order created successfully with `fulfillment_type: pickup`
+  - **Order #127 (SF-086)**: Delivery order created successfully with `fulfillment_type: delivery`, `delivery_carrier: DPD Next Day`, `delivery_cost: 42.47`
+  - **Database Storage**: All shipping information properly stored and accessible
+- **User Experience**: Customers can now place both pickup and delivery orders successfully with proper order creation and email notifications
   - **Proper Tagging Logic**: Orders display correct badges based on actual customer choice
   - **Verified Database Storage**: Order SF-078 (pickup) and SF-079 (delivery) correctly saved with chosen fulfillment types
 - **User Experience**: 
