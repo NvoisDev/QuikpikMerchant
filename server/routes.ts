@@ -1399,7 +1399,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use the correct total from metadata instead of recalculating
         const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
 
-        // Create order with customer details
+        // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
+        const shippingInfoJson = metadata.shippingInfo;
+        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+        
+        console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
+          hasShippingInfo: !!shippingInfoJson,
+          shippingInfoRaw: shippingInfoJson,
+          parsedShippingInfo: shippingInfo,
+          customerChoice: shippingInfo.option,
+          hasService: !!shippingInfo.service,
+          serviceName: shippingInfo.service?.serviceName,
+          servicePrice: shippingInfo.service?.price
+        });
+
+        // Create order with customer details AND SHIPPING DATA
         const orderData = {
           orderNumber: `ORD-${Date.now()}`,
           wholesalerId,
@@ -1413,8 +1427,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           total: correctTotal, // Total = subtotal + customer transaction fee
           status: 'paid',
           stripePaymentIntentId: paymentIntent.id,
-          deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+          deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+          // 🚚 ADDED: Shipping information processing
+          fulfillmentType: shippingInfo.option || 'pickup',
+          deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+          deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
+          shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
         };
+        
+        console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
+          fulfillmentType: orderData.fulfillmentType,
+          deliveryCarrier: orderData.deliveryCarrier,
+          deliveryCost: orderData.deliveryCost,
+          willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+        });
 
         // Create order items with orderId for storage
         const orderItems = items.map((item: any) => ({
