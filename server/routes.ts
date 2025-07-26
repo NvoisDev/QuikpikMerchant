@@ -1878,6 +1878,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             orderNumber: `QP-${Date.now().toString().slice(-6)}`
           }, orderItems);
           console.log('✅ Order created successfully:', order.id);
+          
+          // 🔍 CRITICAL LOG: Verify what actually got saved to database
+          console.log('🔍 DATABASE VERIFICATION: Order saved with values:', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            actualFulfillmentType: order.fulfillmentType,
+            actualDeliveryCarrier: order.deliveryCarrier,
+            actualDeliveryCost: order.deliveryCost,
+            actualShippingTotal: order.shippingTotal,
+            isDeliveryOrder: order.fulfillmentType === 'delivery',
+            hasCarrierInfo: !!order.deliveryCarrier,
+            hasCost: parseFloat(order.deliveryCost || '0') > 0
+          });
 
           // Send customer confirmation email and Stripe invoice
           const wholesaler = await storage.getUser(wholesalerId);

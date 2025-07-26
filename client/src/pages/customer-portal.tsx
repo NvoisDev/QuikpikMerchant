@@ -328,6 +328,15 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               price: customerData.selectedShippingService.price
             } : null
           });
+          console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
+            shippingInfo: {
+              option: customerData.shippingOption,
+              service: customerData.selectedShippingService
+            },
+            isDeliveryOrder: customerData.shippingOption === 'delivery',
+            hasShippingService: !!customerData.selectedShippingService,
+            willCreateDeliveryOrder: customerData.shippingOption === 'delivery' && !!customerData.selectedShippingService
+          });
           console.log('🚚 FRONTEND: === END DEBUG ===');
           
           const data = await response.json();
