@@ -3840,7 +3840,12 @@ export default function CustomerPortal() {
                 {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
                   <StripeCheckoutForm 
                     cart={cart}
-                    customerData={customerData}
+                    customerData={{
+                      ...customerData,
+                      // CRITICAL FIX: Ensure shipping data is preserved for payment processing
+                      shippingOption: customerData.shippingOption,
+                      selectedShippingService: customerData.selectedShippingService
+                    }}
                     wholesaler={wholesaler}
                     totalAmount={(() => {
                       // Calculate the total amount that customer will pay (including transaction fees)
@@ -3864,18 +3869,9 @@ export default function CustomerPortal() {
                       return subtotal + transactionFee + shippingCost;
                     })()}
                     onSuccess={() => {
+                      // Clear cart and hide checkout
                       setCart([]);
                       setShowCheckout(false);
-                      
-                      // Reset shipping state to prevent delivery charges carrying over
-                      setCustomerData(prev => ({
-                        ...prev,
-                        shippingOption: 'pickup',
-                        selectedShippingService: undefined
-                      }));
-                      
-                      // Clear shipping services to force fresh quotes for next order
-                      setAvailableShippingServices([]);
                       
                       // Preserve authentication state and navigate to products view
                       setShowAllProducts(true);
@@ -3893,6 +3889,16 @@ export default function CustomerPortal() {
                         title: "Order Placed Successfully!",
                         description: "You will receive an email confirmation shortly.",
                       });
+                      
+                      // MOVED: Reset shipping state AFTER order confirmation to prevent interference
+                      setTimeout(() => {
+                        setCustomerData(prev => ({
+                          ...prev,
+                          shippingOption: 'pickup',
+                          selectedShippingService: undefined
+                        }));
+                        setAvailableShippingServices([]);
+                      }, 2000); // Reset after 2 seconds to allow payment processing to complete
                     }}
                   />
                 ) : (
