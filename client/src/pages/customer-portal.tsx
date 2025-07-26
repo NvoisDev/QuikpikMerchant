@@ -234,7 +234,7 @@ interface CustomerData {
   postalCode: string;
   country: string;
   notes: string;
-  shippingOption: "pickup" | "delivery";
+  shippingOption: "pickup" | "delivery" | undefined;
   selectedShippingService?: {
     serviceId: string;
     serviceName: string;
@@ -260,7 +260,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
     const createPaymentIntent = async () => {
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && !clientSecret && !isCreatingIntent) {
+      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
         try {
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
@@ -677,7 +677,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'delivery',
+    shippingOption: undefined as 'pickup' | 'delivery' | undefined,
     selectedShippingService: undefined
   });
   
