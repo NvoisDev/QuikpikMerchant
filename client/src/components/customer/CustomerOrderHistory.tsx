@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Package, Clock, Check, Truck, Hand, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 
@@ -318,6 +318,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
@@ -345,10 +346,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     enabled: !!wholesalerId && !!customerPhone,
     refetchInterval: false, // Disable auto-refresh to prevent infinite loops
     refetchIntervalInBackground: false, // Disable background refetching
-    staleTime: 5 * 60 * 1000, // Keep data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep data in cache for 10 min
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
-    refetchOnMount: false // Prevent refetch on component mount
+    staleTime: 0, // Always fetch fresh data - was 5 * 60 * 1000
+    gcTime: 1 * 60 * 1000, // Keep data in cache for 1 min - was 10 * 60 * 1000
+    refetchOnWindowFocus: true, // Enable refetch on window focus to show new orders
+    refetchOnMount: true // Enable refetch on component mount to show fresh orders
   });
 
   // Filter orders based on search term
@@ -373,6 +374,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      // Clear cache and force fresh fetch
+      queryClient.removeQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
       await refetch();
     } finally {
       setIsRefreshing(false);
@@ -435,10 +438,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
-  console.log('CustomerOrderHistory render - orders data:', { orders, isLoading, error });
-  console.log('CustomerOrderHistory render - orders type:', typeof orders);
-  console.log('CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
-  console.log('CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
+  console.log('🎯 CustomerOrderHistory render - orders data:', { orders, isLoading, error });
+  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
+  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
+  console.log('🎯 CustomerOrderHistory render - filteredOrders length:', filteredOrders?.length || 0);
+  console.log('🎯 CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
   
   if (!orders || orders.length === 0) {
     return (
@@ -490,6 +494,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         </div>
       </CardHeader>
       <CardContent>
+        {/* Debug Info - Remove after testing */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+          <div className="font-semibold text-blue-800 mb-2">🔍 Debug Info:</div>
+          <div className="text-blue-700 space-y-1">
+            <div>Orders Array: {Array.isArray(orders) ? 'Yes' : 'No'}</div>
+            <div>Total Orders: {orders?.length || 0}</div>
+            <div>Filtered Orders: {filteredOrders?.length || 0}</div>
+            <div>Search Term: "{searchTerm || 'none'}"</div>
+            <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+            <div>Error: {error ? 'Yes' : 'No'}</div>
+          </div>
+        </div>
+
         {/* Search Bar */}
         <div className="mb-4">
           <div className="relative">

@@ -3839,6 +3839,9 @@ export default function CustomerPortal() {
                         queryKey: [`/api/customer-orders`, wholesalerId, authenticatedCustomer?.phone] 
                       });
                       
+                      // Also clear all queries to ensure fresh data
+                      queryClient.clear();
+                      
                       toast({
                         title: "Order Placed Successfully!",
                         description: "You will receive an email confirmation shortly.",
