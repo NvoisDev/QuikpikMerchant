@@ -1658,6 +1658,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/stripe/webhook', async (req, res) => {
     console.log('🚀 WEBHOOK ENDPOINT HIT - Starting processing...');
     console.log('📨 Webhook received from Stripe');
+    console.log('🔍 Webhook request body type:', typeof req.body);
+    console.log('🔍 Webhook request body length:', JSON.stringify(req.body).length);
+    console.log('🔍 Webhook headers:', req.headers);
     
     const sig = req.headers['stripe-signature'] as string;
     let event;
@@ -1682,9 +1685,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       event = req.body;
     }
 
+    console.log('🔍 Event type received:', event.type);
+    console.log('🔍 Event ID:', event.id);
+    
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
+      console.log('✅ Payment Intent Succeeded event detected, processing...');
       return await processPaymentIntentSucceeded(paymentIntent, res);
+    } else {
+      console.log('ℹ️ Non-payment event received:', event.type);
     }
 
     res.json({ received: true });
@@ -1824,7 +1833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'paid',
             stripePaymentIntentId: paymentIntent.id,
             deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-            notes: customerData.notes || '',
+            notes: '',
             // FIXED: Add shipping information with proper mapping
             fulfillmentType: shippingInfo.option || 'pickup',
             deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
