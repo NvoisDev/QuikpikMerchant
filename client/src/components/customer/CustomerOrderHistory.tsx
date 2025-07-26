@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, Clock, Check, Truck, Hand, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw } from "lucide-react";
+import { Package, Clock, Check, Truck, Hand, MapPin, Calendar, ShoppingBag, Eye, User, Phone, Mail, CreditCard, FileText, Search, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -318,6 +318,8 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHistoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
   const queryClient = useQueryClient();
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
@@ -370,6 +372,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       );
     });
   }, [orders, searchTerm]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const startIndex = (currentPage - 1) * ordersPerPage;
+  const endIndex = startIndex + ordersPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -501,6 +515,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             <div>Orders Array: {Array.isArray(orders) ? 'Yes' : 'No'}</div>
             <div>Total Orders: {orders?.length || 0}</div>
             <div>Filtered Orders: {filteredOrders?.length || 0}</div>
+            <div>Paginated Orders: {paginatedOrders?.length || 0}</div>
+            <div>Current Page: {currentPage} of {totalPages}</div>
             <div>Search Term: "{searchTerm || 'none'}"</div>
             <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
             <div>Error: {error ? 'Yes' : 'No'}</div>
@@ -514,7 +530,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             <Input
               placeholder="Search orders by number, status, products, or date..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 h-10"
             />
           </div>
@@ -529,7 +545,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </div>
         ) : (
         <div className="space-y-2">
-          {filteredOrders.map((order: Order, index: number) => {
+          {paginatedOrders.map((order: Order, index: number) => {
             console.log(`Rendering order ${index}:`, order);
             return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
@@ -667,6 +683,66 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             );
           })}
         </div>
+        )}
+
+        {/* Pagination Controls */}
+        {filteredOrders.length > ordersPerPage && (
+          <div className="mt-6 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage = page === 1 || page === totalPages || 
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+                  
+                  if (!showPage && page === 2 && currentPage > 4) {
+                    return <span key={page} className="px-2 text-gray-400">...</span>;
+                  }
+                  if (!showPage && page === totalPages - 1 && currentPage < totalPages - 3) {
+                    return <span key={page} className="px-2 text-gray-400">...</span>;
+                  }
+                  if (!showPage) return null;
+                  
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
