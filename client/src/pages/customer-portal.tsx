@@ -412,7 +412,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, customerData.shippingOption, customerData.selectedShippingService?.serviceId, totalAmount, clientSecret, isCreatingIntent]);
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Removed selectedShippingService dependency to prevent multiple payment intent creations
 
   if (!clientSecret) {
     return (
