@@ -438,12 +438,15 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     e.preventDefault();
 
     if (!stripe || !elements) {
+      console.error('💳 Payment Error: Stripe or Elements not loaded');
       return;
     }
 
+    console.log('💳 Starting payment confirmation process...');
     setIsProcessing(true);
 
     try {
+      console.log('💳 Calling stripe.confirmPayment...');
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -451,6 +454,8 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         },
         redirect: "if_required",
       });
+
+      console.log('💳 Payment confirmation result:', { error, paymentIntent });
 
       if (error) {
         // Enhanced payment failure handling with detailed error messages
@@ -511,11 +516,15 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment succeeded - webhook automatically handles order creation and emails
+        console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
+        console.log('✅ Webhook should create order automatically for payment:', paymentIntent.id);
         toast({
           title: "Payment Successful!",
           description: "Your order has been placed successfully. You'll receive a confirmation email shortly.",
         });
         onSuccess();
+      } else {
+        console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
     } catch (error: any) {
       console.error('Unexpected payment error:', error);
