@@ -3900,15 +3900,16 @@ export default function CustomerPortal() {
                         description: "You will receive an email confirmation shortly.",
                       });
                       
-                      // MOVED: Reset shipping state AFTER order confirmation to prevent interference
-                      setTimeout(() => {
-                        setCustomerData(prev => ({
-                          ...prev,
-                          shippingOption: 'pickup',
-                          selectedShippingService: undefined
-                        }));
-                        setAvailableShippingServices([]);
-                      }, 2000); // Reset after 2 seconds to allow payment processing to complete
+                      // DISABLED: Reset shipping state that was interfering with delivery orders
+                      // This reset was causing delivery orders to save as pickup orders
+                      // setTimeout(() => {
+                      //   setCustomerData(prev => ({
+                      //     ...prev,
+                      //     shippingOption: 'pickup',
+                      //     selectedShippingService: undefined
+                      //   }));
+                      //   setAvailableShippingServices([]);
+                      // }, 2000);
                     }}
                   />
                 ) : (
