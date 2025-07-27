@@ -391,7 +391,7 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       toast({ 
         title: "Success", 
-        description: `Successfully merged ${data.message || 'customer records'}` 
+        description: data?.message || "Successfully merged customer records" 
       });
       setIsMergeDialogOpen(false);
       setSelectedDuplicates([]);
@@ -2301,8 +2301,8 @@ export default function Customers() {
 
       {/* Upgrade Modal */}
       <SubscriptionUpgradeModal 
-        isOpen={showUpgradeModal} 
-        onClose={() => setShowUpgradeModal(false)} 
+        open={showUpgradeModal} 
+        onOpenChange={() => setShowUpgradeModal(false)} 
       />
     </div>
   );
