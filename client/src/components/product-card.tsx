@@ -21,6 +21,7 @@ import {
   Target,
   TrendingUp
 } from "lucide-react";
+import { SocialShare } from "@/components/social-share";
 import {
   DropdownMenu,
   DropdownMenuContent,
