@@ -26,6 +26,7 @@ interface EmailParams {
 export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<boolean> {
   try {
     const { customerEmail, customerName, wholesalerName, wholesalerEmail, portalUrl } = params;
+    console.log('📧 Sending welcome email to:', customerEmail);
     
     const subject = `Welcome to ${wholesalerName} - Your Wholesale Portal Access`;
     

@@ -10789,9 +10789,21 @@ The Quikpik Team
 
       // Get wholesaler details for welcome messages
       const wholesaler = await storage.getUser(targetUserId);
+      console.log('Wholesaler found for welcome messages:', wholesaler ? `${wholesaler.firstName} ${wholesaler.lastName} (${wholesaler.email})` : 'No wholesaler found');
+      
       if (wholesaler) {
         const customerName = `${firstName} ${lastName || ''}`.trim();
         const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+        const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+        
+        console.log('Sending welcome messages with params:', {
+          customerName,
+          customerEmail: email,
+          customerPhone: formattedPhone,
+          wholesalerName,
+          wholesalerEmail: wholesaler.email,
+          portalUrl
+        });
         
         // Send welcome messages (email and WhatsApp)
         try {
@@ -10799,13 +10811,13 @@ The Quikpik Team
             customerName,
             customerEmail: email,
             customerPhone: formattedPhone,
-            wholesalerName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner',
+            wholesalerName,
             wholesalerEmail: wholesaler.email || 'support@quikpik.co',
             wholesalerPhone: wholesaler.phoneNumber,
             portalUrl
           });
           
-          console.log('Welcome messages sent:', welcomeResult);
+          console.log('Welcome messages result:', welcomeResult);
           
           // Add welcome message status to response
           res.json({
@@ -10824,12 +10836,20 @@ The Quikpik Team
             welcomeMessages: {
               emailSent: false,
               whatsappSent: false,
-              errors: ['Failed to send welcome messages']
+              errors: [`Failed to send welcome messages: ${welcomeError.message}`]
             }
           });
         }
       } else {
-        res.json(customer);
+        console.log('No wholesaler found - skipping welcome messages');
+        res.json({
+          ...customer,
+          welcomeMessages: {
+            emailSent: false,
+            whatsappSent: false,
+            errors: ['No wholesaler account found to send welcome messages from']
+          }
+        });
       }
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -10885,6 +10905,83 @@ The Quikpik Team
     } catch (error) {
       console.error('Error deleting customer:', error);
       res.status(500).json({ error: 'Failed to delete customer' });
+    }
+  });
+
+  // Test endpoint for welcome messages
+  app.post('/api/test-welcome-messages', requireAuth, async (req: any, res) => {
+    try {
+      const { customerName, customerEmail, customerPhone } = req.body;
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      const wholesaler = await storage.getUser(targetUserId);
+      if (!wholesaler) {
+        return res.status(400).json({ error: 'No wholesaler account found' });
+      }
+      
+      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      
+      const welcomeResult = await sendWelcomeMessages({
+        customerName,
+        customerEmail,
+        customerPhone,
+        wholesalerName,
+        wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+        wholesalerPhone: wholesaler.phoneNumber,
+        portalUrl
+      });
+      
+      res.json(welcomeResult);
+    } catch (error) {
+      console.error('Error in test welcome messages:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Manual welcome message test (no auth required for testing)
+  app.post('/api/manual-welcome-test', async (req, res) => {
+    try {
+      const { customerEmail, customerName, customerPhone, wholesalerId } = req.body;
+      
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) {
+        return res.status(400).json({ error: 'Wholesaler not found' });
+      }
+      
+      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      
+      console.log('🧪 Testing welcome messages with:', {
+        customerName,
+        customerEmail,
+        customerPhone,
+        wholesalerName,
+        wholesalerEmail: wholesaler.email
+      });
+      
+      const welcomeResult = await sendWelcomeMessages({
+        customerName,
+        customerEmail,
+        customerPhone,
+        wholesalerName,
+        wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+        wholesalerPhone: wholesaler.phoneNumber,
+        portalUrl
+      });
+      
+      res.json({
+        success: true,
+        welcomeResult,
+        wholesalerUsed: {
+          name: wholesalerName,
+          email: wholesaler.email,
+          business: wholesaler.businessName
+        }
+      });
+    } catch (error) {
+      console.error('Manual welcome test error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
