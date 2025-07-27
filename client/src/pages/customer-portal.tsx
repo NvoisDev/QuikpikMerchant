@@ -3729,12 +3729,10 @@ export default function CustomerPortal() {
                         hasCity: !!customerData.city,
                         hasPostalCode: !!customerData.postalCode
                       });
+                      
                       setCustomerData({...customerData, shippingOption: 'delivery'});
                       console.log('🚚 FRONTEND: Set shippingOption to DELIVERY');
-                      // Force immediate state check
-                      setTimeout(() => {
-                        console.log('🚚 FRONTEND: State after delivery click:', customerData.shippingOption);
-                      }, 100);
+                      
                       if (customerData.address && customerData.city && customerData.postalCode) {
                         fetchShippingQuotes();
                       }
@@ -3837,6 +3835,7 @@ export default function CustomerPortal() {
                 
                 {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
                   <StripeCheckoutForm 
+                    key={`checkout-${customerData.shippingOption}-${customerData.selectedShippingService?.serviceId || 'none'}`}
                     cart={cart}
                     customerData={{
                       ...customerData,
