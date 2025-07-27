@@ -27,6 +27,7 @@ import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { CustomerHome } from "@/components/customer/CustomerHome";
+import { ThankYouPage } from "@/components/customer/ThankYouPage";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
@@ -711,6 +712,16 @@ export default function CustomerPortal() {
     message: ''
   });
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<{
+    orderNumber: string;
+    cart: CartItem[];
+    customerData: any;
+    totalAmount: number;
+    subtotal: number;
+    transactionFee: number;
+    shippingCost: number;
+  } | null>(null);
   const [availableShippingServices, setAvailableShippingServices] = useState<any[]>([]);
   const [loadingShippingQuotes, setLoadingShippingQuotes] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData>({
@@ -1388,6 +1399,40 @@ export default function CustomerPortal() {
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
       onAuthSuccess={handleAuthSuccess}
+    />;
+  }
+
+  // Show thank you page after successful order
+  if (showThankYou && completedOrder && wholesaler && isAuthenticated) {
+    console.log('🎉 Showing thank you page');
+    return <ThankYouPage
+      orderNumber={completedOrder.orderNumber}
+      cart={completedOrder.cart}
+      customerData={completedOrder.customerData}
+      totalAmount={completedOrder.totalAmount}
+      subtotal={completedOrder.subtotal}
+      transactionFee={completedOrder.transactionFee}
+      shippingCost={completedOrder.shippingCost}
+      wholesaler={wholesaler}
+      onContinueShopping={() => {
+        // Clear cart and order data
+        setCart([]);
+        setCompletedOrder(null);
+        setShowThankYou(false);
+        // Navigate back to products
+        setShowAllProducts(true);
+        setShowHomePage(false);
+      }}
+      onViewOrders={() => {
+        // Clear cart and order data
+        setCart([]);
+        setCompletedOrder(null);
+        setShowThankYou(false);
+        // Navigate to order history
+        setShowOrderHistory(true);
+        setShowHomePage(true);
+        setShowAllProducts(false);
+      }}
     />;
   }
 
@@ -3866,13 +3911,43 @@ export default function CustomerPortal() {
                       return subtotal + transactionFee + shippingCost;
                     })()}
                     onSuccess={() => {
-                      // Clear cart and hide checkout
-                      setCart([]);
-                      setShowCheckout(false);
+                      // Calculate order totals
+                      const subtotal = cart.reduce((total, item) => {
+                        if (item.sellingType === "pallets") {
+                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                        } else {
+                          const basePrice = parseFloat(item.product.price) || 0;
+                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                            basePrice,
+                            item.quantity,
+                            item.product.promotionalOffers || [],
+                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                            item.product.promoActive
+                          );
+                          return total + pricing.totalCost;
+                        }
+                      }, 0);
+                      const transactionFee = subtotal * 0.055 + 0.50;
+                      const shippingCost = cartStats.shippingCost || 0;
+                      const totalAmount = subtotal + transactionFee + shippingCost;
                       
-                      // Preserve authentication state and navigate to products view
-                      setShowAllProducts(true);
-                      setShowHomePage(false);
+                      // Generate order number (will be replaced by actual order number from backend)
+                      const orderNumber = `#${Date.now().toString().slice(-6)}`;
+                      
+                      // Capture order data for thank you page
+                      setCompletedOrder({
+                        orderNumber,
+                        cart: [...cart],
+                        customerData: { ...customerData },
+                        totalAmount,
+                        subtotal,
+                        transactionFee,
+                        shippingCost
+                      });
+                      
+                      // Hide checkout and show thank you page
+                      setShowCheckout(false);
+                      setShowThankYou(true);
                       
                       // Invalidate customer orders cache to show new orders immediately
                       queryClient.invalidateQueries({ 
@@ -3881,22 +3956,6 @@ export default function CustomerPortal() {
                       
                       // Also clear all queries to ensure fresh data
                       queryClient.clear();
-                      
-                      toast({
-                        title: "Order Placed Successfully!",
-                        description: "You will receive an email confirmation shortly.",
-                      });
-                      
-                      // DISABLED: Reset shipping state that was interfering with delivery orders
-                      // This reset was causing delivery orders to save as pickup orders
-                      // setTimeout(() => {
-                      //   setCustomerData(prev => ({
-                      //     ...prev,
-                      //     shippingOption: 'pickup',
-                      //     selectedShippingService: undefined
-                      //   }));
-                      //   setAvailableShippingServices([]);
-                      // }, 2000);
                     }}
                   />
                 ) : (
