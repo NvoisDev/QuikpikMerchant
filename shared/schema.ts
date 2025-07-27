@@ -299,7 +299,7 @@ export const products = pgTable("products", {
   imageUrl: varchar("image_url"), // Primary image (for backward compatibility)
   images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for multiple images
   category: varchar("category"),
-  status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock'
+  status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock' | 'locked'
   priceVisible: boolean("price_visible").notNull().default(true),
   negotiationEnabled: boolean("negotiation_enabled").notNull().default(false),
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price

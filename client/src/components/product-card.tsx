@@ -44,12 +44,15 @@ interface Product {
   imageUrl?: string;
   images?: string[];
   category?: string;
-  status: "active" | "inactive" | "out_of_stock";
+  status: "active" | "inactive" | "out_of_stock" | "locked";
   priceVisible: boolean;
   negotiationEnabled: boolean;
   editCount?: number;
   createdAt?: string;
   lowStockThreshold?: number;
+  packQuantity?: number;
+  unitSize?: string;
+  unitOfMeasure?: string;
 }
 
 interface ProductCardProps {
@@ -57,7 +60,7 @@ interface ProductCardProps {
   onEdit: (product: Product) => void;
   onDelete: (id: number) => void;
   onDuplicate?: (product: Product) => void;
-  onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock") => void;
+  onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
   showPromotionAnalytics?: boolean;
 }
 
@@ -111,6 +114,12 @@ export default function ProductCard({
           className: "bg-red-100 text-red-800 hover:bg-red-200", 
           dotColor: "bg-red-500" 
         };
+      case "locked":
+        return { 
+          label: "Locked", 
+          className: "bg-orange-100 text-orange-800 hover:bg-orange-200", 
+          dotColor: "bg-orange-500" 
+        };
       default:
         return { 
           label: "Unknown", 
@@ -120,12 +129,15 @@ export default function ProductCard({
     }
   };
 
-  const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock") => {
+  const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock" | "locked") => {
     console.log("Status change requested:", product.id, newStatus);
     if (onStatusChange) {
       onStatusChange(product.id, newStatus);
     }
   };
+
+  // Check if product is locked
+  const isLocked = product.status === 'locked';
 
   // Get edit limit information based on subscription tier
   const getEditLimitInfo = () => {
@@ -204,7 +216,7 @@ export default function ProductCard({
 
   return (
     <>
-      <Card className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+      <Card className={`hover:shadow-lg transition-shadow duration-200 overflow-hidden ${isLocked ? 'border-orange-300 bg-orange-50/30' : ''}`}>
       <div className="relative">
         <img 
           src={
@@ -293,6 +305,29 @@ export default function ProductCard({
       </div>
 
       <CardContent className="p-6">
+        {/* Locked Product Warning */}
+        {isLocked && (
+          <div className="mb-4 p-3 bg-orange-100 border border-orange-300 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">Product Locked</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-orange-600 border-orange-300 hover:bg-orange-100"
+                onClick={() => window.location.href = '/settings/subscription'}
+              >
+                Upgrade Plan
+              </Button>
+            </div>
+            <p className="text-xs text-orange-700 mt-1">
+              This product is locked due to subscription limits. Upgrade your plan to unlock it.
+            </p>
+          </div>
+        )}
+
         {/* Product Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
@@ -316,16 +351,20 @@ export default function ProductCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem 
-                onClick={() => onEdit(product)}
-                disabled={editInfo.disabled}
-                className={editInfo.disabled ? "opacity-50 cursor-not-allowed" : ""}
+                onClick={() => !isLocked && onEdit(product)}
+                disabled={editInfo.disabled || isLocked}
+                className={(editInfo.disabled || isLocked) ? "opacity-50 cursor-not-allowed" : ""}
               >
                 <Edit className="mr-2 h-4 w-4" />
-                Edit {editInfo.disabled && "(Limit reached)"}
+                Edit {isLocked ? "(Product Locked)" : editInfo.disabled ? "(Limit reached)" : ""}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDuplicate}>
+              <DropdownMenuItem 
+                onClick={() => !isLocked && handleDuplicate()}
+                disabled={isLocked}
+                className={isLocked ? "opacity-50 cursor-not-allowed" : ""}
+              >
                 <Copy className="mr-2 h-4 w-4" />
-                Duplicate
+                Duplicate {isLocked ? "(Product Locked)" : ""}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowStockTracker(true)}>
                 <BarChart3 className="mr-2 h-4 w-4" />
@@ -456,9 +495,10 @@ export default function ProductCard({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7"
-              onClick={() => onEdit(product)}
-              title="Edit Product"
+              className={`h-7 w-7 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isLocked && onEdit(product)}
+              disabled={isLocked}
+              title={isLocked ? "Product Locked - Upgrade plan to unlock" : "Edit Product"}
             >
               <Edit className="h-3 w-3" />
             </Button>

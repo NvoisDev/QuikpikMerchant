@@ -976,6 +976,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
 
+      // Check if product is locked due to subscription limits
+      if (existingProduct.status === 'locked') {
+        return res.status(403).json({ 
+          message: "This product is locked due to subscription limits. Upgrade your plan or delete other products to unlock it.",
+          errorType: "PRODUCT_LOCKED",
+          upgradeRequired: true
+        });
+      }
+
       // Check edit limit based on subscription tier
       const currentEditCount = existingProduct.editCount || 0;
       const user = await storage.getUser(targetUserId);
@@ -1038,6 +1047,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteProduct(id);
+
+      // Check if deleting this product creates space to unlock other products
+      try {
+        const user = await storage.getUser(targetUserId);
+        const productLimit = user?.productLimit || 3;
+        
+        if (productLimit !== -1) { // Only if not unlimited
+          const remainingProducts = await storage.getProducts(targetUserId);
+          const activeProducts = remainingProducts.filter(p => p.status === 'active');
+          const lockedProducts = remainingProducts.filter(p => p.status === 'locked');
+          
+          const availableSlots = productLimit - activeProducts.length;
+          
+          if (availableSlots > 0 && lockedProducts.length > 0) {
+            const productsToUnlock = lockedProducts.slice(0, availableSlots);
+            
+            console.log(`🔓 Product deletion created ${availableSlots} available slots, unlocking ${productsToUnlock.length} products`);
+            
+            for (const product of productsToUnlock) {
+              await storage.updateProduct(product.id, { status: 'active' });
+              console.log(`🔓 Auto-unlocked product: ${product.name} (ID: ${product.id})`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error auto-unlocking products after deletion:', error);
+      }
+
       res.json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -4059,6 +4096,36 @@ Write a professional, sales-focused description that highlights the key benefits
               subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
               productLimit: parseInt(productLimit)
             });
+
+            // Unlock products that were locked due to subscription limits
+            console.log(`🔓 Subscription upgrade completed for user ${userId} to ${tier} tier`);
+            try {
+              const currentProducts = await storage.getProducts(userId);
+              const lockedProducts = currentProducts.filter(p => p.status === 'locked');
+              
+              if (lockedProducts.length > 0) {
+                console.log(`🔓 Found ${lockedProducts.length} locked products to potentially unlock`);
+                
+                const newProductLimit = parseInt(productLimit);
+                const activeProducts = currentProducts.filter(p => p.status === 'active');
+                const availableSlots = newProductLimit - activeProducts.length;
+                
+                if (availableSlots > 0 || newProductLimit === -1) {
+                  const productsToUnlock = newProductLimit === -1 
+                    ? lockedProducts 
+                    : lockedProducts.slice(0, availableSlots);
+                  
+                  for (const product of productsToUnlock) {
+                    await storage.updateProduct(product.id, { status: 'active' });
+                    console.log(`🔓 Unlocked product: ${product.name} (ID: ${product.id})`);
+                  }
+                  
+                  console.log(`🔓 Successfully unlocked ${productsToUnlock.length} products after subscription upgrade`);
+                }
+              }
+            } catch (error) {
+              console.error('Error unlocking products after subscription upgrade:', error);
+            }
           }
           break;
 
@@ -6704,6 +6771,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
+
+      // Check if product is locked due to subscription limits
+      if (product.status === 'locked') {
+        return res.status(403).json({ 
+          message: "This product is currently unavailable due to subscription restrictions.",
+          errorType: "PRODUCT_LOCKED"
+        });
+      }
       
       // Validate quantity against MOQ and stock
       if (quantity < product.moq) {
@@ -7461,6 +7536,14 @@ Please contact the customer to confirm this order.
       const product = await storage.getProduct(parseInt(productId));
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Check if product is locked due to subscription limits
+      if (product.status === 'locked') {
+        return res.status(403).json({ 
+          message: "This product is currently unavailable due to subscription restrictions.",
+          errorType: "PRODUCT_LOCKED"
+        });
       }
 
       // For marketplace negotiations, we'll create a temporary customer user if needed
@@ -8262,15 +8345,75 @@ https://quikpik.app`;
         productLimit: newProductLimit
       });
 
-      // Check if downgrade affects user's current usage
+      // Check if downgrade affects user's current usage and lock excess products
       const currentProducts = await storage.getProducts(userId);
-      const exceededProducts = currentProducts.length > newProductLimit && newProductLimit !== -1;
+      const productCount = currentProducts.length;
+      let lockedProductIds: number[] = [];
+      let lockedProductNames: string[] = [];
 
-      res.json({ 
-        success: true, 
+      if (productCount > newProductLimit && newProductLimit !== -1) {
+        // Sort products by creation date (oldest first) to determine which ones to lock
+        const sortedProducts = currentProducts.sort((a, b) => 
+          new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+        );
+        
+        // Keep the first N products (within limit) active, lock the rest
+        const productsToLock = sortedProducts.slice(newProductLimit);
+        
+        console.log(`🔒 Locking ${productsToLock.length} products due to downgrade to ${targetTier} plan`);
+        
+        for (const product of productsToLock) {
+          try {
+            // Lock the product by setting status to 'locked'
+            await storage.updateProduct(product.id, { status: 'locked' });
+            lockedProductIds.push(product.id);
+            lockedProductNames.push(product.name);
+            console.log(`🔒 Locked product: ${product.name} (ID: ${product.id})`);
+          } catch (error) {
+            console.error(`Failed to lock product ${product.id}:`, error);
+          }
+        }
+        
+        // Additionally, we should disable connected activities for locked products:
+        // 1. Cancel any active negotiations for locked products
+        // 2. Remove locked products from message templates and broadcasts
+        // 3. Prevent new orders for locked products (handled in order creation logic)
+        
+        try {
+          // Cancel active negotiations for locked products
+          for (const productId of lockedProductIds) {
+            const activeNegotiations = await storage.getNegotiations(undefined, productId);
+            for (const negotiation of activeNegotiations) {
+              if (negotiation.status === 'pending' || negotiation.status === 'counter_offered') {
+                await storage.updateNegotiation(negotiation.id, { 
+                  status: 'cancelled',
+                  notes: (negotiation.notes || '') + '\n[System] Cancelled due to subscription downgrade - product access locked.'
+                });
+                console.log(`🔒 Cancelled negotiation ${negotiation.id} for locked product ${productId}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error cancelling negotiations for locked products:', error);
+        }
+      }
+
+      const responseData = {
+        success: true,
         message: `Subscription downgraded to ${targetTier}`,
-        warning: exceededProducts ? `You currently have ${currentProducts.length} products but the ${targetTier} plan allows only ${newProductLimit}. Please delete some products to comply with your new plan limits.` : null
-      });
+        lockedProducts: lockedProductNames.length > 0 ? {
+          count: lockedProductNames.length,
+          names: lockedProductNames,
+          reason: `Your ${targetTier} plan allows only ${newProductLimit} products. The following products have been locked and cannot be used until you upgrade or delete other products:`,
+          unlockInstructions: `To unlock these products, either upgrade your subscription or delete some of your active products to stay within the ${newProductLimit} product limit.`
+        } : null,
+        newLimits: {
+          products: newProductLimit,
+          tier: targetTier
+        }
+      };
+
+      res.json(responseData);
     } catch (error) {
       console.error('Subscription downgrade error:', error);
       res.status(500).json({ error: "Failed to downgrade subscription" });
@@ -8296,13 +8439,53 @@ https://quikpik.app`;
           const userId = session.metadata.userId;
           const planId = session.metadata.planId;
           
+          // Get new product limit for the upgraded plan
+          let newProductLimit = 3; // default for free
+          switch (planId) {
+            case 'standard':
+              newProductLimit = 10;
+              break;
+            case 'premium':
+              newProductLimit = -1; // unlimited
+              break;
+          }
+
           // Update user subscription
           await storage.updateUser(userId, {
             subscriptionTier: planId,
             subscriptionStatus: 'active',
             stripeSubscriptionId: session.subscription,
-            productLimit: getProductLimit(planId)
+            productLimit: newProductLimit
           });
+
+          // Unlock products that were locked due to subscription limits
+          console.log(`🔓 Subscription upgrade completed for user ${userId} to ${planId} tier`);
+          try {
+            const currentProducts = await storage.getProducts(userId);
+            const lockedProducts = currentProducts.filter(p => p.status === 'locked');
+            
+            if (lockedProducts.length > 0) {
+              console.log(`🔓 Found ${lockedProducts.length} locked products to potentially unlock`);
+              
+              const activeProducts = currentProducts.filter(p => p.status === 'active');
+              const availableSlots = newProductLimit - activeProducts.length;
+              
+              if (availableSlots > 0 || newProductLimit === -1) {
+                const productsToUnlock = newProductLimit === -1 
+                  ? lockedProducts 
+                  : lockedProducts.slice(0, availableSlots);
+                
+                for (const product of productsToUnlock) {
+                  await storage.updateProduct(product.id, { status: 'active' });
+                  console.log(`🔓 Unlocked product: ${product.name} (ID: ${product.id})`);
+                }
+                
+                console.log(`🔓 Successfully unlocked ${productsToUnlock.length} products after subscription upgrade`);
+              }
+            }
+          } catch (error) {
+            console.error('Error unlocking products after subscription upgrade:', error);
+          }
         }
         break;
       
