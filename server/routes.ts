@@ -4988,20 +4988,91 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const { businessName, businessDescription, category, targetAudience, style } = req.body;
       
-      // Placeholder for tagline generation - to be implemented
-      const taglines = [
-        `Quality ${businessName} products for your business`,
-        `Trusted ${category} supplier`,
-        `Professional ${businessName} solutions`
-      ];
+      if (!businessName || businessName.trim().length === 0) {
+        return res.status(400).json({ message: "Business name is required" });
+      }
+
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const prompt = `Generate 5 compelling taglines for a B2B wholesale business with these details:
+
+Business Name: ${businessName}
+${businessDescription ? `Description: ${businessDescription}` : ''}
+${category ? `Industry/Category: ${category}` : ''}
+Target Audience: ${targetAudience}
+Style Preference: ${style}
+
+Requirements:
+1. Perfect for B2B wholesale businesses
+2. Professional and memorable
+3. Short (3-8 words ideal)
+4. Emphasize quality, trust, and value
+5. Appeal to retailers and business buyers
+6. Each tagline should be unique and distinct
+
+Return only the taglines, one per line, without numbers or formatting.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert brand copywriter specializing in B2B wholesale taglines. Create memorable, professional taglines that build trust and emphasize value for business customers."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.8,
+      });
+
+      const generatedText = response.choices[0].message.content || "";
+      const taglines = generatedText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0 && !line.match(/^\d+\./))
+        .slice(0, 5);
+
+      if (taglines.length === 0) {
+        // Fallback taglines if AI response is empty
+        const fallbackTaglines = [
+          `Quality ${businessName} Products`,
+          `Your Trusted Business Partner`,
+          `Professional Solutions Delivered`,
+          `Excellence in Every Order`,
+          `Reliable Wholesale Supply`
+        ];
+        return res.json({ taglines: fallbackTaglines });
+      }
       
       res.json({ taglines });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating taglines:", error);
-      res.status(500).json({ 
-        message: "Failed to generate taglines",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
+      
+      // Provide fallback taglines on error
+      const fallbackTaglines = [
+        `Quality ${req.body.businessName || 'Business'} Products`,
+        `Your Trusted Business Partner`,
+        `Professional Solutions Delivered`,
+        `Excellence in Every Order`,
+        `Reliable Wholesale Supply`
+      ];
+      
+      if (error.code === 'insufficient_quota') {
+        res.status(200).json({ 
+          taglines: fallbackTaglines,
+          message: "AI tagline generation temporarily unavailable. Here are some suggested taglines.",
+          fallback: true
+        });
+      } else {
+        res.json({ 
+          taglines: fallbackTaglines,
+          message: "Generated fallback taglines. Try again for AI-powered suggestions.",
+          fallback: true
+        });
+      }
     }
   });
 

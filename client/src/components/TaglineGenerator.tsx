@@ -39,17 +39,26 @@ export function TaglineGenerator({
   const generateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const response = await apiRequest("POST", "/api/ai/generate-taglines", data);
-      return response;
+      const jsonData = await response.json();
+      return jsonData;
     },
     onSuccess: (data) => {
       console.log("Received data:", data);
       const taglines = data.taglines || [];
       console.log("Setting taglines:", taglines);
       setGeneratedTaglines(taglines);
-      toast({
-        title: "Taglines Generated!",
-        description: `Generated ${taglines.length} unique taglines for your store.`,
-      });
+      
+      if (data.fallback) {
+        toast({
+          title: "Taglines Generated",
+          description: data.message || `Generated ${taglines.length} taglines for your store.`,
+        });
+      } else {
+        toast({
+          title: "AI Taglines Generated!",
+          description: `Generated ${taglines.length} unique AI-powered taglines for your store.`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
