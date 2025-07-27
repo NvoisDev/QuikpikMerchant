@@ -833,6 +833,7 @@
   - **Disabled Actions**: Edit, duplicate, and order buttons disabled for locked products with explanatory tooltips
   - **Upgrade Path**: Prominent "Upgrade Plan" buttons direct users to subscription settings
   - **Automatic Recovery**: Products unlock immediately upon subscription upgrade or creating space through deletion
+- **Premium Feature Access**: Advertising functionality now restricted to premium subscribers with proper access controls
 - **Production Ready**: Complete subscription management system operational with proper access controls and automatic product lifecycle management
 
 ### Subscription Downgrade Functionality - IMPLEMENTED ✅ (July 20, 2025)
@@ -1356,13 +1357,14 @@ Quikpik Merchant is a comprehensive web-based B2B platform designed for small-sc
 ### Plan Tiers & Pricing
 - **Free Plan (£0)**: 3 products, 3 edits per product, 2 customer groups (10 customers each), 5 WhatsApp broadcasts/month, basic analytics, email support
 - **Standard Plan (£10.99/month)**: 10 products, unlimited edits, 5 customer groups (50 customers each), 25 WhatsApp broadcasts/month, enhanced analytics & reports, priority email & phone support
-- **Premium Plan (£19.99/month)**: Unlimited products, unlimited edits, unlimited customer groups, unlimited WhatsApp broadcasts, B2B marketplace access, premium analytics dashboard, team management (up to 5 members), dedicated account manager
+- **Premium Plan (£19.99/month)**: Unlimited products, unlimited edits, unlimited customer groups, unlimited WhatsApp broadcasts, B2B marketplace access, product advertising & promotion, premium analytics dashboard, team management (up to 5 members), dedicated account manager
 
 ### Feature Limitations
 - **Product Limits**: Enforced at creation with upgrade prompts when limits reached
 - **Edit Limits**: Tracked per product with visual indicators (e.g., "2/3 edits used")
 - **Customer Group Limits**: Restricted creation when tier limits exceeded
 - **Marketplace Access**: Premium-only feature with visual lock indicators in sidebar
+- **Advertising Access**: Premium-only feature for product promotion and advertising campaigns
 - **Broadcast Limits**: Monthly broadcasting restrictions based on subscription tier
 
 ### Technical Implementation

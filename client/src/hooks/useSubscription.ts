@@ -32,6 +32,11 @@ export function useSubscription() {
     return editCount < editLimit;
   };
 
+  const canAccessAdvertising = () => {
+    if (!user) return false;
+    return user.subscriptionTier === 'premium';
+  };
+
   const getProductLimit = (tier: string) => {
     switch (tier) {
       case 'free':
@@ -63,6 +68,7 @@ export function useSubscription() {
     isLoading,
     canCreateProduct,
     canEditProduct,
+    canAccessAdvertising,
     getProductLimit,
     getEditLimit,
     currentTier: user?.subscriptionTier || 'free',

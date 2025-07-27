@@ -95,6 +95,7 @@ const plans = [
       "Unlimited customer groups",
       "Unlimited WhatsApp broadcasts",
       "B2B Marketplace access",
+      "Product advertising & promotion",
       "Real-time stock alerts",
       "Premium analytics dashboard",
       "Team management (up to 5 members)",
@@ -106,6 +107,7 @@ const plans = [
       customers: "Unlimited customer groups and customers",
       broadcasts: "Unlimited WhatsApp broadcasts",
       marketplace: "Full B2B marketplace access",
+      advertising: "Product advertising and promotion campaigns",
       analytics: "Premium analytics with predictive insights",
       support: "Dedicated account manager with 24/7 support"
     },
