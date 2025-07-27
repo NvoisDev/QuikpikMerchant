@@ -2,6 +2,7 @@ import { CheckCircle, Mail, Package, ArrowLeft, ShoppingBag } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import thankYouImage from "@assets/Untitled design (22)_1753577343220.png";
 
 interface CartItem {
   product: {
@@ -54,16 +55,26 @@ export const ThankYouPage = ({
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Success Header */}
+        {/* Success Header with Image */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <img 
+                src={thankYouImage} 
+                alt="Thank you from our team" 
+                className="w-48 h-48 rounded-2xl object-cover shadow-lg"
+              />
+              <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shadow-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Thank you for your order!</h1>
           <p className="text-lg text-gray-600">
-            Your order has been successfully placed and is being processed.
+            Your order has been successfully placed and is being processed by our team.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            We appreciate your business and look forward to serving you again.
           </p>
         </div>
 
