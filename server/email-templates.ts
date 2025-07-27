@@ -86,7 +86,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.customerAddress ? `<p><strong>Address:</strong> ${data.customerAddress}</p>` : ''}
+            ${data.customerAddress ? `<p><strong>Address:</strong> ${typeof data.customerAddress === 'string' && data.customerAddress.includes('{') ? data.customerAddress.replace(/[{}":]/g, '').replace(/,/g, ', ') : data.customerAddress}</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>
@@ -115,7 +115,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <h2 style="margin-top: 0; color: #d97706;">💰 Payment Breakdown</h2>
             <p><strong>Product Subtotal:</strong> £${data.subtotal}</p>
             ${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `<p><strong>Shipping:</strong> £${data.shippingTotal}</p>` : ''}
-            <p><strong>Customer Transaction Fee:</strong> £${data.customerTransactionFee || '0.00'} <small style="color: #666;">(paid by customer)</small></p>
+
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #f59e0b;">
             <p style="font-size: 18px;"><strong>Total Paid by Customer:</strong> <span style="color: #d97706; font-weight: bold;">£${data.total}</span></p>
             <div style="margin-top: 15px; padding: 15px; background-color: rgba(16, 185, 129, 0.1); border-radius: 6px; border-left: 4px solid #10b981;">
@@ -167,14 +167,14 @@ Fulfillment: ${data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery
 Name: ${data.customerName}
 Email: ${data.customerEmail}
 Phone: ${data.customerPhone}
-${data.customerAddress ? `Address: ${data.customerAddress}` : ''}
+${data.customerAddress ? `Address: ${typeof data.customerAddress === 'string' && data.customerAddress.includes('{') ? data.customerAddress.replace(/[{}":]/g, '').replace(/,/g, ', ') : data.customerAddress}` : ''}
 
 🛍️ ORDER ITEMS
 ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
 
 💰 PAYMENT BREAKDOWN
 Product Subtotal: £${data.subtotal}
-${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}\n` : ''}Customer Transaction Fee: £${data.customerTransactionFee || '0.00'} (paid by customer)
+${data.shippingTotal && parseFloat(data.shippingTotal) > 0 ? `Shipping: £${data.shippingTotal}` : ''}
 Total Paid by Customer: £${data.total}
 
 💰 YOUR EARNINGS

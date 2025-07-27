@@ -6948,7 +6948,7 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Format delivery address properly
+      // Format delivery address properly - clean up JSON symbols
       let deliveryAddress = 'Address to be confirmed';
       try {
         if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
@@ -6956,15 +6956,23 @@ Please contact the customer to confirm this order.
           const parsedAddress = JSON.parse(order.deliveryAddress);
           if (parsedAddress.street) {
             deliveryAddress = `${parsedAddress.street}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.postalCode}, ${parsedAddress.country}`;
+          } else if (parsedAddress.address) {
+            // Handle cases where address is nested
+            deliveryAddress = parsedAddress.address;
           } else {
-            deliveryAddress = order.deliveryAddress;
+            // Clean up JSON symbols from address string
+            deliveryAddress = order.deliveryAddress.replace(/[{}":]/g, '').replace(/,/g, ', ');
           }
         } else if (customer.address) {
           deliveryAddress = customer.address;
         }
       } catch (parseError) {
-        // If JSON parsing fails, use as plain text
-        deliveryAddress = order.deliveryAddress || customer.address || 'Address to be confirmed';
+        // If JSON parsing fails, clean up JSON symbols and use as plain text
+        if (order.deliveryAddress) {
+          deliveryAddress = order.deliveryAddress.replace(/[{}":]/g, '').replace(/,/g, ', ');
+        } else {
+          deliveryAddress = customer.address || 'Address to be confirmed';
+        }
       }
       
       // Create HTML email content with proper product names and pricing
@@ -7021,7 +7029,10 @@ Please contact the customer to confirm this order.
             <h3>Order Details</h3>
             <p><strong>Order ID:</strong> #${order.id}</p>
             <p><strong>From:</strong> ${wholesaler.businessName || 'Wholesale Store'}</p>
-            <p><strong>Delivery Address:</strong> ${deliveryAddress}</p>
+            <p><strong>Fulfillment Type:</strong> ${order.fulfillmentType === 'delivery' ? 'Delivery to your address' : 'Collection from store'}</p>
+            ${order.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> ${deliveryAddress}</p>` : ''}
+            ${order.fulfillmentType === 'pickup' ? `<p><strong>Collection Address:</strong> ${wholesaler.businessAddress || 'Please contact store for address'}</p>` : ''}
+            ${order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? `<p><strong>Delivery Service:</strong> ${order.shippingServiceName || 'Standard Delivery'}</p>` : ''}
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -7049,10 +7060,7 @@ Please contact the customer to confirm this order.
               <span>Shipping:</span>
               <span>${currencySymbol}${order.deliveryCost}</span>
             </div>` : ''}
-            <div style="display: flex; justify-content: space-between; margin: 8px 0;">
-              <span>Transaction Fee (5.5% + £0.50):</span>
-              <span>${currencySymbol}${order.customerTransactionFee || '0.00'}</span>
-            </div>
+
             <hr style="margin: 12px 0; border: none; border-top: 1px solid #e5e7eb;">
             <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
               <span>Total Paid:</span>
