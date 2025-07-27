@@ -1545,7 +1545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await sendEmail({
               to: wholesaler.email,
-              from: 'orders@quikpik.app',
+              from: 'hello@quikpik.co',
               subject: emailTemplate.subject,
               html: emailTemplate.html,
               text: emailTemplate.text
@@ -2712,8 +2712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const businessName = wholesaler?.businessName || "Your Supplier";
           
           // Get the application domain for customer portal link
-          const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-          const portalUrl = `https://${domain}/customer/${targetUserId}`;
+          const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
           
           const welcomeMessage = `🎉 Welcome to ${businessName}!\n\n` +
             `Hi ${name}! 👋\n\n` +
@@ -5040,9 +5039,7 @@ Write a professional, sales-focused description that highlights the key benefits
       const members = await storage.getGroupMembers(customerGroupId);
       
       // Generate marketplace URL for multi-product purchasing
-      const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
-      const domain = replitDomains.split(',')[0].trim();
-      const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      const baseUrl = 'https://quikpik.app';
       const campaignUrl = `${baseUrl}/marketplace`;
 
       // Create campaign record
@@ -5807,9 +5804,7 @@ Write a professional, sales-focused description that highlights the key benefits
 
         const members = await storage.getGroupMembers(customerGroupId);
         // Generate marketplace URL for multi-product purchasing
-        const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
-        const domain = replitDomains.split(',')[0].trim();
-        const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+        const baseUrl = 'https://quikpik.app';
         const campaignUrl = `${baseUrl}/marketplace`;
 
         // Create campaign record
@@ -5949,8 +5944,7 @@ Write a professional, sales-focused description that highlights the key benefits
           return res.status(404).json({ message: "Wholesaler not found" });
         }
 
-        const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0]?.trim();
-        const baseUrl = replitDomain ? `https://${replitDomain}` : 'https://localhost:5000';
+        const baseUrl = 'https://quikpik.app';
         const campaignUrl = `${baseUrl}/marketplace?campaign=${Date.now()}${numericId}`;
         
         const message = whatsappService.generateTemplateMessage(template, wholesaler, campaignUrl);
@@ -7621,7 +7615,7 @@ ${message ? `Customer Message: "${message}"` : ''}
 
 Review and respond to this price request in your Quikpik dashboard.
 
-${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER?.toLowerCase()}.replit.dev` : 'https://your-app.replit.dev'}`;
+https://quikpik.app`;
 
           await whatsappService.sendMessage(
             wholesaler.businessPhone || '',
@@ -8789,7 +8783,7 @@ ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_O
             <div style="background: #059669; color: white; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: center;">
               <h3 style="margin-top: 0; color: white;">Get Started Today</h3>
               <p style="margin-bottom: 15px;">Your free account includes 3 products, customer groups, and WhatsApp messaging.</p>
-              <a href="https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-app.replit.dev'}" 
+              <a href="https://quikpik.app" 
                  style="background: white; color: #059669; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                 Access Your Dashboard
               </a>
@@ -8836,7 +8830,7 @@ Coming Soon - Advanced Features:
 • Industry Intelligence: Benchmarking and competitive insights
 • Customer Success: Dedicated support and business growth guidance
 
-Get Started: Visit your dashboard at https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-app.replit.dev'}
+Get Started: Visit your dashboard at https://quikpik.app
 
 Need Help?
 • Email: support@quikpik.co

@@ -295,10 +295,8 @@ export class WhatsAppService {
   }
 
   generateProductMessage(product: any, customMessage?: string, wholesaler?: any, promotionalOffers?: any[]): string {
-    // Extract the first domain from REPLIT_DOMAINS which contains the main app URL
-    const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
-    const domain = replitDomains.split(',')[0].trim();
-    const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+    // Use production URL for all customer-facing links
+    const baseUrl = 'https://quikpik.app';
     const campaignUrl = `${baseUrl}/customer/${wholesaler?.id || product.wholesalerId}?featured=${product.id}`;
     const currencySymbol = wholesaler?.defaultCurrency === 'GBP' ? '£' : wholesaler?.defaultCurrency === 'EUR' ? '€' : '$';
     const businessName = wholesaler?.businessName || "Your Business";
@@ -627,9 +625,7 @@ Update your inventory or restock soon.`;
       const imageNote = hasImage ? " 📸" : "";
       
       // Generate direct customer portal link with featured product
-      const replitDomains = process.env.REPLIT_DOMAINS || 'localhost:5000';
-      const domain = replitDomains.split(',')[0].trim();
-      const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+      const baseUrl = 'https://quikpik.app';
       const productUrl = `${baseUrl}/customer/${wholesaler.id}?featured=${item.product.id}`;
       
       // Calculate promotional pricing for this product

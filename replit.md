@@ -320,6 +320,27 @@
   - **Contact Information**: Wholesaler business details readily available for customer support
 - **Production Ready**: Complete professional post-purchase experience operational with personal shopkeeper image and comprehensive order confirmation
 
+### EMAIL NOTIFICATION PRODUCTION URL FIXES - COMPLETED ✅ (July 27, 2025)
+- **Critical Issue Resolved**: Customer and wholesaler emails were containing development URLs instead of production `quikpik.app` links
+- **Root Cause**: Multiple email templates and service functions using `REPLIT_DOMAINS` environment variables generating development replit.dev URLs
+- **Solution Implemented**: 
+  - **Customer Transaction Fee Removed**: Eliminated customer transaction fee display from all email templates (both HTML and text) as requested
+  - **Address Formatting Fixed**: Enhanced address parsing to clean up JSON symbols and format properly for display
+  - **Delivery Information Added**: Customer emails now include fulfillment type, delivery address, collection address, and shipping service details
+  - **Production URLs Updated**: All email templates now use `https://quikpik.app` instead of development replit.dev links
+  - **Wholesaler Email Sender Fixed**: Updated from invalid `orders@quikpik.app` to verified `hello@quikpik.co` sender address
+- **Technical Implementation**:
+  - **Customer Email Template**: Removed transaction fee section, added fulfillment type and address details, fixed JSON address parsing
+  - **Wholesaler Email Template**: Updated address formatting logic to handle JSON symbols properly
+  - **URL References Fixed**: Updated 8+ locations across routes.ts and whatsapp.ts to use production URLs
+  - **WhatsApp Service**: Fixed customer portal links in WhatsApp messages to use production URLs
+  - **Welcome Emails**: Updated dashboard links and invitation emails to use quikpik.app domain
+- **User Experience**: 
+  - **Customer Emails**: Now show clean product subtotal without transaction fees, proper delivery information, and correct production links
+  - **Wholesaler Emails**: Display formatted customer addresses without JSON symbols, use verified sender domain
+  - **Professional Links**: All customer-facing emails contain production quikpik.app links instead of development URLs
+- **Production Ready**: Complete email notification system operational with production URLs and clean formatting for both customer and wholesaler communications
+
 ### WHATSAPP BUSINESS API SETUP GUIDE ADDED - COMPLETED ✅ (July 27, 2025)
 - **Feature Enhancement**: Added comprehensive WhatsApp Business API setup guide to Help Hub based on user comparison screen request
 - **Complete Setup Documentation**: Detailed guide covering both Twilio WhatsApp (quick setup) and direct WhatsApp Business API (production scale)
