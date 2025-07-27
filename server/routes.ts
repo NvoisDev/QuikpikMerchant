@@ -10755,14 +10755,35 @@ The Quikpik Team
       const formattedPhone = formatPhoneToInternational(phoneNumber);
       console.log('Formatted phone:', formattedPhone);
       
-      // Create customer user
-      const customer = await storage.createCustomer({
-        firstName,
-        lastName: lastName || '',
-        email: email || '',
-        phoneNumber: formattedPhone,
-        role: 'customer'
-      });
+      // Check for existing customer by phone number first
+      let customer = await storage.getUserByPhone(formattedPhone);
+      
+      if (customer) {
+        // Update existing customer info if needed
+        if (email && customer.email !== email) {
+          customer = await storage.updateCustomer(customer.id, { email });
+        }
+        console.log('Using existing customer:', customer);
+      } else {
+        // Check for existing customer with same email and 'customer' role
+        if (email) {
+          const existingCustomer = await storage.getUserByEmail(email, 'customer');
+          if (existingCustomer) {
+            return res.status(400).json({ 
+              error: 'A customer with this email already exists. Please use a different email or update the existing customer.' 
+            });
+          }
+        }
+        
+        // Create new customer user
+        customer = await storage.createCustomer({
+          firstName,
+          lastName: lastName || '',
+          email: email || '',
+          phoneNumber: formattedPhone,
+          role: 'customer'
+        });
+      }
       
       console.log('Customer created:', customer);
 

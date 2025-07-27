@@ -112,12 +112,12 @@ export const sessions = pgTable(
 // User storage table (required for auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  email: varchar("email"), // Removed .unique() to allow same email across different roles
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
-  role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer'
+  role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer' | 'team_member'
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),
   businessPhone: varchar("business_phone"),
