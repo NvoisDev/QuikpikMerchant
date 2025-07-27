@@ -22,7 +22,7 @@ export default function Landing() {
     {
       icon: Package,
       title: "Smart Inventory Management",
-      description: "Track stock levels, set minimum order quantities, and get automated alerts when inventory runs low.",
+      description: "Track stock levels, set minimum order quantities, and get real-time stock alerts when inventory runs low.",
       color: "bg-primary/10 text-primary"
     },
     {
@@ -34,25 +34,25 @@ export default function Landing() {
     {
       icon: CreditCard,
       title: "Secure Payments",
-      description: "Accept payments online with Stripe integration. Automatic invoice generation and transparent 5% platform fee.",
+      description: "Accept payments online with Stripe integration. Automatic invoice generation and transparent transaction fees.",
       color: "bg-primary/10 text-primary"
     },
     {
       icon: BarChart3,
-      title: "Analytics Dashboard",
-      description: "Track sales performance, popular products, customer behavior, and broadcasting effectiveness in real-time.",
-      color: "bg-primary/10 text-primary"
+      title: "Advanced Analytics & Advertising",
+      description: "Track sales performance with premium analytics. Create advertising campaigns and SEO-optimized product pages.",
+      color: "bg-purple-100 text-purple-600"
     },
     {
       icon: Handshake,
-      title: "Price Negotiation",
-      description: "Enable flexible pricing with built-in negotiation tools. Accept, decline, or counter customer offers seamlessly.",
-      color: "bg-primary/10 text-primary"
+      title: "B2B Marketplace Access",
+      description: "Join our premium B2B marketplace to reach thousands of retailers and expand your customer base nationwide.",
+      color: "bg-green-100 text-green-600"
     },
     {
       icon: Users,
-      title: "Customer Groups",
-      description: "Organize retail customers into groups for targeted marketing and personalized product offerings.",
+      title: "Team Management & Customer Groups",
+      description: "Organize customers into groups and manage team members with role-based permissions and collaborative tools.",
       color: "bg-indigo-100 text-indigo-600"
     }
   ];

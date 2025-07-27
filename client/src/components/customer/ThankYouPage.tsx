@@ -2,7 +2,7 @@ import { CheckCircle, Mail, Package, ArrowLeft, ShoppingBag } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import thankYouImage from "@assets/Untitled design (22)_1753577343220.png";
+// Image removed for production - using icon instead
 
 interface CartItem {
   product: {
@@ -59,11 +59,9 @@ export const ThankYouPage = ({
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <img 
-                src={thankYouImage} 
-                alt="Thank you from our team" 
-                className="w-48 h-48 rounded-2xl object-cover shadow-lg"
-              />
+              <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center shadow-lg">
+                <CheckCircle className="w-24 h-24 text-white" />
+              </div>
               <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shadow-lg">
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
