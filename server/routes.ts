@@ -8284,7 +8284,8 @@ https://quikpik.app`;
 
   app.post('/api/subscription/cancel', requireAuth, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const userId = req.user.id || req.user.claims?.sub;
+      const user = await storage.getUser(userId);
       if (!user || !user.stripeSubscriptionId) {
         return res.status(404).json({ error: "No active subscription found" });
       }
@@ -8304,7 +8305,7 @@ https://quikpik.app`;
   app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
     try {
       const { targetTier } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id || req.user.claims?.sub;
       
       if (!targetTier) {
         return res.status(400).json({ error: "Target tier is required" });
