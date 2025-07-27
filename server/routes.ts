@@ -20,6 +20,7 @@ import { ReliableSMSService } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
+import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { db } from "./db";
 import { eq, and, desc, inArray, or } from "drizzle-orm";
 
@@ -10764,7 +10765,51 @@ The Quikpik Team
       });
       
       console.log('Customer created:', customer);
-      res.json(customer);
+
+      // Get wholesaler details for welcome messages
+      const wholesaler = await storage.getUser(targetUserId);
+      if (wholesaler) {
+        const customerName = `${firstName} ${lastName || ''}`.trim();
+        const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+        
+        // Send welcome messages (email and WhatsApp)
+        try {
+          const welcomeResult = await sendWelcomeMessages({
+            customerName,
+            customerEmail: email,
+            customerPhone: formattedPhone,
+            wholesalerName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner',
+            wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+            wholesalerPhone: wholesaler.phoneNumber,
+            portalUrl
+          });
+          
+          console.log('Welcome messages sent:', welcomeResult);
+          
+          // Add welcome message status to response
+          res.json({
+            ...customer,
+            welcomeMessages: {
+              emailSent: welcomeResult.emailSent,
+              whatsappSent: welcomeResult.whatsappSent,
+              errors: welcomeResult.errors
+            }
+          });
+        } catch (welcomeError) {
+          console.error('Error sending welcome messages:', welcomeError);
+          // Still return customer even if welcome messages fail
+          res.json({
+            ...customer,
+            welcomeMessages: {
+              emailSent: false,
+              whatsappSent: false,
+              errors: ['Failed to send welcome messages']
+            }
+          });
+        }
+      } else {
+        res.json(customer);
+      }
     } catch (error) {
       console.error('Error creating customer:', error);
       res.status(500).json({ error: 'Failed to create customer', details: error.message });

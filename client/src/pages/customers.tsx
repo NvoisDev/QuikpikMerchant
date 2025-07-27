@@ -424,11 +424,33 @@ export default function Customers() {
 
   const addCustomerMutation = useMutation({
     mutationFn: (data: AddCustomerFormData) => apiRequest('POST', '/api/customers', data),
-    onSuccess: async () => {
+    onSuccess: async (response: any) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
       await refetchCustomers(); // Force immediate refresh
-      toast({ title: "Success", description: "Customer added to directory successfully!" });
+      
+      // Show welcome message status if available
+      if (response.welcomeMessages) {
+        const { emailSent, whatsappSent, errors } = response.welcomeMessages;
+        let description = "Customer added successfully!";
+        
+        if (emailSent && whatsappSent) {
+          description += " Welcome email and WhatsApp message sent.";
+        } else if (emailSent) {
+          description += " Welcome email sent.";
+        } else if (whatsappSent) {
+          description += " Welcome WhatsApp message sent.";
+        }
+        
+        if (errors.length > 0) {
+          console.warn("Welcome message errors:", errors);
+        }
+        
+        toast({ title: "Success", description });
+      } else {
+        toast({ title: "Success", description: "Customer added to directory successfully!" });
+      }
+      
       setIsAddCustomerDialogOpen(false);
       addCustomerForm.reset();
     },
