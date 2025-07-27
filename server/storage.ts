@@ -107,6 +107,7 @@ export interface IStorage {
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomerInfo(customerId: string, phoneNumber: string, name: string, email?: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
+  deleteCustomer(customerId: string): Promise<void>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
   
@@ -1214,6 +1215,21 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async deleteCustomer(customerId: string): Promise<void> {
+    // First remove customer from all groups
+    await db
+      .delete(customerGroupMembers)
+      .where(eq(customerGroupMembers.customerId, customerId));
+    
+    // Note: We don't delete orders as they are important business records
+    // We just remove the customer record which will leave orders with null retailerId
+    
+    // Finally delete the customer
+    await db
+      .delete(users)
+      .where(eq(users.id, customerId));
   }
 
   async addCustomerToGroup(groupId: number, customerId: string): Promise<void> {

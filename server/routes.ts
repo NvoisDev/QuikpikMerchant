@@ -10845,6 +10845,28 @@ The Quikpik Team
     }
   });
 
+  app.delete('/api/customers/:id', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.params.id;
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      // Verify the customer belongs to this user
+      const customers = await storage.getAllCustomers(targetUserId);
+      const customer = customers.find(c => c.id === customerId);
+      
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      
+      // Delete the customer (this will cascade to remove from groups and orders)
+      await storage.deleteCustomer(customerId);
+      res.json({ success: true, message: 'Customer deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      res.status(500).json({ error: 'Failed to delete customer' });
+    }
+  });
+
   app.get('/api/customers/:id', requireAuth, async (req: any, res) => {
     try {
       const customerId = req.params.id;

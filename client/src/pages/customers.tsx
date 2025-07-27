@@ -463,6 +463,22 @@ export default function Customers() {
     },
   });
 
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (customerId: string) => apiRequest('DELETE', `/api/customers/${customerId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
+      toast({ title: "Success", description: "Customer deleted successfully!" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateMemberMutation = useMutation({
     mutationFn: ({ groupId, memberId, data }: { groupId: number; memberId: string; data: EditMemberFormData }) =>
       apiRequest('PATCH', `/api/customer-groups/${groupId}/members/${memberId}`, data),
@@ -1311,6 +1327,19 @@ export default function Customers() {
                             title="Edit Customer"
                           >
                             <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete ${customer.firstName} ${customer.lastName}? This action cannot be undone.`)) {
+                                deleteCustomerMutation.mutate(customer.id);
+                              }
+                            }}
+                            title="Delete Customer"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
