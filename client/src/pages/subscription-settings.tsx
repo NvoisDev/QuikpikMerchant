@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,33 @@ export default function SubscriptionSettings() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
+
+  // Check for success/cancel parameters in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const canceled = urlParams.get('canceled');
+    
+    if (success === 'true') {
+      toast({
+        title: "Subscription Updated!",
+        description: "Your subscription has been successfully updated. Thank you for upgrading!",
+      });
+      // Clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+      // Refresh subscription data
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    } else if (canceled === 'true') {
+      toast({
+        title: "Subscription Canceled",
+        description: "Your subscription upgrade was canceled. You can try again anytime.",
+        variant: "destructive",
+      });
+      // Clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [toast, queryClient]);
 
   // Marketplace settings
   const { data: marketplaceSettings } = useQuery({

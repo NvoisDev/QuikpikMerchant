@@ -4044,8 +4044,8 @@ Write a professional, sales-focused description that highlights the key benefits
           quantity: 1,
         }],
         mode: 'subscription',
-        success_url: `${req.protocol}://${req.hostname}/subscription-settings?success=true`,
-        cancel_url: `${req.protocol}://${req.hostname}/subscription-settings?canceled=true`,
+        success_url: `${req.protocol}://${req.get('host')}/subscription?success=true`,
+        cancel_url: `${req.protocol}://${req.get('host')}/subscription?canceled=true`,
         metadata: {
           userId: userId,
           tier: selectedTier,
