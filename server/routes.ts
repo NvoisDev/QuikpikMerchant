@@ -8613,12 +8613,22 @@ https://quikpik.app`;
 
   // Stripe webhook for subscription events
   app.post('/api/webhooks/stripe', async (req, res) => {
+    console.log(`🎣 Stripe webhook received:`, req.body?.type || 'unknown type');
     let event;
 
     try {
       event = req.body;
+      
+      // Enhanced logging for debugging
+      console.log(`🎣 Webhook event details:`, {
+        type: event.type,
+        id: event.id,
+        hasData: !!event.data,
+        hasObject: !!event.data?.object
+      });
+      
     } catch (err) {
-      console.log(`Webhook signature verification failed.`, err);
+      console.log(`Webhook parsing failed:`, err);
       return res.status(400).send(`Webhook Error: ${err}`);
     }
 
@@ -8634,8 +8644,15 @@ https://quikpik.app`;
         });
         
         if (session.mode === 'subscription') {
-          const userId = session.metadata.userId;
-          const planId = session.metadata.planId;
+          const userId = session.metadata?.userId;
+          const planId = session.metadata?.planId;
+          
+          console.log(`🎣 Processing subscription for user: ${userId}, plan: ${planId}`);
+          
+          if (!userId || !planId) {
+            console.error(`❌ Missing metadata in checkout session:`, session.metadata);
+            return res.status(400).send('Missing user or plan metadata');
+          }
           
           // Get new product limit for the upgraded plan
           let newProductLimit = 3; // default for free
@@ -8648,18 +8665,39 @@ https://quikpik.app`;
               break;
           }
 
-          // Update user subscription
-          await storage.updateUser(userId, {
-            subscriptionTier: planId,
-            subscriptionStatus: 'active',
-            stripeSubscriptionId: session.subscription,
-            productLimit: newProductLimit
-          });
-          
-          console.log(`✅ Updated user ${userId} subscription: tier=${planId}, status=active, productLimit=${newProductLimit}`);
+          try {
+            // Update user subscription
+            const updatedUser = await storage.updateUser(userId, {
+              subscriptionTier: planId,
+              subscriptionStatus: 'active',
+              stripeSubscriptionId: session.subscription,
+              productLimit: newProductLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+            });
+            
+            console.log(`✅ Successfully updated user ${userId} subscription:`, {
+              tier: planId,
+              status: 'active',
+              productLimit: newProductLimit,
+              stripeSubId: session.subscription
+            });
+
+            // Verify the update worked
+            const verifyUser = await storage.getUser(userId);
+            console.log(`🔍 Verification - User subscription data:`, {
+              id: verifyUser?.id,
+              tier: verifyUser?.subscriptionTier,
+              status: verifyUser?.subscriptionStatus,
+              limit: verifyUser?.productLimit
+            });
+
+          } catch (error) {
+            console.error(`❌ Failed to update user subscription:`, error);
+            return res.status(500).send('Failed to update subscription');
+          }
 
           // Unlock products that were locked due to subscription limits
-          console.log(`🔓 Subscription upgrade completed for user ${userId} to ${planId} tier`);
+          console.log(`🔓 Starting product unlock process for user ${userId}`);
           try {
             const currentProducts = await storage.getProducts(userId);
             const lockedProducts = currentProducts.filter(p => p.status === 'locked');

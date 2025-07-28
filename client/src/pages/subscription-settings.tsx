@@ -42,6 +42,22 @@ export default function SubscriptionSettings() {
         // Clear the URL parameter
         window.history.replaceState({}, '', window.location.pathname);
         
+        // Trigger manual upgrade endpoint to ensure subscription is updated
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        
+        if (sessionId) {
+          try {
+            await apiRequest("POST", "/api/subscription/manual-upgrade", {
+              planId: 'standard', // Assuming standard plan based on previous upgrade
+              stripeSessionId: sessionId
+            });
+            console.log("🚀 Manual upgrade triggered successfully");
+          } catch (error) {
+            console.error("Manual upgrade failed:", error);
+          }
+        }
+        
         // Force refresh of all subscription-related data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
