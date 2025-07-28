@@ -8314,6 +8314,9 @@ https://quikpik.app`;
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      // Debug logging for subscription status
+      console.log(`📊 Subscription status check for user ${user.id}: tier=${user.subscriptionTier}, status=${user.subscriptionStatus}`);
 
       // If this is a team member, get the wholesaler's subscription info
       if (req.user.role === 'team_member' && req.user.wholesalerId) {
@@ -8370,6 +8373,75 @@ https://quikpik.app`;
     } catch (error) {
       console.error('Subscription cancellation error:', error);
       res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+  });
+
+  // Manual subscription data refresh endpoint
+  app.post('/api/subscription/refresh', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      console.log(`🔄 Manual subscription refresh requested for user ${userId}`);
+
+      // If user has a Stripe subscription, fetch the latest data
+      if (user.stripeSubscriptionId) {
+        try {
+          const subscription = await stripe!.subscriptions.retrieve(user.stripeSubscriptionId);
+          const isActive = subscription.status === 'active';
+          
+          // Determine tier from price ID
+          let tier = 'free';
+          if (subscription.items.data.length > 0) {
+            const priceId = subscription.items.data[0].price.id;
+            if (priceId === SUBSCRIPTION_PRICES.standard) {
+              tier = 'standard';
+            } else if (priceId === SUBSCRIPTION_PRICES.premium) {
+              tier = 'premium';
+            }
+          }
+
+          // Update user with fresh data from Stripe
+          await storage.updateUser(userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: isActive ? 'active' : 'inactive',
+            subscriptionEndsAt: new Date(subscription.current_period_end * 1000),
+            productLimit: tier === 'standard' ? 10 : tier === 'premium' ? -1 : 3
+          });
+
+          console.log(`✅ Refreshed subscription data for user ${userId}: tier=${tier}, status=${isActive ? 'active' : 'inactive'}`);
+          
+          res.json({ 
+            success: true, 
+            tier,
+            status: isActive ? 'active' : 'inactive',
+            message: "Subscription data refreshed successfully" 
+          });
+        } catch (stripeError) {
+          console.error('Error fetching Stripe subscription:', stripeError);
+          res.status(500).json({ error: "Failed to refresh subscription data from Stripe" });
+        }
+      } else {
+        // No Stripe subscription, ensure user is set to free
+        await storage.updateUser(userId, {
+          subscriptionTier: 'free',
+          subscriptionStatus: 'inactive',
+          productLimit: 3
+        });
+        
+        res.json({ 
+          success: true, 
+          tier: 'free',
+          status: 'inactive',
+          message: "User set to free tier" 
+        });
+      }
+    } catch (error) {
+      console.error('Subscription refresh error:', error);
+      res.status(500).json({ error: "Failed to refresh subscription data" });
     }
   });
 
@@ -8530,6 +8602,8 @@ https://quikpik.app`;
             stripeSubscriptionId: session.subscription,
             productLimit: newProductLimit
           });
+          
+          console.log(`✅ Updated user ${userId} subscription: tier=${planId}, status=active, productLimit=${newProductLimit}`);
 
           // Unlock products that were locked due to subscription limits
           console.log(`🔓 Subscription upgrade completed for user ${userId} to ${planId} tier`);

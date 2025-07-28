@@ -156,40 +156,49 @@ function Settings() {
 
   // Handle URL parameters for subscription success/cancel and tab switching
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab');
-    const success = urlParams.get('success');
-    const canceled = urlParams.get('canceled');
+    const handleUrlParams = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      const success = urlParams.get('success');
+      const canceled = urlParams.get('canceled');
+      
+      // Set active tab from URL
+      if (tab) {
+        setActiveTab(tab);
+      }
+      
+      // Handle subscription success/cancel messages
+      if (success === 'true') {
+        toast({
+          title: "Subscription Updated!",
+          description: "Your subscription has been successfully updated. Thank you for upgrading!",
+        });
+        // Clear the URL parameter
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('success');
+        window.history.replaceState({}, '', newUrl.toString());
+        // Refresh subscription data with manual refresh call
+        try {
+          await apiRequest("POST", "/api/subscription/refresh");
+        } catch (error) {
+          console.error("Failed to refresh subscription data:", error);
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      } else if (canceled === 'true') {
+        toast({
+          title: "Subscription Canceled",
+          description: "Your subscription upgrade was canceled. You can try again anytime.",
+          variant: "destructive",
+        });
+        // Clear the URL parameter
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('canceled');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    };
     
-    // Set active tab from URL
-    if (tab) {
-      setActiveTab(tab);
-    }
-    
-    // Handle subscription success/cancel messages
-    if (success === 'true') {
-      toast({
-        title: "Subscription Updated!",
-        description: "Your subscription has been successfully updated. Thank you for upgrading!",
-      });
-      // Clear the URL parameter
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('success');
-      window.history.replaceState({}, '', newUrl.toString());
-      // Refresh subscription data
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    } else if (canceled === 'true') {
-      toast({
-        title: "Subscription Canceled",
-        description: "Your subscription upgrade was canceled. You can try again anytime.",
-        variant: "destructive",
-      });
-      // Clear the URL parameter
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('canceled');
-      window.history.replaceState({}, '', newUrl.toString());
-    }
+    handleUrlParams();
   }, [toast]);
 
   const form = useForm<SettingsFormData>({

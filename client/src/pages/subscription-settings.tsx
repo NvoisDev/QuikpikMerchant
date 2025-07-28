@@ -23,29 +23,38 @@ export default function SubscriptionSettings() {
 
   // Check for success/cancel parameters in URL
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const success = urlParams.get('success');
-    const canceled = urlParams.get('canceled');
+    const handleSuccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const canceled = urlParams.get('canceled');
+      
+      if (success === 'true') {
+        toast({
+          title: "Subscription Updated!",
+          description: "Your subscription has been successfully updated. Thank you for upgrading!",
+        });
+        // Clear the URL parameter
+        window.history.replaceState({}, '', window.location.pathname);
+        // Refresh subscription data with manual refresh call
+        try {
+          await apiRequest("POST", "/api/subscription/refresh");
+        } catch (error) {
+          console.error("Failed to refresh subscription data:", error);
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      } else if (canceled === 'true') {
+        toast({
+          title: "Subscription Canceled",
+          description: "Your subscription upgrade was canceled. You can try again anytime.",
+          variant: "destructive",
+        });
+        // Clear the URL parameter
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
     
-    if (success === 'true') {
-      toast({
-        title: "Subscription Updated!",
-        description: "Your subscription has been successfully updated. Thank you for upgrading!",
-      });
-      // Clear the URL parameter
-      window.history.replaceState({}, '', window.location.pathname);
-      // Refresh subscription data
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    } else if (canceled === 'true') {
-      toast({
-        title: "Subscription Canceled",
-        description: "Your subscription upgrade was canceled. You can try again anytime.",
-        variant: "destructive",
-      });
-      // Clear the URL parameter
-      window.history.replaceState({}, '', window.location.pathname);
-    }
+    handleSuccess();
   }, [toast, queryClient]);
 
   // Marketplace settings
