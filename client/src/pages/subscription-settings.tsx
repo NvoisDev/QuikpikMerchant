@@ -58,7 +58,7 @@ export default function SubscriptionSettings() {
   }, [toast, queryClient]);
 
   // Marketplace settings
-  const { data: marketplaceSettings } = useQuery({
+  const { data: marketplaceSettings } = useQuery<{showPricesToWholesalers: boolean}>({
     queryKey: ["/api/user/marketplace-settings"],
     enabled: currentTier === 'premium'
   });
@@ -240,11 +240,11 @@ export default function SubscriptionSettings() {
             <div>
               <h3 className="text-xl font-semibold capitalize">{currentTier} Plan</h3>
               <p className="text-gray-600">
-                {subscription?.productCount || 0} of {subscription?.productLimit === -1 ? "unlimited" : subscription?.productLimit} products used
+                {(subscription as any)?.productCount || 0} of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit} products used
               </p>
-              {subscription?.expiresAt && (
+              {(subscription as any)?.expiresAt && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Next billing: {new Date(subscription.expiresAt).toLocaleDateString()}
+                  Next billing: {new Date((subscription as any).expiresAt).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -388,19 +388,19 @@ export default function SubscriptionSettings() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-800">Products Created</h4>
               <p className="text-2xl font-bold text-primary">
-                {subscription?.productCount || 0}
+                {(subscription as any)?.productCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {subscription?.productLimit === -1 ? "unlimited" : subscription?.productLimit} allowed
+                of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-800">Team Members</h4>
               <p className="text-2xl font-bold text-primary">
-                {subscription?.teamMemberCount || 0}
+                {(subscription as any)?.teamMemberCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {subscription?.teamMemberLimit === -1 ? "unlimited" : subscription?.teamMemberLimit || 0} allowed
+                of {(subscription as any)?.teamMemberLimit === -1 ? "unlimited" : (subscription as any)?.teamMemberLimit || 0} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
