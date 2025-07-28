@@ -409,27 +409,99 @@ export default function SubscriptionSettings() {
             </div>
           )}
           
-          {currentTier !== "free" && (
-            <div className="mt-4 pt-4 border-t">
-              <Button 
-                variant="outline"
-                onClick={handleCancelSubscription}
-                disabled={canceling}
-                className="text-red-600 hover:text-red-700"
-              >
-                {canceling ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Cancelling...
-                  </>
-                ) : (
-                  "Cancel Subscription"
+          {/* Plan Management Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            {currentTier !== "free" && (
+              <>
+                <Button 
+                  variant="outline"
+                  onClick={handleCancelSubscription}
+                  disabled={canceling}
+                  className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                >
+                  {canceling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Cancel Subscription"
+                  )}
+                </Button>
+                
+                {currentTier === "premium" && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleDowngrade("standard")}
+                    disabled={canceling}
+                    className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                  >
+                    Downgrade to Standard
+                  </Button>
                 )}
-              </Button>
-            </div>
-          )}
+                
+                {(currentTier === "premium" || currentTier === "standard") && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleDowngrade("free")}
+                    disabled={canceling}
+                    className="text-gray-600 hover:text-gray-700 border-gray-200 hover:border-gray-300"
+                  >
+                    Downgrade to Free
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* Quick Downgrade Section for Testing */}
+      {currentTier !== "free" && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <CardTitle className="text-orange-800">Quick Plan Management</CardTitle>
+            <p className="text-orange-600 text-sm">Change your subscription level instantly</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {currentTier !== "free" && (
+                <Button 
+                  variant="outline"
+                  onClick={() => handleDowngrade("free")}
+                  disabled={canceling}
+                  className="border-gray-300 hover:bg-gray-50"
+                >
+                  Switch to Free
+                </Button>
+              )}
+              {currentTier !== "standard" && (
+                <Button 
+                  variant="outline"
+                  onClick={currentTier === "free" ? () => handleUpgrade("standard") : () => handleDowngrade("standard")}
+                  disabled={canceling}
+                  className="border-blue-300 hover:bg-blue-50"
+                >
+                  Switch to Standard
+                </Button>
+              )}
+              {currentTier !== "premium" && (
+                <Button 
+                  variant="outline"
+                  onClick={() => handleUpgrade("premium")}
+                  disabled={canceling}
+                  className="border-yellow-300 hover:bg-yellow-50"
+                >
+                  Switch to Premium
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Changes take effect immediately. Downgrades may lock products that exceed new plan limits.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Available Plans */}
       <div>
