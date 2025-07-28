@@ -8422,6 +8422,56 @@ https://quikpik.app`;
     }
   });
 
+  // Manual subscription upgrade endpoint for successful payments
+  app.post('/api/subscription/manual-upgrade', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { planId, stripeSessionId } = req.body;
+      
+      console.log(`🚀 Manual upgrade requested for user ${userId}: ${planId}`);
+      
+      if (!planId) {
+        // Default to standard if no plan specified but payment was successful
+        console.log(`🚀 No plan specified, defaulting to standard for user ${userId}`);
+      }
+      
+      const targetPlan = planId || 'standard';
+      
+      // Get new product limit for the upgraded plan
+      let newProductLimit = 3;
+      switch (targetPlan) {
+        case 'standard':
+          newProductLimit = 10;
+          break;
+        case 'premium':
+          newProductLimit = -1;
+          break;
+      }
+
+      // Update user subscription immediately
+      await storage.updateUser(userId, {
+        subscriptionTier: targetPlan,
+        subscriptionStatus: 'active',
+        stripeSubscriptionId: stripeSessionId || `manual_${Date.now()}`,
+        productLimit: newProductLimit,
+        subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
+      
+      console.log(`✅ Manual upgrade completed for user ${userId}: ${targetPlan} plan with ${newProductLimit} products`);
+
+      res.json({
+        success: true,
+        subscriptionTier: targetPlan,
+        subscriptionStatus: 'active',
+        productLimit: newProductLimit,
+        message: "Subscription upgraded successfully"
+      });
+    } catch (error) {
+      console.error('Manual upgrade error:', error);
+      res.status(500).json({ error: "Failed to upgrade subscription" });
+    }
+  });
+
   // Manual subscription data refresh endpoint
   app.post('/api/subscription/refresh', requireAuth, async (req: any, res) => {
     try {
