@@ -8541,6 +8541,70 @@ https://quikpik.app`;
     }
   });
 
+  // Universal plan change endpoint (handles both upgrades and downgrades)
+  app.post('/api/subscription/change-plan', requireAuth, async (req: any, res) => {
+    try {
+      const { targetTier } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      console.log(`🔄 Plan change request: User ${userId} wants to change to ${targetTier}`);
+      
+      if (!targetTier) {
+        return res.status(400).json({ error: "Target tier is required" });
+      }
+
+      // Validate target tier
+      const validTiers = ['free', 'standard', 'premium'];
+      if (!validTiers.includes(targetTier)) {
+        return res.status(400).json({ error: "Invalid target tier" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get new product limit for the target tier
+      let newProductLimit = 3;
+      switch (targetTier) {
+        case 'free':
+          newProductLimit = 3;
+          break;
+        case 'standard':
+          newProductLimit = 10;
+          break;
+        case 'premium':
+          newProductLimit = -1;
+          break;
+      }
+
+      console.log(`🔄 Changing plan from ${user.subscriptionTier} to ${targetTier}, limit: ${newProductLimit}`);
+      
+      // Update user subscription directly in database
+      await storage.updateUser(userId, {
+        subscriptionTier: targetTier,
+        subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
+        productLimit: newProductLimit,
+        subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        stripeSubscriptionId: targetTier === 'free' ? null : `manual_${targetTier}_${Date.now()}`
+      });
+
+      console.log(`✅ Plan change completed: User ${userId} is now on ${targetTier} plan`);
+
+      res.json({
+        success: true,
+        message: `Successfully changed to ${targetTier} plan`,
+        newTier: targetTier,
+        productLimit: newProductLimit,
+        status: targetTier === 'free' ? 'inactive' : 'active'
+      });
+
+    } catch (error) {
+      console.error('Plan change error:', error);
+      res.status(500).json({ error: "Failed to change plan" });
+    }
+  });
+
   app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
     try {
       const { targetTier } = req.body;
@@ -8561,14 +8625,8 @@ https://quikpik.app`;
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if this is actually a downgrade
-      const tierOrder = { free: 0, standard: 1, premium: 2 };
-      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
-      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
-
-      if (targetTierOrder >= currentTierOrder) {
-        return res.status(400).json({ error: "This is not a downgrade. Use upgrade endpoint instead." });
-      }
+      // Just redirect to the universal plan change endpoint
+      return res.redirect(307, `/api/subscription/change-plan?targetTier=${targetTier}`);
 
       // If user has an active subscription, cancel it
       if (user.stripeSubscriptionId && user.subscriptionStatus === 'active') {

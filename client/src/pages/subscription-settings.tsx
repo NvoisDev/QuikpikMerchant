@@ -242,39 +242,50 @@ export default function SubscriptionSettings() {
     }
   ];
 
-  const handleUpgrade = (planId: string) => {
-    setSelectedPlan(planId);
-    setUpgradeModalOpen(true);
-  };
+  // Remove the old handleUpgrade function that opens modal
 
-  const handleDowngrade = async (targetPlan: string) => {
+  const handlePlanChange = async (targetPlan: string) => {
     setCanceling(true);
     try {
-      const response = await apiRequest("POST", "/api/subscription/downgrade", {
+      console.log(`🔄 Initiating plan change to: ${targetPlan}`);
+      
+      const response = await apiRequest("POST", "/api/subscription/change-plan", {
         targetTier: targetPlan
       });
       
       if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Plan change successful:`, result);
+        
+        // Force refresh of all subscription-related data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
         toast({
-          title: "Plan Downgraded",
-          description: `Your subscription has been downgraded to ${targetPlan}. Changes will take effect immediately.`,
+          title: "Plan Changed Successfully!",
+          description: `Your subscription has been changed to ${targetPlan}. Changes are now active.`,
         });
+        
+        // Force page refresh after a short delay to ensure UI updates
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to downgrade subscription");
+        throw new Error(errorData.error || "Failed to change subscription plan");
       }
     } catch (error: any) {
+      console.error('Plan change error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to downgrade subscription. Please try again.",
+        description: error.message || "Failed to change subscription plan. Please try again.",
         variant: "destructive",
       });
     } finally {
       setCanceling(false);
     }
   };
+
+  const handleDowngrade = handlePlanChange;
+  const handleUpgrade = handlePlanChange;
 
   return (
     <div className="space-y-6">
@@ -432,22 +443,22 @@ export default function SubscriptionSettings() {
                 {currentTier === "premium" && (
                   <Button 
                     variant="outline"
-                    onClick={() => handleDowngrade("standard")}
+                    onClick={() => handlePlanChange("standard")}
                     disabled={canceling}
                     className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
                   >
-                    Downgrade to Standard
+                    Change to Standard
                   </Button>
                 )}
                 
                 {(currentTier === "premium" || currentTier === "standard") && (
                   <Button 
                     variant="outline"
-                    onClick={() => handleDowngrade("free")}
+                    onClick={() => handlePlanChange("free")}
                     disabled={canceling}
                     className="text-gray-600 hover:text-gray-700 border-gray-200 hover:border-gray-300"
                   >
-                    Downgrade to Free
+                    Change to Free
                   </Button>
                 )}
               </>
@@ -468,7 +479,7 @@ export default function SubscriptionSettings() {
               {currentTier !== "free" && (
                 <Button 
                   variant="outline"
-                  onClick={() => handleDowngrade("free")}
+                  onClick={() => handlePlanChange("free")}
                   disabled={canceling}
                   className="border-gray-300 hover:bg-gray-50"
                 >
@@ -478,7 +489,7 @@ export default function SubscriptionSettings() {
               {currentTier !== "standard" && (
                 <Button 
                   variant="outline"
-                  onClick={currentTier === "free" ? () => handleUpgrade("standard") : () => handleDowngrade("standard")}
+                  onClick={() => handlePlanChange("standard")}
                   disabled={canceling}
                   className="border-blue-300 hover:bg-blue-50"
                 >
@@ -488,7 +499,7 @@ export default function SubscriptionSettings() {
               {currentTier !== "premium" && (
                 <Button 
                   variant="outline"
-                  onClick={() => handleUpgrade("premium")}
+                  onClick={() => handlePlanChange("premium")}
                   disabled={canceling}
                   className="border-yellow-300 hover:bg-yellow-50"
                 >
@@ -561,13 +572,8 @@ export default function SubscriptionSettings() {
                     const currentTierOrder = tierOrder[currentTier as keyof typeof tierOrder] || 0;
                     const targetTierOrder = tierOrder[plan.id as keyof typeof tierOrder] || 0;
                     
-                    if (targetTierOrder < currentTierOrder) {
-                      // This is a downgrade
-                      handleDowngrade(plan.id);
-                    } else {
-                      // This is an upgrade
-                      handleUpgrade(plan.id);
-                    }
+                    // Use the universal plan change function
+                    handlePlanChange(plan.id);
                   }}
                   disabled={plan.current || canceling}
                   className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : ''}`}
