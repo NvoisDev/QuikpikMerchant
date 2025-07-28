@@ -13,7 +13,7 @@ export function useSubscription() {
   const canCreateProduct = () => {
     if (!user || !subscription) return false;
     
-    const productCount = subscription.productCount || 0;
+    const productCount = (subscription as any)?.productCount || 0;
     const limit = getProductLimit(user.subscriptionTier || 'free');
     
     return limit === -1 || productCount < limit;
