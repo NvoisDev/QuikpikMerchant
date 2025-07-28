@@ -8613,22 +8613,35 @@ https://quikpik.app`;
 
   // Stripe webhook for subscription events
   app.post('/api/webhooks/stripe', async (req, res) => {
-    console.log(`🎣 Stripe webhook received:`, req.body?.type || 'unknown type');
+    const timestamp = new Date().toISOString();
+    console.log(`🎣 [${timestamp}] Stripe webhook received:`, req.body?.type || 'unknown type');
     let event;
 
     try {
       event = req.body;
       
       // Enhanced logging for debugging
-      console.log(`🎣 Webhook event details:`, {
+      console.log(`🎣 [${timestamp}] Webhook event details:`, {
         type: event.type,
         id: event.id,
         hasData: !!event.data,
-        hasObject: !!event.data?.object
+        hasObject: !!event.data?.object,
+        livemode: event.livemode,
+        created: event.created
       });
       
+      if (event.data?.object) {
+        console.log(`🎣 [${timestamp}] Event object details:`, {
+          objectType: event.data.object.object,
+          id: event.data.object.id,
+          mode: event.data.object.mode,
+          status: event.data.object.status,
+          metadata: event.data.object.metadata
+        });
+      }
+      
     } catch (err) {
-      console.log(`Webhook parsing failed:`, err);
+      console.log(`❌ [${timestamp}] Webhook parsing failed:`, err);
       return res.status(400).send(`Webhook Error: ${err}`);
     }
 
@@ -8647,10 +8660,18 @@ https://quikpik.app`;
           const userId = session.metadata?.userId;
           const planId = session.metadata?.planId;
           
-          console.log(`🎣 Processing subscription for user: ${userId}, plan: ${planId}`);
+          console.log(`🎣 [${timestamp}] Processing subscription for user: ${userId}, plan: ${planId}`);
+          console.log(`🎣 [${timestamp}] Full session metadata:`, session.metadata);
+          console.log(`🎣 [${timestamp}] Session details:`, {
+            sessionId: session.id,
+            customerId: session.customer,
+            subscriptionId: session.subscription,
+            paymentStatus: session.payment_status,
+            mode: session.mode
+          });
           
           if (!userId || !planId) {
-            console.error(`❌ Missing metadata in checkout session:`, session.metadata);
+            console.error(`❌ [${timestamp}] Missing metadata in checkout session:`, session.metadata);
             return res.status(400).send('Missing user or plan metadata');
           }
           
