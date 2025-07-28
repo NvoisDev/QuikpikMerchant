@@ -8376,6 +8376,41 @@ https://quikpik.app`;
     }
   });
 
+  // Debug endpoint to check subscription data
+  app.get('/api/subscription/debug', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      console.log(`🐛 Debug subscription data for user ${userId}:`, {
+        id: user.id,
+        email: user.email,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        productLimit: user.productLimit,
+        subscriptionEndsAt: user.subscriptionEndsAt
+      });
+
+      res.json({
+        userId: user.id,
+        email: user.email,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        productLimit: user.productLimit,
+        subscriptionEndsAt: user.subscriptionEndsAt,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Debug subscription error:', error);
+      res.status(500).json({ error: "Failed to get debug data" });
+    }
+  });
+
   // Manual subscription data refresh endpoint
   app.post('/api/subscription/refresh', requireAuth, async (req: any, res) => {
     try {

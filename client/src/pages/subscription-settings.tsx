@@ -35,9 +35,18 @@ export default function SubscriptionSettings() {
         });
         // Clear the URL parameter
         window.history.replaceState({}, '', window.location.pathname);
+        // Debug current subscription data first
+        try {
+          const debugResponse = await apiRequest("GET", "/api/subscription/debug");
+          console.log("🐛 Current subscription debug data:", await debugResponse.json());
+        } catch (error) {
+          console.error("Failed to get debug data:", error);
+        }
+        
         // Refresh subscription data with manual refresh call
         try {
-          await apiRequest("POST", "/api/subscription/refresh");
+          const refreshResponse = await apiRequest("POST", "/api/subscription/refresh");
+          console.log("🔄 Refresh response:", await refreshResponse.json());
         } catch (error) {
           console.error("Failed to refresh subscription data:", error);
         }
@@ -230,9 +239,30 @@ export default function SubscriptionSettings() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Current Plan
-            <Badge variant={isActive ? "default" : "secondary"}>
-              {isActive ? "Active" : "Inactive"}
-            </Badge>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const debugResponse = await apiRequest("GET", "/api/subscription/debug");
+                    const debugData = await debugResponse.json();
+                    console.log("🐛 Debug data:", debugData);
+                    toast({
+                      title: "Debug Data",
+                      description: `Tier: ${debugData.subscriptionTier || 'free'}, Status: ${debugData.subscriptionStatus || 'inactive'}`,
+                    });
+                  } catch (error) {
+                    console.error("Debug failed:", error);
+                  }
+                }}
+              >
+                Debug
+              </Button>
+              <Badge variant={isActive ? "default" : "secondary"}>
+                {isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
