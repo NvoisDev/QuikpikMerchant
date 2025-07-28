@@ -35,6 +35,31 @@ export default function SubscriptionSettings() {
     isActive
   });
 
+  // Show login message if not authenticated
+  if (!user) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Subscription Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Please log in to view your subscription details
+          </p>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center">
+            <h3 className="text-lg font-semibold mb-4">Authentication Required</h3>
+            <p className="text-muted-foreground mb-4">
+              You need to log in to access your subscription settings
+            </p>
+            <Button onClick={() => window.location.href = '/login'}>
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
