@@ -377,16 +377,16 @@ export default function SubscriptionSettings() {
           <div className="space-y-3">
             <h4 className="font-semibold text-lg">Your Plan Includes:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {plans.find(p => p.id === currentTier)?.features.slice(0, 8).map((feature, index) => (
+              {plans.find(p => p.id === currentTier)?.features?.slice(0, 8)?.map((feature, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                   <span>{feature}</span>
                 </div>
-              ))}
+              )) || []}
             </div>
-            {plans.find(p => p.id === currentTier)?.features.length > 8 && (
+            {(plans.find(p => p.id === currentTier)?.features?.length || 0) > 8 && (
               <p className="text-sm text-muted-foreground">
-                +{plans.find(p => p.id === currentTier)?.features.length - 8} more features included
+                +{(plans.find(p => p.id === currentTier)?.features?.length || 0) - 8} more features included
               </p>
             )}
           </div>
