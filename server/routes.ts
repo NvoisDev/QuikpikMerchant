@@ -8645,6 +8645,8 @@ https://quikpik.app`;
       return res.status(400).send(`Webhook Error: ${err}`);
     }
 
+    console.log(`🎯 [${timestamp}] About to process event type: ${event.type}`);
+
     // Handle the event
     switch (event.type) {
       case 'checkout.session.completed':
