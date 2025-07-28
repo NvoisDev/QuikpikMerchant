@@ -7,11 +7,11 @@ export function useAuth() {
   
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
-    enabled: false, // Disabled to prevent infinite loops in customer portal
+    enabled: true, // Re-enabled to fetch subscription data
     retry: false,
-    staleTime: Infinity,
+    staleTime: 30000, // Cache for 30 seconds instead of infinity
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true, // Refetch on mount to get fresh data
     refetchInterval: false,
   });
 

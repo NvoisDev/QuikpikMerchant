@@ -21,6 +21,20 @@ export default function SubscriptionSettings() {
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
 
+  // Debug logging to see what data we're getting
+  console.log("🐛 Subscription page data:", {
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      subscriptionTier: user.subscriptionTier,
+      subscriptionStatus: user.subscriptionStatus,
+      productLimit: user.productLimit
+    } : null,
+    subscription,
+    currentTier,
+    isActive
+  });
+
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
