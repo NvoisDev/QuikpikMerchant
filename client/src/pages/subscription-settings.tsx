@@ -285,66 +285,129 @@ export default function SubscriptionSettings() {
         </p>
       </div>
 
-      {/* Current Plan Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Current Plan
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={async () => {
-                  try {
-                    // Force refresh data from server
-                    queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                    
-                    const debugResponse = await apiRequest("GET", "/api/subscription/debug");
-                    const debugData = await debugResponse.json();
-                    console.log("🐛 Debug data:", debugData);
-                    toast({
-                      title: "Subscription Updated",
-                      description: `Tier: ${debugData.subscriptionTier || 'free'}, Status: ${debugData.subscriptionStatus || 'inactive'}`,
-                    });
-                    
-                    // Force page refresh if needed
-                    setTimeout(() => window.location.reload(), 1000);
-                  } catch (error) {
-                    console.error("Debug failed:", error);
-                  }
-                }}
-              >
-                Refresh Data
-              </Button>
-              <Badge variant={isActive ? "default" : "secondary"}>
-                {isActive ? "Active" : "Inactive"}
-              </Badge>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Current Plan Status - Modernized */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold capitalize">{currentTier} Plan</h3>
-              <p className="text-gray-600">
-                {(subscription as any)?.productCount || 0} of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit} products used
-              </p>
-              {(subscription as any)?.expiresAt && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Next billing: {new Date((subscription as any).expiresAt).toLocaleDateString()}
-                </p>
-              )}
+            <div className="flex items-center gap-4">
+              <div className={`flex items-center justify-center w-16 h-16 rounded-full ${
+                currentTier === 'premium' ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                currentTier === 'standard' ? 'bg-blue-500' : 'bg-gray-500'
+              } text-white shadow-lg`}>
+                {currentTier === 'premium' && <Crown className="w-8 h-8" />}
+                {currentTier === 'standard' && <Package className="w-8 h-8" />}
+                {currentTier === 'free' && <Users className="w-8 h-8" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-3xl font-bold capitalize">{currentTier} Plan</h2>
+                  <Badge variant={isActive ? "default" : "destructive"} className={`
+                    ${currentTier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : ''}
+                    ${currentTier === 'standard' ? 'bg-blue-500' : ''}
+                  `}>
+                    {isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="text-2xl font-semibold text-foreground">
+                    {plans.find(p => p.id === currentTier)?.price || "£0"}
+                  </span>
+                  <span>/ {plans.find(p => p.id === currentTier)?.period || "forever"}</span>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">
-                {plans.find(p => p.id === currentTier)?.price || "£0"}
-              </p>
-              <p className="text-gray-600">
-                {plans.find(p => p.id === currentTier)?.period || "forever"}
-              </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                try {
+                  queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                  toast({
+                    title: "Data Refreshed",
+                    description: "Subscription data has been updated from server",
+                  });
+                } catch (error) {
+                  console.error("Refresh failed:", error);
+                }
+              }}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Usage Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-background/60 rounded-lg p-4 text-center border">
+              <div className="text-3xl font-bold text-primary mb-1">
+                {currentTier === 'premium' ? '∞' : 
+                 currentTier === 'standard' ? '10' : '3'}
+              </div>
+              <div className="text-sm text-muted-foreground">Products Limit</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {(subscription as any)?.productCount || 0} used
+              </div>
+            </div>
+            <div className="bg-background/60 rounded-lg p-4 text-center border">
+              <div className="text-3xl font-bold text-primary mb-1">
+                {currentTier === 'premium' ? '∞' : 
+                 currentTier === 'standard' ? '10' : '3'}
+              </div>
+              <div className="text-sm text-muted-foreground">Edits per Product</div>
+            </div>
+            <div className="bg-background/60 rounded-lg p-4 text-center border">
+              <div className="text-3xl font-bold text-primary mb-1">
+                {currentTier === 'premium' ? '∞' : 
+                 currentTier === 'standard' ? '5' : '2'}
+              </div>
+              <div className="text-sm text-muted-foreground">Customer Groups</div>
+            </div>
+            <div className="bg-background/60 rounded-lg p-4 text-center border">
+              <div className="text-3xl font-bold text-primary mb-1">
+                {currentTier === 'premium' ? '∞' : 
+                 currentTier === 'standard' ? '25' : '5'}
+              </div>
+              <div className="text-sm text-muted-foreground">Broadcasts/Month</div>
             </div>
           </div>
+
+          {/* Plan Features Preview */}
+          <div className="space-y-3">
+            <h4 className="font-semibold text-lg">Your Plan Includes:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {plans.find(p => p.id === currentTier)?.features.slice(0, 8).map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+            {plans.find(p => p.id === currentTier)?.features.length > 8 && (
+              <p className="text-sm text-muted-foreground">
+                +{plans.find(p => p.id === currentTier)?.features.length - 8} more features included
+              </p>
+            )}
+          </div>
+
+          {/* Billing Information */}
+          {user?.subscriptionEndsAt && (
+            <div className="bg-secondary/20 rounded-lg p-4 border border-secondary/40">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-5 h-5 text-muted-foreground" />
+                <span className="font-medium">Billing Information</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Next billing date: {new Date(user.subscriptionEndsAt).toLocaleDateString('en-GB', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+          )}
           
           {currentTier !== "free" && (
             <div className="mt-4 pt-4 border-t">
