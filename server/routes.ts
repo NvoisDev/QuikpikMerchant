@@ -793,14 +793,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      let responseUser = req.user;
+      // Always fetch fresh user data from database to ensure subscription updates are reflected
+      const userId = req.user.id || req.user.claims?.sub;
+      const freshUserData = await storage.getUser(userId);
+      
+      let responseUser = freshUserData || req.user;
       
       // Check if this user is a team member and get wholesaler info
-      if (req.user.role === 'team_member' && req.user.wholesalerId) {
-        const wholesalerInfo = await storage.getUser(req.user.wholesalerId);
+      if (responseUser.role === 'team_member' && responseUser.wholesalerId) {
+        const wholesalerInfo = await storage.getUser(responseUser.wholesalerId);
         if (wholesalerInfo) {
           responseUser = {
-            ...req.user,
+            ...responseUser,
             subscriptionTier: wholesalerInfo.subscriptionTier,
             businessName: wholesalerInfo.businessName,
             isTeamMember: true,
@@ -808,6 +812,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }
+      
+      console.log(`👤 Auth endpoint returning fresh user data for ${userId}:`, {
+        id: responseUser.id,
+        email: responseUser.email,
+        subscriptionTier: responseUser.subscriptionTier,
+        subscriptionStatus: responseUser.subscriptionStatus
+      });
       
       res.json(responseUser);
     } catch (error) {

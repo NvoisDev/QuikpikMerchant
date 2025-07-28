@@ -21,6 +21,12 @@ export default function SubscriptionSettings() {
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
 
+  // Force cache invalidation on component mount to ensure fresh data
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+  }, [queryClient]);
+
   // Check for success/cancel parameters in URL
   useEffect(() => {
     const handleSuccess = async () => {
@@ -35,23 +41,13 @@ export default function SubscriptionSettings() {
         });
         // Clear the URL parameter
         window.history.replaceState({}, '', window.location.pathname);
-        // Debug current subscription data first
-        try {
-          const debugResponse = await apiRequest("GET", "/api/subscription/debug");
-          console.log("🐛 Current subscription debug data:", await debugResponse.json());
-        } catch (error) {
-          console.error("Failed to get debug data:", error);
-        }
         
-        // Refresh subscription data with manual refresh call
-        try {
-          const refreshResponse = await apiRequest("POST", "/api/subscription/refresh");
-          console.log("🔄 Refresh response:", await refreshResponse.json());
-        } catch (error) {
-          console.error("Failed to refresh subscription data:", error);
-        }
+        // Force refresh of all subscription-related data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
+        // Force page refresh to ensure UI updates
+        setTimeout(() => window.location.reload(), 1000);
       } else if (canceled === 'true') {
         toast({
           title: "Subscription Canceled",
