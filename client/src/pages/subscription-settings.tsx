@@ -245,19 +245,26 @@ export default function SubscriptionSettings() {
                 size="sm"
                 onClick={async () => {
                   try {
+                    // Force refresh data from server
+                    queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    
                     const debugResponse = await apiRequest("GET", "/api/subscription/debug");
                     const debugData = await debugResponse.json();
                     console.log("🐛 Debug data:", debugData);
                     toast({
-                      title: "Debug Data",
+                      title: "Subscription Updated",
                       description: `Tier: ${debugData.subscriptionTier || 'free'}, Status: ${debugData.subscriptionStatus || 'inactive'}`,
                     });
+                    
+                    // Force page refresh if needed
+                    setTimeout(() => window.location.reload(), 1000);
                   } catch (error) {
                     console.error("Debug failed:", error);
                   }
                 }}
               >
-                Debug
+                Refresh Data
               </Button>
               <Badge variant={isActive ? "default" : "secondary"}>
                 {isActive ? "Active" : "Inactive"}

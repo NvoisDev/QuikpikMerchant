@@ -8615,6 +8615,13 @@ https://quikpik.app`;
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object;
+        console.log(`🎣 Checkout session completed:`, {
+          mode: session.mode,
+          userId: session.metadata?.userId,
+          planId: session.metadata?.planId,
+          subscriptionId: session.subscription
+        });
+        
         if (session.mode === 'subscription') {
           const userId = session.metadata.userId;
           const planId = session.metadata.planId;
