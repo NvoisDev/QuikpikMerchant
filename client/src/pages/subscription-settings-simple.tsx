@@ -107,232 +107,319 @@ export default function SubscriptionSettingsSimple() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Subscription Settings</h1>
-        <p className="text-gray-600 mt-2">
-          Manage your subscription plan and billing information
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Modern Header */}
+        <div className="text-center space-y-4 mb-12">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Subscription Management
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Manage your plan, track usage, and unlock powerful features for your business
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Plan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-xl font-semibold">
-                {user.subscriptionTier || 'Free'} Plan
-              </h3>
-              <p className="text-gray-600">
-                Status: {user.subscriptionStatus || 'active'}
+        {/* Current Plan Overview - Modern Card */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-6">
+              {user.subscriptionTier === 'premium' && (
+                <div className="p-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl shadow-lg">
+                  <Crown className="w-10 h-10 text-white" />
+                </div>
+              )}
+              {user.subscriptionTier === 'standard' && (
+                <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
+                  <Crown className="w-10 h-10 text-white" />
+                </div>
+              )}
+              {(user.subscriptionTier === 'free' || !user.subscriptionTier) && (
+                <div className="p-4 bg-gradient-to-r from-gray-400 to-gray-600 rounded-2xl shadow-lg">
+                  <Crown className="w-10 h-10 text-white" />
+                </div>
+              )}
+              <div>
+                <h2 className="text-3xl font-bold capitalize bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  {user.subscriptionTier || 'free'} Plan
+                </h2>
+                <p className="text-gray-500 text-lg">Status: {user.subscriptionStatus || 'active'}</p>
+              </div>
+            </div>
+            <Badge 
+              variant={user.subscriptionTier === 'premium' ? 'default' : 'secondary'} 
+              className={`px-6 py-3 text-base font-bold rounded-xl ${
+                user.subscriptionTier === 'premium' 
+                  ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg' 
+                  : user.subscriptionTier === 'standard'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {user.subscriptionTier === 'premium' ? '👑 Premium Member' : 
+               user.subscriptionTier === 'standard' ? '⭐ Standard Member' : 
+               '🆓 Free Member'}
+            </Badge>
+          </div>
+          
+          {/* Modern Usage Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-blue-900 text-lg">Products Created</h4>
+                <div className="w-4 h-4 bg-blue-500 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-4xl font-bold text-blue-600 mb-2">0</p>
+              <p className="text-sm text-blue-700 font-medium">
+                of {user.subscriptionTier === 'premium' ? '∞ unlimited' : user.subscriptionTier === 'standard' ? '10' : '3'} allowed
               </p>
             </div>
-            
-            {/* Usage Statistics - Stage 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800">Products Created</h4>
-                <p className="text-2xl font-bold text-primary">0</p>
-                <p className="text-sm text-gray-600">of {user.subscriptionTier === 'premium' ? 'unlimited' : user.subscriptionTier === 'standard' ? '10' : '3'} allowed</p>
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-8 rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-emerald-900 text-lg">Plan Status</h4>
+                <div className="w-4 h-4 bg-emerald-500 rounded-full animate-pulse"></div>
               </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800">Plan Status</h4>
-                <p className="text-2xl font-bold text-primary capitalize">{user.subscriptionTier || 'free'}</p>
-                <p className="text-sm text-gray-600">{user.subscriptionStatus === 'active' ? 'Active subscription' : 'Free plan'}</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <h4 className="font-semibold">Free</h4>
-                  <p className="text-2xl font-bold">£0</p>
-                  <p className="text-sm text-gray-600">forever</p>
-                  
-                  {/* Free Plan Features */}
-                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 3 products</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>3 edits per product</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 2 customer groups</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>5 broadcasts per month</span>
-                    </li>
-                  </ul>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="mt-2 w-full"
-                    disabled={user.subscriptionTier === 'free'}
-                    onClick={() => handlePlanChangeClick('free')}
-                  >
-                    {user.subscriptionTier === 'free' ? 'Current Plan' : 'Downgrade'}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <h4 className="font-semibold">Standard</h4>
-                  <p className="text-2xl font-bold">£10.99</p>
-                  <p className="text-sm text-gray-600">per month</p>
-                  
-                  {/* Standard Plan Features */}
-                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 10 products</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>10 product edits per product</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 5 customer groups</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>25 broadcasts per month</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 2 team members</span>
-                    </li>
-                  </ul>
-                  
-                  <Button 
-                    className="mt-2 w-full"
-                    disabled={user.subscriptionTier === 'standard'}
-                    onClick={() => handlePlanChangeClick('standard')}
-                  >
-                    {user.subscriptionTier === 'standard' ? 'Current Plan' : getPlanChangeAction('standard') === 'upgrade' ? 'Upgrade' : 'Downgrade'}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="relative border-primary shadow-lg">
-                {/* Premium Badge */}
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-primary text-white px-3 py-1">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Most Popular
-                  </Badge>
-                </div>
-                
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Crown className="w-5 h-5 text-yellow-500 mr-2" />
-                    <h4 className="font-semibold">Premium</h4>
-                  </div>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">£19.99</p>
-                  <p className="text-sm text-gray-600">per month</p>
-                  
-                  {/* Premium Plan Features */}
-                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Unlimited products</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Unlimited product edits</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Unlimited customer groups</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Unlimited broadcasts</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 5 team members</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Marketplace access</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Product advertising</span>
-                    </li>
-                  </ul>
-                  
-                  <Button 
-                    className="mt-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                    disabled={user.subscriptionTier === 'premium'}
-                    onClick={() => handlePlanChangeClick('premium')}
-                  >
-                    {user.subscriptionTier === 'premium' ? 'Current Plan' : 'Upgrade'}
-                  </Button>
-                </CardContent>
-              </Card>
+              <p className="text-4xl font-bold text-emerald-600 mb-2 capitalize">{user.subscriptionTier || 'free'}</p>
+              <p className="text-sm text-emerald-700 font-medium">{user.subscriptionStatus === 'active' ? 'Active subscription' : 'Free plan'}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Billing Information - Stage 4 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-800 mb-2">Current Plan</h4>
-              <p className="text-lg font-semibold capitalize">{user.subscriptionTier || 'free'} Plan</p>
-              <p className="text-sm text-gray-600">Status: {user.subscriptionStatus || 'active'}</p>
+        {/* Modern Plan Selection Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Free Plan */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-8 text-center space-y-6 hover:shadow-xl transition-all hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-400 to-gray-600"></div>
+            <div className="space-y-3">
+              <h4 className="text-2xl font-bold text-gray-800">Free</h4>
+              <div className="space-y-1">
+                <p className="text-4xl font-bold text-gray-800">£0</p>
+                <p className="text-gray-500 font-medium">forever</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-medium text-gray-800 mb-2">Next Billing Date</h4>
-              <p className="text-lg font-semibold">
-                {user.subscriptionTier === 'free' ? 'No billing required' : 'August 29, 2025'}
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 3 products</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-gray-700 font-medium">3 edits per product</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 2 customer groups</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-gray-700 font-medium">5 broadcasts per month</span>
+              </li>
+            </ul>
+            
+            <Button 
+              variant="outline" 
+              className="w-full py-3 rounded-xl font-semibold text-base border-2 hover:bg-gray-50 transition-colors"
+              disabled={user.subscriptionTier === 'free'}
+              onClick={() => handlePlanChangeClick('free')}
+            >
+              {user.subscriptionTier === 'free' ? '✓ Current Plan' : 'Downgrade'}
+            </Button>
+          </div>
+
+          {/* Standard Plan */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-200 p-8 text-center space-y-6 hover:shadow-xl transition-all hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <h4 className="text-2xl font-bold text-gray-800">Standard</h4>
+                <Badge className="bg-green-100 text-green-700 px-2 py-1 text-xs font-bold">POPULAR</Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">£10.99</p>
+                <p className="text-gray-500 font-medium">per month</p>
+              </div>
+            </div>
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 10 products</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 font-medium">10 product edits per product</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 5 customer groups</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 font-medium">25 broadcasts per month</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 2 team members</span>
+              </li>
+            </ul>
+            
+            <Button 
+              className="w-full py-3 rounded-xl font-semibold text-base bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all"
+              disabled={user.subscriptionTier === 'standard'}
+              onClick={() => handlePlanChangeClick('standard')}
+            >
+              {user.subscriptionTier === 'standard' ? '✓ Current Plan' : getPlanChangeAction('standard') === 'upgrade' ? 'Upgrade' : 'Downgrade'}
+            </Button>
+          </div>
+
+          {/* Premium Plan */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-yellow-200 p-8 text-center space-y-6 hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500"></div>
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 font-bold shadow-lg">
+                👑 PREMIUM
+              </Badge>
+            </div>
+            
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center justify-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl">
+                  <Crown className="w-6 h-6 text-white" />
+                </div>
+                <h4 className="text-2xl font-bold text-gray-800">Premium</h4>
+              </div>
+              <div className="space-y-1">
+                <p className="text-4xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">£19.99</p>
+                <p className="text-gray-500 font-medium">per month</p>
+              </div>
+            </div>
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Unlimited products</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Unlimited product edits</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Unlimited customer groups</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Unlimited broadcasts</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Up to 5 team members</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Marketplace access</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-yellow-600" />
+                </div>
+                <span className="text-gray-700 font-medium">Product advertising</span>
+              </li>
+            </ul>
+            
+            <Button 
+              className="w-full py-3 rounded-xl font-semibold text-base bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl transition-all"
+              disabled={user.subscriptionTier === 'premium'}
+              onClick={() => handlePlanChangeClick('premium')}
+            >
+              {user.subscriptionTier === 'premium' ? '✓ Current Plan' : 'Upgrade'}
+            </Button>
+        </div>
+
+        {/* Modern Billing Information */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">Billing Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-purple-900 text-lg">Current Plan</h4>
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              </div>
+              <p className="text-2xl font-bold text-purple-600 capitalize">{user.subscriptionTier || 'free'} Plan</p>
+              <p className="text-sm text-purple-700">Status: {user.subscriptionStatus || 'active'}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-2xl border border-orange-100">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-orange-900 text-lg">Next Billing Date</h4>
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              </div>
+              <p className="text-2xl font-bold text-orange-600">
+                {user.subscriptionTier === 'free' ? 'No billing' : 'August 29, 2025'}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-orange-700">
                 {user.subscriptionTier === 'free' ? 'Free plan' : 'Monthly subscription'}
               </p>
             </div>
           </div>
           
           {user.subscriptionTier !== 'free' && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Subscription Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-600">Plan:</span>
-                  <span className="ml-2 font-medium capitalize">{user.subscriptionTier}</span>
+            <div className="mt-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl border border-indigo-100">
+              <h4 className="font-bold text-indigo-900 text-lg mb-4">Subscription Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <p className="text-sm text-indigo-600 font-medium">Plan</p>
+                  <p className="text-xl font-bold text-indigo-800 capitalize">{user.subscriptionTier}</p>
                 </div>
-                <div>
-                  <span className="text-blue-600">Amount:</span>
-                  <span className="ml-2 font-medium">
+                <div className="text-center">
+                  <p className="text-sm text-indigo-600 font-medium">Amount</p>
+                  <p className="text-xl font-bold text-indigo-800">
                     {user.subscriptionTier === 'standard' ? '£10.99' : '£19.99'}/month
-                  </span>
+                  </p>
                 </div>
-                <div>
-                  <span className="text-blue-600">Started:</span>
-                  <span className="ml-2 font-medium">July 29, 2025</span>
+                <div className="text-center">
+                  <p className="text-sm text-indigo-600 font-medium">Started</p>
+                  <p className="text-xl font-bold text-indigo-800">July 29, 2025</p>
                 </div>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+    </div>
 
-      {/* Plan Change Confirmation Modal */}
+    {/* Plan Change Confirmation Modal */}
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
         <DialogContent>
           <DialogHeader>
