@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Crown, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function SubscriptionSettingsSimple() {
@@ -15,6 +16,14 @@ export default function SubscriptionSettingsSimple() {
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
+
+  // Get actual product count
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products'],
+    enabled: !!user,
+  });
+
+  const productCount = Array.isArray(products) ? products.length : 0;
 
   const handlePlanChangeClick = (planId: string) => {
     if (user?.subscriptionTier === planId) return; // Can't change to same plan
@@ -109,49 +118,49 @@ export default function SubscriptionSettingsSimple() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <div className="max-w-6xl mx-auto px-6 py-12 space-y-12">
-        {/* Modern Header */}
-        <div className="text-center space-y-6 mb-16">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+        {/* Header */}
+        <div className="text-center space-y-4 mb-12">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             Subscription Management
           </h1>
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-            Manage your plan, track usage, and unlock powerful features for your wholesale business
+          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+            Manage your plan and track your usage
           </p>
         </div>
 
-        {/* Current Plan Overview - Brand Colors */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-green-100 p-12">
-          <div className="flex items-center justify-between mb-8">
+        {/* Current Plan Overview */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-green-100 p-8">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-6">
               {user.subscriptionTier === 'premium' && (
-                <div className="p-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-3xl shadow-xl">
-                  <Crown className="w-12 h-12 text-white" />
+                <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg">
+                  <Crown className="w-8 h-8 text-white" />
                 </div>
               )}
               {user.subscriptionTier === 'standard' && (
-                <div className="p-6 bg-gradient-to-r from-green-400 to-teal-500 rounded-3xl shadow-xl">
-                  <Crown className="w-12 h-12 text-white" />
+                <div className="p-4 bg-gradient-to-r from-green-400 to-teal-500 rounded-2xl shadow-lg">
+                  <Crown className="w-8 h-8 text-white" />
                 </div>
               )}
               {(user.subscriptionTier === 'free' || !user.subscriptionTier) && (
-                <div className="p-6 bg-gradient-to-r from-gray-400 to-gray-600 rounded-3xl shadow-xl">
-                  <Crown className="w-12 h-12 text-white" />
+                <div className="p-4 bg-gradient-to-r from-gray-400 to-gray-600 rounded-2xl shadow-lg">
+                  <Crown className="w-8 h-8 text-white" />
                 </div>
               )}
               <div>
-                <h2 className="text-4xl font-bold capitalize bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold capitalize bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">
                   {user.subscriptionTier || 'free'} Plan
                 </h2>
-                <p className="text-gray-600 text-xl font-medium">Status: {user.subscriptionStatus || 'active'}</p>
+                <p className="text-gray-600 text-lg font-medium">Status: {user.subscriptionStatus || 'active'}</p>
               </div>
             </div>
             <Badge 
               variant={user.subscriptionTier === 'premium' ? 'default' : 'secondary'} 
-              className={`px-8 py-4 text-lg font-bold rounded-2xl ${
+              className={`px-6 py-3 text-base font-bold rounded-xl ${
                 user.subscriptionTier === 'premium' 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-xl' 
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg' 
                   : user.subscriptionTier === 'standard'
-                  ? 'bg-gradient-to-r from-green-400 to-teal-500 text-white shadow-xl'
+                  ? 'bg-gradient-to-r from-green-400 to-teal-500 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
@@ -161,34 +170,34 @@ export default function SubscriptionSettingsSimple() {
             </Badge>
           </div>
           
-          {/* Brand Usage Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-10 rounded-3xl border border-green-200 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-green-900 text-xl">Products Created</h4>
-                <div className="w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
+          {/* Usage Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200 shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-green-900 text-lg">Products Created</h4>
+                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
-              <p className="text-5xl font-bold text-green-600 mb-3">0</p>
-              <p className="text-base text-green-700 font-semibold">
+              <p className="text-3xl font-bold text-green-600 mb-2">{productCount}</p>
+              <p className="text-sm text-green-700 font-medium">
                 of {user.subscriptionTier === 'premium' ? '∞ unlimited' : user.subscriptionTier === 'standard' ? '10' : '3'} allowed
               </p>
             </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-10 rounded-3xl border border-emerald-200 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-emerald-900 text-xl">Plan Status</h4>
-                <div className="w-5 h-5 bg-emerald-500 rounded-full animate-pulse"></div>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200 shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-emerald-900 text-lg">Plan Status</h4>
+                <div className="w-4 h-4 bg-emerald-500 rounded-full animate-pulse"></div>
               </div>
-              <p className="text-5xl font-bold text-emerald-600 mb-3 capitalize">{user.subscriptionTier || 'free'}</p>
-              <p className="text-base text-emerald-700 font-semibold">{user.subscriptionStatus === 'active' ? 'Active subscription' : 'Free plan'}</p>
+              <p className="text-3xl font-bold text-emerald-600 mb-2 capitalize">{user.subscriptionTier || 'free'}</p>
+              <p className="text-sm text-emerald-700 font-medium">{user.subscriptionStatus === 'active' ? 'Active subscription' : 'Free plan'}</p>
             </div>
           </div>
         </div>
 
-        {/* Brand Plan Selection Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 py-8">
+        {/* Plan Selection Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Free Plan */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200 p-10 text-center space-y-8 hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gray-400 to-gray-600"></div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 text-center space-y-6 hover:shadow-xl transition-all hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-400 to-gray-600"></div>
             <div className="space-y-4">
               <h4 className="text-3xl font-bold text-gray-800">Free</h4>
               <div className="space-y-2">
@@ -366,133 +375,58 @@ export default function SubscriptionSettingsSimple() {
             </Button>
         </div>
 
-        {/* Brand Billing Information */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-green-100 p-12">
-          <h3 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent mb-10">Billing Information</h3>
+        {/* Billing Information */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-green-100 p-6">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent mb-6">Billing Information</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-3xl border border-green-200 shadow-lg">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-green-900 text-xl">Current Plan</h4>
-                <div className="w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-green-900">Current Plan</h4>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
-              <p className="text-3xl font-bold text-green-600 capitalize mb-2">{user.subscriptionTier || 'free'} Plan</p>
-              <p className="text-base text-green-700 font-semibold">Status: {user.subscriptionStatus || 'active'}</p>
+              <p className="text-2xl font-bold text-green-600 capitalize">{user.subscriptionTier || 'free'} Plan</p>
+              <p className="text-sm text-green-700">Status: {user.subscriptionStatus || 'active'}</p>
             </div>
             
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-8 rounded-3xl border border-emerald-200 shadow-lg">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-emerald-900 text-xl">Next Billing Date</h4>
-                <div className="w-5 h-5 bg-emerald-500 rounded-full animate-pulse"></div>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-emerald-900">Next Billing Date</h4>
+                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
               </div>
-              <p className="text-3xl font-bold text-emerald-600 mb-2">
+              <p className="text-2xl font-bold text-emerald-600">
                 {user.subscriptionTier === 'free' ? 'No billing' : 'August 29, 2025'}
               </p>
-              <p className="text-base text-emerald-700 font-semibold">
+              <p className="text-sm text-emerald-700">
                 {user.subscriptionTier === 'free' ? 'Free plan' : 'Monthly subscription'}
               </p>
             </div>
           </div>
           
           {user.subscriptionTier !== 'free' && (
-            <div className="mt-12 p-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl border border-green-200 shadow-lg">
-              <h4 className="font-bold text-green-900 text-xl mb-8">Subscription Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <h4 className="font-bold text-green-900 mb-4">Subscription Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-base text-green-600 font-semibold mb-2">Plan</p>
-                  <p className="text-2xl font-bold text-green-800 capitalize">{user.subscriptionTier}</p>
+                  <p className="text-sm text-green-600 font-medium">Plan</p>
+                  <p className="text-lg font-bold text-green-800 capitalize">{user.subscriptionTier}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-base text-green-600 font-semibold mb-2">Amount</p>
-                  <p className="text-2xl font-bold text-green-800">
+                  <p className="text-sm text-green-600 font-medium">Amount</p>
+                  <p className="text-lg font-bold text-green-800">
                     {user.subscriptionTier === 'standard' ? '£10.99' : '£19.99'}/month
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-base text-green-600 font-semibold mb-2">Started</p>
-                  <p className="text-2xl font-bold text-green-800">July 29, 2025</p>
+                  <p className="text-sm text-green-600 font-medium">Started</p>
+                  <p className="text-lg font-bold text-green-800">July 29, 2025</p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Brand Feature Highlights Section */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-3xl shadow-2xl p-12 text-white">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Why Choose Quikpik Premium?</h3>
-            <p className="text-xl text-green-100 max-w-3xl mx-auto">
-              Unlock the full potential of your wholesale business with our comprehensive features
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Crown className="w-8 h-8 text-white" />
-              </div>
-              <h4 className="text-xl font-bold">Unlimited Products</h4>
-              <p className="text-green-100">Create unlimited product listings without restrictions</p>
-            </div>
-            
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Check className="w-8 h-8 text-white" />
-              </div>
-              <h4 className="text-xl font-bold">Advanced Analytics</h4>
-              <p className="text-green-100">Track performance with detailed business insights</p>
-            </div>
-            
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
-              </div>
-              <h4 className="text-xl font-bold">Priority Support</h4>
-              <p className="text-green-100">Get dedicated support for your business needs</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Brand Trust Section */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-green-100 p-12">
-          <div className="text-center space-y-8">
-            <h3 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">
-              Trusted by 1000+ Businesses
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-3xl border border-green-200">
-                <div className="text-4xl font-bold text-green-600 mb-2">99.9%</div>
-                <div className="text-lg text-green-700 font-semibold">Uptime</div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-8 rounded-3xl border border-emerald-200">
-                <div className="text-4xl font-bold text-emerald-600 mb-2">24/7</div>
-                <div className="text-lg text-emerald-700 font-semibold">Support</div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-8 rounded-3xl border border-teal-200">
-                <div className="text-4xl font-bold text-teal-600 mb-2">1000+</div>
-                <div className="text-lg text-teal-700 font-semibold">Happy Customers</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Brand Footer Section */}
-        <div className="text-center space-y-6 py-8">
-          <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-            Ready to Grow Your Business?
-          </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Join thousands of successful wholesalers using Quikpik to streamline their operations and boost sales.
-          </p>
-          <div className="flex justify-center space-x-6">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-3 h-3 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
-        </div>
       </div>
     </div>
 
