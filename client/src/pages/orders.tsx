@@ -83,6 +83,7 @@ interface Order {
   retailerId: string;
   wholesalerId: string;
   total: string;
+  subtotal?: string; // Add subtotal field
   totalAmount?: string; // Keep for backward compatibility
   status: string;
   paymentStatus: string;
@@ -91,6 +92,10 @@ interface Order {
   deliveryAddress?: string;
   notes?: string;
   fulfillmentType?: string; // Add fulfillment type field
+  orderNumber?: string; // Add order number field
+  shippingOption?: string; // Add shipping option field
+  shippingService?: string; // Add shipping service field
+  shippingCost?: string; // Add shipping cost field
   // Shipping fields
   shippingOrderId?: string;
   shippingHash?: string;
