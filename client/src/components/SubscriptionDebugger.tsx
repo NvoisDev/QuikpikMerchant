@@ -20,6 +20,18 @@ export function SubscriptionDebugger() {
     retry: false,
   });
 
+  // Get subscription audit logs
+  const { data: auditLogs, refetch: refetchLogs } = useQuery({
+    queryKey: ["/api/subscription/audit-logs"],
+    retry: false,
+  });
+
+  // Get subscription statistics
+  const { data: subscriptionStats } = useQuery({
+    queryKey: ["/api/subscription/stats"],
+    retry: false,
+  });
+
   const handleManualUpgrade = async (planId: string) => {
     setIsUpgrading(true);
     try {
@@ -41,6 +53,7 @@ export function SubscriptionDebugger() {
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         refetch();
+        refetchLogs();
         
         // Force page refresh to ensure UI updates
         setTimeout(() => window.location.reload(), 1000);
@@ -63,10 +76,11 @@ export function SubscriptionDebugger() {
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     refetch();
+    refetchLogs();
     
     toast({
       title: "Data Refreshed",
-      description: "Subscription data has been refreshed",
+      description: "Subscription data and audit logs have been refreshed",
     });
   };
 
@@ -107,6 +121,67 @@ export function SubscriptionDebugger() {
             <strong>Stripe Sub ID:</strong> {user.stripeSubscriptionId || 'None'}
           </div>
         </div>
+
+        {auditLogs && auditLogs.logs && auditLogs.logs.length > 0 && (
+          <div className="bg-white p-3 rounded border">
+            <strong>Recent Subscription Activity ({auditLogs.count} events):</strong>
+            <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
+              {auditLogs.logs.slice(0, 10).map((log: any, index: number) => (
+                <div key={index} className="text-xs p-2 bg-gray-50 rounded border-l-4 border-blue-400">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <Badge variant={
+                        log.eventType === 'upgrade' ? 'default' : 
+                        log.eventType === 'downgrade' ? 'destructive' :
+                        log.eventType === 'payment_success' ? 'default' :
+                        log.eventType === 'payment_failed' ? 'destructive' :
+                        'secondary'
+                      } className="text-xs mb-1">
+                        {log.eventType.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                      <div>{log.fromTier} → {log.toTier}</div>
+                      {log.amount && <div>Amount: £{log.amount}</div>}
+                      {log.reason && <div className="text-gray-600">Reason: {log.reason}</div>}
+                    </div>
+                    <div className="text-gray-500 text-right">
+                      {new Date(log.timestamp).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  {log.metadata && (
+                    <div className="mt-1 text-gray-600">
+                      Metadata: {typeof log.metadata === 'string' ? log.metadata : JSON.stringify(log.metadata)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {subscriptionStats && (
+          <div className="bg-white p-3 rounded border">
+            <strong>Subscription Statistics (30 days):</strong>
+            <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{subscriptionStats.stats?.upgrades || 0}</div>
+                <div className="text-gray-600">Upgrades</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-600">{subscriptionStats.stats?.downgrades || 0}</div>
+                <div className="text-gray-600">Downgrades</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">£{subscriptionStats.stats?.totalRevenue?.toFixed(2) || '0.00'}</div>
+                <div className="text-gray-600">Revenue</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {debugData && (
           <div className="bg-white p-3 rounded border">

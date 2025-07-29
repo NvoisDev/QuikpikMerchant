@@ -23,6 +23,16 @@ import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from ".
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { db } from "./db";
 import { eq, and, desc, inArray, or } from "drizzle-orm";
+import { 
+  SubscriptionLogger, 
+  logSubscriptionUpgrade, 
+  logSubscriptionDowngrade, 
+  logPaymentSuccess, 
+  logPaymentFailure, 
+  logManualOverride,
+  logProductUnlock,
+  logLimitReached 
+} from "./subscriptionLogger";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -950,6 +960,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check product limit before creating
       const limitCheck = await storage.checkProductLimit(targetUserId);
       if (!limitCheck.canAdd) {
+        // Log limit reached event
+        await logLimitReached(
+          targetUserId,
+          'product_creation',
+          limitCheck.currentCount,
+          limitCheck.tier,
+          {
+            attemptedAction: 'create_product',
+            productName: req.body.name,
+            limit: limitCheck.limit
+          }
+        );
+        
         return res.status(403).json({ 
           message: `Product limit reached. You can only have ${limitCheck.limit} products on the ${limitCheck.tier} plan. Upgrade your subscription to add more products.`,
           currentCount: limitCheck.currentCount,
@@ -990,6 +1013,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if product is locked due to subscription limits
       if (existingProduct.status === 'locked') {
+        // Log attempt to edit locked product
+        await logLimitReached(
+          targetUserId,
+          'locked_product_edit',
+          0,
+          'unknown',
+          {
+            attemptedAction: 'edit_locked_product',
+            productId: id,
+            productName: existingProduct.name
+          }
+        );
+        
         return res.status(403).json({ 
           message: "This product is locked due to subscription limits. Upgrade your plan or delete other products to unlock it.",
           errorType: "PRODUCT_LOCKED",
@@ -4100,6 +4136,16 @@ Write a professional, sales-focused description that highlights the key benefits
           const session = event.data.object;
           if (session.mode === 'subscription') {
             const { userId, tier, productLimit } = session.metadata;
+            const currentUser = await storage.getUser(userId);
+            const previousTier = currentUser?.subscriptionTier || 'free';
+            
+            // Log the subscription upgrade
+            await logSubscriptionUpgrade(userId, previousTier, tier, session.amount_total ? session.amount_total / 100 : undefined, {
+              stripeSessionId: session.id,
+              stripeSubscriptionId: session.subscription,
+              paymentMethod: session.payment_method_types?.[0] || 'unknown',
+              currency: session.currency || 'gbp'
+            });
             
             await storage.updateUserSubscription(userId, {
               tier: tier,
@@ -4132,6 +4178,11 @@ Write a professional, sales-focused description that highlights the key benefits
                     console.log(`🔓 Unlocked product: ${product.name} (ID: ${product.id})`);
                   }
                   
+                  // Log product unlock event
+                  await logProductUnlock(userId, productsToUnlock.length, tier, {
+                    unlockedProducts: productsToUnlock.map(p => ({ id: p.id, name: p.name }))
+                  });
+                  
                   console.log(`🔓 Successfully unlocked ${productsToUnlock.length} products after subscription upgrade`);
                 }
               }
@@ -4145,6 +4196,20 @@ Write a professional, sales-focused description that highlights the key benefits
           const deletedSub = event.data.object;
           const userToUpdate = await storage.getUser(deletedSub.metadata?.userId);
           if (userToUpdate) {
+            // Log subscription cancellation
+            await SubscriptionLogger.log({
+              userId: userToUpdate.id,
+              eventType: 'cancel',
+              fromTier: userToUpdate.subscriptionTier,
+              toTier: userToUpdate.subscriptionTier, // Keep tier during grace period
+              stripeSubscriptionId: deletedSub.id,
+              reason: 'Subscription cancelled via Stripe',
+              metadata: { 
+                gracePeriodDays: 7,
+                cancellationSource: 'stripe_webhook'
+              }
+            });
+            
             // Don't immediately downgrade - set status to 'cancelled' but preserve tier features
             // This gives businesses a grace period to reactivate or export their data
             await storage.updateUserSubscription(userToUpdate.id, {
@@ -4157,7 +4222,40 @@ Write a professional, sales-focused description that highlights the key benefits
           break;
 
         case 'invoice.payment_failed':
-          // Handle failed payments - could send notification to user
+          const failedInvoice = event.data.object;
+          const failedCustomer = await stripe!.customers.retrieve(failedInvoice.customer);
+          
+          if (failedCustomer && !failedCustomer.deleted && failedCustomer.metadata?.userId) {
+            await logPaymentFailure(
+              failedCustomer.metadata.userId,
+              failedInvoice.amount_due / 100,
+              `Payment failed: ${failedInvoice.billing_reason || 'Unknown reason'}`,
+              failedInvoice.subscription?.toString(),
+              {
+                invoiceId: failedInvoice.id,
+                attemptCount: failedInvoice.attempt_count,
+                nextPaymentAttempt: failedInvoice.next_payment_attempt
+              }
+            );
+          }
+          break;
+
+        case 'invoice.payment_succeeded':
+          const successInvoice = event.data.object;
+          const successCustomer = await stripe!.customers.retrieve(successInvoice.customer);
+          
+          if (successCustomer && !successCustomer.deleted && successCustomer.metadata?.userId) {
+            await logPaymentSuccess(
+              successCustomer.metadata.userId,
+              successInvoice.amount_paid / 100,
+              successInvoice.subscription?.toString(),
+              {
+                invoiceId: successInvoice.id,
+                paymentMethod: successInvoice.payment_intent?.payment_method,
+                billingReason: successInvoice.billing_reason
+              }
+            );
+          }
           break;
       }
 
@@ -8605,6 +8703,47 @@ https://quikpik.app`;
     }
   });
 
+  // Subscription audit log endpoints
+  app.get('/api/subscription/audit-logs', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      // Get subscription history for this user
+      const auditLogs = await SubscriptionLogger.getUserSubscriptionHistory(userId);
+      
+      res.json({
+        success: true,
+        logs: auditLogs,
+        count: auditLogs.length
+      });
+    } catch (error) {
+      console.error('Error fetching subscription audit logs:', error);
+      res.status(500).json({ error: "Failed to fetch subscription history" });
+    }
+  });
+
+  app.get('/api/subscription/stats', requireAuth, async (req: any, res) => {
+    try {
+      const { timeRange } = req.query;
+      
+      // Get subscription statistics
+      const stats = await SubscriptionLogger.getSubscriptionStats(timeRange as any || '30d');
+      
+      if (!stats) {
+        return res.status(500).json({ error: "Failed to generate subscription statistics" });
+      }
+      
+      res.json({
+        success: true,
+        timeRange: timeRange || '30d',
+        stats
+      });
+    } catch (error) {
+      console.error('Error fetching subscription stats:', error);
+      res.status(500).json({ error: "Failed to fetch subscription statistics" });
+    }
+  });
+
   // Free downgrades (no payment required)
   app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
     try {
@@ -8888,6 +9027,19 @@ https://quikpik.app`;
       // Update user subscription to the lower tier
       const newProductLimit = getProductLimit(targetTier);
       
+      // Log the subscription downgrade
+      await logSubscriptionDowngrade(
+        userId, 
+        user.subscriptionTier || 'free', 
+        targetTier, 
+        'User-initiated plan change via manual downgrade',
+        { 
+          previousProductLimit: user.productLimit,
+          newProductLimit,
+          changeSource: 'manual_downgrade_api'
+        }
+      );
+
       await storage.updateUserSubscription(userId, {
         tier: targetTier,
         status: targetTier === 'free' ? 'inactive' : 'active',

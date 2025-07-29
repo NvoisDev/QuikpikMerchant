@@ -606,6 +606,31 @@ export const stockAlerts = pgTable("stock_alerts", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+// Subscription audit logs for tracking all subscription events
+export const subscriptionAuditLogs = pgTable("subscription_audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventType: varchar("event_type").notNull(), // 'upgrade', 'downgrade', 'cancel', 'reactivate', 'payment_success', 'payment_failed', 'webhook_received', 'manual_override', 'product_unlock', 'limit_reached'
+  fromTier: varchar("from_tier"), // Previous subscription tier
+  toTier: varchar("to_tier"), // New subscription tier
+  amount: decimal("amount", { precision: 10, scale: 2 }), // Payment amount
+  currency: varchar("currency", { length: 3 }).default("GBP"), // Currency code
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // Stripe subscription ID
+  stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
+  reason: text("reason"), // Reason for the change
+  metadata: text("metadata"), // Additional data as JSON string
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }), // User's IP address
+  userAgent: text("user_agent"), // User's browser/app info
+}, (table) => {
+  return {
+    userIdIdx: index("subscription_audit_user_id_idx").on(table.userId),
+    eventTypeIdx: index("subscription_audit_event_type_idx").on(table.eventType),
+    timestampIdx: index("subscription_audit_timestamp_idx").on(table.timestamp),
+    stripeSubscriptionIdx: index("subscription_audit_stripe_sub_idx").on(table.stripeSubscriptionId),
+  };
+});
+
 
 
 // Relations
