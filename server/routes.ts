@@ -4711,6 +4711,32 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // WhatsApp API Routes (Shared Service)
 
+  // Stripe Connect status endpoint for priority alert
+  app.get("/api/stripe/connect/status", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if Stripe Connect is properly configured
+      const isConnected = !!(user.stripeConnectAccountId);
+      const hasPayoutsEnabled = !!(user.stripeConnectAccountId && user.stripePayoutsEnabled);
+      
+      res.json({
+        isConnected,
+        accountId: user.stripeConnectAccountId,
+        hasPayoutsEnabled,
+        requiresInfo: isConnected && !hasPayoutsEnabled
+      });
+    } catch (error) {
+      console.error("Error fetching Stripe Connect status:", error);
+      res.status(500).json({ error: "Failed to fetch Stripe Connect status" });
+    }
+  });
+
   // WhatsApp status endpoint for priority alert
   app.get("/api/whatsapp/status", requireAuth, async (req: any, res) => {
     try {

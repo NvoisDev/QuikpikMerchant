@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/currencies";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
+import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
@@ -302,8 +303,9 @@ export default function WholesalerDashboard() {
           </div>
         </div>
 
-        {/* WhatsApp Setup Priority Alert */}
+        {/* Priority Setup Alerts */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <StripeSetupAlert />
           <WhatsAppSetupAlert />
         </div>
 

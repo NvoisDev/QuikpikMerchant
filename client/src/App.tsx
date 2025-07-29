@@ -95,6 +95,7 @@ function AuthenticatedRoutes() {
             <Route path="/customers" component={Customers} />
             <Route path="/orders" component={Orders} />
             <Route path="/subscription" component={SubscriptionSettings} />
+            <Route path="/subscription-settings" component={SubscriptionSettings} />
             <Route path="/analytics" component={Analytics} />
             <Route path="/business-performance" component={BusinessPerformance} />
             <Route path="/financials" component={Financials} />
