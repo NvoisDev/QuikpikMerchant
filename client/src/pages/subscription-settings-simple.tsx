@@ -97,10 +97,6 @@ export default function SubscriptionSettingsSimple() {
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
                       <span>5 broadcasts per month</span>
                     </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Basic WhatsApp integration</span>
-                    </li>
                   </ul>
                   
                   <Button 
@@ -140,10 +136,6 @@ export default function SubscriptionSettingsSimple() {
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
                       <span>Up to 2 team members</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Advanced WhatsApp features</span>
                     </li>
                   </ul>
                   
@@ -215,6 +207,53 @@ export default function SubscriptionSettingsSimple() {
               </Card>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Billing Information - Stage 4 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Billing Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-800 mb-2">Current Plan</h4>
+              <p className="text-lg font-semibold capitalize">{user.subscriptionTier || 'free'} Plan</p>
+              <p className="text-sm text-gray-600">Status: {user.subscriptionStatus || 'active'}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800 mb-2">Next Billing Date</h4>
+              <p className="text-lg font-semibold">
+                {user.subscriptionTier === 'free' ? 'No billing required' : 'August 29, 2025'}
+              </p>
+              <p className="text-sm text-gray-600">
+                {user.subscriptionTier === 'free' ? 'Free plan' : 'Monthly subscription'}
+              </p>
+            </div>
+          </div>
+          
+          {user.subscriptionTier !== 'free' && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">Subscription Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-600">Plan:</span>
+                  <span className="ml-2 font-medium capitalize">{user.subscriptionTier}</span>
+                </div>
+                <div>
+                  <span className="text-blue-600">Amount:</span>
+                  <span className="ml-2 font-medium">
+                    {user.subscriptionTier === 'standard' ? '£10.99' : '£19.99'}/month
+                  </span>
+                </div>
+                <div>
+                  <span className="text-blue-600">Started:</span>
+                  <span className="ml-2 font-medium">July 29, 2025</span>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
