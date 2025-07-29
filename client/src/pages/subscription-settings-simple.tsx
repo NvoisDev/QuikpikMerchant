@@ -24,6 +24,14 @@ export default function SubscriptionSettingsSimple() {
 
   const productCount = Array.isArray(products) ? products.length : 0;
 
+  // Debug current user subscription data
+  console.log('🔍 Current user subscription data:', {
+    subscriptionTier: user?.subscriptionTier,
+    subscriptionStatus: user?.subscriptionStatus,
+    productLimit: user?.productLimit,
+    userObject: user
+  });
+
   const getPlanChangeAction = (targetPlan: string) => {
     const planHierarchy = { free: 0, standard: 1, premium: 2 };
     const currentPlan = user?.subscriptionTier || 'free';
@@ -55,9 +63,11 @@ export default function SubscriptionSettingsSimple() {
       const response = await apiRequest('POST', '/api/subscription/change-plan', { targetTier: plan });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Force refresh user data immediately
+      await refetchAuth();
       queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
-      refetchAuth();
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
 
@@ -88,6 +98,12 @@ export default function SubscriptionSettingsSimple() {
         description: `Successfully ${action}d to ${selectedPlan} plan.`,
       });
       
+      // Force another refresh after a short delay to ensure data is synced
+      setTimeout(async () => {
+        await refetchAuth();
+        console.log('🔄 Force refreshed user data after plan change');
+      }, 1000);
+      
       setShowConfirmModal(false);
     } catch (error: any) {
       console.error('Plan change error:', error);
@@ -117,6 +133,17 @@ export default function SubscriptionSettingsSimple() {
     );
   }
 
+  // Add a manual refresh button for debugging
+  const handleManualRefresh = async () => {
+    console.log('🔄 Manual refresh triggered');
+    await refetchAuth();
+    queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+    toast({
+      title: "Data Refreshed",
+      description: "User data has been refreshed from the server.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
       <div className="max-w-4xl mx-auto px-6 py-12 space-y-8">
@@ -128,6 +155,24 @@ export default function SubscriptionSettingsSimple() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Manage your plan and track your usage
           </p>
+          
+          {/* Debug info and refresh button */}
+          <div className="flex justify-center gap-4 mt-4 p-2 bg-gray-100 rounded-lg text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              className="text-xs"
+            >
+              Refresh Data
+            </Button>
+            <span className="text-gray-600">
+              Current Tier: <strong>{user?.subscriptionTier || 'undefined'}</strong>
+            </span>
+            <span className="text-gray-600">
+              Status: <strong>{user?.subscriptionStatus || 'undefined'}</strong>
+            </span>
+          </div>
         </div>
 
         {/* Current Plan Overview */}
