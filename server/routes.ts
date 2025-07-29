@@ -8541,19 +8541,18 @@ https://quikpik.app`;
     }
   });
 
-  // Universal plan change endpoint (handles both upgrades and downgrades)
-  app.post('/api/subscription/change-plan', requireAuth, async (req: any, res) => {
+  // Free downgrades (no payment required)
+  app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
     try {
       const { targetTier } = req.body;
       const userId = req.user.id || req.user.claims?.sub;
       
-      console.log(`🔄 Plan change request: User ${userId} wants to change to ${targetTier}`);
+      console.log(`🔽 Downgrade request: User ${userId} wants to downgrade to ${targetTier}`);
       
       if (!targetTier) {
         return res.status(400).json({ error: "Target tier is required" });
       }
 
-      // Validate target tier
       const validTiers = ['free', 'standard', 'premium'];
       if (!validTiers.includes(targetTier)) {
         return res.status(400).json({ error: "Invalid target tier" });
@@ -8562,6 +8561,15 @@ https://quikpik.app`;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if this is actually a downgrade
+      const tierOrder = { free: 0, standard: 1, premium: 2 };
+      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
+      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
+
+      if (targetTierOrder >= currentTierOrder) {
+        return res.status(400).json({ error: "This is not a downgrade. Use upgrade endpoint instead." });
       }
 
       // Get new product limit for the target tier
@@ -8578,30 +8586,204 @@ https://quikpik.app`;
           break;
       }
 
-      console.log(`🔄 Changing plan from ${user.subscriptionTier} to ${targetTier}, limit: ${newProductLimit}`);
-      
-      // Update user subscription directly in database
+      // Cancel existing Stripe subscription if any
+      if (user.stripeSubscriptionId && user.subscriptionStatus === 'active') {
+        try {
+          await stripe!.subscriptions.cancel(user.stripeSubscriptionId);
+          console.log(`✅ Cancelled Stripe subscription: ${user.stripeSubscriptionId}`);
+        } catch (stripeError) {
+          console.error('Error cancelling Stripe subscription:', stripeError);
+        }
+      }
+
+      // Update user subscription to lower tier
       await storage.updateUser(userId, {
         subscriptionTier: targetTier,
         subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
         productLimit: newProductLimit,
-        subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        stripeSubscriptionId: targetTier === 'free' ? null : `manual_${targetTier}_${Date.now()}`
+        subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        stripeSubscriptionId: targetTier === 'free' ? null : user.stripeSubscriptionId
       });
 
-      console.log(`✅ Plan change completed: User ${userId} is now on ${targetTier} plan`);
+      console.log(`✅ Downgrade completed: User ${userId} is now on ${targetTier} plan`);
 
       res.json({
         success: true,
-        message: `Successfully changed to ${targetTier} plan`,
+        message: `Successfully downgraded to ${targetTier} plan`,
         newTier: targetTier,
         productLimit: newProductLimit,
         status: targetTier === 'free' ? 'inactive' : 'active'
       });
 
     } catch (error) {
-      console.error('Plan change error:', error);
-      res.status(500).json({ error: "Failed to change plan" });
+      console.error('Downgrade error:', error);
+      res.status(500).json({ error: "Failed to downgrade plan" });
+    }
+  });
+
+  // Paid upgrades (payment required via Stripe)
+  app.post('/api/subscription/upgrade', requireAuth, async (req: any, res) => {
+    try {
+      const { targetTier } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      console.log(`🔼 Upgrade request: User ${userId} wants to upgrade to ${targetTier}`);
+      
+      if (!targetTier) {
+        return res.status(400).json({ error: "Target tier is required" });
+      }
+
+      const validTiers = ['standard', 'premium']; // Only paid tiers for upgrades
+      if (!validTiers.includes(targetTier)) {
+        return res.status(400).json({ error: "Invalid upgrade tier. Use free for downgrades." });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if this is actually an upgrade
+      const tierOrder = { free: 0, standard: 1, premium: 2 };
+      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
+      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
+
+      if (targetTierOrder <= currentTierOrder) {
+        return res.status(400).json({ error: "This is not an upgrade. Use downgrade endpoint instead." });
+      }
+
+      // Create Stripe checkout session for the upgrade
+      const priceData = {
+        standard: {
+          unit_amount: 1099, // £10.99 in pence
+          currency: 'gbp',
+          product_data: {
+            name: 'Quikpik Standard Plan',
+            description: 'Up to 10 products, advanced features'
+          }
+        },
+        premium: {
+          unit_amount: 1999, // £19.99 in pence  
+          currency: 'gbp',
+          product_data: {
+            name: 'Quikpik Premium Plan',
+            description: 'Unlimited products, all premium features'
+          }
+        }
+      };
+
+      const session = await stripe!.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: priceData[targetTier as keyof typeof priceData],
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}`,
+        cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
+        customer_email: user.email,
+        metadata: {
+          userId: userId,
+          targetTier: targetTier,
+          upgradeFromTier: user.subscriptionTier
+        }
+      });
+
+      console.log(`✅ Created Stripe checkout session for ${targetTier} upgrade: ${session.id}`);
+
+      res.json({
+        success: true,
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        message: `Redirecting to payment for ${targetTier} plan upgrade`
+      });
+
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      res.status(500).json({ error: "Failed to create upgrade payment session" });
+    }
+  });
+
+  // Stripe webhook handler for subscription events
+  app.post('/api/stripe/webhook', async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      // In production, you'd use a webhook secret from environment
+      // For now, we'll verify the event manually
+      event = stripe!.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test');
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    console.log(`🎣 Stripe webhook received: ${event.type}`);
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object as any;
+          console.log(`✅ Checkout completed for session: ${session.id}`);
+          
+          if (session.metadata?.userId && session.metadata?.targetTier) {
+            const userId = session.metadata.userId;
+            const targetTier = session.metadata.targetTier;
+            
+            // Get new product limit for the target tier
+            let newProductLimit = 3;
+            switch (targetTier) {
+              case 'standard':
+                newProductLimit = 10;
+                break;
+              case 'premium':
+                newProductLimit = -1;
+                break;
+            }
+
+            // Update user subscription in database
+            await storage.updateUser(userId, {
+              subscriptionTier: targetTier,
+              subscriptionStatus: 'active',
+              productLimit: newProductLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              stripeSubscriptionId: session.subscription
+            });
+
+            console.log(`✅ Upgraded user ${userId} to ${targetTier} plan via webhook`);
+          }
+          break;
+
+        case 'customer.subscription.updated':
+        case 'customer.subscription.deleted':
+          const subscription = event.data.object as any;
+          console.log(`📝 Subscription ${event.type}: ${subscription.id}`);
+          
+          // Find user by subscription ID and update status
+          const users = await storage.getAllUsers();
+          const user = users.find(u => u.stripeSubscriptionId === subscription.id);
+          
+          if (user) {
+            const isActive = subscription.status === 'active';
+            await storage.updateUser(user.id, {
+              subscriptionStatus: isActive ? 'active' : subscription.status,
+              subscriptionEndsAt: isActive ? new Date(subscription.current_period_end * 1000) : null
+            });
+            
+            console.log(`✅ Updated subscription status for user ${user.id}: ${subscription.status}`);
+          }
+          break;
+
+        default:
+          console.log(`🤷 Unhandled webhook event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 

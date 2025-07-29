@@ -244,39 +244,37 @@ export default function SubscriptionSettings() {
 
   // Remove the old handleUpgrade function that opens modal
 
-  const handlePlanChange = async (targetPlan: string) => {
+  const handleDowngrade = async (targetPlan: string) => {
     setCanceling(true);
     try {
-      console.log(`🔄 Initiating plan change to: ${targetPlan}`);
+      console.log(`🔽 Initiating downgrade to: ${targetPlan}`);
       
-      const response = await apiRequest("POST", "/api/subscription/change-plan", {
+      const response = await apiRequest("POST", "/api/subscription/downgrade", {
         targetTier: targetPlan
       });
       
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ Plan change successful:`, result);
+        console.log(`✅ Downgrade successful:`, result);
         
-        // Force refresh of all subscription-related data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         toast({
-          title: "Plan Changed Successfully!",
-          description: `Your subscription has been changed to ${targetPlan}. Changes are now active.`,
+          title: "Plan Downgraded Successfully!",
+          description: `Your subscription has been downgraded to ${targetPlan}. Changes are now active.`,
         });
         
-        // Force page refresh after a short delay to ensure UI updates
         setTimeout(() => window.location.reload(), 1500);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to change subscription plan");
+        throw new Error(errorData.error || "Failed to downgrade subscription plan");
       }
     } catch (error: any) {
-      console.error('Plan change error:', error);
+      console.error('Downgrade error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to change subscription plan. Please try again.",
+        description: error.message || "Failed to downgrade subscription. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -284,8 +282,66 @@ export default function SubscriptionSettings() {
     }
   };
 
-  const handleDowngrade = handlePlanChange;
-  const handleUpgrade = handlePlanChange;
+  const handleUpgrade = async (targetPlan: string) => {
+    setCanceling(true);
+    try {
+      console.log(`🔼 Initiating upgrade to: ${targetPlan}`);
+      
+      if (targetPlan === 'free') {
+        // Free tier is a downgrade, not upgrade
+        return handleDowngrade(targetPlan);
+      }
+      
+      const response = await apiRequest("POST", "/api/subscription/upgrade", {
+        targetTier: targetPlan
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Upgrade checkout created:`, result);
+        
+        // Redirect to Stripe checkout
+        if (result.checkoutUrl) {
+          toast({
+            title: "Redirecting to Payment",
+            description: `Taking you to secure payment for ${targetPlan} plan upgrade.`,
+          });
+          
+          // Redirect to Stripe checkout
+          window.location.href = result.checkoutUrl;
+        } else {
+          throw new Error("No checkout URL received");
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create upgrade payment session");
+      }
+    } catch (error: any) {
+      console.error('Upgrade error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start upgrade process. Please try again.",
+        variant: "destructive",
+      });
+      setCanceling(false);
+    }
+    // Don't reset canceling here since we're redirecting to Stripe
+  };
+
+  const handlePlanChange = (targetPlan: string) => {
+    // Determine if it's an upgrade or downgrade
+    const tierOrder = { free: 0, standard: 1, premium: 2 };
+    const currentTierOrder = tierOrder[currentTier as keyof typeof tierOrder] || 0;
+    const targetTierOrder = tierOrder[targetPlan as keyof typeof tierOrder] || 0;
+    
+    if (targetTierOrder > currentTierOrder) {
+      // This is an upgrade - requires payment
+      handleUpgrade(targetPlan);
+    } else {
+      // This is a downgrade - free
+      handleDowngrade(targetPlan);
+    }
+  };
 
   return (
     <div className="space-y-6">
