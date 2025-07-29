@@ -136,7 +136,39 @@ export default function Subscription() {
       if (!response.ok) throw new Error("Failed to fetch subscription status");
       return response.json();
     },
+    enabled: !!user, // Only fetch when user is available
   });
+
+  // Show loading state
+  if (isLoading || !user) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
+            <p className="text-gray-600 mt-1">Manage your plan and billing</p>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center space-y-4 py-12">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-3 h-8 bg-gradient-to-t from-purple-400 to-indigo-500 rounded-full animate-bounce"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.3s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center">Loading subscription details...</p>
+        </div>
+      </div>
+    );
+  }
 
   const upgradeMutation = useMutation({
     mutationFn: async (tier: string) => {
@@ -173,7 +205,7 @@ export default function Subscription() {
 
   const currentTier = user?.subscriptionTier || 'free';
   const currentLimit = user?.productLimit || 3;
-  const currentProducts = subscriptionStatus?.currentProducts || 0;
+  const currentProducts = subscriptionStatus?.currentProducts || subscriptionStatus?.productCount || 0;
 
   const isCurrentPlan = (planTier: string) => planTier === currentTier;
   const canUpgrade = (planTier: string) => {
@@ -364,7 +396,18 @@ export default function Subscription() {
                       >
                         {isUpgrading && upgradeMutation.variables === plan.tier ? (
                           <>
-                            <CreditCard className="mr-2 h-4 w-4 animate-spin" />
+                            <div className="flex space-x-0.5 mr-2">
+                              {[...Array(2)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="w-1 h-4 bg-white rounded-full animate-pulse"
+                                  style={{
+                                    animationDelay: `${i * 0.15}s`,
+                                    animationDuration: '1.2s'
+                                  }}
+                                />
+                              ))}
+                            </div>
                             Processing...
                           </>
                         ) : (
