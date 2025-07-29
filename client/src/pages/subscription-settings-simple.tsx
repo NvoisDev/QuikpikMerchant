@@ -36,8 +36,14 @@ export default function SubscriptionSettingsSimple() {
   };
 
   const handlePlanChangeClick = (plan: 'free' | 'standard' | 'premium') => {
-    if (plan === (user?.subscriptionTier || 'free')) {
-      return; // Same plan, do nothing
+    const currentPlan = user?.subscriptionTier || 'free';
+    if (plan === currentPlan) {
+      toast({
+        title: "Already on this plan",
+        description: `You're already on the ${plan} plan.`,
+        variant: "default",
+      });
+      return;
     }
     
     setSelectedPlan(plan);
@@ -75,7 +81,7 @@ export default function SubscriptionSettingsSimple() {
       }
       
       // For downgrades or free plan changes, update directly
-      await planChangeMutation.mutateAsync({ plan: selectedPlan });
+      const result = await planChangeMutation.mutateAsync({ plan: selectedPlan });
       
       toast({
         title: "Plan Updated",
@@ -85,9 +91,17 @@ export default function SubscriptionSettingsSimple() {
       setShowConfirmModal(false);
     } catch (error: any) {
       console.error('Plan change error:', error);
+      console.error('Current user tier:', user?.subscriptionTier);
+      console.error('Target plan:', selectedPlan);
+      
+      let errorMessage = error.message;
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
       toast({
         title: "Plan Change Failed",
-        description: error.message || `Failed to ${getPlanChangeAction(selectedPlan)} to ${selectedPlan} plan.`,
+        description: errorMessage || `Failed to ${getPlanChangeAction(selectedPlan)} to ${selectedPlan} plan.`,
         variant: "destructive",
       });
     } finally {

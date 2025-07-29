@@ -8767,8 +8767,10 @@ https://quikpik.app`;
       }
 
       // Check if user is already on this tier
+      console.log(`🔍 Current tier: ${user.subscriptionTier}, Target tier: ${targetTier}`);
       if (user.subscriptionTier === targetTier) {
-        return res.status(400).json({ error: "You are already on this plan" });
+        console.log(`❌ User ${userId} already on ${targetTier} plan`);
+        return res.status(400).json({ error: `You are already on the ${targetTier} plan` });
       }
 
       // Determine if this is an upgrade or downgrade
