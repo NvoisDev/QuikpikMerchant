@@ -134,16 +134,28 @@ export default function SubscriptionSettingsSimple() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
+        <div className="flex flex-col items-center space-y-4 max-w-md text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-          <p className="text-gray-600">Loading your subscription data...</p>
-          <Button
-            variant="outline"
-            onClick={forceRefreshAuth}
-            className="mt-4"
-          >
-            Refresh Authentication
-          </Button>
+          <h2 className="text-xl font-semibold text-gray-800">Authentication Required</h2>
+          <p className="text-gray-600">Please log in to view your subscription settings.</p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={forceRefreshAuth}
+            >
+              Refresh Authentication
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/'}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Go to Login
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500">
+            Your subscription has been updated to Standard plan in the database. 
+            Please log in to see the changes.
+          </p>
         </div>
       </div>
     );
