@@ -133,28 +133,51 @@ export default function SubscriptionSettingsSimple() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4 max-w-md text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-          <h2 className="text-xl font-semibold text-gray-800">Authentication Required</h2>
-          <p className="text-gray-600">Please log in to view your subscription settings.</p>
-          <div className="flex gap-3">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-6 max-w-md text-center bg-white p-8 rounded-xl shadow-lg">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-gray-800">Authentication Required</h2>
+            <p className="text-gray-600">Your subscription has been successfully upgraded to Standard plan!</p>
+          </div>
+          
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 w-full">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium text-green-800">Subscription Updated</span>
+            </div>
+            <p className="text-sm text-green-700 mt-1">
+              Standard Plan • 10 Products • £10.99/month
+            </p>
+          </div>
+          
+          <p className="text-gray-600">
+            Please authenticate with Google to access your updated subscription settings.
+          </p>
+          
+          <div className="flex flex-col gap-3 w-full">
+            <Button
+              onClick={() => window.location.href = '/api/auth/google'}
+              className="bg-green-600 hover:bg-green-700 w-full"
+            >
+              Sign in with Google
+            </Button>
             <Button
               variant="outline"
               onClick={forceRefreshAuth}
+              className="w-full"
             >
-              Refresh Authentication
-            </Button>
-            <Button
-              onClick={() => window.location.href = '/'}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Go to Login
+              Refresh Session
             </Button>
           </div>
-          <p className="text-sm text-gray-500">
-            Your subscription has been updated to Standard plan in the database. 
-            Please log in to see the changes.
+          
+          <p className="text-xs text-gray-500">
+            After signing in, you'll see your updated Standard plan with access to 10 products.
           </p>
         </div>
       </div>
