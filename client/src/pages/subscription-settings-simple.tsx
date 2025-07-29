@@ -56,6 +56,20 @@ export default function SubscriptionSettingsSimple() {
               </p>
             </div>
             
+            {/* Usage Statistics - Stage 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-800">Products Created</h4>
+                <p className="text-2xl font-bold text-primary">0</p>
+                <p className="text-sm text-gray-600">of {user.subscriptionTier === 'premium' ? 'unlimited' : user.subscriptionTier === 'standard' ? '25' : '5'} allowed</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-800">Plan Status</h4>
+                <p className="text-2xl font-bold text-primary capitalize">{user.subscriptionTier || 'free'}</p>
+                <p className="text-sm text-gray-600">{user.subscriptionStatus === 'active' ? 'Active subscription' : 'Free plan'}</p>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
