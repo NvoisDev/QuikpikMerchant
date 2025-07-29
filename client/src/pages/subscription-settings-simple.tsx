@@ -46,7 +46,7 @@ export default function SubscriptionSettingsSimple() {
 
   const planChangeMutation = useMutation({
     mutationFn: async ({ plan }: { plan: string }) => {
-      const response = await apiRequest('POST', '/api/subscription/change-plan', { plan });
+      const response = await apiRequest('POST', '/api/subscription/change-plan', { targetTier: plan });
       return response;
     },
     onSuccess: () => {
@@ -63,12 +63,13 @@ export default function SubscriptionSettingsSimple() {
       
       if (action === 'upgrade' && selectedPlan !== 'free') {
         // For upgrades, redirect to Stripe Checkout
-        const response = await apiRequest('POST', '/api/create-subscription', {
-          plan: selectedPlan
+        const response = await apiRequest('POST', '/api/subscription/create', {
+          tier: selectedPlan
         });
         
-        if (response.url) {
-          window.location.href = response.url;
+        const data = await response.json();
+        if (data.subscriptionUrl) {
+          window.location.href = data.subscriptionUrl;
           return;
         }
       }
