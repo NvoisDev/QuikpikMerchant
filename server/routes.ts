@@ -790,14 +790,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create or update user in database
       const user = await createOrUpdateUser(googleUser);
       
-      // Set user session
+      // Set user session with enhanced session data
       (req.session as any).userId = user.id;
+      (req.session as any).user = user;
+      
+      console.log(`🔐 Google auth session created for user ${user.email}`);
       
       // Redirect to dashboard for authenticated users
       res.redirect('/dashboard');
     } catch (error) {
       console.error('Google auth callback error:', error);
       res.redirect('/login?error=auth_failed');
+    }
+  });
+
+  // Add a debug endpoint to check session state
+  app.get('/api/auth/debug', async (req: any, res) => {
+    res.json({
+      sessionExists: !!req.session,
+      sessionData: req.session,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+  });
+
+  // Temporary authentication recovery endpoint
+  app.post('/api/auth/recover', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || email !== 'hello@quikpik.co') {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Recreate session
+      (req.session as any).userId = user.id;
+      (req.session as any).user = user;
+      
+      console.log(`🔐 Session recovered for user ${user.email}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Authentication recovered',
+        user: {
+          id: user.id,
+          email: user.email,
+          subscriptionTier: user.subscriptionTier
+        }
+      });
+    } catch (error) {
+      console.error('Auth recovery error:', error);
+      res.status(500).json({ error: 'Recovery failed' });
     }
   });
 

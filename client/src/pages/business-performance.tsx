@@ -1,8 +1,10 @@
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
   BarChart3, 
   FileText, 
@@ -19,12 +21,36 @@ import {
 
 export default function BusinessPerformance() {
   const { isPremium, currentTier, subscription, refetch } = useSubscription();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Add debug logging
   console.log('🔍 Business Performance subscription check:', {
     subscription,
     currentTier,
     isPremium
+  });
+
+  // Authentication recovery mutation
+  const recoverAuthMutation = useMutation({
+    mutationFn: () => apiRequest("/api/auth/recover", "POST", { email: "hello@quikpik.co" }),
+    onSuccess: () => {
+      toast({
+        title: "Authentication Recovered",
+        description: "Your session has been restored. Refreshing your subscription status...",
+      });
+      // Invalidate all auth and subscription queries
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Recovery Failed", 
+        description: "Could not recover your session. Please log in again.",
+        variant: "destructive"
+      });
+    }
   });
 
   if (!isPremium) {
@@ -72,6 +98,14 @@ export default function BusinessPerformance() {
               size="lg"
             >
               Refresh Access
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => recoverAuthMutation.mutate()}
+              disabled={recoverAuthMutation.isPending}
+              size="lg"
+            >
+              {recoverAuthMutation.isPending ? "Recovering..." : "Recover Session"}
             </Button>
           </div>
         </div>

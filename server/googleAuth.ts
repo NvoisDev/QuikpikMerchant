@@ -128,6 +128,15 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Debug session information
+    console.log('🔍 Auth Debug:', {
+      sessionExists: !!req.session,
+      sessionUser: req.session?.user ? 'exists' : 'missing',
+      sessionUserId: req.session?.userId || 'missing',
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : 'no_method',
+      headers: req.headers.cookie ? 'has_cookies' : 'no_cookies'
+    });
+
     // Check for session user object (primary method for email/password auth)
     const sessionUser = req.session?.user;
     if (sessionUser && sessionUser.id) {
@@ -143,6 +152,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           });
         }
         
+        console.log(`✅ Session auth successful for user ${user.email}`);
         // Use session data which includes team member context
         req.user = sessionUser;
         return next();
@@ -164,6 +174,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           });
         }
         
+        console.log(`✅ Legacy session auth successful for user ${user.email}`);
         req.user = user;
         return next();
       }
