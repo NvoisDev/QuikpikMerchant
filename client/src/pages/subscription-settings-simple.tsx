@@ -24,13 +24,7 @@ export default function SubscriptionSettingsSimple() {
 
   const productCount = Array.isArray(products) ? products.length : 0;
 
-  // Debug current user subscription data
-  console.log('🔍 Current user subscription data:', {
-    subscriptionTier: user?.subscriptionTier,
-    subscriptionStatus: user?.subscriptionStatus,
-    productLimit: user?.productLimit,
-    userObject: user
-  });
+
 
   const getPlanChangeAction = (targetPlan: string) => {
     const planHierarchy = { free: 0, standard: 1, premium: 2 };
@@ -133,16 +127,7 @@ export default function SubscriptionSettingsSimple() {
     );
   }
 
-  // Add a manual refresh button for debugging
-  const handleManualRefresh = async () => {
-    console.log('🔄 Manual refresh triggered');
-    await refetchAuth();
-    queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-    toast({
-      title: "Data Refreshed",
-      description: "User data has been refreshed from the server.",
-    });
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
@@ -156,23 +141,7 @@ export default function SubscriptionSettingsSimple() {
             Manage your plan and track your usage
           </p>
           
-          {/* Debug info and refresh button */}
-          <div className="flex justify-center gap-4 mt-4 p-2 bg-gray-100 rounded-lg text-xs">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualRefresh}
-              className="text-xs"
-            >
-              Refresh Data
-            </Button>
-            <span className="text-gray-600">
-              Current Tier: <strong>{user?.subscriptionTier || 'undefined'}</strong>
-            </span>
-            <span className="text-gray-600">
-              Status: <strong>{user?.subscriptionStatus || 'undefined'}</strong>
-            </span>
-          </div>
+
         </div>
 
         {/* Current Plan Overview */}
