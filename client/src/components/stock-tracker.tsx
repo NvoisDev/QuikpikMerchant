@@ -171,10 +171,28 @@ export default function StockTracker({ product }: StockTrackerProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+          <div className="flex flex-col items-center space-y-4 py-6">
+            {/* Enhanced Loading Animation */}
+            <div className="flex space-x-1">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-2 h-6 bg-gradient-to-t from-orange-400 to-yellow-500 rounded-full animate-pulse"
+                  style={{
+                    animationDelay: `${i * 0.15}s`,
+                    animationDuration: '1.5s'
+                  }}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-gray-500 text-center">Loading stock data...</p>
+            
+            {/* Skeleton Content */}
+            <div className="w-full space-y-4 mt-4">
+              <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+            </div>
           </div>
         </CardContent>
       </Card>

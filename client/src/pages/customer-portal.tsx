@@ -418,8 +418,22 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   if (!clientSecret) {
     return (
       <div className="text-center py-8">
-        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        <p>Preparing payment...</p>
+        <div className="flex flex-col items-center space-y-4">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-7 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-bounce"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.2s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-600">Preparing payment...</p>
+        </div>
       </div>
     );
   }
@@ -1546,7 +1560,18 @@ export default function CustomerPortal() {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                   {wholesalerLoading ? (
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="flex space-x-0.5">
+                        {[...Array(2)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1 h-4 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-pulse"
+                            style={{
+                              animationDelay: `${i * 0.2}s`,
+                              animationDuration: '1.5s'
+                            }}
+                          />
+                        ))}
+                      </div>
                       <span className="hidden sm:inline">Loading...</span>
                       <span className="sm:hidden">...</span>
                     </div>
@@ -3835,7 +3860,18 @@ export default function CustomerPortal() {
                     
                     {loadingShippingQuotes ? (
                       <div className="text-center py-4">
-                        <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                        <div className="flex justify-center space-x-1 mb-3">
+                          {[...Array(3)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-2 h-6 bg-gradient-to-t from-blue-400 to-cyan-500 rounded-full animate-pulse"
+                              style={{
+                                animationDelay: `${i * 0.15}s`,
+                                animationDuration: '1.6s'
+                              }}
+                            />
+                          ))}
+                        </div>
                         <p className="text-sm text-gray-600">Getting shipping quotes...</p>
                       </div>
                     ) : availableShippingServices.length > 0 ? (

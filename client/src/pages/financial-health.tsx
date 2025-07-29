@@ -125,7 +125,22 @@ export default function FinancialHealth() {
   if (!user) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center space-y-4">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-3 h-8 bg-gradient-to-t from-purple-400 to-indigo-500 rounded-full animate-bounce"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.3s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center">Loading financial health analysis...</p>
+        </div>
       </div>
     );
   }
