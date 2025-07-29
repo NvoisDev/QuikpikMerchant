@@ -2,12 +2,71 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Crown, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function SubscriptionSettingsSimple() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [processing, setProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const handlePlanChangeClick = (planId: string) => {
+    if (user?.subscriptionTier === planId) return; // Can't change to same plan
+    setSelectedPlan(planId);
+    setShowConfirmModal(true);
+  };
+
+  const confirmPlanChange = async () => {
+    setProcessing(true);
+    try {
+      const response = await apiRequest("POST", "/api/subscription/change-plan", {
+        targetTier: selectedPlan
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Plan change successful:`, result);
+        
+        toast({
+          title: "Plan Changed Successfully",
+          description: `Your subscription has been updated to ${selectedPlan} plan.`,
+        });
+
+        // Refresh the page to show updated plan
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        throw new Error("Plan change failed");
+      }
+    } catch (error) {
+      console.error("Plan change error:", error);
+      toast({
+        title: "Plan Change Failed",
+        description: "There was an error updating your subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+      setShowConfirmModal(false);
+    }
+  };
+
+  const getPlanChangeAction = (planId: string) => {
+    const tierOrder = { free: 0, standard: 1, premium: 2 };
+    const currentTierOrder = tierOrder[user?.subscriptionTier as keyof typeof tierOrder] || 0;
+    const targetTierOrder = tierOrder[planId as keyof typeof tierOrder] || 0;
+    
+    if (targetTierOrder > currentTierOrder) {
+      return "upgrade";
+    } else {
+      return "downgrade";
+    }
+  };
 
   // Show login message if not authenticated
   if (!user) {
@@ -103,6 +162,7 @@ export default function SubscriptionSettingsSimple() {
                     variant="outline" 
                     className="mt-2 w-full"
                     disabled={user.subscriptionTier === 'free'}
+                    onClick={() => handlePlanChangeClick('free')}
                   >
                     {user.subscriptionTier === 'free' ? 'Current Plan' : 'Downgrade'}
                   </Button>
@@ -142,8 +202,9 @@ export default function SubscriptionSettingsSimple() {
                   <Button 
                     className="mt-2 w-full"
                     disabled={user.subscriptionTier === 'standard'}
+                    onClick={() => handlePlanChangeClick('standard')}
                   >
-                    {user.subscriptionTier === 'standard' ? 'Current Plan' : 'Upgrade'}
+                    {user.subscriptionTier === 'standard' ? 'Current Plan' : getPlanChangeAction('standard') === 'upgrade' ? 'Upgrade' : 'Downgrade'}
                   </Button>
                 </CardContent>
               </Card>
@@ -200,6 +261,7 @@ export default function SubscriptionSettingsSimple() {
                   <Button 
                     className="mt-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                     disabled={user.subscriptionTier === 'premium'}
+                    onClick={() => handlePlanChangeClick('premium')}
                   >
                     {user.subscriptionTier === 'premium' ? 'Current Plan' : 'Upgrade'}
                   </Button>
@@ -256,6 +318,59 @@ export default function SubscriptionSettingsSimple() {
           )}
         </CardContent>
       </Card>
+
+      {/* Plan Change Confirmation Modal */}
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {getPlanChangeAction(selectedPlan) === 'upgrade' ? 'Upgrade' : 'Downgrade'} Subscription
+            </DialogTitle>
+            <DialogDescription>
+              {getPlanChangeAction(selectedPlan) === 'upgrade' ? (
+                <>
+                  You're about to upgrade to the <strong className="capitalize">{selectedPlan}</strong> plan.
+                  {selectedPlan === 'standard' && ' This will cost £10.99/month.'}
+                  {selectedPlan === 'premium' && ' This will cost £19.99/month.'}
+                  <br /><br />
+                  The upgrade will take effect immediately and you'll be charged now.
+                </>
+              ) : (
+                <>
+                  You're about to downgrade to the <strong className="capitalize">{selectedPlan}</strong> plan.
+                  {selectedPlan === 'free' && ' You will lose access to paid features.'}
+                  {selectedPlan === 'standard' && ' Some premium features will no longer be available.'}
+                  <br /><br />
+                  The downgrade will take effect at your next billing cycle.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmModal(false)}
+              disabled={processing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmPlanChange}
+              disabled={processing}
+              className={getPlanChangeAction(selectedPlan) === 'upgrade' ? 'bg-primary' : ''}
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Confirm ${getPlanChangeAction(selectedPlan) === 'upgrade' ? 'Upgrade' : 'Downgrade'}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
