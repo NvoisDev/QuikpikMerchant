@@ -8744,6 +8744,144 @@ https://quikpik.app`;
     }
   });
 
+  // Universal plan change endpoint (handles both upgrades and downgrades)
+  app.post('/api/subscription/change-plan', requireAuth, async (req: any, res) => {
+    try {
+      const { targetTier } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      console.log(`🔄 Plan change request: User ${userId} wants to change to ${targetTier}`);
+      
+      if (!targetTier) {
+        return res.status(400).json({ error: "Target tier is required" });
+      }
+
+      const validTiers = ['free', 'standard', 'premium'];
+      if (!validTiers.includes(targetTier)) {
+        return res.status(400).json({ error: "Invalid target tier" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if user is already on this tier
+      if (user.subscriptionTier === targetTier) {
+        return res.status(400).json({ error: "You are already on this plan" });
+      }
+
+      // Determine if this is an upgrade or downgrade
+      const tierOrder = { free: 0, standard: 1, premium: 2 };
+      const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
+      const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
+      
+      const isUpgrade = targetTierOrder > currentTierOrder;
+      
+      if (isUpgrade) {
+        // For upgrades, redirect to Stripe checkout
+        if (!stripe) {
+          return res.status(500).json({ error: "Payment system not configured. Please contact support." });
+        }
+
+        // Create Stripe checkout session for the upgrade
+        const priceData = {
+          standard: {
+            unit_amount: 1099, // £10.99 in pence
+            currency: 'gbp',
+            product_data: {
+              name: 'Quikpik Standard Plan',
+              description: 'Up to 10 products, advanced features'
+            }
+          },
+          premium: {
+            unit_amount: 1999, // £19.99 in pence  
+            currency: 'gbp',
+            product_data: {
+              name: 'Quikpik Premium Plan',
+              description: 'Unlimited products, all premium features'
+            }
+          }
+        };
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: priceData[targetTier as keyof typeof priceData],
+              quantity: 1,
+            },
+          ],
+          mode: 'payment',
+          success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}`,
+          cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
+          customer_email: user.email,
+          metadata: {
+            userId: userId,
+            targetTier: targetTier,
+            upgradeFromTier: user.subscriptionTier || 'free'
+          },
+        });
+
+        // Log the upgrade attempt
+        await logSubscriptionUpgrade(userId, user.subscriptionTier || 'free', targetTier, {
+          source: 'plan_change_modal',
+          stripeSessionId: session.id,
+          amount: priceData[targetTier as keyof typeof priceData].unit_amount / 100,
+          currency: 'gbp'
+        });
+
+        res.json({ 
+          url: session.url,
+          sessionId: session.id,
+          message: "Redirecting to payment..."
+        });
+      } else {
+        // For downgrades, handle immediately
+        let newProductLimit = 3;
+        switch (targetTier) {
+          case 'free':
+            newProductLimit = 3;
+            break;
+          case 'standard':
+            newProductLimit = 10;
+            break;
+          case 'premium':
+            newProductLimit = -1;
+            break;
+        }
+
+        // Update user subscription tier immediately
+        await storage.updateUser(userId, {
+          subscriptionTier: targetTier,
+          subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
+          productLimit: newProductLimit,
+          subscriptionEndsAt: targetTier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        });
+
+        // Log the downgrade
+        await logSubscriptionDowngrade(userId, user.subscriptionTier || 'free', targetTier, {
+          source: 'plan_change_modal',
+          reason: 'user_requested',
+          effectiveDate: new Date().toISOString()
+        });
+
+        console.log(`✅ Downgrade completed for user ${userId}: ${user.subscriptionTier} → ${targetTier}`);
+
+        res.json({
+          success: true,
+          subscriptionTier: targetTier,
+          subscriptionStatus: targetTier === 'free' ? 'inactive' : 'active',
+          productLimit: newProductLimit,
+          message: `Successfully downgraded to ${targetTier} plan`
+        });
+      }
+    } catch (error) {
+      console.error('Plan change error:', error);
+      res.status(500).json({ error: "Failed to process plan change" });
+    }
+  });
+
   // Free downgrades (no payment required)
   app.post('/api/subscription/downgrade', requireAuth, async (req: any, res) => {
     try {

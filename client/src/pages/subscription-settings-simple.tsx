@@ -31,23 +31,36 @@ export default function SubscriptionSettingsSimple() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ Plan change successful:`, result);
+        console.log(`✅ Plan change response:`, result);
         
-        toast({
-          title: "Plan Changed Successfully",
-          description: `Your subscription has been updated to ${selectedPlan} plan.`,
-        });
+        if (result.url) {
+          // This is an upgrade - redirect to Stripe checkout
+          toast({
+            title: "Redirecting to Payment",
+            description: "You'll be redirected to complete your upgrade payment.",
+          });
+          
+          // Redirect to Stripe checkout
+          window.location.href = result.url;
+        } else if (result.success) {
+          // This is a downgrade - show success message
+          toast({
+            title: "Plan Changed Successfully",
+            description: `Your subscription has been updated to ${selectedPlan} plan.`,
+          });
 
-        // Refresh the page to show updated plan
-        setTimeout(() => window.location.reload(), 1500);
+          // Refresh the page to show updated plan
+          setTimeout(() => window.location.reload(), 1500);
+        }
       } else {
-        throw new Error("Plan change failed");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Plan change failed");
       }
     } catch (error) {
       console.error("Plan change error:", error);
       toast({
         title: "Plan Change Failed",
-        description: "There was an error updating your subscription. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error updating your subscription. Please try again.",
         variant: "destructive",
       });
     } finally {
