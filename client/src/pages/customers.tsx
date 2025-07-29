@@ -875,9 +875,20 @@ export default function Customers() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{group.name}</CardTitle>
-                      <Badge variant="secondary">
-                        {group.memberCount || 0} members
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary">
+                          {group.memberCount || 0} members
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewMembers(group)}
+                          title="View Members"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     {group.description && (
                       <p className="text-sm text-muted-foreground">{group.description}</p>
@@ -926,14 +937,6 @@ export default function Customers() {
                         </DropdownMenu>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewMembers(group)}
-                          title="View Members"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
