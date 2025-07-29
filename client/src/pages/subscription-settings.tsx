@@ -79,10 +79,6 @@ export default function SubscriptionSettings() {
     );
   }
 
-  // Add error boundary for subscription data access
-  const safeSubscription = subscription || {};
-  const subscriptionData = safeSubscription as any;
-
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
