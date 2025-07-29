@@ -8965,8 +8965,9 @@ https://quikpik.app`;
           success: true,
           message: `You are already on the ${targetTier} plan`,
           newTier: targetTier,
-          productLimit: user.productLimit || newProductLimit,
-          status: user.subscriptionStatus || 'active'
+          productLimit: user.productLimit || getProductLimit(targetTier),
+          status: user.subscriptionStatus || 'active',
+          alreadyOnPlan: true
         });
       }
 

@@ -88,13 +88,27 @@ export default function SubscriptionSettings() {
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
-    // Close any stuck modals immediately
+    // Close any stuck modals immediately on page load
     setDowngradeModalOpen(false);
     setCanceling(false);
+    setUpgradeModalOpen(false);
+    
+    // Clear any existing toasts to prevent old error messages
     
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
   }, [queryClient]);
+
+  // Add effect to clear URL parameters and close modals on page focus
+  useEffect(() => {
+    const handleFocus = () => {
+      setDowngradeModalOpen(false);
+      setCanceling(false);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   // Check for success/cancel parameters in URL
   useEffect(() => {
@@ -275,44 +289,48 @@ export default function SubscriptionSettings() {
       
       const result = await response.json();
       
-      if (response.ok) {
+      // Always close modal first to prevent UI issues
+      setDowngradeModalOpen(false);
+      
+      // Check for success conditions - either response.ok OR result.success
+      if (response.ok || result.success) {
         console.log(`✅ Downgrade successful:`, result);
         
-        // Close modal immediately
-        setDowngradeModalOpen(false);
-        
-        // Show success message
-        toast({
-          title: "Plan Changed Successfully",
-          description: `Your plan has been changed to ${result.newTier || targetDowngradePlan}. Changes are effective immediately.`,
-        });
+        // Show appropriate success message
+        if (result.alreadyOnPlan || result.message?.includes("already on")) {
+          toast({
+            title: "Plan Status Confirmed",
+            description: `You are already on the ${result.newTier || targetDowngradePlan} plan with all its features.`,
+          });
+        } else {
+          toast({
+            title: "Plan Changed Successfully", 
+            description: `Your plan has been changed to ${result.newTier || targetDowngradePlan}. Changes are effective immediately.`,
+          });
+        }
         
         // Refresh subscription data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         // Reload page after short delay to show updated UI
-        setTimeout(() => window.location.reload(), 2000);
+        setTimeout(() => window.location.reload(), 1500);
       } else {
-        // Handle error cases but still check if the result indicates success
-        if (result.success && result.message?.includes("already on")) {
-          // User is already on target plan - treat as success
-          setDowngradeModalOpen(false);
-          toast({
-            title: "Plan Status",
-            description: result.message,
-          });
-          queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-          setTimeout(() => window.location.reload(), 1500);
-        } else {
-          throw new Error(result.error || "Failed to downgrade subscription plan");
-        }
+        // Only show error if it's a genuine failure
+        console.error('Downgrade failed:', result);
+        toast({
+          title: "Plan Change Failed",
+          description: result.error || "Unable to process plan change. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       console.error('Downgrade error:', error);
+      // Close modal on error too
+      setDowngradeModalOpen(false);
       toast({
-        title: "Error",
-        description: error.message || "Failed to downgrade subscription. Please try again.",
+        title: "Connection Error",
+        description: "Unable to connect to server. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
