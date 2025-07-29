@@ -63,7 +63,7 @@ export default function SubscriptionSettingsSimple() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-medium text-gray-800">Products Created</h4>
                 <p className="text-2xl font-bold text-primary">0</p>
-                <p className="text-sm text-gray-600">of {user.subscriptionTier === 'premium' ? 'unlimited' : user.subscriptionTier === 'standard' ? '25' : '5'} allowed</p>
+                <p className="text-sm text-gray-600">of {user.subscriptionTier === 'premium' ? 'unlimited' : user.subscriptionTier === 'standard' ? '10' : '3'} allowed</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-medium text-gray-800">Plan Status</h4>
@@ -83,15 +83,23 @@ export default function SubscriptionSettingsSimple() {
                   <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 5 products</span>
+                      <span>Up to 3 products</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Basic customer management</span>
+                      <span>3 edits per product</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>WhatsApp messaging</span>
+                      <span>Up to 2 customer groups</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>5 broadcasts per month</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Basic WhatsApp integration</span>
                     </li>
                   </ul>
                   
@@ -115,19 +123,27 @@ export default function SubscriptionSettingsSimple() {
                   <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Up to 25 products</span>
+                      <span>Up to 10 products</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Advanced analytics</span>
+                      <span>10 product edits per product</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Campaign management</span>
+                      <span>Up to 5 customer groups</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Team collaboration</span>
+                      <span>25 broadcasts per month</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Up to 2 team members</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Advanced WhatsApp features</span>
                     </li>
                   </ul>
                   
@@ -165,19 +181,27 @@ export default function SubscriptionSettingsSimple() {
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>AI-powered features</span>
+                      <span>Unlimited product edits</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Priority support</span>
+                      <span>Unlimited customer groups</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Advanced integrations</span>
+                      <span>Unlimited broadcasts</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Custom branding</span>
+                      <span>Up to 5 team members</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Marketplace access</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Product advertising</span>
                     </li>
                   </ul>
                   
