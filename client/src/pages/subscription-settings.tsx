@@ -88,6 +88,10 @@ export default function SubscriptionSettings() {
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
+    // Close any stuck modals immediately
+    setDowngradeModalOpen(false);
+    setCanceling(false);
+    
     queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
   }, [queryClient]);
