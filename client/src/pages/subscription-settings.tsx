@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { SubscriptionDebugger } from "@/components/SubscriptionDebugger";
 
 export default function SubscriptionSettings() {
   const { user } = useAuth();
@@ -87,11 +88,15 @@ export default function SubscriptionSettings() {
         
         if (sessionId) {
           try {
+            // Get the plan from URL params if available
+            const urlParams = new URLSearchParams(window.location.search);
+            const planId = urlParams.get('plan') || 'premium'; // Default to premium if no plan specified
+            
             await apiRequest("POST", "/api/subscription/manual-upgrade", {
-              planId: 'standard', // Assuming standard plan based on previous upgrade
+              planId: planId,
               stripeSessionId: sessionId
             });
-            console.log("🚀 Manual upgrade triggered successfully");
+            console.log(`🚀 Manual upgrade triggered successfully for ${planId} plan`);
           } catch (error) {
             console.error("Manual upgrade failed:", error);
           }
