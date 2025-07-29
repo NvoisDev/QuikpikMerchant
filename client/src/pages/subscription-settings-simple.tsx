@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown } from "lucide-react";
+import { Crown, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SubscriptionSettingsSimple() {
@@ -78,6 +78,23 @@ export default function SubscriptionSettingsSimple() {
                   <h4 className="font-semibold">Free</h4>
                   <p className="text-2xl font-bold">£0</p>
                   <p className="text-sm text-gray-600">forever</p>
+                  
+                  {/* Free Plan Features */}
+                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Up to 5 products</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Basic customer management</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>WhatsApp messaging</span>
+                    </li>
+                  </ul>
+                  
                   <Button 
                     variant="outline" 
                     className="mt-2 w-full"
@@ -93,6 +110,27 @@ export default function SubscriptionSettingsSimple() {
                   <h4 className="font-semibold">Standard</h4>
                   <p className="text-2xl font-bold">£10.99</p>
                   <p className="text-sm text-gray-600">per month</p>
+                  
+                  {/* Standard Plan Features */}
+                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Up to 25 products</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Advanced analytics</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Campaign management</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Team collaboration</span>
+                    </li>
+                  </ul>
+                  
                   <Button 
                     className="mt-2 w-full"
                     disabled={user.subscriptionTier === 'standard'}
@@ -118,6 +156,31 @@ export default function SubscriptionSettingsSimple() {
                   </div>
                   <p className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">£19.99</p>
                   <p className="text-sm text-gray-600">per month</p>
+                  
+                  {/* Premium Plan Features */}
+                  <ul className="space-y-2 mt-4 mb-4 text-left text-sm">
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Unlimited products</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>AI-powered features</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Priority support</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Advanced integrations</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="w-4 h-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Custom branding</span>
+                    </li>
+                  </ul>
+                  
                   <Button 
                     className="mt-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                     disabled={user.subscriptionTier === 'premium'}
