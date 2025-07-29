@@ -9513,10 +9513,10 @@ https://quikpik.app`;
         onboardingStep: 0,
         isFirstLogin: false,
         productLimit: -1, // Team members inherit wholesaler's limits
-        passwordHash: password // Store password temporarily (use proper hashing in production)
+        // passwordHash will be set by createUserWithPassword method
       };
 
-      const newUser = await storage.createUser(userData);
+      const newUser = await storage.createUserWithPassword(userData, password);
       
       // Update team member status to active and link to user
       await storage.updateTeamMemberStatus(teamMember.id, 'active');
@@ -9730,12 +9730,12 @@ The Quikpik Team
         onboardingStep: 0,
         isFirstLogin: false,
         productLimit: 3, // Free tier limit
-        passwordHash: password, // Store password (use proper hashing in production)
+        // passwordHash will be set by createUserWithPassword method
         phoneNumber: businessPhone || '',
         logoType: 'initials'
       };
 
-      const newUser = await storage.createUser(userData);
+      const newUser = await storage.createUserWithPassword(userData, password);
 
       // Send welcome email
       await sendWelcomeEmail(newUser);
@@ -9814,9 +9814,9 @@ The Quikpik Team
         return res.status(401).json({ message: "Please use the Business Owner tab to sign in" });
       }
 
-      // Check password (simple comparison for now - use proper hashing in production)
-      console.log('Checking password:', password, 'against stored:', user.passwordHash);
-      if (!user.passwordHash || password !== user.passwordHash) {
+      // Authenticate user with encrypted password
+      const authenticatedUser = await storage.authenticateUser(email, password);
+      if (!authenticatedUser) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
@@ -9921,9 +9921,9 @@ The Quikpik Team
         return res.status(401).json({ message: "Please use the Team Member tab to sign in" });
       }
 
-      // Check password (simple comparison for now - use proper hashing in production)
-      console.log('Checking business owner password:', password, 'against stored:', user.passwordHash);
-      if (!user.passwordHash || password !== user.passwordHash) {
+      // Authenticate user with encrypted password
+      const authenticatedUser = await storage.authenticateUser(email, password);
+      if (!authenticatedUser) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 

@@ -60,6 +60,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
+import { hashPassword, verifyPassword } from "./passwordUtils";
 
 export interface IStorage {
   // User operations (required for auth)
@@ -72,6 +73,11 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User>;
   updateUserOnboarding(id: string, onboardingData: { onboardingStep?: number; onboardingCompleted?: boolean; onboardingSkipped?: boolean }): Promise<User>;
+  
+  // Password authentication methods
+  createUserWithPassword(userData: Partial<UpsertUser>, password: string): Promise<User>;
+  authenticateUser(email: string, password: string): Promise<User | null>;
+  updateUserPassword(id: string, newPassword: string): Promise<User>;
   
   // Product operations
   getProducts(wholesalerId?: string): Promise<Product[]>;
@@ -346,6 +352,57 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values(userData as any)
       .returning();
+    return user;
+  }
+
+  // Password authentication methods
+  async createUserWithPassword(userData: Partial<UpsertUser>, password: string): Promise<User> {
+    // Hash the password before storing
+    const passwordHash = await hashPassword(password);
+    
+    const userDataWithPassword = {
+      ...userData,
+      passwordHash
+    };
+    
+    const [user] = await db
+      .insert(users)
+      .values(userDataWithPassword as any)
+      .returning();
+    return user;
+  }
+
+  async authenticateUser(email: string, password: string): Promise<User | null> {
+    // Find user by email
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    
+    if (!user || !user.passwordHash) {
+      return null;
+    }
+    
+    // Verify password
+    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    
+    if (!isValidPassword) {
+      return null;
+    }
+    
+    return user;
+  }
+
+  async updateUserPassword(id: string, newPassword: string): Promise<User> {
+    // Hash the new password
+    const passwordHash = await hashPassword(newPassword);
+    
+    const [user] = await db
+      .update(users)
+      .set({ passwordHash })
+      .where(eq(users.id, id))
+      .returning();
+    
     return user;
   }
 
