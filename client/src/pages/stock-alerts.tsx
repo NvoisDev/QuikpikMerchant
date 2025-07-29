@@ -180,12 +180,30 @@ export default function StockAlerts() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="space-y-3">
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
+        <div className="flex flex-col items-center space-y-6">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-2">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-6 bg-gradient-to-t from-orange-400 to-red-500 rounded-full animate-pulse"
+                style={{
+                  animationDelay: `${i * 0.15}s`,
+                  animationDuration: '1.5s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center">Loading stock alerts...</p>
+          
+          {/* Skeleton Content */}
+          <div className="w-full space-y-4 mt-8">
+            <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+            <div className="space-y-3">
+              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
           </div>
         </div>
       </div>

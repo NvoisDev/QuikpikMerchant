@@ -244,12 +244,30 @@ export default function TeamManagement() {
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+        <div className="flex flex-col items-center space-y-6">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-3 h-12 bg-gradient-to-t from-green-400 to-blue-500 rounded-full animate-bounce"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1s'
+                }}
+              />
             ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center">Loading team management...</p>
+          
+          {/* Skeleton Cards */}
+          <div className="w-full space-y-4 mt-8">
+            <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+            <div className="grid gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded animate-pulse"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -406,13 +406,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center space-y-4 py-8">
+            {/* Enhanced Loading Animation */}
+            <div className="flex space-x-1">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-2 h-6 bg-gradient-to-t from-blue-400 to-indigo-500 rounded-full animate-pulse"
+                  style={{
+                    animationDelay: `${i * 0.2}s`,
+                    animationDuration: '1.8s'
+                  }}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-gray-500">Loading order history...</p>
+            
+            {/* Skeleton Cards */}
+            <div className="w-full space-y-4 mt-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
