@@ -103,6 +103,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       });
     } else {
       // Create new user with first login flag
+      // SECURITY: All Google OAuth users are wholesalers by default
+      // Customers use separate SMS-based authentication system
       user = await storage.createUser({
         id: googleUser.id,
         email: googleUser.email,
@@ -110,7 +112,7 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
         profileImageUrl: googleUser.picture,
         googleId: googleUser.id,
-        role: 'wholesaler', // Default role
+        role: 'wholesaler', // Default role - customers use separate auth
         businessName: `${googleUser.name}'s Business`,
         defaultCurrency: 'GBP',
         isFirstLogin: true
@@ -131,6 +133,16 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
+        // SECURITY: Block customer/retailer access to wholesaler dashboard
+        if (user.role === 'retailer' || user.role === 'customer') {
+          console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard`);
+          return res.status(403).json({ 
+            error: 'Access denied. Customers cannot access the wholesaler dashboard.',
+            userType: user.role,
+            redirectUrl: '/customer-login'
+          });
+        }
+        
         // Use session data which includes team member context
         req.user = sessionUser;
         return next();
@@ -142,6 +154,16 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     if (sessionUserId) {
       const user = await storage.getUser(sessionUserId);
       if (user) {
+        // SECURITY: Block customer/retailer access to wholesaler dashboard
+        if (user.role === 'retailer' || user.role === 'customer') {
+          console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard`);
+          return res.status(403).json({ 
+            error: 'Access denied. Customers cannot access the wholesaler dashboard.',
+            userType: user.role,
+            redirectUrl: '/customer-login'
+          });
+        }
+        
         req.user = user;
         return next();
       }
@@ -149,6 +171,18 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
     // Check for Replit OAuth session
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      const user = req.user;
+      
+      // SECURITY: Block customer/retailer access to wholesaler dashboard
+      if (user.role === 'retailer' || user.role === 'customer') {
+        console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard`);
+        return res.status(403).json({ 
+          error: 'Access denied. Customers cannot access the wholesaler dashboard.',
+          userType: user.role,
+          redirectUrl: '/customer-login'
+        });
+      }
+      
       return next();
     }
 

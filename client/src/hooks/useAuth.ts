@@ -8,7 +8,18 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     enabled: true, // Re-enabled to fetch subscription data
-    retry: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 403 (access denied) error
+      if (error?.response?.status === 403) {
+        // If user is blocked for being a customer, redirect to customer login
+        if (error?.response?.data?.userType === 'retailer' || error?.response?.data?.userType === 'customer') {
+          console.log('🚫 Customer detected trying to access wholesaler dashboard, redirecting...');
+          window.location.href = '/customer-login';
+          return false;
+        }
+      }
+      return failureCount < 3;
+    },
     staleTime: 30000, // Cache for 30 seconds instead of infinity
     refetchOnWindowFocus: false,
     refetchOnMount: true, // Refetch on mount to get fresh data

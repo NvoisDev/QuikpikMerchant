@@ -140,7 +140,22 @@ function AuthenticatedRoutes() {
 
 function Router() {
   const [location] = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  
+  // SECURITY: Block customers from accessing wholesaler dashboard
+  // This is a frontend protection - backend has the primary security
+  if (user && (user.role === 'customer' || user.role === 'retailer')) {
+    console.log('🚫 Frontend: Customer detected, redirecting to customer portal');
+    window.location.href = '/customer-login';
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Redirecting...</h2>
+          <p className="text-gray-600">Customers cannot access the wholesaler dashboard.</p>
+        </div>
+      </div>
+    );
+  }
   
   // Check if current route is public (doesn't need authentication)
   const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/team-invitation', '/advertising-preview'];
