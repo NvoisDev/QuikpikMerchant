@@ -702,13 +702,13 @@ export default function Orders() {
                           
                           {/* Fulfillment Type Tags */}
                           {order.fulfillmentType === 'delivery' && (
-                            <Badge variant="outline" className="flex items-center gap-1">
+                            <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
                               <Truck className="h-3 w-3" />
                               Delivery
                             </Badge>
                           )}
-                          {order.fulfillmentType === 'collection' && (
-                            <Badge variant="secondary" className="flex items-center gap-1">
+                          {(order.fulfillmentType === 'collection' || order.fulfillmentType === 'pickup') && (
+                            <Badge variant="secondary" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
                               <Hand className="h-3 w-3" />
                               Collection
                             </Badge>
@@ -899,7 +899,7 @@ export default function Orders() {
                         <p className="text-sm text-blue-800">{formatAddress(selectedOrder.deliveryAddress)}</p>
                       </div>
                     )}
-                    {selectedOrder.fulfillmentType === 'collection' && (
+                    {(selectedOrder.fulfillmentType === 'collection' || selectedOrder.fulfillmentType === 'pickup') && (
                       <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                         <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
                           <Hand className="h-4 w-4" />
