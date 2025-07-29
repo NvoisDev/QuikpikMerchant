@@ -16,7 +16,7 @@ import { DowngradeConfirmationModal } from "@/components/DowngradeConfirmationMo
 
 export default function SubscriptionSettings() {
   const { user } = useAuth();
-  const { subscription, currentTier, isActive } = useSubscription();
+  const { subscription, currentTier, isActive, isLoading: subscriptionLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -63,6 +63,25 @@ export default function SubscriptionSettings() {
       </div>
     );
   }
+
+  // Show loading state while subscription data is being fetched
+  if (subscriptionLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Subscription Settings</h1>
+          <p className="text-muted-foreground mt-2">Loading your subscription details...</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // Add error boundary for subscription data access
+  const safeSubscription = subscription || {};
+  const subscriptionData = safeSubscription as any;
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
@@ -691,7 +710,7 @@ export default function SubscriptionSettings() {
                 {(subscription as any)?.productCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit} allowed
+                of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit || 'N/A'} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
@@ -700,7 +719,7 @@ export default function SubscriptionSettings() {
                 {(subscription as any)?.teamMemberCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {(subscription as any)?.teamMemberLimit === -1 ? "unlimited" : (subscription as any)?.teamMemberLimit || 0} allowed
+                of {(subscription as any)?.teamMemberLimit === -1 ? "unlimited" : (subscription as any)?.teamMemberLimit || 'N/A'} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
