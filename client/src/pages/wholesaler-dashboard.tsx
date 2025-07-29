@@ -10,6 +10,7 @@ import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
+import { WhatsAppTestPanel } from "@/components/WhatsAppTestPanel";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
@@ -307,6 +308,7 @@ export default function WholesalerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <StripeSetupAlert />
           <WhatsAppSetupAlert />
+          <WhatsAppTestPanel />
         </div>
 
         {/* Quick Actions Section */}
