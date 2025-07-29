@@ -181,55 +181,6 @@ export default function SubscriptionSettingsSimple() {
           </div>
         </div>
 
-        {/* Billing Information */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">Billing Information</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-green-900">Current Plan</h4>
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              </div>
-              <p className="text-2xl font-bold text-green-600 capitalize">{user.subscriptionTier || 'Standard'} Plan</p>
-              <p className="text-sm text-green-700">Status: {user.subscriptionStatus || 'active'}</p>
-            </div>
-            
-            <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-green-900">Next Billing Date</h4>
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                August 29, 2025
-              </p>
-              <p className="text-sm text-green-700">Monthly subscription</p>
-            </div>
-          </div>
-          
-          {user.subscriptionTier !== 'free' && (
-            <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-100">
-              <h4 className="font-medium text-green-900 mb-4">Subscription Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-green-600 font-medium">Plan</p>
-                  <p className="text-lg font-bold text-green-800 capitalize">{user.subscriptionTier || 'Standard'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-green-600 font-medium">Amount</p>
-                  <p className="text-lg font-bold text-green-800">
-                    {user.subscriptionTier === 'standard' ? '£10.99' : '£19.99'}/month
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-green-600 font-medium">Started</p>
-                  <p className="text-lg font-bold text-green-800">July 29, 2025</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Plan Selection Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Free Plan */}
@@ -387,6 +338,55 @@ export default function SubscriptionSettingsSimple() {
               {user.subscriptionTier === 'premium' ? '✓ Current Plan' : 'Upgrade Now'}
             </Button>
           </div>
+        </div>
+
+        {/* Billing Information */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-6">Billing Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-green-900">Current Plan</h4>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              <p className="text-2xl font-bold text-green-600 capitalize">{user.subscriptionTier || 'Standard'} Plan</p>
+              <p className="text-sm text-green-700">Status: {user.subscriptionStatus || 'active'}</p>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-green-900">Next Billing Date</h4>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+              <p className="text-2xl font-bold text-green-600">
+                August 29, 2025
+              </p>
+              <p className="text-sm text-green-700">Monthly subscription</p>
+            </div>
+          </div>
+          
+          {user.subscriptionTier !== 'free' && (
+            <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-100">
+              <h4 className="font-medium text-green-900 mb-4">Subscription Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-sm text-green-600 font-medium">Plan</p>
+                  <p className="text-lg font-bold text-green-800 capitalize">{user.subscriptionTier || 'Standard'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-green-600 font-medium">Amount</p>
+                  <p className="text-lg font-bold text-green-800">
+                    {user.subscriptionTier === 'standard' ? '£10.99' : '£19.99'}/month
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-green-600 font-medium">Started</p>
+                  <p className="text-lg font-bold text-green-800">July 29, 2025</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
