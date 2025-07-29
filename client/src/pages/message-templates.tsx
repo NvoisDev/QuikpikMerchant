@@ -213,7 +213,7 @@ export default function MessageTemplates() {
 
     message += `📦 *Featured Products:*\n`;
     
-    template.products.forEach((item, index) => {
+    (template.products || []).forEach((item, index) => {
       const price = item.specialPrice || item.product.price;
       message += `${index + 1}. *${item.product.name}*\n`;
       message += `   💰 ${formatCurrency(parseFloat(price))} (MOQ: ${item.product.moq})\n`;
@@ -246,7 +246,22 @@ export default function MessageTemplates() {
   if (templatesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center space-y-4">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-3 h-8 bg-gradient-to-t from-blue-400 to-indigo-500 rounded-full animate-bounce"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.3s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 text-center">Loading message templates...</p>
+        </div>
       </div>
     );
   }
@@ -456,23 +471,23 @@ export default function MessageTemplates() {
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center text-gray-600">
                   <Package className="h-4 w-4 mr-1" />
-                  {template.products.length} products
+                  {(template.products || []).length} products
                 </span>
                 <span className="flex items-center text-gray-600">
                   <Send className="h-4 w-4 mr-1" />
-                  {template.campaigns.length} campaigns
+                  {(template.campaigns || []).length} campaigns
                 </span>
               </div>
               
-              {template.campaigns.length > 0 && (
+              {(template.campaigns || []).length > 0 && (
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-500">Total Sent:</span>
-                    <div className="font-medium">{template.campaigns.reduce((sum, c) => sum + c.recipientCount, 0)}</div>
+                    <div className="font-medium">{(template.campaigns || []).reduce((sum, c) => sum + c.recipientCount, 0)}</div>
                   </div>
                   <div>
                     <span className="text-gray-500">Revenue:</span>
-                    <div className="font-medium">{formatCurrency(template.campaigns.reduce((sum, c) => sum + parseFloat(c.totalRevenue), 0))}</div>
+                    <div className="font-medium">{formatCurrency((template.campaigns || []).reduce((sum, c) => sum + parseFloat(c.totalRevenue), 0))}</div>
                   </div>
                 </div>
               )}
