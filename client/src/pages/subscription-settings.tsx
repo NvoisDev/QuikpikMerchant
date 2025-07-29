@@ -690,19 +690,19 @@ export default function SubscriptionSettings() {
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-800">Products Created</h4>
               <p className="text-2xl font-bold text-primary">
-                {(subscription as any)?.productCount || 0}
+                {(safeSubscription as any)?.productCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {(subscription as any)?.productLimit === -1 ? "unlimited" : (subscription as any)?.productLimit || 'N/A'} allowed
+                of {(safeSubscription as any)?.productLimit === -1 ? "unlimited" : (safeSubscription as any)?.productLimit || 'N/A'} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-800">Team Members</h4>
               <p className="text-2xl font-bold text-primary">
-                {(subscription as any)?.teamMemberCount || 0}
+                {(safeSubscription as any)?.teamMemberCount || 0}
               </p>
               <p className="text-sm text-gray-600">
-                of {(subscription as any)?.teamMemberLimit === -1 ? "unlimited" : (subscription as any)?.teamMemberLimit || 'N/A'} allowed
+                of {(safeSubscription as any)?.teamMemberLimit === -1 ? "unlimited" : (safeSubscription as any)?.teamMemberLimit || 'N/A'} allowed
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">

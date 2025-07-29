@@ -17,7 +17,7 @@ import RetailerInterface from "@/pages/retailer-interface";
 import Checkout from "@/pages/checkout";
 import Broadcasts from "@/pages/broadcasts";
 import CustomerGroups from "@/pages/customer-groups";
-import SubscriptionSettings from "@/pages/subscription-settings";
+import SubscriptionSettingsSimple from "@/pages/subscription-settings-simple";
 import Settings from "@/pages/settings";
 import Marketplace from "@/pages/marketplace";
 import Advertising from "@/pages/advertising";
@@ -109,8 +109,8 @@ function AuthenticatedRoutes() {
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
             <Route path="/orders" component={Orders} />
-            <Route path="/subscription" component={SubscriptionSettings} />
-            <Route path="/subscription-settings" component={SubscriptionSettings} />
+            <Route path="/subscription" component={SubscriptionSettingsSimple} />
+            <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
             <Route path="/analytics" component={Analytics} />
             <Route path="/business-performance" component={BusinessPerformance} />
             <Route path="/financials" component={Financials} />
