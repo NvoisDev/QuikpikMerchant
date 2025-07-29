@@ -228,6 +228,165 @@ export default function SubscriptionSettingsSimple() {
           )}
         </div>
 
+        {/* Plan Selection Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Free Plan */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 text-center space-y-6 hover:shadow-xl transition-all relative">
+            <div className="space-y-4">
+              <div className="inline-block p-3 bg-gray-100 rounded-xl">
+                <Crown className="w-6 h-6 text-gray-600" />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-800 mb-2">Free</h4>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-gray-800">£0</p>
+                  <p className="text-gray-500">/month</p>
+                </div>
+              </div>
+            </div>
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Up to 3 products</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Basic product management</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Customer portal</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Email support</span>
+              </li>
+            </ul>
+            
+            <Button 
+              variant="outline" 
+              className="w-full py-3 rounded-xl font-medium border-2 hover:bg-gray-50 transition-colors"
+              disabled={user.subscriptionTier === 'free' || !user.subscriptionTier}
+              onClick={() => handlePlanChangeClick('free')}
+            >
+              {(user.subscriptionTier === 'free' || !user.subscriptionTier) ? '✓ Current Plan' : 'Downgrade'}
+            </Button>
+          </div>
+
+          {/* Standard Plan - Popular */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border-2 border-green-300 p-6 text-center space-y-6 hover:shadow-xl transition-all relative">
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <span className="bg-green-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                Most Popular
+              </span>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="inline-block p-3 bg-green-100 rounded-xl">
+                <Crown className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-800 mb-2">Standard</h4>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-gray-800">£10.99</p>
+                  <p className="text-gray-500">/month</p>
+                </div>
+              </div>
+            </div>
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700 font-medium">Up to 10 products</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Advanced product management</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Customer groups</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">WhatsApp messaging</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Order management</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Priority support</span>
+              </li>
+            </ul>
+            
+            <Button 
+              className="w-full py-3 rounded-xl font-medium bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg hover:shadow-xl transition-all"
+              disabled={user.subscriptionTier === 'standard'}
+              onClick={() => handlePlanChangeClick('standard')}
+            >
+              {user.subscriptionTier === 'standard' ? '✓ Current Plan' : 'Get Started'}
+            </Button>
+          </div>
+
+          {/* Premium Plan */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 text-center space-y-6 hover:shadow-xl transition-all relative">
+            <div className="space-y-4">
+              <div className="inline-block p-3 bg-yellow-100 rounded-xl">
+                <Crown className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-800 mb-2">Premium</h4>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-gray-800">£19.99</p>
+                  <p className="text-gray-500">/month</p>
+                </div>
+              </div>
+            </div>
+            
+            <ul className="space-y-3 text-left">
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700 font-medium">Unlimited products</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Everything in Standard</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Advanced analytics</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Team management</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Marketing campaigns</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">API access</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">24/7 priority support</span>
+              </li>
+            </ul>
+            
+            <Button 
+              className="w-full py-3 rounded-xl font-medium bg-yellow-600 hover:bg-yellow-700 text-white border-0 shadow-lg hover:shadow-xl transition-all"
+              disabled={user.subscriptionTier === 'premium'}
+              onClick={() => handlePlanChangeClick('premium')}
+            >
+              {user.subscriptionTier === 'premium' ? '✓ Current Plan' : 'Upgrade Now'}
+            </Button>
+          </div>
+        </div>
+
       </div>
 
       {/* Plan Change Confirmation Modal */}
