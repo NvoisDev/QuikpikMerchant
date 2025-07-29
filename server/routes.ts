@@ -8955,12 +8955,22 @@ https://quikpik.app`;
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if this is actually a downgrade
+      // Check if this is actually a downgrade or if user is already on the target tier
       const tierOrder = { free: 0, standard: 1, premium: 2 };
       const currentTierOrder = tierOrder[user.subscriptionTier as keyof typeof tierOrder] || 0;
       const targetTierOrder = tierOrder[targetTier as keyof typeof tierOrder] || 0;
 
-      if (targetTierOrder >= currentTierOrder) {
+      if (user.subscriptionTier === targetTier) {
+        return res.status(200).json({ 
+          success: true,
+          message: `You are already on the ${targetTier} plan`,
+          newTier: targetTier,
+          productLimit: user.productLimit || newProductLimit,
+          status: user.subscriptionStatus || 'active'
+        });
+      }
+
+      if (targetTierOrder > currentTierOrder) {
         return res.status(400).json({ error: "This is not a downgrade. Use upgrade endpoint instead." });
       }
 

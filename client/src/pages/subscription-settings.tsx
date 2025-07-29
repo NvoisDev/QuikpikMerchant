@@ -269,23 +269,40 @@ export default function SubscriptionSettings() {
         targetTier: targetDowngradePlan
       });
       
+      const result = await response.json();
+      
       if (response.ok) {
-        const result = await response.json();
         console.log(`✅ Downgrade successful:`, result);
         
+        // Close modal immediately
+        setDowngradeModalOpen(false);
+        
+        // Show success message
+        toast({
+          title: "Plan Changed Successfully",
+          description: `Your plan has been changed to ${result.newTier || targetDowngradePlan}. Changes are effective immediately.`,
+        });
+        
+        // Refresh subscription data
         queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        toast({
-          title: "Plan Downgrade Scheduled",
-          description: `Your plan will be downgraded to ${targetDowngradePlan} at the end of your current billing period. You'll keep all current features until then.`,
-        });
-        
-        setDowngradeModalOpen(false);
-        setTimeout(() => window.location.reload(), 1500);
+        // Reload page after short delay to show updated UI
+        setTimeout(() => window.location.reload(), 2000);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to downgrade subscription plan");
+        // Handle error cases but still check if the result indicates success
+        if (result.success && result.message?.includes("already on")) {
+          // User is already on target plan - treat as success
+          setDowngradeModalOpen(false);
+          toast({
+            title: "Plan Status",
+            description: result.message,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          throw new Error(result.error || "Failed to downgrade subscription plan");
+        }
       }
     } catch (error: any) {
       console.error('Downgrade error:', error);
