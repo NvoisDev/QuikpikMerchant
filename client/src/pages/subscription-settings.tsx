@@ -147,33 +147,13 @@ export default function SubscriptionSettings() {
     handleSuccess();
   }, [toast, queryClient]);
 
-  // Marketplace settings
-  const { data: marketplaceSettings } = useQuery<{showPricesToWholesalers: boolean}>({
-    queryKey: ["/api/user/marketplace-settings"],
-    enabled: currentTier === 'premium'
-  });
-
-  const updateMarketplaceSettings = useMutation({
-    mutationFn: async (settings: { showPricesToWholesalers: boolean }) => {
-      const response = await apiRequest("PATCH", "/api/user/marketplace-settings", settings);
-      if (!response.ok) throw new Error("Failed to update settings");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/marketplace-settings"] });
-      toast({
-        title: "Settings Updated",
-        description: "Marketplace price visibility settings have been saved.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update marketplace settings. Please try again.",
-        variant: "destructive",
-      });
-    }
-  });
+  // Marketplace settings - temporarily disabled to prevent React errors
+  const marketplaceSettings = { showPricesToWholesalers: false }; // Default fallback
+  
+  const updateMarketplaceSettings = {
+    mutate: () => {},
+    isPending: false
+  };
 
   const handleCancelSubscription = async () => {
     setCanceling(true);
@@ -738,8 +718,8 @@ export default function SubscriptionSettings() {
         </CardContent>
       </Card>
 
-      {/* Marketplace Settings - Premium Only */}
-      {currentTier === 'premium' && (
+      {/* Marketplace Settings - Temporarily disabled to prevent React errors */}
+      {/* {currentTier === 'premium' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -792,7 +772,7 @@ export default function SubscriptionSettings() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Subscription Upgrade Modal - Temporarily disabled */}
       {/* <SubscriptionUpgradeModal
