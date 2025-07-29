@@ -119,10 +119,32 @@ export default function SubscriptionSettingsSimple() {
     }
   };
 
+  // Add force refresh function
+  const forceRefreshAuth = async () => {
+    // Clear all cached queries
+    queryClient.clear();
+    // Force refetch user data
+    await refetchAuth();
+    toast({
+      title: "Authentication Refreshed",
+      description: "Please try accessing your subscription data again.",
+    });
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          <p className="text-gray-600">Loading your subscription data...</p>
+          <Button
+            variant="outline"
+            onClick={forceRefreshAuth}
+            className="mt-4"
+          >
+            Refresh Authentication
+          </Button>
+        </div>
       </div>
     );
   }
@@ -141,7 +163,17 @@ export default function SubscriptionSettingsSimple() {
             Manage your plan and track your usage
           </p>
           
-
+          {/* Force refresh button for troubleshooting */}
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={forceRefreshAuth}
+              className="text-xs"
+            >
+              Refresh Subscription Data
+            </Button>
+          </div>
         </div>
 
         {/* Current Plan Overview */}
