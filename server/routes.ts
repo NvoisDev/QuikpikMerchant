@@ -29,7 +29,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-06-30.basil",
+  apiVersion: "2023-10-16",
 }) : null;
 
 // Subscription price IDs for monthly plans in GBP
@@ -8690,6 +8690,12 @@ https://quikpik.app`;
         return res.status(400).json({ error: "This is not an upgrade. Use downgrade endpoint instead." });
       }
 
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.error('Stripe not configured - STRIPE_SECRET_KEY missing');
+        return res.status(500).json({ error: "Payment system not configured. Please contact support." });
+      }
+
       // Create Stripe checkout session for the upgrade
       const priceData = {
         standard: {
@@ -8710,7 +8716,7 @@ https://quikpik.app`;
         }
       };
 
-      const session = await stripe!.checkout.sessions.create({
+      const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
           {
@@ -8718,7 +8724,7 @@ https://quikpik.app`;
             quantity: 1,
           },
         ],
-        mode: 'subscription',
+        mode: 'payment',
         success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}`,
         cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
         customer_email: user.email,
