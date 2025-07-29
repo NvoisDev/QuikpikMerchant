@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SubscriptionSettingsSimple() {
@@ -100,13 +102,24 @@ export default function SubscriptionSettingsSimple() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="relative border-primary shadow-lg">
+                {/* Premium Badge */}
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <Badge className="bg-primary text-white px-3 py-1">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Most Popular
+                  </Badge>
+                </div>
+                
                 <CardContent className="p-4 text-center">
-                  <h4 className="font-semibold">Premium</h4>
-                  <p className="text-2xl font-bold">£19.99</p>
+                  <div className="flex items-center justify-center mb-2">
+                    <Crown className="w-5 h-5 text-yellow-500 mr-2" />
+                    <h4 className="font-semibold">Premium</h4>
+                  </div>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">£19.99</p>
                   <p className="text-sm text-gray-600">per month</p>
                   <Button 
-                    className="mt-2 w-full"
+                    className="mt-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                     disabled={user.subscriptionTier === 'premium'}
                   >
                     {user.subscriptionTier === 'premium' ? 'Current Plan' : 'Upgrade'}
