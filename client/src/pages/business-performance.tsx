@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -17,12 +18,14 @@ import {
 } from "lucide-react";
 
 export default function BusinessPerformance() {
-  const { data: subscriptionStatus } = useQuery({
-    queryKey: ["/api/subscription/status"],
+  const { isPremium, currentTier, subscription, refetch } = useSubscription();
+  
+  // Add debug logging
+  console.log('🔍 Business Performance subscription check:', {
+    subscription,
+    currentTier,
+    isPremium
   });
-
-  // Check if user has premium access
-  const isPremium = subscriptionStatus?.tier === 'premium';
 
   if (!isPremium) {
     return (
@@ -57,11 +60,20 @@ export default function BusinessPerformance() {
               </li>
             </ul>
           </div>
-          <Link href="/subscription">
-            <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
-              Upgrade to Premium
+          <div className="flex gap-3">
+            <Link href="/subscription">
+              <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
+                Upgrade to Premium
+              </Button>
+            </Link>
+            <Button 
+              variant="outline" 
+              onClick={() => refetch()} 
+              size="lg"
+            >
+              Refresh Access
             </Button>
-          </Link>
+          </div>
         </div>
       </div>
     );

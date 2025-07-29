@@ -4,7 +4,7 @@ import { useAuth } from "./useAuth";
 export function useSubscription() {
   const { user } = useAuth();
 
-  const { data: subscription, isLoading } = useQuery({
+  const { data: subscription, isLoading, refetch } = useQuery({
     queryKey: ["/api/subscription/status"],
     queryFn: async () => {
       try {
@@ -21,25 +21,29 @@ export function useSubscription() {
           console.warn(`Subscription status failed: ${res.status}`);
           // Return a default subscription object for unauthenticated users
           return {
-            tier: 'free',
-            status: 'inactive',
+            subscriptionTier: 'free',
+            subscriptionStatus: 'inactive',
             productCount: 0
           };
         }
         
-        return await res.json();
+        const data = await res.json();
+        console.log('🔍 Subscription data from API:', data);
+        return data;
       } catch (error) {
         console.warn('Subscription query failed:', error);
         // Return safe defaults on error
         return {
-          tier: 'free',
-          status: 'inactive',
+          subscriptionTier: 'free',
+          subscriptionStatus: 'inactive',
           productCount: 0
         };
       }
     },
     enabled: !!user,
     retry: false,
+    staleTime: 0, // Always fetch fresh
+    refetchOnMount: true,
   });
 
   const canCreateProduct = () => {
@@ -103,7 +107,9 @@ export function useSubscription() {
     canAccessAdvertising,
     getProductLimit,
     getEditLimit,
-    currentTier: user?.subscriptionTier || 'free',
-    isActive: user?.subscriptionStatus === 'active'
+    currentTier: subscription?.subscriptionTier || user?.subscriptionTier || 'free',
+    isActive: subscription?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'active',
+    isPremium: (subscription?.subscriptionTier || user?.subscriptionTier) === 'premium',
+    refetch
   };
 }
