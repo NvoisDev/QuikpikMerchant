@@ -122,11 +122,11 @@ export function SubscriptionDebugger() {
           </div>
         </div>
 
-        {auditLogs && auditLogs.logs && auditLogs.logs.length > 0 && (
+        {auditLogs && (auditLogs as any).logs && (auditLogs as any).logs.length > 0 && (
           <div className="bg-white p-3 rounded border">
-            <strong>Recent Subscription Activity ({auditLogs.count} events):</strong>
+            <strong>Recent Subscription Activity ({(auditLogs as any).count} events):</strong>
             <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-              {auditLogs.logs.slice(0, 10).map((log: any, index: number) => (
+              {(auditLogs as any).logs.slice(0, 10).map((log: any, index: number) => (
                 <div key={index} className="text-xs p-2 bg-gray-50 rounded border-l-4 border-blue-400">
                   <div className="flex justify-between items-start">
                     <div>
@@ -168,15 +168,15 @@ export function SubscriptionDebugger() {
             <strong>Subscription Statistics (30 days):</strong>
             <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{subscriptionStats.stats?.upgrades || 0}</div>
+                <div className="text-lg font-bold text-green-600">{(subscriptionStats as any).stats?.upgrades || 0}</div>
                 <div className="text-gray-600">Upgrades</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-red-600">{subscriptionStats.stats?.downgrades || 0}</div>
+                <div className="text-lg font-bold text-red-600">{(subscriptionStats as any).stats?.downgrades || 0}</div>
                 <div className="text-gray-600">Downgrades</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">£{subscriptionStats.stats?.totalRevenue?.toFixed(2) || '0.00'}</div>
+                <div className="text-lg font-bold text-blue-600">£{(subscriptionStats as any).stats?.totalRevenue?.toFixed(2) || '0.00'}</div>
                 <div className="text-gray-600">Revenue</div>
               </div>
             </div>
