@@ -45,7 +45,7 @@ export function WhatsAppSetupAlert() {
             </AlertDescription>
             
             <div className="flex items-center gap-3">
-              <Link href="/settings?tab=integrations">
+              <Link href="/settings?tab=whatsapp">
                 <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
                   <Settings className="h-4 w-4 mr-2" />
                   Set Up WhatsApp
