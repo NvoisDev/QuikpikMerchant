@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { SubscriptionDebugger } from "@/components/SubscriptionDebugger";
+import { DowngradeConfirmationModal } from "@/components/DowngradeConfirmationModal";
 
 export default function SubscriptionSettings() {
   const { user } = useAuth();
@@ -21,6 +22,8 @@ export default function SubscriptionSettings() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
+  const [downgradeModalOpen, setDowngradeModalOpen] = useState(false);
+  const [targetDowngradePlan, setTargetDowngradePlan] = useState("");
 
   // Debug logging to see what data we're getting
   console.log("🐛 Subscription page data:", {
@@ -250,12 +253,18 @@ export default function SubscriptionSettings() {
   // Remove the old handleUpgrade function that opens modal
 
   const handleDowngrade = async (targetPlan: string) => {
+    // Show confirmation modal instead of immediate downgrade
+    setTargetDowngradePlan(targetPlan);
+    setDowngradeModalOpen(true);
+  };
+
+  const confirmDowngrade = async () => {
     setCanceling(true);
     try {
-      console.log(`🔽 Initiating downgrade to: ${targetPlan}`);
+      console.log(`🔽 Initiating downgrade to: ${targetDowngradePlan}`);
       
       const response = await apiRequest("POST", "/api/subscription/downgrade", {
-        targetTier: targetPlan
+        targetTier: targetDowngradePlan
       });
       
       if (response.ok) {
@@ -266,10 +275,11 @@ export default function SubscriptionSettings() {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         toast({
-          title: "Plan Downgraded Successfully!",
-          description: `Your subscription has been downgraded to ${targetPlan}. Changes are now active.`,
+          title: "Plan Downgrade Scheduled",
+          description: `Your plan will be downgraded to ${targetDowngradePlan} at the end of your current billing period. You'll keep all current features until then.`,
         });
         
+        setDowngradeModalOpen(false);
         setTimeout(() => window.location.reload(), 1500);
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -768,6 +778,16 @@ export default function SubscriptionSettings() {
         onOpenChange={setUpgradeModalOpen}
         reason="general"
         currentPlan={currentTier}
+      />
+
+      {/* Downgrade Confirmation Modal */}
+      <DowngradeConfirmationModal
+        open={downgradeModalOpen}
+        onOpenChange={setDowngradeModalOpen}
+        currentPlan={currentTier}
+        targetPlan={targetDowngradePlan}
+        onConfirm={confirmDowngrade}
+        isLoading={canceling}
       />
     </div>
   );
