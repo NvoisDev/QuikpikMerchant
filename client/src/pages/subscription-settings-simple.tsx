@@ -205,11 +205,19 @@ export default function SubscriptionSettingsSimple() {
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Basic product management</span>
+                <span className="text-gray-700">3 edits per product</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Customer portal</span>
+                <span className="text-gray-700">2 customer groups (10 each)</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">5 WhatsApp broadcasts/month</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Basic order management</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
@@ -255,23 +263,27 @@ export default function SubscriptionSettingsSimple() {
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Advanced product management</span>
+                <span className="text-gray-700">Unlimited product edits</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Customer groups</span>
+                <span className="text-gray-700">5 customer groups (50 each)</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">WhatsApp messaging</span>
+                <span className="text-gray-700">25 WhatsApp broadcasts/month</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Order management</span>
+                <span className="text-gray-700">Advanced order processing</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Priority support</span>
+                <span className="text-gray-700">Enhanced analytics & reports</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Priority email & phone support</span>
               </li>
             </ul>
             
@@ -306,27 +318,31 @@ export default function SubscriptionSettingsSimple() {
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Everything in Standard</span>
+                <span className="text-gray-700">Unlimited product edits</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Advanced analytics</span>
+                <span className="text-gray-700">Unlimited customer groups</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Team management</span>
+                <span className="text-gray-700">Unlimited WhatsApp broadcasts</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">Marketing campaigns</span>
+                <span className="text-gray-700">B2B Marketplace access</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">API access</span>
+                <span className="text-gray-700">Product advertising & promotion</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">24/7 priority support</span>
+                <span className="text-gray-700">Team management (up to 5 members)</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">Dedicated account manager</span>
               </li>
             </ul>
             
