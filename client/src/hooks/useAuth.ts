@@ -7,22 +7,43 @@ export function useAuth() {
   
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
-    enabled: true, // Re-enabled to fetch subscription data
-    retry: (failureCount, error: any) => {
-      // Don't retry if it's a 403 (access denied) error
-      if (error?.response?.status === 403) {
-        // If user is blocked for being a customer, redirect to customer login
-        if (error?.response?.data?.userType === 'retailer' || error?.response?.data?.userType === 'customer') {
-          console.log('🚫 Customer detected trying to access wholesaler dashboard, redirecting...');
-          window.location.href = '/customer-login';
-          return false;
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/auth/user", {
+          credentials: "include",
+        });
+        
+        if (res.status === 401) {
+          // Not authenticated - this is expected, return null
+          return null;
         }
+        
+        if (res.status === 403) {
+          // Access denied - likely a customer trying to access wholesaler dashboard
+          const data = await res.json().catch(() => ({}));
+          if (data.userType === 'retailer' || data.userType === 'customer') {
+            console.log('🚫 Customer detected trying to access wholesaler dashboard, redirecting...');
+            window.location.href = '/customer-login';
+            return null;
+          }
+        }
+        
+        if (!res.ok) {
+          throw new Error(`${res.status}: ${res.statusText}`);
+        }
+        
+        return await res.json();
+      } catch (error) {
+        // Don't throw errors for authentication issues - return null instead
+        console.log('Authentication check failed:', error);
+        return null;
       }
-      return failureCount < 3;
     },
-    staleTime: 30000, // Cache for 30 seconds instead of infinity
+    enabled: true,
+    retry: false, // Don't retry authentication failures
+    staleTime: 30000,
     refetchOnWindowFocus: false,
-    refetchOnMount: true, // Refetch on mount to get fresh data
+    refetchOnMount: true,
     refetchInterval: false,
   });
 
@@ -50,7 +71,7 @@ export function useAuth() {
     user,
     loading: isLoading,
     isLoading,
-    isAuthenticated: !!user && !error,
+    isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };
