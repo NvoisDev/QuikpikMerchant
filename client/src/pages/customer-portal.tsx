@@ -647,6 +647,15 @@ export default function CustomerPortal() {
   
   // Static wholesaler ID calculation to prevent infinite re-renders
   const wholesalerId = useMemo(() => {
+    // Check for WhatsApp pre-selection parameter first
+    const urlParams = new URLSearchParams(window.location.search);
+    const whatsappWholesaler = urlParams.get('store');
+    
+    if (whatsappWholesaler) {
+      console.log('🆔 WhatsApp pre-selected wholesaler:', whatsappWholesaler);
+      return whatsappWholesaler;
+    }
+    
     // Always prioritize URL parameter extraction for customer portal
     const rawId = wholesalerIdParam || (location.includes('/store/') ? location.split('/store/')[1] : location.split('/customer/')[1]);
     // Decode URL encoding and remove query parameters

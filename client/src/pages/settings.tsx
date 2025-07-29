@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { WhatsAppSetupGuides } from "@/components/WhatsAppSetupGuides";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle, HelpCircle, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TaglineGenerator } from "@/components/TaglineGenerator";
@@ -152,6 +153,10 @@ const CURRENCIES = [
 function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // WhatsApp setup guide state
+  const [showWhatsAppGuide, setShowWhatsAppGuide] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct' | null>(null);
   const [activeTab, setActiveTab] = useState("account");
 
   // Handle URL parameters for subscription success/cancel and tab switching
@@ -819,6 +824,10 @@ function WhatsAppIntegrationSection() {
   const [isEditingConfig, setIsEditingConfig] = useState(false);
   const [showProviderSelection, setShowProviderSelection] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct'>('twilio');
+  
+  // Setup guide state
+  const [showWhatsAppGuide, setShowWhatsAppGuide] = useState(false);
+  const [guideProvider, setGuideProvider] = useState<'twilio' | 'direct' | null>(null);
   const [twilioConfig, setTwilioConfig] = useState({
     accountSid: "",
     authToken: "", 
@@ -1041,12 +1050,42 @@ function WhatsAppIntegrationSection() {
               <p className="text-blue-700 mb-4">
                 Connect WhatsApp to send product broadcasts and updates to your customers.
               </p>
-              <Button 
-                onClick={() => setShowProviderSelection(true)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Get Started with WhatsApp
-              </Button>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => setShowProviderSelection(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Get Started with WhatsApp
+                </Button>
+                
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setGuideProvider('twilio');
+                      setShowWhatsAppGuide(true);
+                    }}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Twilio Setup Guide
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setGuideProvider('direct');
+                      setShowWhatsAppGuide(true);
+                    }}
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    WhatsApp API Guide
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         ) : showProviderSelection ? (
@@ -1165,8 +1204,47 @@ function WhatsAppIntegrationSection() {
 
 
 
+      {/* WhatsApp Setup Guides Modal */}
+      <WhatsAppSetupGuides
+        isOpen={showWhatsAppGuide}
+        onClose={() => {
+          setShowWhatsAppGuide(false);
+          setGuideProvider(null);
+        }}
+        provider={guideProvider}
+      />
+
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-medium text-gray-800 mb-3">📚 Twilio WhatsApp Setup Guide</h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-medium text-gray-800">📚 Setup Guides</h4>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setGuideProvider('twilio');
+                setShowWhatsAppGuide(true);
+              }}
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <ExternalLink className="h-4 w-4 mr-1" />
+              Twilio Guide
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setGuideProvider('direct');
+                setShowWhatsAppGuide(true);
+              }}
+              className="text-green-600 border-green-200 hover:bg-green-50"
+            >
+              <ExternalLink className="h-4 w-4 mr-1" />
+              WhatsApp API Guide
+            </Button>
+          </div>
+        </div>
+        <h5 className="font-medium text-gray-800 mb-3">Twilio WhatsApp Quick Reference</h5>
         <div className="text-sm text-gray-600 space-y-3">
           <div>
             <p className="font-medium text-gray-800 mb-1">For Testing (Sandbox Mode):</p>

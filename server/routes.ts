@@ -4711,6 +4711,44 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // WhatsApp API Routes (Shared Service)
 
+  // WhatsApp status endpoint for priority alert
+  app.get("/api/whatsapp/status", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if WhatsApp is configured (either Twilio or Direct)
+      const isConfigured = !!(
+        (user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber) ||
+        (user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
+      );
+
+      const provider = user.whatsappProvider || 'twilio';
+      
+      res.json({
+        isConfigured,
+        provider,
+        serviceProvider: provider === 'twilio' ? 'Twilio WhatsApp' : 'WhatsApp Business API',
+        twilioAccountSid: user.twilioAccountSid ? "configured" : null,
+        twilioAuthToken: user.twilioAuthToken ? "configured" : null, 
+        twilioPhoneNumber: user.twilioPhoneNumber,
+        whatsappBusinessPhoneId: user.whatsappBusinessPhoneId,
+        whatsappAccessToken: user.whatsappAccessToken ? "configured" : null,
+        whatsappAppId: user.whatsappAppId,
+        whatsappBusinessPhone: user.whatsappBusinessPhone,
+        whatsappBusinessName: user.whatsappBusinessName,
+        whatsappProvider: user.whatsappProvider
+      });
+    } catch (error) {
+      console.error("Error fetching WhatsApp status:", error);
+      res.status(500).json({ error: "Failed to fetch WhatsApp status" });
+    }
+  });
+
   app.post('/api/whatsapp/test', requireAuth, async (req: any, res) => {
     try {
       const { testPhoneNumber } = req.body;
