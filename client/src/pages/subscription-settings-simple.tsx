@@ -9,7 +9,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SubscriptionSettingsSimple() {
-  const { user, refetch: refetchAuth } = useAuth();
+  const { user, refetch } = useAuth();
+  const refetchAuth = refetch;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [processing, setProcessing] = useState(false);
@@ -21,7 +22,7 @@ export default function SubscriptionSettingsSimple() {
     enabled: !!user,
   });
 
-  const productCount = products.length;
+  const productCount = Array.isArray(products) ? products.length : 0;
 
   const getPlanChangeAction = (targetPlan: string) => {
     const planHierarchy = { free: 0, standard: 1, premium: 2 };
