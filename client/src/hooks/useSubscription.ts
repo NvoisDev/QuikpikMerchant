@@ -6,6 +6,38 @@ export function useSubscription() {
 
   const { data: subscription, isLoading } = useQuery({
     queryKey: ["/api/subscription/status"],
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/subscription/status", {
+          credentials: "include",
+        });
+        
+        if (res.status === 401) {
+          // Not authenticated - return null
+          return null;
+        }
+        
+        if (!res.ok) {
+          console.warn(`Subscription status failed: ${res.status}`);
+          // Return a default subscription object for unauthenticated users
+          return {
+            tier: 'free',
+            status: 'inactive',
+            productCount: 0
+          };
+        }
+        
+        return await res.json();
+      } catch (error) {
+        console.warn('Subscription query failed:', error);
+        // Return safe defaults on error
+        return {
+          tier: 'free',
+          status: 'inactive',
+          productCount: 0
+        };
+      }
+    },
     enabled: !!user,
     retry: false,
   });

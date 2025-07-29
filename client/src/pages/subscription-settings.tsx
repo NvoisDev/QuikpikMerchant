@@ -34,10 +34,17 @@ export default function SubscriptionSettings() {
       subscriptionStatus: user.subscriptionStatus,
       productLimit: user.productLimit
     } : null,
-    subscription,
+    subscription: subscription || {},
     currentTier,
     isActive
   });
+
+  // Ensure subscription is never undefined - provide safe defaults
+  const safeSubscription = subscription || {
+    tier: 'free',
+    status: 'inactive',
+    productCount: 0
+  };
 
   // Show login message if not authenticated
   if (!user) {
@@ -444,7 +451,7 @@ export default function SubscriptionSettings() {
               </div>
               <div className="text-sm text-muted-foreground">Products Limit</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {(subscription as any)?.productCount || 0} used
+                {(safeSubscription as any)?.productCount || 0} used
               </div>
             </div>
             <div className="bg-background/60 rounded-lg p-4 text-center border">
