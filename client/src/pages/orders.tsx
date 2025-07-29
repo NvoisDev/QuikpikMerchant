@@ -90,6 +90,7 @@ interface Order {
   updatedAt: string;
   deliveryAddress?: string;
   notes?: string;
+  fulfillmentType?: string; // Add fulfillment type field
   // Shipping fields
   shippingOrderId?: string;
   shippingHash?: string;
@@ -694,6 +695,20 @@ export default function Orders() {
                           <h3 className="font-semibold text-lg">{order.orderNumber || `Order #${order.id}`}</h3>
                           {getStatusBadge(order.status)}
                           
+                          {/* Fulfillment Type Tags */}
+                          {order.fulfillmentType === 'delivery' && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <Truck className="h-3 w-3" />
+                              Delivery
+                            </Badge>
+                          )}
+                          {order.fulfillmentType === 'collection' && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Hand className="h-3 w-3" />
+                              Collection
+                            </Badge>
+                          )}
+                          
                           {/* Show shipping status */}
                           {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
                             <>
@@ -868,6 +883,26 @@ export default function Orders() {
                         </div>
                       ))}
                     </div>
+                    
+                    {/* Fulfillment Information moved under Order Items */}
+                    {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Delivery Address
+                        </h4>
+                        <p className="text-sm text-blue-800">{formatAddress(selectedOrder.deliveryAddress)}</p>
+                      </div>
+                    )}
+                    {selectedOrder.fulfillmentType === 'collection' && (
+                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+                          <Hand className="h-4 w-4" />
+                          Collection Information
+                        </h4>
+                        <p className="text-sm text-green-800">This order is available for collection from your business location.</p>
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
