@@ -8329,13 +8329,13 @@ https://quikpik.app`;
         const session = event.data.object;
         console.log(`🎣 [${timestamp}] Checkout session completed: ${session.mode} mode`);
         
-        // Handle subscription upgrade checkouts (mode: 'payment' with subscription metadata)
-        if (session.mode === 'payment' && session.metadata && session.metadata.targetTier && session.metadata.userId) {
-          console.log(`✅ Processing checkout-based subscription upgrade for user ${session.metadata.userId} to ${session.metadata.targetTier}`);
+        // Handle subscription upgrade checkouts (both mode: 'payment' and mode: 'subscription' with metadata)
+        if (session.metadata && session.metadata.userId && (session.metadata.targetTier || session.metadata.tier)) {
+          const targetTier = session.metadata.targetTier || session.metadata.tier;
+          console.log(`✅ Processing checkout-based subscription upgrade for user ${session.metadata.userId} to ${targetTier}`);
           
           try {
             const userId = session.metadata.userId;
-            const targetTier = session.metadata.targetTier;
             const upgradeFromTier = session.metadata.upgradeFromTier || 'free';
             
             // Determine product limit for the new tier
