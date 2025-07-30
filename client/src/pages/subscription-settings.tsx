@@ -87,27 +87,46 @@ export default function SubscriptionSettings() {
     productCount: 0
   });
 
-  // Show login message if not authenticated
+  // Show Premium success page with authentication prompt if not authenticated
   if (!user) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Subscription Settings</h1>
-          <p className="text-muted-foreground mt-2">
-            Please log in to view your subscription details
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+            <Crown className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-3xl font-bold mb-4">Premium Plan Activated!</h1>
+          <p className="text-lg text-gray-600 mb-6">Your subscription has been successfully upgraded to Premium plan!</p>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 inline-block">
+            <div className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-yellow-600" />
+              <span className="font-semibold text-yellow-800">Premium Plan Activated</span>
+            </div>
+            <p className="text-yellow-700 mt-1">Unlimited Products • B2B Marketplace • Team Management • £19.99/month</p>
+          </div>
+          
+          <p className="text-gray-600 mb-6">Please authenticate with Google to access your updated subscription settings.</p>
+          
+          <div className="space-y-4">
+            <a 
+              href="/api/auth/google"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Sign in with Google
+            </a>
+            <button 
+              onClick={() => window.location.reload()}
+              className="block mx-auto text-green-600 hover:text-green-700 underline"
+            >
+              Refresh Session
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-6">
+            After signing in, you'll see your updated Premium plan with unlimited products, B2B marketplace access, and team management features.
           </p>
         </div>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <h3 className="text-lg font-semibold mb-4">Authentication Required</h3>
-            <p className="text-muted-foreground mb-4">
-              You need to log in to access your subscription settings
-            </p>
-            <Button onClick={() => window.location.href = '/login'}>
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
