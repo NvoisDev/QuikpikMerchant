@@ -1808,59 +1808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate removed - webhook-test functionality merged into main webhook
 
-  // Webhook to handle successful payments
-  app.post('/api/stripe/webhook', async (req, res) => {
-    console.log('🚀 WEBHOOK ENDPOINT HIT - Starting processing...');
-    console.log('📨 Webhook received from Stripe');
-    console.log('🔍 Webhook request body type:', typeof req.body);
-    console.log('🔍 Webhook request body length:', JSON.stringify(req.body).length);
-    console.log('🔍 Webhook headers:', req.headers);
-    
-    const sig = req.headers['stripe-signature'] as string;
-    let event;
-
-    try {
-      // Check if webhook secret is configured
-      if (!process.env.STRIPE_WEBHOOK_SECRET) {
-        console.log('⚠️ STRIPE_WEBHOOK_SECRET not configured - bypassing signature verification');
-        // In development, process the event directly
-        event = req.body;
-        console.log('⚠️ Development mode - processing webhook without signature verification');
-      } else {
-        if (!stripe) {
-          throw new Error('Stripe not configured');
-        }
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-        console.log('✅ Webhook signature verified successfully');
-      }
-    } catch (err: any) {
-      console.log(`❌ Webhook signature verification failed:`, err.message);
-      console.log('🔄 Attempting to process webhook without verification in development mode');
-      event = req.body;
-    }
-
-    console.log('🔍 Event type received:', event.type);
-    console.log('🔍 Event ID:', event.id);
-    
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object;
-      console.log('✅ Payment Intent Succeeded event detected, processing...');
-      
-      // Check if this is a subscription upgrade payment
-      const metadata = paymentIntent.metadata;
-      if (metadata.targetTier && metadata.userId) {
-        console.log('🔼 This is a subscription upgrade payment, processing...');
-        return await processSubscriptionUpgrade(paymentIntent, res);
-      } else {
-        console.log('🛒 This is a customer order payment, processing...');
-        return await processPaymentIntentSucceeded(paymentIntent, res);
-      }
-    } else {
-      console.log('ℹ️ Non-payment event received:', event.type);
-    }
-
-    res.json({ received: true });
-  });
+  // OLD WEBHOOK HANDLER REMOVED - Using /api/webhooks/stripe instead
 
   // Process subscription upgrade payments
   async function processSubscriptionUpgrade(paymentIntent: any, res: any) {
@@ -8766,8 +8714,12 @@ https://quikpik.app`;
         console.log(`🎣 [${timestamp}] ===== CHECKOUT SESSION COMPLETED WEBHOOK RECEIVED =====`);
         console.log(`🎣 [${timestamp}] Session mode: ${session.mode}`);
         console.log(`🎣 [${timestamp}] Payment status: ${session.payment_status}`);
-        console.log(`🎣 [${timestamp}] Session metadata:`, session.metadata);
+        console.log(`🎣 [${timestamp}] Session metadata:`, JSON.stringify(session.metadata, null, 2));
         console.log(`🎣 [${timestamp}] Subscription ID: ${session.subscription}`);
+        console.log(`🎣 [${timestamp}] Metadata keys:`, Object.keys(session.metadata || {}));
+        console.log(`🎣 [${timestamp}] Has userId:`, !!session.metadata?.userId);
+        console.log(`🎣 [${timestamp}] Has tier:`, !!session.metadata?.tier);
+        console.log(`🎣 [${timestamp}] Has targetTier:`, !!session.metadata?.targetTier);
         console.log(`🎣 [${timestamp}] About to check mode conditions...`);
         
         if (session.mode === 'payment') {
@@ -8828,9 +8780,9 @@ https://quikpik.app`;
             console.error('❌ Error processing subscription upgrade via checkout session:', error);
             return res.status(500).json({ error: 'Failed to process subscription upgrade' });
           }
-        } else if (session.mode === 'subscription' && session.metadata?.userId && session.metadata?.planId) {
+        } else if (session.mode === 'subscription' && session.metadata?.userId && session.metadata?.tier) {
           const userId = session.metadata.userId;
-          const planId = session.metadata.planId;
+          const planId = session.metadata.tier; // This is actually "tier" in the metadata
           
           // Get new product limit for the upgraded plan
           let newProductLimit = 3; // default for free
