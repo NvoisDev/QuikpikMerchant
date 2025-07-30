@@ -42,6 +42,8 @@ import Signup from "@/pages/signup";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
+import UpgradeSuccess from "@/pages/upgrade-success";
+import AuthSuccess from "@/pages/auth-success";
 import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
@@ -59,6 +61,8 @@ function PublicRoutes() {
       <Route path="/login" component={Login} />
       <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/advertising-preview" component={AdvertisingPreview} />
+      <Route path="/upgrade-success" component={UpgradeSuccess} />
+      <Route path="/auth-success" component={AuthSuccess} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />
