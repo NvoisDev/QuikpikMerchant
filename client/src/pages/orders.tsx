@@ -641,13 +641,18 @@ export default function Orders() {
                               </td>
                               <td className="p-4">
                                 <div className="text-sm">
-                                  {order.shippingOrderId ? (
+                                  {order.fulfillmentType === 'delivery' ? (
                                     <div className="flex items-center gap-1">
-                                      <Truck className="h-3 w-3" />
-                                      <span>Express</span>
+                                      <Truck className="h-3 w-3 text-blue-600" />
+                                      <span>Delivery</span>
+                                    </div>
+                                  ) : order.fulfillmentType === 'collection' || order.fulfillmentType === 'pickup' ? (
+                                    <div className="flex items-center gap-1">
+                                      <Hand className="h-3 w-3 text-green-600" />
+                                      <span>Pick up</span>
                                     </div>
                                   ) : (
-                                    <span className="text-gray-500">Express</span>
+                                    <span className="text-gray-500">Not specified</span>
                                   )}
                                   {order.shippingOrderId && (
                                     <div className="text-xs text-gray-500 mt-1">Tracking added</div>
