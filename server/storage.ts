@@ -3750,7 +3750,7 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // Get all customers (both in groups and standalone) with their group information
+    // Get all customers who are associated with this wholesaler through groups OR orders
     const allCustomers = await db.execute(sql`
       SELECT DISTINCT
         u.id,
@@ -3769,8 +3769,8 @@ export class DatabaseStorage implements IStorage {
           u.first_name, 
           'Customer'
         ) as full_name,
-        COALESCE(STRING_AGG(cg.name, ', '), '') as group_names,
-        COALESCE(STRING_AGG(cg.id::text, ','), '') as group_ids,
+        COALESCE(STRING_AGG(DISTINCT cg.name, ', '), '') as group_names,
+        COALESCE(STRING_AGG(DISTINCT cg.id::text, ','), '') as group_ids,
         COUNT(DISTINCT o.id) as total_orders,
         COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent,
         MAX(o.created_at) as last_order_date
@@ -3779,6 +3779,13 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
       LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
       WHERE u.role IN ('retailer', 'customer')
+        AND (
+          -- Customer is in a group belonging to this wholesaler
+          cg.wholesaler_id = ${wholesalerId}
+          OR 
+          -- Customer has placed orders with this wholesaler
+          o.wholesaler_id = ${wholesalerId}
+        )
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
