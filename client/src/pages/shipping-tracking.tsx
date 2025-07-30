@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SHIPPING_STATUS_LABELS, SHIPPING_STATUS_COLORS } from '@shared/tracking-schema';
+import { queryClient } from '@/lib/queryClient';
 
 interface TrackingEvent {
   id: string;
@@ -52,9 +53,20 @@ export default function ShippingTracking() {
 
   const { data: trackedOrders = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/shipping/tracked-orders'],
-    staleTime: 30000, // 30 seconds
+    staleTime: 0, // No cache to force fresh data
     refetchInterval: 60000, // Auto-refresh every minute
   });
+
+  // Debug: Log the actual data received
+  React.useEffect(() => {
+    console.log('Tracked orders data:', trackedOrders);
+  }, [trackedOrders]);
+
+  const handleForceClear = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/shipping/tracked-orders'] });
+    queryClient.removeQueries({ queryKey: ['/api/shipping/tracked-orders'] });
+    refetch();
+  };
 
   const { data: trackingDetails, isLoading: isLoadingDetails, refetch: refetchDetails } = useQuery({
     queryKey: ['/api/shipping/tracking', selectedOrder?.id],
@@ -119,10 +131,19 @@ export default function ShippingTracking() {
           <h1 className="text-3xl font-bold">Shipping Tracking</h1>
           <p className="text-muted-foreground">Real-time tracking for all your orders</p>
         </div>
-        <Button onClick={() => refetch()} variant="outline" className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Refresh All
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => refetch()} variant="outline" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh All
+          </Button>
+          <Button 
+            onClick={handleForceClear} 
+            variant="outline" 
+            className="gap-2 bg-red-50 border-red-200 hover:bg-red-100"
+          >
+            Clear Cache
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
