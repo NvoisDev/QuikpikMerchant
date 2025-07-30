@@ -8716,11 +8716,12 @@ https://quikpik.app`;
         console.log(`🎣 [${timestamp}] Payment status: ${session.payment_status}`);
         console.log(`🎣 [${timestamp}] Session metadata:`, JSON.stringify(session.metadata, null, 2));
         console.log(`🎣 [${timestamp}] Subscription ID: ${session.subscription}`);
-        console.log(`🎣 [${timestamp}] Metadata keys:`, Object.keys(session.metadata || {}));
-        console.log(`🎣 [${timestamp}] Has userId:`, !!session.metadata?.userId);
-        console.log(`🎣 [${timestamp}] Has tier:`, !!session.metadata?.tier);
-        console.log(`🎣 [${timestamp}] Has targetTier:`, !!session.metadata?.targetTier);
-        console.log(`🎣 [${timestamp}] About to check mode conditions...`);
+        
+        // For subscription mode, don't handle billing here - let subscription webhooks handle it
+        if (session.mode === 'subscription') {
+          console.log(`🔔 [${timestamp}] Subscription checkout completed - billing will be handled by subscription webhooks`);
+          return res.json({ received: true, message: 'Subscription checkout completed - billing handled by subscription webhooks' });
+        }
         
         if (session.mode === 'payment') {
           // Handle one-time subscription upgrade payments
@@ -8780,82 +8781,113 @@ https://quikpik.app`;
             console.error('❌ Error processing subscription upgrade via checkout session:', error);
             return res.status(500).json({ error: 'Failed to process subscription upgrade' });
           }
-        } else if (session.mode === 'subscription' && session.metadata?.userId && session.metadata?.tier) {
-          const userId = session.metadata.userId;
-          const planId = session.metadata.tier; // This is actually "tier" in the metadata
-          
-          // Get new product limit for the upgraded plan
-          let newProductLimit = 3; // default for free
-          switch (planId) {
-            case 'standard':
-              newProductLimit = 10;
-              break;
-            case 'premium':
-              newProductLimit = -1; // unlimited
-              break;
-          }
-
-          try {
-            // Update user subscription
-            const updatedUser = await storage.updateUser(userId, {
-              subscriptionTier: planId,
-              subscriptionStatus: 'active',
-              stripeSubscriptionId: session.subscription,
-              productLimit: newProductLimit,
-              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-            });
-            
-            console.log(`✅ Successfully updated user ${userId} subscription:`, {
-              tier: planId,
-              status: 'active',
-              productLimit: newProductLimit,
-              stripeSubId: session.subscription
-            });
-
-            // Verify the update worked
-            const verifyUser = await storage.getUser(userId);
-            console.log(`🔍 Verification - User subscription data:`, {
-              id: verifyUser?.id,
-              tier: verifyUser?.subscriptionTier,
-              status: verifyUser?.subscriptionStatus,
-              limit: verifyUser?.productLimit
-            });
-
-          } catch (error) {
-            console.error(`❌ Failed to update user subscription:`, error);
-            return res.status(500).send('Failed to update subscription');
-          }
-
-          // Unlock products that were locked due to subscription limits
-          console.log(`🔓 Starting product unlock process for user ${userId}`);
-          try {
-            const currentProducts = await storage.getProducts(userId);
-            const lockedProducts = currentProducts.filter(p => p.status === 'locked');
-            
-            if (lockedProducts.length > 0) {
-              console.log(`🔓 Found ${lockedProducts.length} locked products to potentially unlock`);
-              
-              const activeProducts = currentProducts.filter(p => p.status === 'active');
-              const availableSlots = newProductLimit - activeProducts.length;
-              
-              if (availableSlots > 0 || newProductLimit === -1) {
-                const productsToUnlock = newProductLimit === -1 
-                  ? lockedProducts 
-                  : lockedProducts.slice(0, availableSlots);
-                
-                for (const product of productsToUnlock) {
-                  await storage.updateProduct(product.id, { status: 'active' });
-                  console.log(`🔓 Unlocked product: ${product.name} (ID: ${product.id})`);
-                }
-                
-                console.log(`🔓 Successfully unlocked ${productsToUnlock.length} products after subscription upgrade`);
-              }
-            }
-          } catch (error) {
-            console.error('Error unlocking products after subscription upgrade:', error);
-          }
+        } else {
+          console.log(`🎣 [${timestamp}] Non-subscription checkout session completed`);
+          return res.json({ received: true, message: 'Non-subscription checkout completed' });
         }
         break;
+        
+      case 'customer.subscription.created':
+        const newSubscription = event.data.object;
+        console.log(`🆕 [${timestamp}] ===== NEW SUBSCRIPTION CREATED =====`);
+        console.log(`🆕 [${timestamp}] Subscription ID: ${newSubscription.id}`);
+        console.log(`🆕 [${timestamp}] Customer ID: ${newSubscription.customer}`);
+        
+        try {
+          // Get customer details to find the user
+          const customer = await stripe.customers.retrieve(newSubscription.customer as string);
+          if (typeof customer === 'string') {
+            console.error(`❌ [${timestamp}] Invalid customer object returned`);
+            return res.status(400).send('Invalid customer data');
+          }
+          
+          const userId = customer.metadata?.userId;
+          if (!userId) {
+            console.error(`❌ [${timestamp}] No userId found in customer metadata`);
+            return res.status(400).send('No user ID in customer metadata');
+          }
+          
+          // Get subscription details to determine tier
+          const subscriptionItem = newSubscription.items.data[0];
+          const priceId = subscriptionItem.price.id;
+          
+          // Map price ID to tier
+          let tier = 'free';
+          let productLimit = 3;
+          
+          if (priceId === 'price_1RieBnBLkKweDa5PCS7fdhWO') { // Standard
+            tier = 'standard';
+            productLimit = 10;
+          } else if (priceId === 'price_1RieBnBLkKweDa5Py3yl0gTP') { // Premium
+            tier = 'premium';
+            productLimit = -1;
+          }
+          
+          console.log(`🆕 [${timestamp}] Updating user ${userId} to ${tier} tier`);
+          
+          // Update user subscription
+          await storage.updateUser(userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
+            stripeSubscriptionId: newSubscription.id,
+            productLimit: productLimit,
+            subscriptionEndsAt: new Date(newSubscription.current_period_end * 1000)
+          });
+          
+          console.log(`✅ [${timestamp}] Successfully created subscription for user ${userId}:`, {
+            tier: tier,
+            subscriptionId: newSubscription.id,
+            productLimit: productLimit
+          });
+          
+          return res.json({ 
+            received: true, 
+            message: `Subscription created for ${tier} plan`,
+            userId: userId,
+            tier: tier,
+            subscriptionId: newSubscription.id
+          });
+          
+        } catch (error) {
+          console.error(`❌ [${timestamp}] Error processing new subscription:`, error);
+          return res.status(500).send('Failed to process new subscription');
+        }
+        break;
+        
+      case 'customer.subscription.updated':
+        const updatedSubscription = event.data.object;
+        console.log(`🔄 [${timestamp}] ===== SUBSCRIPTION UPDATED =====`);
+        console.log(`🔄 [${timestamp}] Subscription ID: ${updatedSubscription.id}`);
+        
+        try {
+          // Get customer details
+          const customer = await stripe.customers.retrieve(updatedSubscription.customer as string);
+          if (typeof customer === 'string') {
+            console.error(`❌ [${timestamp}] Invalid customer object returned`);
+            return res.status(400).send('Invalid customer data');
+          }
+          
+          const userId = customer.metadata?.userId;
+          if (!userId) {
+            console.error(`❌ [${timestamp}] No userId found in customer metadata`);
+            return res.status(400).send('No user ID in customer metadata');
+          }
+          
+          // Update subscription status and end date
+          await storage.updateUser(userId, {
+            subscriptionStatus: updatedSubscription.status,
+            subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
+          });
+          
+          console.log(`✅ [${timestamp}] Updated subscription for user ${userId}`);
+          return res.json({ received: true, message: 'Subscription updated' });
+          
+        } catch (error) {
+          console.error(`❌ [${timestamp}] Error processing subscription update:`, error);
+          return res.status(500).send('Failed to process subscription update');
+        }
+        break;
+
       
       case 'invoice.payment_succeeded':
         const invoice = event.data.object;
