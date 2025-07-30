@@ -8479,59 +8479,7 @@ https://quikpik.app`;
     }
   });
 
-  // Subscription endpoints
-  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
-    try {
-      const { planId } = req.body;
-      const user = await storage.getUser(req.user.claims.sub);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (!['standard', 'premium'].includes(planId)) {
-        return res.status(400).json({ error: "Invalid plan" });
-      }
-
-      // Create or get Stripe customer
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe!.customers.create({
-          email: user.email || undefined,
-          name: user.businessName || `${user.firstName} ${user.lastName}` || undefined,
-          metadata: {
-            userId: user.id
-          }
-        });
-        customerId = customer.id;
-        await storage.updateUser(user.id, { stripeCustomerId: customerId });
-      }
-
-      // Create checkout session
-      const session = await stripe!.checkout.sessions.create({
-        customer: customerId,
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: SUBSCRIPTION_PRICES[planId as keyof typeof SUBSCRIPTION_PRICES],
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        success_url: `${req.protocol}://${req.get('host')}/settings?tab=subscription&success=true`,
-        cancel_url: `${req.protocol}://${req.get('host')}/settings?tab=subscription&canceled=true`,
-        metadata: {
-          userId: user.id,
-          planId: planId
-        }
-      });
-
-      res.json({ subscriptionUrl: session.url });
-    } catch (error) {
-      console.error('Subscription creation error:', error);
-      res.status(500).json({ error: "Failed to create subscription" });
-    }
-  });
+  // Subscription endpoints (duplicate removed - using the main one above)
 
   app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
