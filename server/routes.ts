@@ -5085,6 +5085,158 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
+  // Enhanced Broadcast Campaign with Personalized Discounts
+  app.post('/api/campaigns/enhanced-broadcast', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { title, customMessage, selectedProducts, customerGroupId, discountStrategy, includeContact, includePurchaseLink } = req.body;
+
+      // Validate required fields
+      if (!title || !selectedProducts || selectedProducts.length === 0 || !customerGroupId) {
+        return res.status(400).json({ message: "Missing required fields: title, products, and customer group" });
+      }
+
+      // Get customers in the selected group
+      const customers = customerGroupId === 'all' 
+        ? await storage.getAllCustomers(targetUserId)
+        : await storage.getCustomersByGroup(targetUserId, parseInt(customerGroupId));
+
+      if (customers.length === 0) {
+        return res.status(400).json({ message: "No customers found in selected group" });
+      }
+
+      // Get product details
+      const products = await storage.getProductsByIds(targetUserId, selectedProducts);
+      if (products.length === 0) {
+        return res.status(400).json({ message: "No valid products found" });
+      }
+
+      const campaignId = `enhanced_broadcast_${Date.now()}`;
+      let totalSent = 0;
+
+      // Helper function to calculate personalized discount
+      function calculatePersonalizedDiscount(customer: any, strategy: string): number {
+        switch (strategy) {
+          case 'automatic':
+            // AI-driven discount based on customer value
+            const totalSpent = customer.totalSpent || 0;
+            const orderCount = customer.orderCount || 0;
+            
+            if (totalSpent > 1000 && orderCount > 10) {
+              return 0.20 + Math.random() * 0.05; // 20-25% for high-value customers
+            } else if (totalSpent > 500 && orderCount > 5) {
+              return 0.15 + Math.random() * 0.05; // 15-20% for regular customers  
+            } else {
+              return 0.10 + Math.random() * 0.05; // 10-15% for new customers
+            }
+          
+          case 'tiered':
+            // Simple tier-based discount
+            if ((customer.totalSpent || 0) > 800) {
+              return 0.18; // 18% for top tier
+            } else if ((customer.totalSpent || 0) > 400) {
+              return 0.12; // 12% for middle tier
+            } else {
+              return 0.08; // 8% for basic tier
+            }
+          
+          case 'fixed':
+            return 0.10; // 10% for everyone
+          
+          default:
+            return 0.10;
+        }
+      }
+
+      // Send personalized messages to each customer
+      for (const customer of customers) {
+        try {
+          // Calculate personalized discounts for this customer
+          const personalizedProducts = products.map((product: any) => {
+            const discount = calculatePersonalizedDiscount(customer, discountStrategy);
+            const originalPrice = parseFloat(product.price);
+            const discountedPrice = originalPrice * (1 - discount);
+            
+            return {
+              ...product,
+              originalPrice,
+              discountedPrice,
+              discountPercentage: Math.round(discount * 100)
+            };
+          });
+
+          // Generate personalized message
+          let message = `🌟 Hi ${customer.firstName || customer.phoneNumber}!\n\n`;
+          
+          if (customMessage) {
+            message += `${customMessage}\n\n`;
+          }
+
+          message += `Special offers just for you:\n\n`;
+
+          personalizedProducts.forEach((product: any) => {
+            message += `${product.name}\n`;
+            message += `£${product.discountedPrice.toFixed(2)} (${product.discountPercentage}% OFF)\n`;
+            message += `Was: £${product.originalPrice.toFixed(2)}\n\n`;
+          });
+
+          if (includePurchaseLink) {
+            message += `Order now: ${process.env.CUSTOMER_PORTAL_URL || 'lanrefoods.quikpik.app'}\n\n`;
+          }
+
+          if (includeContact) {
+            message += `Questions? Reply to this message or call us.`;
+          }
+
+          // Send WhatsApp message (integrate with your existing WhatsApp service)
+          const whatsappResult = await sendWhatsAppMessage(customer.phoneNumber, message);
+          
+          // Log analytics for each product discount (integrate with existing promotion analytics)
+          for (const product of personalizedProducts) {
+            try {
+              await storage.logPromotionAnalytics({
+                wholesalerId: targetUserId,
+                productId: product.id,
+                customerId: customer.id,
+                campaignId,
+                campaignType: 'enhanced_broadcast',
+                campaignTitle: title,
+                originalPrice: product.originalPrice,
+                promotionalPrice: product.discountedPrice,
+                discountAmount: product.originalPrice - product.discountedPrice,
+                discountPercentage: product.discountPercentage,
+                customerGroupId: customerGroupId === 'all' ? null : parseInt(customerGroupId),
+                isPersonalized: true,
+                recipientCount: 1,
+                viewCount: 1
+              });
+            } catch (analyticsError) {
+              console.error('Analytics logging error:', analyticsError);
+              // Don't fail the whole campaign for analytics errors
+            }
+          }
+
+          totalSent++;
+        } catch (error) {
+          console.error(`Error sending to customer ${customer.id}:`, error);
+        }
+      }
+
+      res.json({
+        success: true,
+        campaignId,
+        recipientCount: totalSent,
+        productCount: products.length,
+        message: `Enhanced broadcast sent successfully to ${totalSent} customers with personalized discounts`
+      });
+
+    } catch (error) {
+      console.error("Error creating enhanced broadcast:", error);
+      res.status(500).json({ message: "Failed to create enhanced broadcast campaign" });
+    }
+  });
+
   // Unified Campaigns API (merges broadcasts and message templates)
   app.get('/api/campaigns', requireAuth, async (req: any, res) => {
     try {

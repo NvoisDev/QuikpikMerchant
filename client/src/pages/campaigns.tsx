@@ -55,6 +55,7 @@ import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
 import PersonalizedCampaignCreator from "@/components/PersonalizedCampaignCreator";
+import EnhancedBroadcastCreator from "@/components/EnhancedBroadcastCreator";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -1718,76 +1719,80 @@ export default function Campaigns() {
 
         <TabsContent value="personalized" className="space-y-6">
           <div className="space-y-6">
-            {/* Personalized Campaigns Header */}
+            {/* Enhanced Broadcast with Personalized Discounts Header */}
             <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 rounded-lg border">
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
                   <Target className="h-4 w-4 text-white" />
                 </div>
-                <h2 className="text-xl font-semibold">Personalized Campaign System</h2>
+                <h2 className="text-xl font-semibold">Broadcast with Personalized Discounts</h2>
               </div>
               <p className="text-muted-foreground mb-4">
-                Create AI-powered personalized promotional campaigns with unique offers for each customer based on their purchase history, preferences, and behavior patterns.
+                Send your regular broadcast campaigns but with unique discount percentages per customer based on their purchase history. Simple workflow, personalized pricing.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Individual customer segmentation</span>
+                  <span>Same broadcast workflow</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Dynamic pricing per customer</span>
+                  <span>Personalized discount per customer</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Performance tracking & analytics</span>
+                  <span>Track performance in your analytics</span>
                 </div>
               </div>
             </div>
 
-            {/* Personalized Campaign Creator */}
-            <PersonalizedCampaignCreator 
+            {/* Enhanced Broadcast Creator with Personalized Discounts */}
+            <EnhancedBroadcastCreator 
               onCampaignCreated={() => {
                 toast({
-                  title: "Campaign Created Successfully",
-                  description: "Your personalized campaign has been sent to all selected customers.",
+                  title: "Enhanced Broadcast Sent",
+                  description: "Your broadcast with personalized discounts has been sent successfully.",
                 });
-                // Optionally refresh any campaign data
                 refetchCampaigns();
               }}
             />
 
-            {/* Recent Personalized Campaigns Summary */}
+            {/* Integration with Existing Analytics */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
-                  Personalized Campaign Performance
+                  Performance Tracking Integration
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">0</p>
-                    <p className="text-sm text-muted-foreground">Personalized Campaigns</p>
+                    <p className="text-2xl font-bold text-primary">📊</p>
+                    <p className="text-sm text-muted-foreground">Product Analytics</p>
+                    <p className="text-xs text-gray-500 mt-1">View individual product performance from your Product Management page</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">0</p>
-                    <p className="text-sm text-muted-foreground">Unique Offers Sent</p>
+                    <p className="text-2xl font-bold text-primary">🎯</p>
+                    <p className="text-sm text-muted-foreground">Campaign Performance</p>
+                    <p className="text-xs text-gray-500 mt-1">Track broadcast effectiveness in the Performance tab above</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">0%</p>
-                    <p className="text-sm text-muted-foreground">Avg. Redemption Rate</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">£0</p>
-                    <p className="text-sm text-muted-foreground">Generated Revenue</p>
+                    <p className="text-2xl font-bold text-primary">💰</p>
+                    <p className="text-sm text-muted-foreground">Revenue Tracking</p>
+                    <p className="text-xs text-gray-500 mt-1">Monitor personalized discount impact on sales and conversion</p>
                   </div>
                 </div>
                 
-                <div className="mt-6 text-center text-muted-foreground">
-                  <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Create your first personalized campaign to see performance metrics here</p>
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Analytics Integration</span>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    Your enhanced broadcast campaigns will appear in your existing promotion analytics (like the one shown for Pounded Yam). 
+                    Each personalized discount will be tracked as a separate promotional offer, giving you detailed insights into which discount levels work best for different customer segments.
+                  </p>
                 </div>
               </CardContent>
             </Card>
