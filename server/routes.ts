@@ -8274,6 +8274,44 @@ https://quikpik.app`;
 
   // REMOVED: Duplicate webhook handlers moved to beginning of route registration
 
+  // NEW TEST ENDPOINT - completely separate webhook handler to verify functionality
+  app.post('/api/webhooks/stripe-debug', async (req, res) => {
+    console.log(`🚨 DEBUG WEBHOOK HIT - New handler executing at ${new Date().toISOString()}`);
+    console.log(`🚨 DEBUG - Raw request body:`, JSON.stringify(req.body, null, 2));
+    
+    if (req.body?.type === 'checkout.session.completed') {
+      const session = req.body.data?.object;
+      console.log(`🚨 DEBUG - Session metadata:`, session?.metadata);
+      
+      if (session?.metadata?.userId && (session?.metadata?.tier || session?.metadata?.targetTier)) {
+        const tier = session.metadata.tier || session.metadata.targetTier;
+        console.log(`🚨 DEBUG - Processing upgrade: ${session.metadata.userId} → ${tier}`);
+        
+        try {
+          await storage.updateUser(session.metadata.userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
+            productLimit: tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3)
+          });
+          
+          return res.json({ 
+            success: true, 
+            message: `DEBUG: Upgraded ${session.metadata.userId} to ${tier}`,
+            handler: 'NEW_DEBUG_HANDLER'
+          });
+        } catch (error) {
+          return res.status(500).json({ error: 'DEBUG: Upgrade failed', details: error.message });
+        }
+      }
+    }
+    
+    return res.json({ 
+      received: true, 
+      message: 'DEBUG: Webhook received but no upgrade processed',
+      handler: 'NEW_DEBUG_HANDLER'
+    });
+  });
+
   // Backup webhook handler for testing - keeping temporarily
   app.post('/api/webhooks/stripe-backup', async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -8302,13 +8340,16 @@ https://quikpik.app`;
         const paymentIntent = event.data.object;
         const metadata = paymentIntent.metadata;
         
-        // Check if this is a subscription upgrade payment
-        if (metadata.targetTier && metadata.userId) {
-          console.log(`✅ Processing subscription upgrade for user ${metadata.userId} to ${metadata.targetTier}`);
+        // Check if this is a subscription upgrade payment - handle both tier and targetTier formats
+        const userIdFromMetadata = metadata.userId;
+        const tierFromMetadata = metadata.targetTier || metadata.tier;
+        
+        if (userIdFromMetadata && tierFromMetadata) {
+          console.log(`✅ Processing subscription upgrade for user ${userIdFromMetadata} to ${tierFromMetadata}`);
           
           try {
-            const userId = metadata.userId;
-            const targetTier = metadata.targetTier;
+            const userId = userIdFromMetadata;
+            const targetTier = tierFromMetadata;
             const upgradeFromTier = metadata.upgradeFromTier || 'free';
             
             console.log(`🔼 Processing upgrade: User ${userId} from ${upgradeFromTier} to ${targetTier}`);
@@ -8373,16 +8414,30 @@ https://quikpik.app`;
         
       case 'checkout.session.completed':
         const session = event.data.object;
-        console.log(`🎣 [${timestamp}] Checkout session completed: ${session.mode} mode`);
+        console.log(`🎣 [${timestamp}] WEBHOOK HANDLER EXECUTING - Checkout session completed: ${session.mode} mode`);
+        console.log(`🔍 WEBHOOK DEBUG - Session metadata:`, JSON.stringify(session.metadata, null, 2));
+        console.log(`🔍 WEBHOOK DEBUG - Session object keys:`, Object.keys(session));
         
-        // Handle subscription upgrade checkouts (both mode: 'payment' and mode: 'subscription' with metadata)
-        if (session.metadata && session.metadata.userId && (session.metadata.targetTier || session.metadata.tier)) {
-          const targetTier = session.metadata.targetTier || session.metadata.tier;
-          console.log(`✅ Processing checkout-based subscription upgrade for user ${session.metadata.userId} to ${targetTier}`);
+        // COMPREHENSIVE METADATA CHECK - handle all possible metadata formats
+        const hasUserId = session.metadata?.userId;
+        const hasTier = session.metadata?.tier || session.metadata?.targetTier || session.metadata?.plan;
+        const tierValue = session.metadata?.tier || session.metadata?.targetTier || session.metadata?.plan;
+        
+        console.log(`🔍 WEBHOOK DEBUG - Metadata analysis:`, {
+          hasUserId: !!hasUserId,
+          hasTier: !!hasTier,
+          tierValue: tierValue,
+          fullMetadata: session.metadata
+        });
+        
+        // Handle subscription upgrade checkouts with flexible metadata checking
+        if (hasUserId && hasTier) {
+          const targetTier = tierValue;
+          console.log(`✅ WEBHOOK PROCESSING - Subscription upgrade for user ${hasUserId} to ${targetTier}`);
           
           try {
-            const userId = session.metadata.userId;
-            const upgradeFromTier = session.metadata.upgradeFromTier || 'free';
+            const userId = hasUserId;
+            const upgradeFromTier = session.metadata?.upgradeFromTier || 'free';
             
             // Determine product limit for the new tier
             let newProductLimit = 3; // default for free
@@ -8395,6 +8450,8 @@ https://quikpik.app`;
                 break;
             }
             
+            console.log(`🔄 WEBHOOK UPDATE - Updating user ${userId} to ${targetTier} with limit ${newProductLimit}`);
+            
             // Update user subscription in database
             await storage.updateUser(userId, {
               subscriptionTier: targetTier,
@@ -8403,24 +8460,48 @@ https://quikpik.app`;
               subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
             });
             
-            console.log(`✅ Successfully upgraded user ${userId} to ${targetTier} via checkout session`);
+            console.log(`✅ WEBHOOK SUCCESS - User ${userId} upgraded to ${targetTier} via checkout session`);
             
             return res.json({ 
               received: true, 
               message: `Subscription upgraded to ${targetTier} via checkout`,
               userId: userId,
               newTier: targetTier,
-              productLimit: newProductLimit
+              productLimit: newProductLimit,
+              timestamp: new Date().toISOString(),
+              source: 'checkout.session.completed'
             });
             
           } catch (error) {
-            console.error('❌ Error processing checkout-based subscription upgrade:', error);
-            return res.status(500).json({ error: 'Failed to process subscription upgrade' });
+            console.error('❌ WEBHOOK ERROR - Failed to process checkout-based subscription upgrade:', error);
+            return res.status(500).json({ 
+              error: 'Failed to process subscription upgrade',
+              details: error.message,
+              timestamp: new Date().toISOString()
+            });
           }
         } else {
-          // No metadata for subscription upgrade - either a customer order or missing metadata
-          console.log(`⚠️ Checkout session completed without subscription upgrade metadata: mode=${session.mode}, hasMetadata=${!!session.metadata}`);
-          return res.json({ received: true, message: 'Checkout completed without subscription upgrade' });
+          // Enhanced logging for missing metadata cases
+          console.log(`⚠️ WEBHOOK WARNING - Checkout session without upgrade metadata:`, {
+            mode: session.mode,
+            hasMetadata: !!session.metadata,
+            hasUserId: !!hasUserId,
+            hasTier: !!hasTier,
+            metadataKeys: session.metadata ? Object.keys(session.metadata) : [],
+            fullSession: JSON.stringify(session, null, 2)
+          });
+          
+          // Return success but indicate no processing needed
+          return res.json({ 
+            received: true, 
+            message: 'Checkout completed - no subscription upgrade metadata found',
+            debug: {
+              hasUserId: !!hasUserId,
+              hasTier: !!hasTier,
+              metadata: session.metadata
+            },
+            timestamp: new Date().toISOString()
+          });
         }
         break;
         
