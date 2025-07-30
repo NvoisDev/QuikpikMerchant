@@ -54,8 +54,6 @@ import { PromotionalOffersManager } from "@/components/PromotionalOffersManager"
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
-import PersonalizedCampaignCreator from "@/components/PersonalizedCampaignCreator";
-import EnhancedBroadcastCreator from "@/components/EnhancedBroadcastCreator";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -240,7 +238,7 @@ export default function Campaigns() {
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
   const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'personalized' | 'performance'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'performance'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
@@ -720,15 +718,11 @@ export default function Campaigns() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'personalized' | 'performance')}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'performance')}>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Broadcast Campaigns
-          </TabsTrigger>
-          <TabsTrigger value="personalized" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Personalized Campaigns
+            Campaign Management
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1715,88 +1709,6 @@ export default function Campaigns() {
         </DialogContent>
       </Dialog>
 
-        </TabsContent>
-
-        <TabsContent value="personalized" className="space-y-6">
-          <div className="space-y-6">
-            {/* Enhanced Broadcast with Personalized Discounts Header */}
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 rounded-lg border">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                  <Target className="h-4 w-4 text-white" />
-                </div>
-                <h2 className="text-xl font-semibold">Broadcast with Personalized Discounts</h2>
-              </div>
-              <p className="text-muted-foreground mb-4">
-                Send your regular broadcast campaigns but with unique discount percentages per customer based on their purchase history. Simple workflow, personalized pricing.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Same broadcast workflow</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Personalized discount per customer</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span>Track performance in your analytics</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Broadcast Creator with Personalized Discounts */}
-            <EnhancedBroadcastCreator 
-              onCampaignCreated={() => {
-                toast({
-                  title: "Enhanced Broadcast Sent",
-                  description: "Your broadcast with personalized discounts has been sent successfully.",
-                });
-                refetchCampaigns();
-              }}
-            />
-
-            {/* Integration with Existing Analytics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Performance Tracking Integration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">📊</p>
-                    <p className="text-sm text-muted-foreground">Product Analytics</p>
-                    <p className="text-xs text-gray-500 mt-1">View individual product performance from your Product Management page</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">🎯</p>
-                    <p className="text-sm text-muted-foreground">Campaign Performance</p>
-                    <p className="text-xs text-gray-500 mt-1">Track broadcast effectiveness in the Performance tab above</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">💰</p>
-                    <p className="text-sm text-muted-foreground">Revenue Tracking</p>
-                    <p className="text-xs text-gray-500 mt-1">Monitor personalized discount impact on sales and conversion</p>
-                  </div>
-                </div>
-                
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BarChart3 className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Analytics Integration</span>
-                  </div>
-                  <p className="text-xs text-blue-700">
-                    Your enhanced broadcast campaigns will appear in your existing promotion analytics (like the one shown for Pounded Yam). 
-                    Each personalized discount will be tracked as a separate promotional offer, giving you detailed insights into which discount levels work best for different customer segments.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">

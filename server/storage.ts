@@ -19,10 +19,6 @@ import {
   smsVerificationCodes,
   teamMembers,
   tabPermissions,
-  customerPromotionalOffers,
-  personalizedCampaignRecipients,
-  customerPromotionPreferences,
-  promotionAnalytics,
   type User,
   type UpsertUser,
   type Product,
@@ -61,17 +57,9 @@ import {
   type InsertOnboardingMilestone,
   type SMSVerificationCode,
   type InsertSMSVerificationCode,
-  type CustomerPromotionalOffer,
-  type InsertCustomerPromotionalOffer,
-  type PersonalizedCampaignRecipient,
-  type InsertPersonalizedCampaignRecipient,
-  type CustomerPromotionPreference,
-  type InsertCustomerPromotionPreference,
-  type PromotionAnalytics,
-  type InsertPromotionAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count, or, ilike, gte } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 
 export interface IStorage {
@@ -313,51 +301,6 @@ export interface IStorage {
   getProductPerformanceSummary(wholesalerId: string, productId: number): Promise<any>;
   getPromotionDashboard(wholesalerId: string): Promise<any>;
   trackPromotionActivity(wholesalerId: string, campaignId: number, productId: number, action: string, metadata?: any): Promise<void>;
-
-  // Personalized Promotional System operations
-  createCustomerPromotionalOffer(offer: InsertCustomerPromotionalOffer): Promise<CustomerPromotionalOffer>;
-  getCustomerPromotionalOffers(wholesalerId: string, customerId?: string, productId?: number, campaignId?: string): Promise<(CustomerPromotionalOffer & { product: Product; customer: User })[]>;
-  getActiveCustomerOffers(customerId: string, wholesalerId: string): Promise<(CustomerPromotionalOffer & { product: Product })[]>;
-  redeemCustomerOffer(offerId: number, orderId: number): Promise<CustomerPromotionalOffer>;
-  updateCustomerOfferUsage(offerId: number, usageCount: number): Promise<void>;
-  
-  createPersonalizedCampaignRecipient(recipient: InsertPersonalizedCampaignRecipient): Promise<PersonalizedCampaignRecipient>;
-  getPersonalizedCampaignRecipients(campaignId: string, wholesalerId: string): Promise<(PersonalizedCampaignRecipient & { customer: User })[]>;
-  updatePersonalizedCampaignEngagement(recipientId: number, updates: {
-    messageStatus?: string;
-    clickedPurchaseLink?: boolean;
-    placedOrder?: boolean;
-    orderValue?: number;
-  }): Promise<PersonalizedCampaignRecipient>;
-  
-  getCustomerPromotionPreferences(customerId: string, wholesalerId: string): Promise<CustomerPromotionPreference | undefined>;
-  upsertCustomerPromotionPreferences(preferences: InsertCustomerPromotionPreference): Promise<CustomerPromotionPreference>;
-  updateCustomerPromotionMetrics(customerId: string, wholesalerId: string, updates: {
-    totalOffersReceived?: number;
-    totalOffersRedeemed?: number;
-    averageOrderValue?: number;
-    totalSpent?: number;
-    lastPurchaseAt?: Date;
-  }): Promise<void>;
-  
-  getCustomersForPersonalization(wholesalerId: string): Promise<(User & { 
-    preferences?: CustomerPromotionPreference;
-    recentOrders: Order[];
-  })[]>;
-  getPersonalizedCampaignAnalytics(campaignId: string, wholesalerId: string): Promise<{
-    totalRecipients: number;
-    totalOffers: number;
-    redemptionRate: number;
-    avgOrderValue: number;
-    totalRevenue: number;
-    engagementMetrics: {
-      messagesSent: number;
-      messagesDelivered: number;
-      messagesRead: number;
-      linksClicked: number;
-      ordersPlaced: number;
-    };
-  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3464,284 +3407,6 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${smsVerificationCodes.expiresAt} < ${now}`);
   }
 
-  // Personalized Promotional System operations
-  async createCustomerPromotionalOffer(offer: InsertCustomerPromotionalOffer): Promise<CustomerPromotionalOffer> {
-    const [newOffer] = await db
-      .insert(customerPromotionalOffers)
-      .values(offer)
-      .returning();
-    return newOffer;
-  }
-
-  async getCustomerPromotionalOffers(
-    wholesalerId: string, 
-    customerId?: string, 
-    productId?: number, 
-    campaignId?: string
-  ): Promise<(CustomerPromotionalOffer & { product: Product; customer: User })[]> {
-    let query = db
-      .select()
-      .from(customerPromotionalOffers)
-      .leftJoin(products, eq(customerPromotionalOffers.productId, products.id))
-      .leftJoin(users, eq(customerPromotionalOffers.customerId, users.id))
-      .where(eq(customerPromotionalOffers.wholesalerId, wholesalerId));
-
-    if (customerId) {
-      query = query.where(eq(customerPromotionalOffers.customerId, customerId));
-    }
-    if (productId) {
-      query = query.where(eq(customerPromotionalOffers.productId, productId));
-    }
-    if (campaignId) {
-      query = query.where(eq(customerPromotionalOffers.campaignId, campaignId));
-    }
-
-    const results = await query.orderBy(desc(customerPromotionalOffers.createdAt));
-    
-    return results.map(result => ({
-      ...result.customer_promotional_offers,
-      product: result.products!,
-      customer: result.users!
-    }));
-  }
-
-  async getActiveCustomerOffers(customerId: string, wholesalerId: string): Promise<(CustomerPromotionalOffer & { product: Product })[]> {
-    const results = await db
-      .select()
-      .from(customerPromotionalOffers)
-      .leftJoin(products, eq(customerPromotionalOffers.productId, products.id))
-      .where(
-        and(
-          eq(customerPromotionalOffers.customerId, customerId),
-          eq(customerPromotionalOffers.wholesalerId, wholesalerId),
-          eq(customerPromotionalOffers.isActive, true),
-          eq(customerPromotionalOffers.isRedeemed, false)
-        )
-      )
-      .orderBy(desc(customerPromotionalOffers.createdAt));
-
-    return results.map(result => ({
-      ...result.customer_promotional_offers,
-      product: result.products!
-    }));
-  }
-
-  async redeemCustomerOffer(offerId: number, orderId: number): Promise<CustomerPromotionalOffer> {
-    const [updatedOffer] = await db
-      .update(customerPromotionalOffers)
-      .set({
-        isRedeemed: true,
-        redeemedAt: new Date(),
-        redemptionOrderId: orderId,
-        usageCount: sql`${customerPromotionalOffers.usageCount} + 1`
-      })
-      .where(eq(customerPromotionalOffers.id, offerId))
-      .returning();
-    
-    return updatedOffer;
-  }
-
-  async updateCustomerOfferUsage(offerId: number, usageCount: number): Promise<void> {
-    await db
-      .update(customerPromotionalOffers)
-      .set({ usageCount })
-      .where(eq(customerPromotionalOffers.id, offerId));
-  }
-
-  async createPersonalizedCampaignRecipient(recipient: InsertPersonalizedCampaignRecipient): Promise<PersonalizedCampaignRecipient> {
-    const [newRecipient] = await db
-      .insert(personalizedCampaignRecipients)
-      .values(recipient)
-      .returning();
-    return newRecipient;
-  }
-
-  async getPersonalizedCampaignRecipients(campaignId: string, wholesalerId: string): Promise<(PersonalizedCampaignRecipient & { customer: User })[]> {
-    const results = await db
-      .select()
-      .from(personalizedCampaignRecipients)
-      .leftJoin(users, eq(personalizedCampaignRecipients.customerId, users.id))
-      .where(
-        and(
-          eq(personalizedCampaignRecipients.campaignId, campaignId),
-          eq(personalizedCampaignRecipients.wholesalerId, wholesalerId)
-        )
-      )
-      .orderBy(desc(personalizedCampaignRecipients.createdAt));
-
-    return results.map(result => ({
-      ...result.personalized_campaign_recipients,
-      customer: result.users!
-    }));
-  }
-
-  async updatePersonalizedCampaignEngagement(recipientId: number, updates: {
-    messageStatus?: string;
-    clickedPurchaseLink?: boolean;
-    placedOrder?: boolean;
-    orderValue?: number;
-  }): Promise<PersonalizedCampaignRecipient> {
-    const [updatedRecipient] = await db
-      .update(personalizedCampaignRecipients)
-      .set(updates)
-      .where(eq(personalizedCampaignRecipients.id, recipientId))
-      .returning();
-    
-    return updatedRecipient;
-  }
-
-  async getCustomerPromotionPreferences(customerId: string, wholesalerId: string): Promise<CustomerPromotionPreference | undefined> {
-    const [preferences] = await db
-      .select()
-      .from(customerPromotionPreferences)
-      .where(
-        and(
-          eq(customerPromotionPreferences.customerId, customerId),
-          eq(customerPromotionPreferences.wholesalerId, wholesalerId)
-        )
-      );
-    
-    return preferences;
-  }
-
-  async upsertCustomerPromotionPreferences(preferences: InsertCustomerPromotionPreference): Promise<CustomerPromotionPreference> {
-    const [upsertedPreferences] = await db
-      .insert(customerPromotionPreferences)
-      .values(preferences)
-      .onConflictDoUpdate({
-        target: [customerPromotionPreferences.customerId, customerPromotionPreferences.wholesalerId],
-        set: {
-          ...preferences,
-          updatedAt: new Date()
-        }
-      })
-      .returning();
-    
-    return upsertedPreferences;
-  }
-
-  async updateCustomerPromotionMetrics(customerId: string, wholesalerId: string, updates: {
-    totalOffersReceived?: number;
-    totalOffersRedeemed?: number;
-    averageOrderValue?: number;
-    totalSpent?: number;
-    lastPurchaseAt?: Date;
-  }): Promise<void> {
-    await db
-      .update(customerPromotionPreferences)
-      .set({
-        ...updates,
-        redemptionRate: updates.totalOffersReceived && updates.totalOffersRedeemed 
-          ? (updates.totalOffersRedeemed / updates.totalOffersReceived) * 100 
-          : undefined,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          eq(customerPromotionPreferences.customerId, customerId),
-          eq(customerPromotionPreferences.wholesalerId, wholesalerId)
-        )
-      );
-  }
-
-  async getCustomersForPersonalization(wholesalerId: string): Promise<(User & { 
-    preferences?: CustomerPromotionPreference;
-    recentOrders: Order[];
-  })[]> {
-    // Get all customers who have ordered from this wholesaler
-    const customers = await db
-      .select()
-      .from(users)
-      .where(eq(users.role, 'customer'));
-
-    const customersWithData = await Promise.all(
-      customers.map(async (customer) => {
-        // Get customer's promotion preferences
-        const preferences = await this.getCustomerPromotionPreferences(customer.id, wholesalerId);
-        
-        // Get recent orders (last 6 months)
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        
-        const recentOrders = await db
-          .select()
-          .from(orders)
-          .where(
-            and(
-              eq(orders.customerId, customer.id),
-              eq(orders.wholesalerId, wholesalerId),
-              gte(orders.orderDate, sixMonthsAgo)
-            )
-          )
-          .orderBy(desc(orders.orderDate));
-
-        return {
-          ...customer,
-          preferences,
-          recentOrders
-        };
-      })
-    );
-
-    // Filter to only customers who have ordered from this wholesaler
-    return customersWithData.filter(customer => customer.recentOrders.length > 0);
-  }
-
-  async getPersonalizedCampaignAnalytics(campaignId: string, wholesalerId: string): Promise<{
-    totalRecipients: number;
-    totalOffers: number;
-    redemptionRate: number;
-    avgOrderValue: number;
-    totalRevenue: number;
-    engagementMetrics: {
-      messagesSent: number;
-      messagesDelivered: number;
-      messagesRead: number;
-      linksClicked: number;
-      ordersPlaced: number;
-    };
-  }> {
-    // Get campaign recipients
-    const recipients = await this.getPersonalizedCampaignRecipients(campaignId, wholesalerId);
-    
-    // Get associated offers
-    const offers = await this.getCustomerPromotionalOffers(wholesalerId, undefined, undefined, campaignId);
-    
-    // Calculate metrics
-    const totalRecipients = recipients.length;
-    const totalOffers = offers.length;
-    const redeemedOffers = offers.filter(offer => offer.isRedeemed).length;
-    const redemptionRate = totalOffers > 0 ? (redeemedOffers / totalOffers) * 100 : 0;
-    
-    const totalRevenue = offers
-      .filter(offer => offer.isRedeemed)
-      .reduce((sum, offer) => sum + Number(offer.promotionalPrice), 0);
-    
-    const avgOrderValue = redeemedOffers > 0 ? totalRevenue / redeemedOffers : 0;
-    
-    // Calculate engagement metrics
-    const messagesSent = recipients.length;
-    const messagesDelivered = recipients.filter(r => r.messageStatus === 'delivered').length;
-    const messagesRead = recipients.filter(r => r.messageStatus === 'read').length;
-    const linksClicked = recipients.filter(r => r.clickedPurchaseLink).length;
-    const ordersPlaced = recipients.filter(r => r.placedOrder).length;
-
-    return {
-      totalRecipients,
-      totalOffers,
-      redemptionRate,
-      avgOrderValue,
-      totalRevenue,
-      engagementMetrics: {
-        messagesSent,
-        messagesDelivered,
-        messagesRead,
-        linksClicked,
-        ordersPlaced
-      }
-    };
-  }
-
   // Customer Address Book operations
   async getAllCustomers(wholesalerId: string): Promise<(User & { 
     groupNames: string[]; 
@@ -3750,7 +3415,7 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // Get all customers who are associated with this wholesaler through groups OR orders
+    // Get all customers (both in groups and standalone) with their group information
     const allCustomers = await db.execute(sql`
       SELECT DISTINCT
         u.id,
@@ -3769,8 +3434,8 @@ export class DatabaseStorage implements IStorage {
           u.first_name, 
           'Customer'
         ) as full_name,
-        COALESCE(STRING_AGG(DISTINCT cg.name, ', '), '') as group_names,
-        COALESCE(STRING_AGG(DISTINCT cg.id::text, ','), '') as group_ids,
+        COALESCE(STRING_AGG(cg.name, ', '), '') as group_names,
+        COALESCE(STRING_AGG(cg.id::text, ','), '') as group_ids,
         COUNT(DISTINCT o.id) as total_orders,
         COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent,
         MAX(o.created_at) as last_order_date
@@ -3779,13 +3444,6 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
       LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
       WHERE u.role IN ('retailer', 'customer')
-        AND (
-          -- Customer is in a group belonging to this wholesaler
-          cg.wholesaler_id = ${wholesalerId}
-          OR 
-          -- Customer has placed orders with this wholesaler
-          o.wholesaler_id = ${wholesalerId}
-        )
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC

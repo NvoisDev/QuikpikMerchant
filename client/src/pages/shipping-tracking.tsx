@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SHIPPING_STATUS_LABELS, SHIPPING_STATUS_COLORS } from '@shared/tracking-schema';
-import { queryClient } from '@/lib/queryClient';
 
 interface TrackingEvent {
   id: string;
@@ -33,7 +32,6 @@ interface TrackingEvent {
 
 interface TrackedOrder {
   id: number;
-  orderNumber?: string;
   customerName: string;
   customerEmail: string;
   trackingNumber?: string;
@@ -53,20 +51,9 @@ export default function ShippingTracking() {
 
   const { data: trackedOrders = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/shipping/tracked-orders'],
-    staleTime: 0, // No cache to force fresh data
+    staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Auto-refresh every minute
   });
-
-  // Debug: Log the actual data received
-  React.useEffect(() => {
-    console.log('Tracked orders data:', trackedOrders);
-  }, [trackedOrders]);
-
-  const handleForceClear = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/shipping/tracked-orders'] });
-    queryClient.removeQueries({ queryKey: ['/api/shipping/tracked-orders'] });
-    refetch();
-  };
 
   const { data: trackingDetails, isLoading: isLoadingDetails, refetch: refetchDetails } = useQuery({
     queryKey: ['/api/shipping/tracking', selectedOrder?.id],
@@ -78,7 +65,6 @@ export default function ShippingTracking() {
   const filteredOrders = trackedOrders.filter((order: TrackedOrder) =>
     order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.id.toString().includes(searchTerm)
   );
 
@@ -131,19 +117,10 @@ export default function ShippingTracking() {
           <h1 className="text-3xl font-bold">Shipping Tracking</h1>
           <p className="text-muted-foreground">Real-time tracking for all your orders</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => refetch()} variant="outline" className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh All
-          </Button>
-          <Button 
-            onClick={handleForceClear} 
-            variant="outline" 
-            className="gap-2 bg-red-50 border-red-200 hover:bg-red-100"
-          >
-            Clear Cache
-          </Button>
-        </div>
+        <Button onClick={() => refetch()} variant="outline" className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Refresh All
+        </Button>
       </div>
 
       {/* Stats Overview */}
@@ -207,7 +184,7 @@ export default function ShippingTracking() {
                         onClick={() => setSelectedOrder(order)}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="font-medium">{order.orderNumber || `Order #${order.id}`}</div>
+                          <div className="font-medium">Order #{order.id}</div>
                           <Badge 
                             variant="secondary" 
                             className={`${SHIPPING_STATUS_COLORS[order.shippingStatus as keyof typeof SHIPPING_STATUS_COLORS] || 'text-gray-600 bg-gray-50'}`}
@@ -251,7 +228,7 @@ export default function ShippingTracking() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    {selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Tracking
+                    Order #{selectedOrder.id} Tracking
                   </CardTitle>
                   <div className="flex gap-2">
                     {selectedOrder.trackingNumber && (

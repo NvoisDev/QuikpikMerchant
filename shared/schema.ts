@@ -522,27 +522,19 @@ export const campaignOrders = pgTable("campaign_orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Enhanced Promotion Analytics - Track pricing impact and performance with personalization support
+// Promotion Analytics - Track pricing impact and performance
 export const promotionAnalytics = pgTable("promotion_analytics", {
   id: serial("id").primaryKey(),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   productId: integer("product_id").notNull().references(() => products.id),
-  customerId: varchar("customer_id").references(() => users.id), // Now optional for aggregated data
   campaignId: varchar("campaign_id").notNull(), // References either broadcast.id or template.id
-  campaignType: varchar("campaign_type").notNull(), // 'single' | 'multi' | 'personalized'
+  campaignType: varchar("campaign_type").notNull(), // 'single' | 'multi'
   campaignTitle: varchar("campaign_title").notNull(),
-  
-  // Pricing details
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
   promotionalPrice: decimal("promotional_price", { precision: 10, scale: 2 }).notNull(),
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
   discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).notNull(),
-  
-  // Targeting
   customerGroupId: integer("customer_group_id").references(() => customerGroups.id),
-  isPersonalized: boolean("is_personalized").default(false), // Whether this was a personalized offer
-  
-  // Performance metrics
   recipientCount: integer("recipient_count").default(0),
   viewCount: integer("view_count").default(0), // How many customers viewed the promotion
   clickCount: integer("click_count").default(0), // How many clicked the purchase link
@@ -552,13 +544,6 @@ export const promotionAnalytics = pgTable("promotion_analytics", {
   potentialRevenue: decimal("potential_revenue", { precision: 12, scale: 2 }).default("0.00"), // Revenue if sold at original price
   revenueLoss: decimal("revenue_loss", { precision: 12, scale: 2 }).default("0.00"), // Lost revenue due to discount
   conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0.00"), // orderCount / recipientCount
-  
-  // Personalization effectiveness
-  personalizedOfferRedemptionRate: decimal("personalized_offer_redemption_rate", { precision: 5, scale: 2 }), // % of personalized offers redeemed
-  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }),
-  customerRetentionRate: decimal("customer_retention_rate", { precision: 5, scale: 2 }), // % who came back
-  
-  // Timeline tracking
   campaignSentAt: timestamp("campaign_sent_at"),
   firstOrderAt: timestamp("first_order_at"),
   lastOrderAt: timestamp("last_order_at"),
@@ -643,133 +628,6 @@ export const subscriptionAuditLogs = pgTable("subscription_audit_logs", {
     eventTypeIdx: index("subscription_audit_event_type_idx").on(table.eventType),
     timestampIdx: index("subscription_audit_timestamp_idx").on(table.timestamp),
     stripeSubscriptionIdx: index("subscription_audit_stripe_sub_idx").on(table.stripeSubscriptionId),
-  };
-});
-
-// Customer-Specific Promotional Offers - Personalized discounts per customer-product combination
-export const customerPromotionalOffers = pgTable("customer_promotional_offers", {
-  id: serial("id").primaryKey(),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
-  customerId: varchar("customer_id").notNull().references(() => users.id),
-  productId: integer("product_id").notNull().references(() => products.id),
-  campaignId: varchar("campaign_id").notNull(), // References campaign or broadcast ID
-  
-  // Promotional offer details
-  offerType: varchar("offer_type").notNull(), // 'percentage_discount' | 'fixed_discount' | 'fixed_price' | 'bogo' | etc.
-  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
-  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
-  fixedPrice: decimal("fixed_price", { precision: 10, scale: 2 }),
-  buyQuantity: integer("buy_quantity"),
-  getQuantity: integer("get_quantity"),
-  
-  // Pricing context
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
-  promotionalPrice: decimal("promotional_price", { precision: 10, scale: 2 }).notNull(),
-  maxQuantity: integer("max_quantity"), // Maximum quantity this offer applies to
-  
-  // Usage tracking
-  isActive: boolean("is_active").default(true),
-  isRedeemed: boolean("is_redeemed").default(false),
-  redeemedAt: timestamp("redeemed_at"),
-  redemptionOrderId: integer("redemption_order_id").references(() => orders.id),
-  usageCount: integer("usage_count").default(0),
-  maxUsage: integer("max_usage").default(1), // How many times customer can use this offer
-  
-  // Validity period
-  validFrom: timestamp("valid_from").defaultNow(),
-  validUntil: timestamp("valid_until"),
-  
-  // Campaign tracking
-  campaignTitle: varchar("campaign_title").notNull(),
-  sentViaWhatsApp: boolean("sent_via_whatsapp").default(false),
-  whatsappMessageId: varchar("whatsapp_message_id"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    wholesalerIdIdx: index("customer_promo_wholesaler_idx").on(table.wholesalerId),
-    customerIdIdx: index("customer_promo_customer_idx").on(table.customerId),
-    productIdIdx: index("customer_promo_product_idx").on(table.productId),
-    campaignIdIdx: index("customer_promo_campaign_idx").on(table.campaignId),
-    activeOffersIdx: index("customer_promo_active_idx").on(table.isActive),
-    validityIdx: index("customer_promo_validity_idx").on(table.validFrom, table.validUntil),
-  };
-});
-
-// Personalized Campaign Recipients - Track who received what personalized content
-export const personalizedCampaignRecipients = pgTable("personalized_campaign_recipients", {
-  id: serial("id").primaryKey(),
-  campaignId: varchar("campaign_id").notNull(),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
-  customerId: varchar("customer_id").notNull().references(() => users.id),
-  
-  // Message personalization
-  personalizedMessage: text("personalized_message").notNull(), // The actual WhatsApp message sent
-  originalMessage: text("original_message").notNull(), // Template message before personalization
-  
-  // Offer tracking
-  offerCount: integer("offer_count").default(0), // Number of personalized offers in this message
-  totalDiscountValue: decimal("total_discount_value", { precision: 10, scale: 2 }).default("0.00"),
-  
-  // Engagement tracking
-  messageStatus: varchar("message_status").default("sent"), // 'sent' | 'delivered' | 'read' | 'failed'
-  whatsappMessageId: varchar("whatsapp_message_id"),
-  sentAt: timestamp("sent_at").defaultNow(),
-  deliveredAt: timestamp("delivered_at"),
-  readAt: timestamp("read_at"),
-  
-  // Customer interaction
-  clickedPurchaseLink: boolean("clicked_purchase_link").default(false),
-  clickedAt: timestamp("clicked_at"),
-  viewedProducts: jsonb("viewed_products").$type<number[]>().default([]), // Product IDs viewed
-  placedOrder: boolean("placed_order").default(false),
-  orderValue: decimal("order_value", { precision: 10, scale: 2 }),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    campaignIdIdx: index("personalized_campaign_idx").on(table.campaignId),
-    wholesalerIdIdx: index("personalized_wholesaler_idx").on(table.wholesalerId),
-    customerIdIdx: index("personalized_customer_idx").on(table.customerId),
-    sentAtIdx: index("personalized_sent_at_idx").on(table.sentAt),
-    engagementIdx: index("personalized_engagement_idx").on(table.clickedPurchaseLink, table.placedOrder),
-  };
-});
-
-// Customer Promotion Preferences - Track customer response patterns for AI-driven personalization
-export const customerPromotionPreferences = pgTable("customer_promotion_preferences", {
-  id: serial("id").primaryKey(),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
-  customerId: varchar("customer_id").notNull().references(() => users.id),
-  
-  // Response patterns
-  preferredDiscountType: varchar("preferred_discount_type"), // 'percentage' | 'fixed_amount' | 'bogo' | 'bulk'
-  averageDiscountThreshold: decimal("average_discount_threshold", { precision: 5, scale: 2 }), // Minimum discount % that typically converts
-  preferredOrderQuantity: integer("preferred_order_quantity"), // Typical order size
-  seasonalPatterns: jsonb("seasonal_patterns").default({}), // Purchase patterns by season/month
-  
-  // Engagement patterns
-  bestPerformingOfferTypes: jsonb("best_performing_offer_types").default([]), // Array of offer types that work well
-  responseTimePattern: varchar("response_time_pattern"), // 'immediate' | 'within_hours' | 'within_days' | 'slow'
-  preferredContactTimes: jsonb("preferred_contact_times").default([]), // Hours of day when they respond best
-  
-  // Calculated metrics
-  totalOffersReceived: integer("total_offers_received").default(0),
-  totalOffersRedeemed: integer("total_offers_redeemed").default(0),
-  redemptionRate: decimal("redemption_rate", { precision: 5, scale: 2 }).default("0.00"),
-  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }).default("0.00"),
-  totalSpent: decimal("total_spent", { precision: 12, scale: 2 }).default("0.00"),
-  lastPurchaseAt: timestamp("last_purchase_at"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    wholesalerCustomerIdx: index("customer_prefs_wholesaler_customer_idx").on(table.wholesalerId, table.customerId),
-    redemptionRateIdx: index("customer_prefs_redemption_idx").on(table.redemptionRate),
-    lastPurchaseIdx: index("customer_prefs_last_purchase_idx").on(table.lastPurchaseAt),
   };
 });
 
@@ -939,48 +797,6 @@ export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
   }),
 }));
 
-// Relations for personalized promotional system
-export const customerPromotionalOffersRelations = relations(customerPromotionalOffers, ({ one }) => ({
-  wholesaler: one(users, {
-    fields: [customerPromotionalOffers.wholesalerId],
-    references: [users.id],
-  }),
-  customer: one(users, {
-    fields: [customerPromotionalOffers.customerId],
-    references: [users.id],
-  }),
-  product: one(products, {
-    fields: [customerPromotionalOffers.productId],
-    references: [products.id],
-  }),
-  redemptionOrder: one(orders, {
-    fields: [customerPromotionalOffers.redemptionOrderId],
-    references: [orders.id],
-  }),
-}));
-
-export const personalizedCampaignRecipientsRelations = relations(personalizedCampaignRecipients, ({ one }) => ({
-  wholesaler: one(users, {
-    fields: [personalizedCampaignRecipients.wholesalerId],
-    references: [users.id],
-  }),
-  customer: one(users, {
-    fields: [personalizedCampaignRecipients.customerId],
-    references: [users.id],
-  }),
-}));
-
-export const customerPromotionPreferencesRelations = relations(customerPromotionPreferences, ({ one }) => ({
-  wholesaler: one(users, {
-    fields: [customerPromotionPreferences.wholesalerId],
-    references: [users.id],
-  }),
-  customer: one(users, {
-    fields: [customerPromotionPreferences.customerId],
-    references: [users.id],
-  }),
-}));
-
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -1110,31 +926,6 @@ export const insertPromotionAnalyticsSchema = createInsertSchema(promotionAnalyt
 });
 export type InsertPromotionAnalytics = z.infer<typeof insertPromotionAnalyticsSchema>;
 export type PromotionAnalytics = typeof promotionAnalytics.$inferSelect;
-
-// Personalized promotional system types
-export const insertCustomerPromotionalOfferSchema = createInsertSchema(customerPromotionalOffers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertCustomerPromotionalOffer = z.infer<typeof insertCustomerPromotionalOfferSchema>;
-export type CustomerPromotionalOffer = typeof customerPromotionalOffers.$inferSelect;
-
-export const insertPersonalizedCampaignRecipientSchema = createInsertSchema(personalizedCampaignRecipients).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertPersonalizedCampaignRecipient = z.infer<typeof insertPersonalizedCampaignRecipientSchema>;
-export type PersonalizedCampaignRecipient = typeof personalizedCampaignRecipients.$inferSelect;
-
-export const insertCustomerPromotionPreferenceSchema = createInsertSchema(customerPromotionPreferences).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertCustomerPromotionPreference = z.infer<typeof insertCustomerPromotionPreferenceSchema>;
-export type CustomerPromotionPreference = typeof customerPromotionPreferences.$inferSelect;
 
 export const insertProductPerformanceSummarySchema = createInsertSchema(productPerformanceSummary).omit({
   id: true,
