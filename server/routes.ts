@@ -1845,13 +1845,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
       console.log('✅ Payment Intent Succeeded event detected, processing...');
-      return await processPaymentIntentSucceeded(paymentIntent, res);
+      
+      // Check if this is a subscription upgrade payment
+      const metadata = paymentIntent.metadata;
+      if (metadata.targetTier && metadata.userId) {
+        console.log('🔼 This is a subscription upgrade payment, processing...');
+        return await processSubscriptionUpgrade(paymentIntent, res);
+      } else {
+        console.log('🛒 This is a customer order payment, processing...');
+        return await processPaymentIntentSucceeded(paymentIntent, res);
+      }
     } else {
       console.log('ℹ️ Non-payment event received:', event.type);
     }
 
     res.json({ received: true });
   });
+
+  // Process subscription upgrade payments
+  async function processSubscriptionUpgrade(paymentIntent: any, res: any) {
+    console.log('=== 🔼 SUBSCRIPTION UPGRADE PROCESSING START ===');
+    console.log('🔼 Processing subscription upgrade payment for:', paymentIntent.id);
+    console.log('🔍 Payment Intent Metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+    
+    try {
+      const metadata = paymentIntent.metadata;
+      const userId = metadata.userId;
+      const targetTier = metadata.targetTier;
+      const upgradeFromTier = metadata.upgradeFromTier || 'free';
+      
+      console.log(`🔼 Processing upgrade: User ${userId} from ${upgradeFromTier} to ${targetTier}`);
+      
+      if (!userId || !targetTier) {
+        console.error('❌ Missing required metadata for subscription upgrade:', metadata);
+        return res.status(400).json({ error: 'Missing user or tier metadata' });
+      }
+      
+      // Determine product limit for the new tier
+      let newProductLimit = 3; // default for free
+      switch (targetTier) {
+        case 'standard':
+          newProductLimit = 10;
+          break;
+        case 'premium':
+          newProductLimit = -1; // unlimited
+          break;
+      }
+      
+      // Update user subscription in database
+      const updatedUser = await storage.updateUser(userId, {
+        subscriptionTier: targetTier,
+        subscriptionStatus: 'active',
+        productLimit: newProductLimit,
+        subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      });
+      
+      console.log(`✅ Successfully upgraded user ${userId} to ${targetTier}:`, {
+        tier: targetTier,
+        status: 'active',
+        productLimit: newProductLimit,
+        amount: paymentIntent.amount / 100
+      });
+      
+      // Verify the update worked
+      const verifyUser = await storage.getUser(userId);
+      console.log(`🔍 Verification - User subscription data:`, {
+        id: verifyUser?.id,
+        tier: verifyUser?.subscriptionTier,
+        status: verifyUser?.subscriptionStatus,
+        limit: verifyUser?.productLimit
+      });
+      
+      res.json({ 
+        received: true, 
+        message: `Subscription upgraded to ${targetTier}`,
+        userId: userId,
+        newTier: targetTier,
+        productLimit: newProductLimit
+      });
+      
+    } catch (error) {
+      console.error('❌ Error processing subscription upgrade:', error);
+      res.status(500).json({ error: 'Failed to process subscription upgrade' });
+    }
+  }
 
   // Shared function to process payment_intent.succeeded events
   async function processPaymentIntentSucceeded(paymentIntent: any, res: any) {
