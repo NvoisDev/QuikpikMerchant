@@ -17,10 +17,10 @@ const MascotSVG = ({ size = 'md', variant = 'default' }: { size: 'sm' | 'md' | '
   };
 
   const colors = {
-    default: { primary: '#3B82F6', secondary: '#60A5FA', accent: '#FDE047' },
-    success: { primary: '#10B981', secondary: '#34D399', accent: '#FDE047' },
-    processing: { primary: '#8B5CF6', secondary: '#A78BFA', accent: '#FBBF24' },
-    shipping: { primary: '#F59E0B', secondary: '#FBBF24', accent: '#34D399' }
+    default: { primary: '#22c55e', secondary: '#4ade80', accent: '#fbbf24' },
+    success: { primary: '#16a34a', secondary: '#22c55e', accent: '#eab308' },
+    processing: { primary: '#059669', secondary: '#10b981', accent: '#f59e0b' },
+    shipping: { primary: '#0d9488', secondary: '#14b8a6', accent: '#22c55e' }
   };
 
   const color = colors[variant as keyof typeof colors];
@@ -118,7 +118,7 @@ const MascotSVG = ({ size = 'md', variant = 'default' }: { size: 'sm' | 'md' | '
         {[...Array(3)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-yellow-400 rounded-full"
+            className="absolute w-1 h-1 bg-green-400 rounded-full"
             style={{
               left: `${30 + i * 20}%`,
               top: `${20 + i * 15}%`,
@@ -161,13 +161,13 @@ const LoadingMascot: React.FC<LoadingMascotProps> = ({
   const getVariantIcon = () => {
     switch (variant) {
       case 'success':
-        return <Star className="w-4 h-4 text-green-500" />;
+        return <Star className="w-4 h-4 text-green-600" />;
       case 'processing':
-        return <Package className="w-4 h-4 text-purple-500" />;
+        return <Package className="w-4 h-4 text-emerald-600" />;
       case 'shipping':
-        return <Truck className="w-4 h-4 text-orange-500" />;
+        return <Truck className="w-4 h-4 text-teal-600" />;
       default:
-        return <ShoppingCart className="w-4 h-4 text-blue-500" />;
+        return <ShoppingCart className="w-4 h-4 text-green-500" />;
     }
   };
 
@@ -191,7 +191,7 @@ const LoadingMascot: React.FC<LoadingMascotProps> = ({
         {[...Array(3)].map((_, i) => (
           <motion.div
             key={i}
-            className="w-2 h-2 bg-blue-500 rounded-full"
+            className="w-2 h-2 bg-green-500 rounded-full"
             animate={{
               scale: [1, 1.5, 1],
               opacity: [0.3, 1, 0.3],

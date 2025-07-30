@@ -358,7 +358,7 @@ export default function Orders() {
             {[...Array(5)].map((_, i) => (
               <div
                 key={i}
-                className="w-2 h-8 bg-gradient-to-t from-blue-400 to-purple-600 rounded-full animate-pulse"
+                className="w-2 h-8 bg-gradient-to-t from-green-400 to-emerald-600 rounded-full animate-pulse"
                 style={{
                   animationDelay: `${i * 0.1}s`,
                   animationDuration: '1.2s'
@@ -366,7 +366,7 @@ export default function Orders() {
               />
             ))}
           </div>
-          <p className="text-sm text-gray-500 text-center">Loading your orders...</p>
+          <p className="text-sm font-medium text-gray-600 text-center">Loading your orders...</p>
         </div>
       </div>
     );

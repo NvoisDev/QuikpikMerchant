@@ -24,7 +24,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({
   
   const backgroundClasses = overlay 
     ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm'
-    : 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800';
+    : 'bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800';
 
   return (
     <motion.div
@@ -38,7 +38,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -right-1/2 w-full h-full">
           <motion.div
-            className="w-96 h-96 rounded-full bg-gradient-to-r from-blue-200/20 to-purple-200/20"
+            className="w-96 h-96 rounded-full bg-gradient-to-r from-green-200/20 to-emerald-200/20"
             animate={{ 
               scale: [1, 1.2, 1],
               rotate: [0, 180, 360]
@@ -52,7 +52,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({
         </div>
         <div className="absolute -bottom-1/2 -left-1/2 w-full h-full">
           <motion.div
-            className="w-80 h-80 rounded-full bg-gradient-to-r from-green-200/20 to-blue-200/20"
+            className="w-80 h-80 rounded-full bg-gradient-to-r from-teal-200/20 to-green-200/20"
             animate={{ 
               scale: [1.2, 1, 1.2],
               rotate: [360, 180, 0]
@@ -77,7 +77,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({
         {/* Progress Bar */}
         <div className="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+            className="h-full bg-gradient-to-r from-green-500 to-emerald-600"
             initial={{ width: 0 }}
             animate={{ width: "100%" }}
             transition={{ 

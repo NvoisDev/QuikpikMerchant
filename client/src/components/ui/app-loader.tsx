@@ -16,11 +16,11 @@ const AppLoader: React.FC<AppLoaderProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 ${className}`}>
       {/* Background Animation */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
-          className="absolute -top-1/4 -left-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-blue-200/30 to-purple-200/30"
+          className="absolute -top-1/4 -left-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-green-200/30 to-emerald-200/30"
           animate={{ 
             scale: [1, 1.2, 1],
             rotate: [0, 360],
@@ -33,7 +33,7 @@ const AppLoader: React.FC<AppLoaderProps> = ({
           }}
         />
         <motion.div
-          className="absolute -bottom-1/4 -right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-green-200/30 to-blue-200/30"
+          className="absolute -bottom-1/4 -right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-teal-200/30 to-green-200/30"
           animate={{ 
             scale: [1.2, 1, 1.2],
             rotate: [360, 0],
@@ -57,8 +57,8 @@ const AppLoader: React.FC<AppLoaderProps> = ({
           className="space-y-4"
         >
           <div className="text-4xl font-bold text-gray-800">
-            <span className="text-blue-600">Quik</span>
-            <span className="text-purple-600">pik</span>
+            <span className="text-green-600">Quik</span>
+            <span className="text-emerald-600">pik</span>
           </div>
           <p className="text-gray-600 text-lg">Wholesale Platform</p>
         </motion.div>
@@ -80,7 +80,7 @@ const AppLoader: React.FC<AppLoaderProps> = ({
           >
             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                className="h-full bg-gradient-to-r from-green-500 to-emerald-600"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
@@ -95,7 +95,7 @@ const AppLoader: React.FC<AppLoaderProps> = ({
           {[...Array(5)].map((_, i) => (
             <motion.div
               key={i}
-              className="w-2 h-8 bg-gradient-to-t from-blue-400 to-purple-600 rounded-full"
+              className="w-2 h-8 bg-gradient-to-t from-green-400 to-emerald-600 rounded-full"
               animate={{
                 scaleY: [1, 0.5, 1],
                 opacity: [0.5, 1, 0.5],

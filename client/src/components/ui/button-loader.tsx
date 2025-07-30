@@ -70,11 +70,11 @@ const ButtonLoader: React.FC<ButtonLoaderProps> = ({
       case 'success':
         return `${baseStyles} bg-green-600 hover:bg-green-700 text-white focus:ring-green-500`;
       case 'processing':
-        return `${baseStyles} bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500`;
+        return `${baseStyles} bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500`;
       case 'shipping':
-        return `${baseStyles} bg-orange-600 hover:bg-orange-700 text-white focus:ring-orange-500`;
+        return `${baseStyles} bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500`;
       default:
-        return `${baseStyles} bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500`;
+        return `${baseStyles} bg-green-600 hover:bg-green-700 text-white focus:ring-green-500`;
     }
   };
 
