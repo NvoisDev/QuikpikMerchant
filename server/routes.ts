@@ -4278,6 +4278,216 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // ======= END ADVERTISING & PROMOTION ENDPOINTS =======
 
+  // ======= PERSONALIZED PROMOTIONAL SYSTEM ENDPOINTS =======
+  
+  // Get customers available for personalization
+  app.get('/api/personalized-campaigns/customers', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      
+      const customers = await storage.getCustomersForPersonalization(targetUserId);
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching customers for personalization:", error);
+      res.status(500).json({ message: "Failed to fetch customers" });
+    }
+  });
+
+  // Create personalized promotional offers for customers
+  app.post('/api/personalized-campaigns/offers', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { customerId, productId, campaignId, offerType, discountPercentage, discountAmount, fixedPrice, buyQuantity, getQuantity, originalPrice, promotionalPrice, maxQuantity, validUntil, personalizationReason, customerSegment, offerPriority } = req.body;
+
+      const offer = await storage.createCustomerPromotionalOffer({
+        wholesalerId: targetUserId,
+        customerId,
+        productId,
+        campaignId,
+        offerType,
+        discountPercentage: discountPercentage ? discountPercentage.toString() : null,
+        discountAmount: discountAmount ? discountAmount.toString() : null,
+        fixedPrice: fixedPrice ? fixedPrice.toString() : null,
+        buyQuantity,
+        getQuantity,
+        originalPrice: originalPrice.toString(),
+        promotionalPrice: promotionalPrice.toString(),
+        maxQuantity,
+        validUntil: validUntil ? new Date(validUntil) : null,
+        personalizationReason,
+        customerSegment,
+        offerPriority: offerPriority || 1
+      });
+
+      res.json(offer);
+    } catch (error) {
+      console.error("Error creating customer promotional offer:", error);
+      res.status(500).json({ message: "Failed to create promotional offer" });
+    }
+  });
+
+  // Get promotional offers for a wholesaler
+  app.get('/api/personalized-campaigns/offers', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { customerId, productId, campaignId } = req.query;
+
+      const offers = await storage.getCustomerPromotionalOffers(
+        targetUserId,
+        customerId as string,
+        productId ? parseInt(productId as string) : undefined,
+        campaignId as string
+      );
+
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching promotional offers:", error);
+      res.status(500).json({ message: "Failed to fetch promotional offers" });
+    }
+  });
+
+  // Get active offers for a specific customer
+  app.get('/api/personalized-campaigns/customers/:customerId/offers', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { customerId } = req.params;
+
+      const offers = await storage.getActiveCustomerOffers(customerId, targetUserId);
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching customer offers:", error);
+      res.status(500).json({ message: "Failed to fetch customer offers" });
+    }
+  });
+
+  // Create personalized campaign recipients
+  app.post('/api/personalized-campaigns/recipients', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { campaignId, customerId, personalizedMessage, customerName, totalOffersIncluded, personalizationStrategy } = req.body;
+
+      const recipient = await storage.createPersonalizedCampaignRecipient({
+        wholesalerId: targetUserId,
+        campaignId,
+        customerId,
+        personalizedMessage,
+        customerName,
+        totalOffersIncluded: totalOffersIncluded || 0,
+        personalizationStrategy
+      });
+
+      res.json(recipient);
+    } catch (error) {
+      console.error("Error creating campaign recipient:", error);
+      res.status(500).json({ message: "Failed to create campaign recipient" });
+    }
+  });
+
+  // Get campaign recipients
+  app.get('/api/personalized-campaigns/:campaignId/recipients', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { campaignId } = req.params;
+
+      const recipients = await storage.getPersonalizedCampaignRecipients(campaignId, targetUserId);
+      res.json(recipients);
+    } catch (error) {
+      console.error("Error fetching campaign recipients:", error);
+      res.status(500).json({ message: "Failed to fetch campaign recipients" });
+    }
+  });
+
+  // Update campaign engagement
+  app.patch('/api/personalized-campaigns/recipients/:recipientId/engagement', requireAuth, async (req: any, res) => {
+    try {
+      const { recipientId } = req.params;
+      const { messageStatus, clickedPurchaseLink, placedOrder, orderValue } = req.body;
+
+      const recipient = await storage.updatePersonalizedCampaignEngagement(
+        parseInt(recipientId),
+        { messageStatus, clickedPurchaseLink, placedOrder, orderValue }
+      );
+
+      res.json(recipient);
+    } catch (error) {
+      console.error("Error updating campaign engagement:", error);
+      res.status(500).json({ message: "Failed to update engagement" });
+    }
+  });
+
+  // Get or create customer promotion preferences
+  app.get('/api/personalized-campaigns/customers/:customerId/preferences', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { customerId } = req.params;
+
+      const preferences = await storage.getCustomerPromotionPreferences(customerId, targetUserId);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching customer preferences:", error);
+      res.status(500).json({ message: "Failed to fetch customer preferences" });
+    }
+  });
+
+  // Update customer promotion preferences
+  app.post('/api/personalized-campaigns/customers/:customerId/preferences', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { customerId } = req.params;
+      const preferenceData = req.body;
+
+      const preferences = await storage.upsertCustomerPromotionPreferences({
+        wholesalerId: targetUserId,
+        customerId,
+        ...preferenceData
+      });
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating customer preferences:", error);
+      res.status(500).json({ message: "Failed to update customer preferences" });
+    }
+  });
+
+  // Get personalized campaign analytics
+  app.get('/api/personalized-campaigns/:campaignId/analytics', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      const { campaignId } = req.params;
+
+      const analytics = await storage.getPersonalizedCampaignAnalytics(campaignId, targetUserId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching campaign analytics:", error);
+      res.status(500).json({ message: "Failed to fetch campaign analytics" });
+    }
+  });
+
+  // Redeem customer promotional offer
+  app.post('/api/personalized-campaigns/offers/:offerId/redeem', requireAuth, async (req: any, res) => {
+    try {
+      const { offerId } = req.params;
+      const { orderId } = req.body;
+
+      const offer = await storage.redeemCustomerOffer(parseInt(offerId), orderId);
+      res.json(offer);
+    } catch (error) {
+      console.error("Error redeeming offer:", error);
+      res.status(500).json({ message: "Failed to redeem offer" });
+    }
+  });
+
+  // ======= END PERSONALIZED PROMOTIONAL SYSTEM ENDPOINTS =======
+
   // WhatsApp API Routes (Shared Service)
 
   // Stripe Connect status endpoint for priority alert

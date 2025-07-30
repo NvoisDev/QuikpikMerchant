@@ -54,6 +54,7 @@ import { PromotionalOffersManager } from "@/components/PromotionalOffersManager"
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
+import PersonalizedCampaignCreator from "@/components/PersonalizedCampaignCreator";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -238,7 +239,7 @@ export default function Campaigns() {
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
   const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'performance'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'personalized' | 'performance'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
@@ -718,11 +719,15 @@ export default function Campaigns() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'performance')}>
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'personalized' | 'performance')}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Campaign Management
+            Broadcast Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="personalized" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Personalized Campaigns
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1709,6 +1714,84 @@ export default function Campaigns() {
         </DialogContent>
       </Dialog>
 
+        </TabsContent>
+
+        <TabsContent value="personalized" className="space-y-6">
+          <div className="space-y-6">
+            {/* Personalized Campaigns Header */}
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 rounded-lg border">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                  <Target className="h-4 w-4 text-white" />
+                </div>
+                <h2 className="text-xl font-semibold">Personalized Campaign System</h2>
+              </div>
+              <p className="text-muted-foreground mb-4">
+                Create AI-powered personalized promotional campaigns with unique offers for each customer based on their purchase history, preferences, and behavior patterns.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span>Individual customer segmentation</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span>Dynamic pricing per customer</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span>Performance tracking & analytics</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Personalized Campaign Creator */}
+            <PersonalizedCampaignCreator 
+              onCampaignCreated={() => {
+                toast({
+                  title: "Campaign Created Successfully",
+                  description: "Your personalized campaign has been sent to all selected customers.",
+                });
+                // Optionally refresh any campaign data
+                refetchCampaigns();
+              }}
+            />
+
+            {/* Recent Personalized Campaigns Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Personalized Campaign Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold text-primary">0</p>
+                    <p className="text-sm text-muted-foreground">Personalized Campaigns</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold text-primary">0</p>
+                    <p className="text-sm text-muted-foreground">Unique Offers Sent</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold text-primary">0%</p>
+                    <p className="text-sm text-muted-foreground">Avg. Redemption Rate</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold text-primary">£0</p>
+                    <p className="text-sm text-muted-foreground">Generated Revenue</p>
+                  </div>
+                </div>
+                
+                <div className="mt-6 text-center text-muted-foreground">
+                  <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Create your first personalized campaign to see performance metrics here</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
