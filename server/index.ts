@@ -61,10 +61,14 @@ app.use((req, res, next) => {
     // Start standalone webhook server for Stripe webhooks
     try {
       const { startStandaloneWebhook } = await import("./standalone-webhook");
-      startStandaloneWebhook();
+      const webhookServer = startStandaloneWebhook();
       console.log("🔗 Standalone webhook server started on port 5001");
-    } catch (error) {
-      console.error("⚠️ Failed to start webhook server:", error);
+    } catch (error: any) {
+      if (error.code === 'EADDRINUSE') {
+        console.log("⚠️ Webhook server already running on port 5001");
+      } else {
+        console.error("⚠️ Failed to start webhook server:", error);
+      }
     }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

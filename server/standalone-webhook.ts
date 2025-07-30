@@ -126,11 +126,21 @@ webhookApp.get('/api/health', (req, res) => {
 
 // Start standalone webhook server
 export function startStandaloneWebhook() {
-  webhookApp.listen(webhookPort, () => {
+  const server = webhookApp.listen(webhookPort, () => {
     console.log(`🚀 Standalone webhook server running on port ${webhookPort}`);
     console.log(`🔗 Webhook endpoint: http://localhost:${webhookPort}/api/webhooks/stripe`);
     console.log(`🧪 Test endpoint: http://localhost:${webhookPort}/api/webhook-test`);
   });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Port ${webhookPort} is already in use. Webhook server may already be running.`);
+    } else {
+      console.error('❌ Webhook server error:', err);
+    }
+  });
+
+  return server;
 }
 
 // Auto-start if this file is run directly
