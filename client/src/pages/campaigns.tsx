@@ -1424,10 +1424,10 @@ export default function Campaigns() {
                     <div className="font-medium text-lg">{formatCurrency(
                       campaign.products?.reduce((sum: number, p: any) => {
                         if (p.specialPrice) {
-                          return sum + ((Number(p.specialPrice) || 0) * (Number(p.product?.stock) || 0));
+                          return sum + ((Number(p.specialPrice) || 0) * (Number(p.quantity) || 0));
                         }
                         if (p.product) {
-                          const quantity = Number(p.product.stock) || 0;
+                          const quantity = Number(p.quantity) || 0;
                           // Include promotional offers from the campaign product item
                           const productWithOffers = {
                             ...p.product,
