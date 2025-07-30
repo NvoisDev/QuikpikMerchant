@@ -20,6 +20,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Login endpoint for business owners
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const user = await storage.authenticateUser(email, password);
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      // Create session
+      (req as any).session.userId = user.id;
+      (req as any).session.user = user;
+
+      console.log(`✅ User logged in successfully: ${user.email}`);
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Logout endpoint
+  app.post('/api/auth/logout', (req, res) => {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
+  });
+
   // User authentication endpoint
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
