@@ -19,6 +19,27 @@ export default function SubscriptionSettings() {
   const { subscription, currentTier, isActive, isLoading: subscriptionLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Auto-refresh subscription data when component mounts to catch recent upgrades
+  useEffect(() => {
+    const autoRefreshSubscription = async () => {
+      // Only auto-refresh if user is authenticated and no URL params (not coming from Stripe)
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasStripeParams = urlParams.get('success') || urlParams.get('canceled');
+      
+      if (user && !hasStripeParams) {
+        try {
+          // Refresh subscription data silently
+          await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+        } catch (error) {
+          console.log("Silent refresh failed:", error);
+        }
+      }
+    };
+
+    autoRefreshSubscription();
+  }, [user, queryClient]);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
@@ -150,7 +171,7 @@ export default function SubscriptionSettings() {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         // Force page refresh to ensure UI updates
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => window.location.reload(), 2000);
       } else if (canceled === 'true') {
         toast({
           title: "Subscription Canceled",
@@ -444,12 +465,16 @@ export default function SubscriptionSettings() {
               size="sm"
               onClick={async () => {
                 try {
-                  queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-                  queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                  await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+                  await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                  await queryClient.refetchQueries({ queryKey: ["/api/subscription/status"] });
+                  await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
                   toast({
                     title: "Data Refreshed",
                     description: "Subscription data has been updated from server",
                   });
+                  // Refresh the page to ensure complete update
+                  setTimeout(() => window.location.reload(), 500);
                 } catch (error) {
                   console.error("Refresh failed:", error);
                 }
