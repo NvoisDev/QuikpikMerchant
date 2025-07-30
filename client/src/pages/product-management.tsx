@@ -450,14 +450,10 @@ export default function ProductManagement() {
   };
 
   const { data: products, isLoading, error } = useQuery<Product[]>({
-    queryKey: ["/api/marketplace/products", "104871691614680693123"],
+    queryKey: ["/api/products"],
     queryFn: async () => {
-      console.log('Fetching products for Surulere Foods Wholesale');
-      const params = new URLSearchParams();
-      params.append('wholesalerId', '104871691614680693123');
-      
-      console.log('Query params:', params.toString());
-      const response = await fetch(`/api/marketplace/products?${params}`, {
+      console.log('Fetching products for current user');
+      const response = await fetch(`/api/products`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch products");
@@ -511,7 +507,6 @@ export default function ProductManagement() {
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsDialogOpen(false);
       form.reset();
@@ -551,7 +546,6 @@ export default function ProductManagement() {
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setIsDialogOpen(false);
       setEditingProduct(null);
@@ -584,7 +578,6 @@ export default function ProductManagement() {
       return await apiRequest("DELETE", `/api/products/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -605,7 +598,6 @@ export default function ProductManagement() {
       return await apiRequest("PATCH", `/api/products/${id}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
