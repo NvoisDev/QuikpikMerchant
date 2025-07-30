@@ -594,7 +594,7 @@ export default function Orders() {
                             >
                               <td className="p-4">
                                 <div>
-                                  <div className="font-medium">{order.orderNumber || `#${order.id}`}</div>
+                                  <div className="font-semibold text-gray-900">{order.orderNumber || `#${order.id}`}</div>
                                   <div className="text-sm text-gray-500">
                                     {new Date(order.createdAt).toLocaleDateString('en-GB', {
                                       year: 'numeric',
@@ -609,7 +609,7 @@ export default function Orders() {
                               </td>
                               <td className="p-4">
                                 <div>
-                                  <div className="font-medium">
+                                  <div className="font-semibold text-gray-900">
                                     {order.retailer ? `${order.retailer.firstName} ${order.retailer.lastName}` : 'Unknown Customer'}
                                   </div>
                                   {order.retailer?.businessName && (
@@ -621,46 +621,46 @@ export default function Orders() {
                                 <span className="text-sm text-gray-600">Online Store</span>
                               </td>
                               <td className="p-4">
-                                <div className="font-medium">
+                                <div className="font-semibold text-gray-900">
                                   {formatCurrency(parseFloat(order.subtotal || order.total), order.wholesaler?.preferredCurrency || 'GBP')}
                                 </div>
                               </td>
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-sm">Paid</span>
+                                  <span className="text-sm font-medium text-gray-700">Paid</span>
                                 </div>
                               </td>
                               <td className="p-4">
                                 {order.status === 'fulfilled' ? (
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                                    <span className="text-sm">Fulfilled</span>
+                                    <span className="text-sm font-medium text-gray-700">Fulfilled</span>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                    <span className="text-sm">Unfulfilled</span>
+                                    <span className="text-sm font-medium text-gray-700">Unfulfilled</span>
                                   </div>
                                 )}
                               </td>
                               <td className="p-4">
-                                <span className="text-sm">{order.items?.length || 1} item{(order.items?.length || 1) !== 1 ? 's' : ''}</span>
+                                <span className="text-sm font-medium text-gray-700">{order.items?.length || 1} item{(order.items?.length || 1) !== 1 ? 's' : ''}</span>
                               </td>
                               <td className="p-4">
                                 <div className="text-sm">
                                   {order.fulfillmentType === 'delivery' ? (
                                     <div className="flex items-center gap-1">
                                       <Truck className="h-3 w-3 text-blue-600" />
-                                      <span>Delivery</span>
+                                      <span className="font-medium text-gray-700">Delivery</span>
                                     </div>
                                   ) : order.fulfillmentType === 'collection' || order.fulfillmentType === 'pickup' ? (
                                     <div className="flex items-center gap-1">
                                       <Hand className="h-3 w-3 text-green-600" />
-                                      <span>Pick up</span>
+                                      <span className="font-medium text-gray-700">Pick up</span>
                                     </div>
                                   ) : (
-                                    <span className="text-gray-500">Not specified</span>
+                                    <span className="font-medium text-gray-500">Not specified</span>
                                   )}
                                   {order.shippingOrderId && (
                                     <div className="text-xs text-gray-500 mt-1">Tracking added</div>
@@ -862,7 +862,7 @@ export default function Orders() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm font-medium text-gray-600">
                     Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
                   </div>
                   <div className="flex items-center gap-2">
@@ -895,7 +895,7 @@ export default function Orders() {
                             variant={currentPage === pageNum ? "default" : "outline"}
                             size="sm"
                             onClick={() => setCurrentPage(pageNum)}
-                            className="w-8 h-8 p-0"
+                            className="w-8 h-8 p-0 font-medium"
                           >
                             {pageNum}
                           </Button>
@@ -904,12 +904,12 @@ export default function Orders() {
                       
                       {totalPages > 5 && currentPage < totalPages - 2 && (
                         <>
-                          <span className="text-muted-foreground">...</span>
+                          <span className="text-sm font-medium text-gray-500">...</span>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setCurrentPage(totalPages)}
-                            className="w-8 h-8 p-0"
+                            className="w-8 h-8 p-0 font-medium"
                           >
                             {totalPages}
                           </Button>
