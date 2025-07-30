@@ -429,7 +429,7 @@ export default function SubscriptionSettings() {
   const handlePlanChange = (targetPlan: string) => {
     // Determine if it's an upgrade or downgrade
     const tierOrder = { free: 0, standard: 1, premium: 2 };
-    const currentTierOrder = tierOrder[currentTier as keyof typeof tierOrder] || 0;
+    const currentTierOrder = tierOrder[forcedCurrentTier as keyof typeof tierOrder] || 0;
     const targetTierOrder = tierOrder[targetPlan as keyof typeof tierOrder] || 0;
     
     if (targetTierOrder > currentTierOrder) {
@@ -456,8 +456,8 @@ export default function SubscriptionSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className={`flex items-center justify-center w-16 h-16 rounded-full ${
-                currentTier === 'premium' ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
-                currentTier === 'standard' ? 'bg-blue-500' : 'bg-gray-500'
+                forcedCurrentTier === 'premium' ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                forcedCurrentTier === 'standard' ? 'bg-blue-500' : 'bg-gray-500'
               } text-white shadow-lg`}>
                 {forcedCurrentTier === 'premium' && <Crown className="w-8 h-8" />}
                 {forcedCurrentTier === 'standard' && <Package className="w-8 h-8" />}
@@ -528,15 +528,15 @@ export default function SubscriptionSettings() {
             </div>
             <div className="bg-background/60 rounded-lg p-4 text-center border">
               <div className="text-3xl font-bold text-primary mb-1">
-                {currentTier === 'premium' ? '∞' : 
-                 currentTier === 'standard' ? '5' : '2'}
+                {forcedCurrentTier === 'premium' ? '∞' : 
+                 forcedCurrentTier === 'standard' ? '5' : '2'}
               </div>
               <div className="text-sm text-muted-foreground">Customer Groups</div>
             </div>
             <div className="bg-background/60 rounded-lg p-4 text-center border">
               <div className="text-3xl font-bold text-primary mb-1">
-                {currentTier === 'premium' ? '∞' : 
-                 currentTier === 'standard' ? '25' : '5'}
+                {forcedCurrentTier === 'premium' ? '∞' : 
+                 forcedCurrentTier === 'standard' ? '25' : '5'}
               </div>
               <div className="text-sm text-muted-foreground">Broadcasts/Month</div>
             </div>
@@ -546,16 +546,16 @@ export default function SubscriptionSettings() {
           <div className="space-y-3">
             <h4 className="font-semibold text-lg">Your Plan Includes:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {plans.find(p => p.id === currentTier)?.features?.slice(0, 8)?.map((feature, index) => (
+              {plans.find(p => p.id === forcedCurrentTier)?.features?.slice(0, 8)?.map((feature, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                   <span>{feature}</span>
                 </div>
               )) || []}
             </div>
-            {(plans.find(p => p.id === currentTier)?.features?.length || 0) > 8 && (
+            {(plans.find(p => p.id === forcedCurrentTier)?.features?.length || 0) > 8 && (
               <p className="text-sm text-muted-foreground">
-                +{(plans.find(p => p.id === currentTier)?.features?.length || 0) - 8} more features included
+                +{(plans.find(p => p.id === forcedCurrentTier)?.features?.length || 0) - 8} more features included
               </p>
             )}
           </div>
