@@ -101,9 +101,25 @@ export class PromotionalPricingCalculator {
       return true;
     });
 
-    // Apply promotional price if active, regardless of whether there are additional promotional offers
-    // This allows campaign special prices to work independently of promotional offers
-    if (promoActive && promoPrice) {
+    // Check if we have percentage or other calculated discounts that should override fixed promo price
+    const hasCalculatedOffers = promotionalOffers.some(offer => {
+      if (offer.isActive === false) return false;
+      
+      // Check date validity if provided
+      if (offer.startDate && offer.endDate) {
+        const now = new Date();
+        const start = new Date(offer.startDate);
+        const end = new Date(offer.endDate);
+        end.setDate(end.getDate() + 1);
+        if (now < start || now > end) return false;
+      }
+      
+      return ['percentage_discount', 'fixed_discount', 'fixed_amount_discount'].includes(offer.type);
+    });
+
+    // Apply promotional price only if no calculated offers exist
+    // This prioritizes percentage discounts over fixed promotional prices
+    if (promoActive && promoPrice && !hasCalculatedOffers) {
       effectivePrice = promoPrice;
       totalDiscount += (originalPrice - promoPrice) * quantity;
       appliedOffers.push(`Sale Price: £${promoPrice.toFixed(2)}`);

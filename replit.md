@@ -1,5 +1,20 @@
 # Quikpik Merchant - Wholesale B2B Platform
 
+## PROMOTIONAL PRICING CALCULATION FIX - COMPLETED ✅ (July 30, 2025)
+**Fixed Percentage Discount Priority Over Fixed Promotional Prices**
+
+- **Pricing Logic Enhancement**: Fixed promotional pricing calculation to prioritize percentage discounts over fixed promotional prices
+  - Problem: 10% off £0.55 was showing £0.30 instead of correct £0.495 (≈£0.50)
+  - Root Cause: Fixed promotional price (promoPrice) was overriding percentage discount calculations
+  - Solution: Modified promotional pricing logic to check for calculated offers first
+  - New Priority: Percentage/fixed discounts take precedence over hardcoded promotional prices
+
+- **Calculation Verification**: Correct promotional pricing now applied consistently
+  - Original price: £0.55 → 10% discount → Final price: £0.495 (displayed as £0.50)
+  - Fixed promotional prices only apply when no calculated discounts exist
+  - Maintains backward compatibility with existing promotional pricing structure
+  - Enhanced offer application logic for accurate discount calculations
+
 ## PERSONALIZED PROMOTIONAL CAMPAIGNS SYSTEM IMPLEMENTED - COMPLETED ✅ (July 30, 2025)
 **Revolutionary Customer-Specific WhatsApp Marketing with AI-Driven Personalization**
 
