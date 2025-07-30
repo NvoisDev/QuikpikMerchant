@@ -8329,7 +8329,51 @@ https://quikpik.app`;
         const session = event.data.object;
         console.log(`🎣 [${timestamp}] Checkout session completed: ${session.mode} mode`);
         
-        // Subscription checkouts are handled by payment_intent.succeeded webhook
+        // Handle subscription upgrade checkouts (mode: 'payment' with subscription metadata)
+        if (session.mode === 'payment' && session.metadata && session.metadata.targetTier && session.metadata.userId) {
+          console.log(`✅ Processing checkout-based subscription upgrade for user ${session.metadata.userId} to ${session.metadata.targetTier}`);
+          
+          try {
+            const userId = session.metadata.userId;
+            const targetTier = session.metadata.targetTier;
+            const upgradeFromTier = session.metadata.upgradeFromTier || 'free';
+            
+            // Determine product limit for the new tier
+            let newProductLimit = 3; // default for free
+            switch (targetTier) {
+              case 'standard':
+                newProductLimit = 10;
+                break;
+              case 'premium':
+                newProductLimit = -1; // unlimited
+                break;
+            }
+            
+            // Update user subscription in database
+            await storage.updateUser(userId, {
+              subscriptionTier: targetTier,
+              subscriptionStatus: 'active',
+              productLimit: newProductLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+            });
+            
+            console.log(`✅ Successfully upgraded user ${userId} to ${targetTier} via checkout session`);
+            
+            return res.json({ 
+              received: true, 
+              message: `Subscription upgraded to ${targetTier} via checkout`,
+              userId: userId,
+              newTier: targetTier,
+              productLimit: newProductLimit
+            });
+            
+          } catch (error) {
+            console.error('❌ Error processing checkout-based subscription upgrade:', error);
+            return res.status(500).json({ error: 'Failed to process subscription upgrade' });
+          }
+        }
+        
+        // Regular subscription checkouts are handled by payment_intent.succeeded webhook
         if (session.mode === 'subscription') {
           return res.json({ received: true, message: 'Subscription handled by payment_intent webhook' });
         }

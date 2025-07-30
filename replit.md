@@ -36,6 +36,7 @@
   - **Final Verification**: payment_intent.succeeded webhooks processing subscription upgrades perfectly (checkout.session.completed not needed)
   - **Webhook Signature Fix**: Resolved TypeScript null safety issues causing checkout.session.completed events to return 400 errors
   - **Clean Webhook Responses**: checkout.session.completed now returns proper success responses instead of "Missing user or plan metadata" errors
+  - **Checkout Session Handler Fix**: Added proper processing for subscription upgrade checkout sessions with mode: 'payment' to prevent metadata errors
 
 ## CRITICAL DATA ISOLATION FIX & SERVER STABILITY - COMPLETED ✅ (July 30, 2025)
 **Complete Data Security Enhancement & Duplicate Endpoint Cleanup**
