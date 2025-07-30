@@ -107,21 +107,20 @@ export default function SubscriptionSettings() {
     );
   }
 
-  // Force cache invalidation on component mount to ensure fresh data
+  // Consolidated effect for cache invalidation and modal cleanup
   useEffect(() => {
     // Close any stuck modals immediately on page load
     setDowngradeModalOpen(false);
     setCanceling(false);
     setUpgradeModalOpen(false);
     
-    // Clear any existing toasts to prevent old error messages
-    
-    queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-  }, [queryClient]);
+    // Invalidate queries to ensure fresh data
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] })
+    ]);
 
-  // Add effect to clear URL parameters and close modals on page focus
-  useEffect(() => {
+    // Add focus handler to close modals
     const handleFocus = () => {
       setDowngradeModalOpen(false);
       setCanceling(false);
@@ -129,7 +128,7 @@ export default function SubscriptionSettings() {
     
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [queryClient]);
 
   // Check for success/cancel parameters in URL
   useEffect(() => {
@@ -147,13 +146,11 @@ export default function SubscriptionSettings() {
         window.history.replaceState({}, '', window.location.pathname);
         
         // Trigger manual upgrade endpoint to ensure subscription is updated
-        const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
         if (sessionId) {
           try {
             // Get the plan from URL params if available
-            const urlParams = new URLSearchParams(window.location.search);
             const planId = urlParams.get('plan') || 'premium'; // Default to premium if no plan specified
             
             await apiRequest("POST", "/api/subscription/manual-upgrade", {
@@ -167,8 +164,10 @@ export default function SubscriptionSettings() {
         }
         
         // Force refresh of all subscription-related data
-        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] })
+        ]);
         
         // Force page refresh to ensure UI updates
         setTimeout(() => window.location.reload(), 2000);
@@ -308,7 +307,7 @@ export default function SubscriptionSettings() {
         targetTier: targetDowngradePlan
       });
       
-      const result = await response.json();
+      const result = await response.json().catch(() => ({ error: "Invalid response from server" }));
       
       // Always close modal first to prevent UI issues
       setDowngradeModalOpen(false);
@@ -331,8 +330,10 @@ export default function SubscriptionSettings() {
         }
         
         // Refresh subscription data
-        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] })
+        ]);
         
         // Reload page after short delay to show updated UI
         setTimeout(() => window.location.reload(), 1500);
@@ -341,7 +342,7 @@ export default function SubscriptionSettings() {
         console.error('Downgrade failed:', result);
         toast({
           title: "Plan Change Failed",
-          description: result.error || "Unable to process plan change. Please try again.",
+          description: (result?.error || result?.message || "Unable to process plan change. Please try again."),
           variant: "destructive",
         });
       }
