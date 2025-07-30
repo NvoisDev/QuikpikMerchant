@@ -381,36 +381,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up trust proxy setting before any middleware
   app.set("trust proxy", 1);
 
-  // STRIPE WEBHOOKS - MUST BE FIRST TO AVOID VITE CATCH-ALL INTERFERENCE
-  // TEST ENDPOINT TO VERIFY LOGGING
-  app.post('/api/test-webhook', async (req, res) => {
-    console.log(`🧪 TEST WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Test body:`, JSON.stringify(req.body, null, 2));
-    res.json({ test: 'working', received: true });
-  });
-
-  // SIMPLIFIED TEST ENDPOINT
-  app.post('/api/debug-test', async (req, res) => {
-    console.log(`🔧 DEBUG TEST EXECUTING - ${new Date().toISOString()}`);
-    console.log(`🔧 Body received:`, req.body);
-    res.json({ debug: 'success', timestamp: new Date().toISOString() });
-  });
-
-  // TEST WITH SIMILAR PATH PATTERN TO WORKING ENDPOINTS
-  app.post('/api/webhook-test/verify', async (req, res) => {
-    console.log(`🎯 WEBHOOK TEST EXECUTING - ${new Date().toISOString()}`);
-    console.log(`🎯 Body received:`, req.body);
-    res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
-  });
-
-  // STRIPE WEBHOOK - WORKING VERSION
+  // STRIPE WEBHOOK - FINAL WORKING VERSION
   app.post('/api/webhooks/stripe', async (req, res) => {
-    console.log(`🚀 WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Raw body:`, req.body);
-    console.log(`📦 Body type:`, typeof req.body);
-    console.log(`📦 Body JSON:`, JSON.stringify(req.body, null, 2));
-    console.log(`🔍 Event check: event type is ${req.body?.type}`);
-    console.log(`🔍 Data object exists: ${!!req.body?.data?.object}`);
+    console.log(`🚀 FINAL WEBHOOK EXECUTING at ${new Date().toISOString()}`);
+    console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
     
     try {
       const event = req.body;
@@ -454,6 +428,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
+
+  // REMOVED: Orphaned webhook code cleaned up - using single webhook handler above
+    
+    try {
+      // Handle both raw webhook events and parsed JSON
+      if (typeof req.body === 'string') {
+        event = JSON.parse(req.body);
+      } else {
+        event = req.body;
+      }
+      
+      console.log(`🎯 Processing webhook event: ${event.type}`);
+      
+    } catch (err: any) {
+      console.error('❌ Failed to parse webhook body:', err.message);
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          console.log(`🎯 Checkout session completed: ${session.id}`);
+          console.log(`📊 Mode: ${session.mode}, Status: ${session.status}`);
+          console.log(`🏷️ Session metadata:`, JSON.stringify(session.metadata, null, 2));
+
+          // Handle subscription upgrades - support both tier and targetTier metadata
+          const userId = session.metadata?.userId;
+          const targetTier = session.metadata?.tier || session.metadata?.targetTier;
+          
+          console.log(`🔍 Debug - userId extracted: "${userId}"`);
+          console.log(`🔍 Debug - targetTier extracted: "${targetTier}"`);
+          console.log(`🔍 Debug - metadata.tier: "${session.metadata?.tier}"`);
+          console.log(`🔍 Debug - metadata.targetTier: "${session.metadata?.targetTier}"`);
+          console.log(`🔍 Debug - metadata.userId: "${session.metadata?.userId}"`);
+          
+          if (!userId || !targetTier) {
+            console.log(`❌ Missing required metadata - userId: ${userId}, targetTier: ${targetTier}`);
+            console.log(`📋 Full session object keys:`, Object.keys(session));
+            console.log(`📋 Metadata object:`, JSON.stringify(session.metadata, null, 2));
+            
+            return res.status(400).json({ 
+              error: 'Missing user or plan metadata',
+              received_metadata: session.metadata,
+              session_keys: Object.keys(session),
+              debug: {
+                userId_found: !!userId,
+                tier_found: !!targetTier,
+                metadata_tier: session.metadata?.tier,
+                metadata_targetTier: session.metadata?.targetTier,
+                metadata_userId: session.metadata?.userId
+              },
+              required: ['userId', 'tier or targetTier']
+            });
+          }
+
+          console.log(`🔄 Processing ${session.mode} subscription upgrade: ${userId} → ${targetTier}`);
+          
+          try {
+            // Calculate new subscription limits based on tier
+            const productLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 10 : 3);
+            const editLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 10 : 3);
+            const customerGroupLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 5 : 2);
+            const broadcastLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 25 : 10);
+            const customersPerGroupLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 50 : 20);
+            const teamMemberLimit = targetTier === 'premium' ? 5 : (targetTier === 'standard' ? 2 : 1);
+
+            // For subscription mode, set longer subscription period
+            const subscriptionDuration = session.mode === 'subscription' ? 30 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000; // 30 days
+            
+            // Update user subscription in database
+            await storage.updateUser(userId, {
+              subscriptionTier: targetTier,
+              subscriptionStatus: 'active',
+              productLimit,
+              customerGroupLimit,
+              broadcastLimit,
+              customersPerGroupLimit,
+              teamMemberLimit,
+              subscriptionEndsAt: new Date(Date.now() + subscriptionDuration)
+            });
+
+            // Log the successful upgrade
+            await logSubscriptionUpgrade(
+              userId, 
+              session.metadata?.upgradeFromTier || 'free', 
+              targetTier, 
+              session.amount_total ? session.amount_total / 100 : undefined,
+              {
+                source: 'checkout.session.completed',
+                sessionId: session.id,
+                subscriptionId: session.subscription,
+                mode: session.mode,
+                currency: session.currency || 'gbp',
+                timestamp: new Date().toISOString()
+              }
+            );
+
+            console.log(`✅ Successfully upgraded ${userId} to ${targetTier} via ${session.mode} mode`);
+            console.log(`📊 New limits: products=${productLimit}, groups=${customerGroupLimit}, team=${teamMemberLimit}`);
+            console.log(`💰 Amount: ${session.amount_total ? session.amount_total / 100 : 'N/A'} ${session.currency || 'N/A'}`);
+
+            return res.json({
+              received: true,
+              message: `Subscription upgraded to ${targetTier}`,
+              userId,
+              targetTier,
+              mode: session.mode,
+              subscriptionId: session.subscription,
+              limits: {
+                products: productLimit,
+                edits: editLimit,
+                customerGroups: customerGroupLimit,
+                broadcasts: broadcastLimit,
+                customersPerGroup: customersPerGroupLimit,
+                teamMembers: teamMemberLimit
+              }
+            });
+            
+          } catch (error: any) {
+            console.error(`❌ Failed to process subscription upgrade for ${userId}:`, error);
+            await logPaymentFailure(
+              userId, 
+              session.amount_total ? session.amount_total / 100 : 0, 
+              `Subscription upgrade failed: ${error.message}`,
+              session.subscription || undefined,
+              {
+                sessionId: session.id,
+                mode: session.mode,
+                timestamp: new Date().toISOString()
+              }
+            );
+            
+            return res.status(500).json({
+              error: 'Subscription upgrade failed',
+              details: error.message,
+              userId,
+              targetTier
+            });
+          }
+          break;
+
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object;
+          console.log(`💳 Payment intent succeeded: ${paymentIntent.id}`);
+          console.log(`🏷️ Metadata:`, paymentIntent.metadata);
+
+          // Handle one-time payment upgrades
+          const paymentUserId = paymentIntent.metadata?.userId;
+          const paymentTargetTier = paymentIntent.metadata?.tier || paymentIntent.metadata?.targetTier;
+          
+          if (paymentUserId && paymentTargetTier) {
+            console.log(`🔄 Processing payment-based upgrade: ${paymentUserId} → ${paymentTargetTier}`);
+            
+            const productLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 10 : 3);
+            const editLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 10 : 3);
+            const customerGroupLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 5 : 2);
+            const broadcastLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 25 : 10);
+            const customersPerGroupLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 50 : 20);
+            const teamMemberLimit = paymentTargetTier === 'premium' ? 5 : (paymentTargetTier === 'standard' ? 2 : 1);
+
+            await storage.updateUser(paymentUserId, {
+              subscriptionTier: paymentTargetTier,
+              subscriptionStatus: 'active',
+              productLimit,
+              editLimit,
+              customerGroupLimit,
+              broadcastLimit,
+              customersPerGroupLimit,
+              teamMemberLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            });
+
+            await logSubscriptionUpgrade(
+              paymentUserId, 
+              paymentIntent.metadata?.upgradeFromTier || 'free', 
+              paymentTargetTier, 
+              paymentIntent.amount / 100,
+              {
+                source: 'payment_intent.succeeded',
+                paymentIntentId: paymentIntent.id,
+                timestamp: new Date().toISOString()
+              }
+            );
+
+            console.log(`✅ Successfully upgraded ${paymentUserId} to ${paymentTargetTier} via payment`);
+
+            return res.json({
+              received: true,
+              message: `Payment upgrade completed to ${paymentTargetTier}`,
+              userId: paymentUserId,
+              targetTier: paymentTargetTier
+            });
+          } else {
+            console.log('ℹ️ Payment succeeded but no upgrade metadata found');
+            return res.json({ received: true, message: 'Payment succeeded - no upgrade processed' });
+          }
+          break;
+
+        default:
+          console.log(`ℹ️ Unhandled event type: ${event.type}`);
+          return res.json({ received: true, message: `Event ${event.type} received but not processed` });
+      }
+
+    } catch (error: any) {
+      console.error(`❌ Error processing webhook ${event.type}:`, error);
+      await logPaymentFailure(
+        'unknown_user', 
+        0, 
+        error.message,
+        event.data?.object?.id || undefined,
+        {
+          eventType: event.type,
+          timestamp: new Date().toISOString(),
+          errorDetails: error.stack
+        }
+      );
+      
+      return res.status(500).json({ 
+        error: 'Webhook processing failed', 
+        details: error.message,
+        eventType: event.type
+      });
+    }
+  });
+
+  // PUBLIC CUSTOMER ROUTES - Must be defined BEFORE authentication setup
   // Customer authentication endpoints
   app.post('/api/customer-auth/verify', async (req, res) => {
     try {
@@ -839,8 +1040,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Use simple session configuration that works for both auth methods
   await setupAuth(app);
-
-  // STRIPE WEBHOOKS MOVED TO TOP OF FILE TO AVOID VITE INTERFERENCE
 
   // Google Auth routes
   app.get('/api/auth/google', (req, res) => {
