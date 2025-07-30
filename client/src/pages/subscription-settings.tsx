@@ -10,9 +10,9 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-// import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
-// import { SubscriptionDebugger } from "@/components/SubscriptionDebugger";
-// import { DowngradeConfirmationModal } from "@/components/DowngradeConfirmationModal";
+import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { SubscriptionDebugger } from "@/components/SubscriptionDebugger";
+import { DowngradeConfirmationModal } from "@/components/DowngradeConfirmationModal";
 
 export default function SubscriptionSettings() {
   const { user } = useAuth();
@@ -813,23 +813,23 @@ export default function SubscriptionSettings() {
         </Card>
       )} */}
 
-      {/* Subscription Upgrade Modal - Temporarily disabled */}
-      {/* <SubscriptionUpgradeModal
+      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal
         open={upgradeModalOpen}
         onOpenChange={setUpgradeModalOpen}
         reason="general"
         currentPlan={currentTier}
-      /> */}
+      />
 
-      {/* Downgrade Confirmation Modal - Temporarily disabled */}
-      {/* <DowngradeConfirmationModal
+      {/* Downgrade Confirmation Modal */}
+      <DowngradeConfirmationModal
         open={downgradeModalOpen}
         onOpenChange={setDowngradeModalOpen}
         currentPlan={currentTier}
         targetPlan={targetDowngradePlan}
         onConfirm={confirmDowngrade}
         isLoading={canceling}
-      /> */}
+      />
     </div>
   );
 }
