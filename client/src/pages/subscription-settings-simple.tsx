@@ -9,8 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SubscriptionSettingsSimple() {
-  const { user, refetch } = useAuth();
-  const refetchAuth = refetch;
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [processing, setProcessing] = useState(false);
@@ -59,9 +58,10 @@ export default function SubscriptionSettingsSimple() {
     },
     onSuccess: async () => {
       // Force refresh user data immediately
-      await refetchAuth();
-      queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] })
+      ]);
     },
   });
 
@@ -94,7 +94,10 @@ export default function SubscriptionSettingsSimple() {
       
       // Force another refresh after a short delay to ensure data is synced
       setTimeout(async () => {
-        await refetchAuth();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] })
+        ]);
         console.log('🔄 Force refreshed user data after plan change');
       }, 1000);
       
@@ -124,7 +127,10 @@ export default function SubscriptionSettingsSimple() {
     // Clear all cached queries
     queryClient.clear();
     // Force refetch user data
-    await refetchAuth();
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] })
+    ]);
     toast({
       title: "Authentication Refreshed",
       description: "Please try accessing your subscription data again.",
