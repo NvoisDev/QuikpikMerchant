@@ -57,6 +57,15 @@ app.use((req, res, next) => {
     const { setupVite, serveStatic } = await import("./vite");
     
     const server = await registerRoutes(app);
+    
+    // Start standalone webhook server for Stripe webhooks
+    try {
+      const { startStandaloneWebhook } = await import("./standalone-webhook");
+      startStandaloneWebhook();
+      console.log("🔗 Standalone webhook server started on port 5001");
+    } catch (error) {
+      console.error("⚠️ Failed to start webhook server:", error);
+    }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -134,6 +134,6 @@ export function startStandaloneWebhook() {
 }
 
 // Auto-start if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && process.argv[1].includes('standalone-webhook.ts')) {
   startStandaloneWebhook();
 }
