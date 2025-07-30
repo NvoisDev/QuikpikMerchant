@@ -583,7 +583,6 @@ export default function Orders() {
                             <th className="text-left p-4 font-medium text-gray-900">Fulfillment Status</th>
                             <th className="text-left p-4 font-medium text-gray-900">Items</th>
                             <th className="text-left p-4 font-medium text-gray-900">Delivery Method</th>
-                            <th className="text-left p-4 font-medium text-gray-900">Tags</th>
                             <th className="text-left p-4 font-medium text-gray-900">Actions</th>
                           </tr>
                         </thead>
@@ -669,13 +668,6 @@ export default function Orders() {
                                   )}
                                   {order.shippingOrderId && (
                                     <div className="text-xs text-gray-500 mt-1">Tracking added</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <div className="flex items-center gap-1">
-                                  {order.retailer?.businessName && (
-                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">Business</span>
                                   )}
                                 </div>
                               </td>
