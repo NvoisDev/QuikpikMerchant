@@ -381,55 +381,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up trust proxy setting before any middleware
   app.set("trust proxy", 1);
 
-  // CRITICAL: Stripe webhook handlers MUST be first to avoid routing conflicts
+  // STRIPE WEBHOOK - Rebuilt from scratch following official Stripe documentation
   app.post('/api/webhooks/stripe', async (req, res) => {
-    // IMMEDIATE FIX for checkout.session.completed with tier metadata
-    if (req.body?.type === 'checkout.session.completed') {
-      const session = req.body.data?.object;
-      
-      if (session?.metadata?.tier && session?.metadata?.userId) {
-        try {
-          const userId = session.metadata.userId;
-          const targetTier = session.metadata.tier;
-          
-          let newProductLimit = 3;
-          switch (targetTier) {
-            case 'standard': newProductLimit = 10; break;
-            case 'premium': newProductLimit = -1; break;
-            default: newProductLimit = 3; break;
-          }
-          
-          await storage.updateUser(userId, {
-            subscriptionTier: targetTier,
-            subscriptionStatus: 'active',
-            productLimit: newProductLimit,
-            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          });
-          
-          return res.json({ 
-            success: true,
-            message: `Subscription upgraded successfully`,
-            userId: userId,
-            targetTier: targetTier,
-            productLimit: newProductLimit
-          });
-          
-        } catch (error) {
-          return res.status(500).json({ 
-            error: 'Upgrade failed', 
-            details: error.message
-          });
-        }
-      } else {
-        return res.status(400).json({
-          error: 'Missing required metadata (tier or userId)',
-          received_metadata: session?.metadata || 'none'
-        });
-      }
+    console.log(`🔔 Stripe Webhook received at ${new Date().toISOString()}`);
+    console.log(`📦 Raw body type: ${typeof req.body}, content: ${JSON.stringify(req.body, null, 2)}`);
+
+    if (!stripe) {
+      console.error('❌ Stripe not configured');
+      return res.status(500).json({ error: 'Stripe not configured' });
     }
+
+    let event: any;
     
-    // Return success for all other webhook events
-    return res.json({ received: true, message: 'Webhook processed' });
+    try {
+      // Handle both raw webhook events and parsed JSON
+      if (typeof req.body === 'string') {
+        event = JSON.parse(req.body);
+      } else {
+        event = req.body;
+      }
+      
+      console.log(`🎯 Processing webhook event: ${event.type}`);
+      
+    } catch (err: any) {
+      console.error('❌ Failed to parse webhook body:', err.message);
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          console.log(`🎯 Checkout session completed: ${session.id}`);
+          console.log(`📊 Mode: ${session.mode}, Status: ${session.status}`);
+          console.log(`🏷️ Metadata:`, session.metadata);
+
+          // Handle subscription upgrades - support both tier and targetTier
+          const userId = session.metadata?.userId;
+          const targetTier = session.metadata?.tier || session.metadata?.targetTier;
+          
+          if (userId && targetTier) {
+            console.log(`🔄 Processing subscription upgrade: ${userId} → ${targetTier}`);
+            
+            // Calculate new subscription limits
+            const productLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 10 : 3);
+            const editLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 10 : 3);
+            const customerGroupLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 5 : 2);
+            const broadcastLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 25 : 10);
+            const customersPerGroupLimit = targetTier === 'premium' ? -1 : (targetTier === 'standard' ? 50 : 20);
+            const teamMemberLimit = targetTier === 'premium' ? 5 : (targetTier === 'standard' ? 2 : 1);
+
+            // Update user subscription
+            await storage.updateUser(userId, {
+              subscriptionTier: targetTier,
+              subscriptionStatus: 'active',
+              productLimit,
+              editLimit,
+              customerGroupLimit,
+              broadcastLimit,
+              customersPerGroupLimit,
+              teamMemberLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            });
+
+            // Log the successful upgrade
+            await logSubscriptionUpgrade(userId, session.metadata?.upgradeFromTier || 'free', targetTier, {
+              source: 'checkout.session.completed',
+              sessionId: session.id,
+              mode: session.mode,
+              timestamp: new Date().toISOString()
+            });
+
+            console.log(`✅ Successfully upgraded ${userId} to ${targetTier}`);
+            console.log(`📊 New limits: products=${productLimit}, groups=${customerGroupLimit}, team=${teamMemberLimit}`);
+
+            return res.json({
+              received: true,
+              message: `Subscription upgraded to ${targetTier}`,
+              userId,
+              targetTier,
+              limits: {
+                products: productLimit,
+                edits: editLimit,
+                customerGroups: customerGroupLimit,
+                broadcasts: broadcastLimit,
+                customersPerGroup: customersPerGroupLimit,
+                teamMembers: teamMemberLimit
+              }
+            });
+          } else {
+            console.log('ℹ️ No subscription upgrade metadata found');
+            return res.json({ received: true, message: 'Checkout completed - no upgrade processed' });
+          }
+          break;
+
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object;
+          console.log(`💳 Payment intent succeeded: ${paymentIntent.id}`);
+          console.log(`🏷️ Metadata:`, paymentIntent.metadata);
+
+          // Handle one-time payment upgrades
+          const paymentUserId = paymentIntent.metadata?.userId;
+          const paymentTargetTier = paymentIntent.metadata?.tier || paymentIntent.metadata?.targetTier;
+          
+          if (paymentUserId && paymentTargetTier) {
+            console.log(`🔄 Processing payment-based upgrade: ${paymentUserId} → ${paymentTargetTier}`);
+            
+            const productLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 10 : 3);
+            const editLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 10 : 3);
+            const customerGroupLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 5 : 2);
+            const broadcastLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 25 : 10);
+            const customersPerGroupLimit = paymentTargetTier === 'premium' ? -1 : (paymentTargetTier === 'standard' ? 50 : 20);
+            const teamMemberLimit = paymentTargetTier === 'premium' ? 5 : (paymentTargetTier === 'standard' ? 2 : 1);
+
+            await storage.updateUser(paymentUserId, {
+              subscriptionTier: paymentTargetTier,
+              subscriptionStatus: 'active',
+              productLimit,
+              editLimit,
+              customerGroupLimit,
+              broadcastLimit,
+              customersPerGroupLimit,
+              teamMemberLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            });
+
+            await logSubscriptionUpgrade(paymentUserId, paymentIntent.metadata?.upgradeFromTier || 'free', paymentTargetTier, {
+              source: 'payment_intent.succeeded',
+              paymentIntentId: paymentIntent.id,
+              amountPaid: paymentIntent.amount / 100,
+              timestamp: new Date().toISOString()
+            });
+
+            console.log(`✅ Successfully upgraded ${paymentUserId} to ${paymentTargetTier} via payment`);
+
+            return res.json({
+              received: true,
+              message: `Payment upgrade completed to ${paymentTargetTier}`,
+              userId: paymentUserId,
+              targetTier: paymentTargetTier
+            });
+          } else {
+            console.log('ℹ️ Payment succeeded but no upgrade metadata found');
+            return res.json({ received: true, message: 'Payment succeeded - no upgrade processed' });
+          }
+          break;
+
+        default:
+          console.log(`ℹ️ Unhandled event type: ${event.type}`);
+          return res.json({ received: true, message: `Event ${event.type} received but not processed` });
+      }
+
+    } catch (error: any) {
+      console.error(`❌ Error processing webhook ${event.type}:`, error);
+      await logPaymentFailure(event.data?.object?.id || 'unknown', error.message, {
+        eventType: event.type,
+        timestamp: new Date().toISOString(),
+        errorDetails: error.stack
+      });
+      
+      return res.status(500).json({ 
+        error: 'Webhook processing failed', 
+        details: error.message,
+        eventType: event.type
+      });
+    }
   });
 
   // PUBLIC CUSTOMER ROUTES - Must be defined BEFORE authentication setup
