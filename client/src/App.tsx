@@ -126,6 +126,8 @@ function AuthenticatedRoutes() {
             <Route path="/message-templates" component={Campaigns} />
             <Route path="/stock-alerts" component={StockAlerts} />
             <Route path="/team-management" component={TeamManagement} />
+            <Route path="/shipping-settings" component={ShippingSettings} />
+            <Route path="/shipping-tracking" component={ShippingTracking} />
             <Route path="/help" component={Help} />
             <Route path="/preview-store" component={CustomerPortal} />
           </>
