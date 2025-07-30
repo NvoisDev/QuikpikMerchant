@@ -71,7 +71,7 @@ import {
   type InsertPromotionAnalytics,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike, gte } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 
 export interface IStorage {
@@ -3670,7 +3670,7 @@ export class DatabaseStorage implements IStorage {
             and(
               eq(orders.customerId, customer.id),
               eq(orders.wholesalerId, wholesalerId),
-              sql`${orders.orderDate} > ${sixMonthsAgo}`
+              gte(orders.orderDate, sixMonthsAgo)
             )
           )
           .orderBy(desc(orders.orderDate));
