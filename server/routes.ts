@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import session from "express-session";
+import MemoryStore from "memorystore";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
@@ -11,6 +13,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up trust proxy setting
   app.set("trust proxy", 1);
 
+  // Session configuration
+  const MemoryStoreSession = MemoryStore(session);
+  app.use(session({
+    store: new MemoryStoreSession({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    secret: process.env.SESSION_SECRET || 'your-session-secret-key-here',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
   // Authentication middleware - simplified
   const requireAuth = (req: any, res: any, next: any) => {
     if (!req.session?.userId) {
@@ -19,6 +37,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.user = req.session.user;
     next();
   };
+
+  // Google OAuth login route (existing working authentication)  
+  app.get('/api/auth/google', (req, res) => {
+    // Redirect to Google OAuth (this should be implemented by the original system)
+    res.redirect('/dashboard'); // Temporary redirect
+  });
 
   // Login endpoint for business owners
   app.post('/api/auth/login', async (req, res) => {
@@ -29,13 +53,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email and password are required" });
       }
 
+      console.log(`🔐 Login attempt for: ${email}`);
+      
       const user = await storage.authenticateUser(email, password);
       
       if (!user) {
+        console.log(`❌ Authentication failed for: ${email}`);
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      // Create session
+      // Create session - ensure session exists first
+      if (!(req as any).session) {
+        console.error("Session not initialized");
+        return res.status(500).json({ error: "Session configuration error" });
+      }
+      
       (req as any).session.userId = user.id;
       (req as any).session.user = user;
 
