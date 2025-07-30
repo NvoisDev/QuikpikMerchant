@@ -571,7 +571,6 @@ export default function Orders() {
                           <tr>
                             <th className="text-left p-4 font-medium text-gray-900">
                               <div className="flex items-center gap-2">
-                                <Checkbox />
                                 Order
                                 <ArrowUpDown className="h-4 w-4 text-gray-400" />
                               </div>
@@ -594,20 +593,17 @@ export default function Orders() {
                               onClick={() => setSelectedOrder(order)}
                             >
                               <td className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <Checkbox />
-                                  <div>
-                                    <div className="font-medium">{order.orderNumber || `#${order.id}`}</div>
-                                    <div className="text-sm text-gray-500">
-                                      {new Date(order.createdAt).toLocaleDateString('en-GB', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                      })} at {new Date(order.createdAt).toLocaleTimeString('en-GB', {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </div>
+                                <div>
+                                  <div className="font-medium">{order.orderNumber || `#${order.id}`}</div>
+                                  <div className="text-sm text-gray-500">
+                                    {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })} at {new Date(order.createdAt).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
                                   </div>
                                 </div>
                               </td>
