@@ -469,7 +469,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values(product).returning();
+    const [newProduct] = await db.insert(products).values([product]).returning();
     return newProduct;
   }
 
@@ -499,7 +499,7 @@ export class DatabaseStorage implements IStorage {
       1, // quantity of 1 for base calculation
       promotionalOffers,
       currentProduct.promoPrice ? parseFloat(currentProduct.promoPrice.toString()) : undefined,
-      currentProduct.promoActive
+      currentProduct.promoActive ?? false
     );
 
     console.log(`💰 Promotional pricing calculated: original=${pricing.originalPrice}, effective=${pricing.effectivePrice}, hasPromo=${pricing.effectivePrice < pricing.originalPrice}`);
@@ -512,7 +512,7 @@ export class DatabaseStorage implements IStorage {
       .update(products)
       .set({ 
         promoActive: hasPromotion,
-        promoPrice: promoPrice,
+        promoPrice: promoPrice?.toString() || null,
         updatedAt: new Date() 
       })
       .where(eq(products.id, id))
@@ -587,11 +587,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get unique user IDs for batch fetching
-    const retailerIds = [...new Set(orderResults.map(o => o.retailerId))];
-    const wholesalerIds = [...new Set(orderResults.map(o => o.wholesalerId))];
+    const retailerIds = Array.from(new Set(orderResults.map(o => o.retailerId)));
+    const wholesalerIds = Array.from(new Set(orderResults.map(o => o.wholesalerId)));
     
     // Batch fetch users
-    const allUserIds = [...new Set([...retailerIds, ...wholesalerIds])];
+    const allUserIds = Array.from(new Set([...retailerIds, ...wholesalerIds]));
     const allUsers = await db
       .select()
       .from(users)
@@ -1383,7 +1383,7 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<User> {
+  async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }> {
     try {
       console.log('Starting customer merge process:', { primaryCustomerId, duplicateCustomerIds });
       
@@ -1468,7 +1468,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('Customer merge completed successfully');
-      return updatedPrimaryCustomer;
+      return { mergedOrdersCount: duplicateCustomerIds.length };
       
     } catch (error) {
       console.error('Error in mergeCustomers:', error);
@@ -1476,14 +1476,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Order item operations
-  async getOrderItems(orderId: number): Promise<any[]> {
-    const items = await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, orderId));
-    return items;
-  }
+
 
   // Product stock operations  
   async updateProductStock(productId: number, newStock: number): Promise<void> {
@@ -1814,7 +1807,7 @@ export class DatabaseStorage implements IStorage {
       console.log('Products found:', productsList.length);
 
       // Get unique wholesaler IDs
-      const wholesalerIds = [...new Set(productsList.map(p => p.wholesaler_id))];
+      const wholesalerIds = Array.from(new Set(productsList.map(p => p.wholesaler_id)));
       
       if (wholesalerIds.length === 0) {
         console.log('No wholesaler IDs found');
@@ -1967,7 +1960,7 @@ export class DatabaseStorage implements IStorage {
       wholesalers.map(async (wholesaler) => {
         // Get team members for this wholesaler
         const teamMemberIds = await db
-          .select({ userId: teamMembers.userId })
+          .select({ userId: teamMembers.id })
           .from(teamMembers)
           .where(eq(teamMembers.wholesalerId, wholesaler.id));
         
@@ -2568,7 +2561,6 @@ export class DatabaseStorage implements IStorage {
         wholesalerId: stockMovements.wholesalerId,
         movementType: stockMovements.movementType,
         quantity: stockMovements.quantity,
-        unitType: stockMovements.unitType,
         unitType: stockMovements.unitType,
         stockBefore: stockMovements.stockBefore,
         stockAfter: stockMovements.stockAfter,

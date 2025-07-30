@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./vite";
+import { validateDatabaseConnection } from "./health";
 
 // Set OAuth redirect URI for production deployment
 if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
@@ -42,7 +42,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    console.log("🚀 Starting Quikpik server...");
+    
+    // Validate database connection first
+    const dbConnected = await validateDatabaseConnection();
+    if (!dbConnected) {
+      console.error("❌ Server startup failed: Database connection could not be established");
+      process.exit(1);
+    }
+
+    // Lazy load heavy modules
+    const { registerRoutes } = await import("./routes");
+    const { setupVite, serveStatic } = await import("./vite");
+    
+    const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -70,6 +84,13 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
+    console.log(`✅ Server successfully started on port ${port}`);
+    console.log(`🌐 Health check available at: http://localhost:${port}/api/health`);
     log(`serving on port ${port}`);
   });
+  
+} catch (error) {
+  console.error("❌ Server startup failed:", error);
+  process.exit(1);
+}
 })();

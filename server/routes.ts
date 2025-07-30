@@ -11,6 +11,7 @@ import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessa
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
 import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator";
+import { healthCheck } from "./health";
 import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
@@ -375,6 +376,8 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment monitoring
+  app.get('/api/health', healthCheck);
   // Set up trust proxy setting before any middleware
   app.set("trust proxy", 1);
 
