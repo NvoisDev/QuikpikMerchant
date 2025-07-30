@@ -36,6 +36,27 @@
   - Performance tracking: Real-time analytics for campaign effectiveness and customer engagement
   - Revenue optimization: Dynamic pricing strategies that maximize conversion and customer lifetime value
 
+## SHIPPING TRACKING SYSTEM ARCHITECTURE CLARIFIED - COMPLETED ✅ (July 30, 2025)
+**Real Customer Orders Only: No Demo Data for Shipping Tracking**
+
+- **Shipping Tracking Purpose**: System displays only real customer orders with shipping/delivery requirements
+  - Each wholesaler sees only orders from their actual customers who selected delivery/shipping
+  - No demo or placeholder data - only authentic customer purchase orders appear
+  - Orders are unique to each wholesaler based on customer purchase relationships
+  - Tracking information populated when customers choose delivery fulfillment option
+
+- **Data Isolation Architecture**: Complete separation between different wholesale businesses
+  - Customer orders filtered by wholesaler relationship through secure SQL queries
+  - Each business sees only their own customer orders and shipping tracking
+  - Zero cross-contamination between different wholesale operations
+  - Real-time tracking updates when shipping information becomes available
+
+- **Order Integration**: Shipping tracking connected to actual order processing system
+  - Orders appear when customers complete purchases with delivery options
+  - Order numbers match format used throughout orders system (SF-xxx or Order #xxx)
+  - Customer information, delivery addresses, and order totals from real purchase data
+  - Tracking status updates reflect actual shipping carrier information
+
 ## CRITICAL CUSTOMER DATA ISOLATION BUG FIXED - COMPLETED ✅ (July 30, 2025)
 **Emergency Security Fix: Customer Directory Data Breach Prevention**
 
