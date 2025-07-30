@@ -22,10 +22,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: process.env.SESSION_SECRET || 'your-session-secret-key-here',
     resave: false,
     saveUninitialized: false,
+    name: 'sessionId',
     cookie: {
       secure: false, // Set to true in production with HTTPS
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      httpOnly: false, // Allow client-side access for debugging
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax'
     }
   }));
 
