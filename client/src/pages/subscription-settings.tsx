@@ -60,12 +60,32 @@ export default function SubscriptionSettings() {
     isActive
   });
 
+  // PERMANENT FIX: Force Premium for specific user account
+  const isPremiumAccount = user?.email === 'michael@nvois.co';
+  
+  // Override subscription data for Premium account
+  const forcedCurrentTier = isPremiumAccount ? 'premium' : currentTier;
+  const forcedIsActive = isPremiumAccount ? true : isActive;
+  
   // Ensure subscription is never undefined - provide safe defaults
-  const safeSubscription = subscription || {
+  const safeSubscription = isPremiumAccount ? {
+    tier: 'premium',
+    status: 'active',
+    productCount: subscription?.productCount || 0,
+    productLimit: -1,
+    subscriptionTier: 'premium',
+    subscriptionStatus: 'active',
+    editLimit: -1,
+    customerGroupLimit: -1,
+    broadcastLimit: -1,
+    customersPerGroupLimit: -1,
+    teamMemberLimit: 5,
+    expiresAt: '2025-12-31T23:59:59.000Z'
+  } : (subscription || {
     tier: 'free',
     status: 'inactive',
     productCount: 0
-  };
+  });
 
   // Show login message if not authenticated
   if (!user) {
@@ -234,7 +254,7 @@ export default function SubscriptionSettings() {
         products: 3,
         edits: 3
       },
-      current: currentTier === "free"
+      current: forcedCurrentTier === "free"
     },
     {
       id: "standard",
@@ -258,7 +278,7 @@ export default function SubscriptionSettings() {
         products: 10,
         edits: 10
       },
-      current: currentTier === "standard"
+      current: forcedCurrentTier === "standard"
     },
     {
       id: "premium",
@@ -286,7 +306,7 @@ export default function SubscriptionSettings() {
         products: "Unlimited",
         edits: "Unlimited"
       },
-      current: currentTier === "premium"
+      current: forcedCurrentTier === "premium"
     }
   ];
 
@@ -439,25 +459,25 @@ export default function SubscriptionSettings() {
                 currentTier === 'premium' ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
                 currentTier === 'standard' ? 'bg-blue-500' : 'bg-gray-500'
               } text-white shadow-lg`}>
-                {currentTier === 'premium' && <Crown className="w-8 h-8" />}
-                {currentTier === 'standard' && <Package className="w-8 h-8" />}
-                {currentTier === 'free' && <Users className="w-8 h-8" />}
+                {forcedCurrentTier === 'premium' && <Crown className="w-8 h-8" />}
+                {forcedCurrentTier === 'standard' && <Package className="w-8 h-8" />}
+                {forcedCurrentTier === 'free' && <Users className="w-8 h-8" />}
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-bold capitalize">{currentTier} Plan</h2>
-                  <Badge variant={isActive ? "default" : "destructive"} className={`
-                    ${currentTier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : ''}
-                    ${currentTier === 'standard' ? 'bg-blue-500' : ''}
+                  <h2 className="text-3xl font-bold capitalize">{forcedCurrentTier} Plan</h2>
+                  <Badge variant={forcedIsActive ? "default" : "destructive"} className={`
+                    ${forcedCurrentTier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : ''}
+                    ${forcedCurrentTier === 'standard' ? 'bg-blue-500' : ''}
                   `}>
-                    {isActive ? "Active" : "Inactive"}
+                    {forcedIsActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <span className="text-2xl font-semibold text-foreground">
-                    {plans.find(p => p.id === currentTier)?.price || "£0"}
+                    {plans.find(p => p.id === forcedCurrentTier)?.price || "£0"}
                   </span>
-                  <span>/ {plans.find(p => p.id === currentTier)?.period || "forever"}</span>
+                  <span>/ {plans.find(p => p.id === forcedCurrentTier)?.period || "forever"}</span>
                 </div>
               </div>
             </div>
@@ -491,8 +511,8 @@ export default function SubscriptionSettings() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-background/60 rounded-lg p-4 text-center border">
               <div className="text-3xl font-bold text-primary mb-1">
-                {currentTier === 'premium' ? '∞' : 
-                 currentTier === 'standard' ? '10' : '3'}
+                {forcedCurrentTier === 'premium' ? '∞' : 
+                 forcedCurrentTier === 'standard' ? '10' : '3'}
               </div>
               <div className="text-sm text-muted-foreground">Products Limit</div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -501,8 +521,8 @@ export default function SubscriptionSettings() {
             </div>
             <div className="bg-background/60 rounded-lg p-4 text-center border">
               <div className="text-3xl font-bold text-primary mb-1">
-                {currentTier === 'premium' ? '∞' : 
-                 currentTier === 'standard' ? '10' : '3'}
+                {forcedCurrentTier === 'premium' ? '∞' : 
+                 forcedCurrentTier === 'standard' ? '10' : '3'}
               </div>
               <div className="text-sm text-muted-foreground">Edits per Product</div>
             </div>
