@@ -8763,31 +8763,74 @@ https://quikpik.app`;
         
       case 'checkout.session.completed':
         const session = event.data.object;
-        console.log(`🎣 Checkout session completed:`, {
-          mode: session.mode,
-          userId: session.metadata?.userId,
-          planId: session.metadata?.planId,
-          subscriptionId: session.subscription
-        });
+        console.log(`🎣 [${timestamp}] ===== CHECKOUT SESSION COMPLETED WEBHOOK RECEIVED =====`);
+        console.log(`🎣 [${timestamp}] Session mode: ${session.mode}`);
+        console.log(`🎣 [${timestamp}] Payment status: ${session.payment_status}`);
+        console.log(`🎣 [${timestamp}] Session metadata:`, session.metadata);
+        console.log(`🎣 [${timestamp}] Subscription ID: ${session.subscription}`);
+        console.log(`🎣 [${timestamp}] About to check mode conditions...`);
         
-        if (session.mode === 'subscription') {
+        if (session.mode === 'payment') {
+          // Handle one-time subscription upgrade payments
           const userId = session.metadata?.userId;
-          const planId = session.metadata?.planId;
+          const targetTier = session.metadata?.targetTier;
+          const upgradeFromTier = session.metadata?.upgradeFromTier;
           
-          console.log(`🎣 [${timestamp}] Processing subscription for user: ${userId}, plan: ${planId}`);
-          console.log(`🎣 [${timestamp}] Full session metadata:`, session.metadata);
-          console.log(`🎣 [${timestamp}] Session details:`, {
-            sessionId: session.id,
-            customerId: session.customer,
-            subscriptionId: session.subscription,
-            paymentStatus: session.payment_status,
-            mode: session.mode
-          });
+          console.log(`🔼 [${timestamp}] ===== SUBSCRIPTION UPGRADE DETECTED =====`);
+          console.log(`🔼 [${timestamp}] Processing subscription upgrade for user: ${userId}, from ${upgradeFromTier} to ${targetTier}`);
+          console.log(`🔼 [${timestamp}] Full session metadata:`, session.metadata);
+          console.log(`🔼 [${timestamp}] Session mode: ${session.mode}, Payment status: ${session.payment_status}`);
           
-          if (!userId || !planId) {
-            console.error(`❌ [${timestamp}] Missing metadata in checkout session:`, session.metadata);
+          if (!userId || !targetTier) {
+            console.error(`❌ [${timestamp}] Missing upgrade metadata in checkout session:`, session.metadata);
             return res.status(400).send('Missing user or plan metadata');
           }
+          
+          // Get new product limit for the upgraded plan
+          let newProductLimit = 3; // default for free
+          switch (targetTier) {
+            case 'standard':
+              newProductLimit = 10;
+              break;
+            case 'premium':
+              newProductLimit = -1; // unlimited
+              break;
+          }
+
+          try {
+            // Update user subscription
+            const updatedUser = await storage.updateUser(userId, {
+              subscriptionTier: targetTier,
+              subscriptionStatus: 'active',
+              productLimit: newProductLimit,
+              subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+            });
+            
+            console.log(`✅ Successfully upgraded user ${userId} to ${targetTier} via checkout.session.completed:`, {
+              tier: targetTier,
+              status: 'active',
+              productLimit: newProductLimit,
+              sessionId: session.id
+            });
+
+            // Log the successful upgrade
+            await logSubscriptionUpgrade(userId, upgradeFromTier || 'free', targetTier, session.amount_total ? session.amount_total / 100 : 0);
+
+            return res.json({ 
+              received: true, 
+              message: `Subscription upgraded to ${targetTier} via checkout session`,
+              userId: userId,
+              newTier: targetTier,
+              productLimit: newProductLimit
+            });
+            
+          } catch (error) {
+            console.error('❌ Error processing subscription upgrade via checkout session:', error);
+            return res.status(500).json({ error: 'Failed to process subscription upgrade' });
+          }
+        } else if (session.mode === 'subscription' && session.metadata?.userId && session.metadata?.planId) {
+          const userId = session.metadata.userId;
+          const planId = session.metadata.planId;
           
           // Get new product limit for the upgraded plan
           let newProductLimit = 3; // default for free
