@@ -15,7 +15,12 @@
   - Database updates applied immediately upon successful payment with correct product limits
   - Enhanced logging for debugging subscription upgrade flow
 
-- **Production Status**: ✅ DEPLOYMENT READY - Subscription upgrades now complete successfully after Stripe payment, users immediately upgraded to new tier with proper limits
+- **Webhook Configuration Required**: For automatic upgrades, Stripe webhook endpoint must be configured
+  - **Webhook URL**: https://workspace.hello3253.repl.co/api/webhooks/stripe
+  - **Required Events**: payment_intent.succeeded, checkout.session.completed
+  - **Manual Upgrades**: Applied as temporary solution until webhook endpoint is configured in Stripe dashboard
+
+- **Production Status**: ✅ DEPLOYMENT READY - Webhook processing code complete, awaiting Stripe webhook configuration for automatic upgrades
 
 ## CRITICAL DATA ISOLATION FIX & SERVER STABILITY - COMPLETED ✅ (July 30, 2025)
 **Complete Data Security Enhancement & Duplicate Endpoint Cleanup**
