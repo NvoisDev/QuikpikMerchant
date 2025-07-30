@@ -34,13 +34,14 @@ import {
   logProductUnlock,
   logLimitReached 
 } from "./subscriptionLogger";
+import { registerWebhookRoutes } from "./webhook-handler";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-06-30.basil",
 }) : null;
 
 // Subscription price IDs for monthly plans in GBP
@@ -381,6 +382,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up trust proxy setting before any middleware
   app.set("trust proxy", 1);
 
+  // REGISTER DEDICATED WEBHOOK HANDLER FIRST
+  registerWebhookRoutes(app);
+
   // STRIPE WEBHOOKS - MUST BE FIRST TO AVOID VITE CATCH-ALL INTERFERENCE
   // TEST ENDPOINT TO VERIFY LOGGING
   app.post('/api/test-webhook', async (req, res) => {
@@ -454,6 +458,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
+
+  // WORKING STRIPE WEBHOOK - MOVED TO WORKING SECTION
+  app.post('/api/stripe-webhook', async (req, res) => {
+    console.log(`🚀 STRIPE WEBHOOK EXECUTING at ${new Date().toISOString()}`);
+    console.log(`📦 Event data:`, JSON.stringify(req.body, null, 2));
+    
+    try {
+      const event = req.body;
+      
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data?.object;
+        console.log(`💳 Checkout completed: ${session?.id}`);
+        console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
+        
+        const userId = session?.metadata?.userId;
+        const tier = session?.metadata?.tier || session?.metadata?.targetTier;
+        
+        if (userId && tier) {
+          console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
+          
+          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+          
+          await storage.updateUser(userId, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
+            productLimit: productLimit,
+            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          });
+          
+          console.log(`✅ Upgraded ${userId} to ${tier} successfully`);
+          
+          return res.json({
+            received: true,
+            message: `Subscription upgraded to ${tier}`,
+            userId: userId,
+            tier: tier,
+            productLimit: productLimit
+          });
+        } else {
+          console.log(`❌ Missing metadata: userId=${userId}, tier=${tier}`);
+          return res.status(400).json({ 
+            error: 'Missing user or plan metadata',
+            receivedMetadata: session?.metadata 
+          });
+        }
+      }
+      
+      return res.json({ received: true });
+      
+    } catch (error) {
+      console.error('❌ Webhook error:', error);
+      return res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
   // Customer authentication endpoints
   app.post('/api/customer-auth/verify', async (req, res) => {
     try {
@@ -1611,7 +1670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
 
         // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
-        const shippingInfoJson = metadata.shippingInfo;
+        const shippingInfoJson = paymentIntent.metadata.shippingInfo;
         const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
         console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
