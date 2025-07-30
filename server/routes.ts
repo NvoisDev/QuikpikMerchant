@@ -8232,6 +8232,16 @@ https://quikpik.app`;
         return res.status(500).send('Webhook secret not configured');
       }
 
+      if (!stripe) {
+        console.error('❌ Stripe not initialized');
+        return res.status(500).send('Stripe not initialized');
+      }
+
+      if (!sig) {
+        console.error('❌ Missing stripe-signature header');
+        return res.status(400).send('Missing stripe-signature header');
+      }
+
       event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err: any) {
       console.error(`❌ Webhook signature verification failed:`, err.message);
