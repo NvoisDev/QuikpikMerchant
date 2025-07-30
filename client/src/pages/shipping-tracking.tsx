@@ -32,6 +32,7 @@ interface TrackingEvent {
 
 interface TrackedOrder {
   id: number;
+  orderNumber?: string;
   customerName: string;
   customerEmail: string;
   trackingNumber?: string;
@@ -65,6 +66,7 @@ export default function ShippingTracking() {
   const filteredOrders = trackedOrders.filter((order: TrackedOrder) =>
     order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.id.toString().includes(searchTerm)
   );
 
@@ -184,7 +186,7 @@ export default function ShippingTracking() {
                         onClick={() => setSelectedOrder(order)}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="font-medium">Order #{order.id}</div>
+                          <div className="font-medium">{order.orderNumber || `Order #${order.id}`}</div>
                           <Badge 
                             variant="secondary" 
                             className={`${SHIPPING_STATUS_COLORS[order.shippingStatus as keyof typeof SHIPPING_STATUS_COLORS] || 'text-gray-600 bg-gray-50'}`}
@@ -228,7 +230,7 @@ export default function ShippingTracking() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    Order #{selectedOrder.id} Tracking
+                    {selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Tracking
                   </CardTitle>
                   <div className="flex gap-2">
                     {selectedOrder.trackingNumber && (
