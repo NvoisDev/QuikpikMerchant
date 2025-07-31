@@ -30,7 +30,7 @@ export interface OrderEmailData {
 }
 
 export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): { subject: string; html: string; text: string } {
-  const subject = `New Order #${data.orderNumber} - ${data.customerName}`;
+  const subject = `New Order ${data.orderNumber} - ${data.customerName}`;
 
   const html = `
 <!DOCTYPE html>
@@ -68,7 +68,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
 
         <div class="order-summary">
             <h2 style="margin-top: 0; color: #059669;">📦 Order Summary</h2>
-            <p><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p><strong>Wholesale Reference:</strong> <span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${data.orderNumber}</span></p>
             <p><strong>Order Date:</strong> ${new Date(data.orderDate).toLocaleString('en-GB', { 
               weekday: 'long', 
               year: 'numeric', 
@@ -136,7 +136,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <ul style="margin: 0; padding-left: 20px;">
                 <li>Review the order details in your Quikpik dashboard</li>
                 <li>Prepare the items for ${data.fulfillmentType === 'pickup' ? 'customer pickup' : 'delivery'}</li>
-                <li>Contact the customer if you have any questions</li>
+                <li><strong>When contacting the customer, always quote reference: ${data.orderNumber}</strong></li>
                 <li>Mark the order as fulfilled when ready</li>
             </ul>
         </div>

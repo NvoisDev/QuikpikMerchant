@@ -1683,9 +1683,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           servicePrice: shippingInfo.service?.price
         });
 
+        // Get wholesaler info for reference generation
+        const wholesaler = await storage.getUser(wholesalerId);
+        
+        // Generate wholesale reference number for both parties to use
+        const wholesaleRef = `${wholesaler?.businessName?.substring(0, 2).toUpperCase() || 'WS'}-${Date.now().toString().slice(-6)}`;
+        
+        console.log(`🏢 Generated wholesale reference: ${wholesaleRef} for ${wholesaler?.businessName || 'Unknown Business'}`);;
+        
         // Create order with customer details AND SHIPPING DATA
         const orderData = {
-          orderNumber: `ORD-${Date.now()}`,
+          orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
           wholesalerId,
           retailerId: customer.id,
           customerName, // Store customer name
@@ -1723,10 +1731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const order = await storage.createOrder(orderData, orderItems);
         
-        console.log(`✅ Order #${order.id} created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
+        console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
         // Send customer confirmation email and Stripe invoice
-        const wholesaler = await storage.getUser(wholesalerId);
         if (wholesaler && customerEmail) {
           try {
             // Enrich items with product details for email
@@ -1759,10 +1766,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Send WhatsApp notification to wholesaler
+        // Send WhatsApp notification to wholesaler with wholesale reference
         if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
           const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
-          const message = `🎉 New Order Received!\n\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nPlease prepare the order for delivery.`;
+          const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
           
           try {
             const { whatsappService } = await import('./whatsapp');
@@ -6813,6 +6820,7 @@ Please contact the customer to confirm this order.
           <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
             <h3>Order Details</h3>
             <p><strong>Order ID:</strong> #${order.id}</p>
+            <p><strong>Wholesale Reference:</strong> ${order.orderNumber || `WS-${order.id}`}</p>
             <p><strong>From:</strong> ${wholesaler.businessName || 'Wholesale Store'}</p>
             <p><strong>Fulfillment Type:</strong> ${order.fulfillmentType === 'delivery' ? 'Delivery to your address' : 'Collection from store'}</p>
             ${order.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> ${deliveryAddress}</p>` : ''}
@@ -6856,6 +6864,7 @@ Please contact the customer to confirm this order.
           <div style="background: #e5f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h4>Payment Status: PAID ✅</h4>
             <p>Your order has been confirmed and payment processed successfully. The wholesaler will prepare your order and contact you with delivery details.</p>
+            <p><strong>Important:</strong> When contacting the store about this order, please quote your <strong>Wholesale Reference: ${order.orderNumber || `WS-${order.id}`}</strong> for quick identification.</p>
           </div>
 
           <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
@@ -6881,7 +6890,7 @@ Please contact the customer to confirm this order.
         const msg = {
           to: customer.email,
           from: 'hello@quikpik.co', // Use verified sender
-          subject: `Order Confirmation #${order.id} - ${wholesaler.businessName || 'Wholesale Store'}`,
+          subject: `Order Confirmation ${order.orderNumber || `#${order.id}`} - ${wholesaler.businessName || 'Wholesale Store'}`,
           html: emailHtml,
           // Add tracking and delivery settings
           tracking_settings: {
