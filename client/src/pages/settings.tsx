@@ -808,9 +808,14 @@ function IntegrationsSection() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Stripe Connect integration - temporarily disabled to fix infinite loop
-  const stripeStatus = { paymentsEnabled: false, hasAccount: false };
-  const stripeLoading = false;
+  // Stripe Connect integration
+  const { data: stripeStatus = {}, isLoading: stripeLoading } = useQuery({
+    queryKey: ["/api/stripe/connect-status"],
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds (shorter for setup detection)
+  });
 
   const startOnboardingMutation = useMutation({
     mutationFn: async () => {
