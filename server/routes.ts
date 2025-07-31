@@ -3261,8 +3261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${req.protocol}://${req.get('host')}/settings?stripe_onboarding=refresh`,
-        return_url: `${req.protocol}://${req.get('host')}/business-performance/financials?stripe_onboarding=complete`,
+        refresh_url: `${req.protocol}://${req.get('host')}/settings?tab=integrations&stripe_onboarding=refresh`,
+        return_url: `${req.protocol}://${req.get('host')}/settings?tab=integrations&stripe_onboarding=complete`,
         type: 'account_onboarding',
       });
 

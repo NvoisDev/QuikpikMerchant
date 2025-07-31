@@ -11,7 +11,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle, HelpCircle, ExternalLink } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle, HelpCircle, ExternalLink, Puzzle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TaglineGenerator } from "@/components/TaglineGenerator";
@@ -372,6 +372,17 @@ function Settings() {
                 </div>
                 <div 
                   className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                    activeTab === "integrations" 
+                      ? "bg-blue-50 text-blue-700" 
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setActiveTab("integrations")}
+                >
+                  <Puzzle className="h-5 w-5 mr-3" />
+                  <span>Integrations</span>
+                </div>
+                <div 
+                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
                     activeTab === "whatsapp" 
                       ? "bg-blue-50 text-blue-700" 
                       : "text-gray-600 hover:bg-gray-50"
@@ -396,6 +407,7 @@ function Settings() {
                 {activeTab === "business" && "Business Settings"}
                 {activeTab === "billing" && "Billing & Subscription"}
                 {activeTab === "notifications" && "Notification Settings"}
+                {activeTab === "integrations" && "Integrations"}
                 {activeTab === "whatsapp" && "WhatsApp Integration"}
               </CardTitle>
             </CardHeader>
@@ -807,6 +819,10 @@ function Settings() {
                 </div>
               )}
 
+              {activeTab === "integrations" && (
+                <IntegrationsSection />
+              )}
+
               {activeTab === "whatsapp" && (
                 <WhatsAppIntegrationSection />
               )}
@@ -814,6 +830,159 @@ function Settings() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function IntegrationsSection() {
+  const { user } = useAuth();
+  const { data: stripeStatus = {} } = useQuery({
+    queryKey: ["/api/stripe/connect-status"],
+  });
+  const { data: whatsappStatus = {} } = useQuery({
+    queryKey: ["/api/whatsapp/status"],
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium mb-4">Integrations</h3>
+        <p className="text-gray-600">Connect your business tools to streamline operations</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Payment Processing Tile */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/settings?tab=billing'}>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Payment Processing</h4>
+                    <p className="text-sm text-gray-600">Stripe Connect</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {(stripeStatus as any)?.paymentsEnabled ? (
+                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                      Connected
+                    </div>
+                  ) : (stripeStatus as any)?.hasAccount ? (
+                    <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                      Setup Required
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                      Not Connected
+                    </div>
+                  )}
+                  <ExternalLink className="h-4 w-4 text-gray-400 ml-2" />
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                {(stripeStatus as any)?.paymentsEnabled ? (
+                  "Accept payments and receive funds directly to your bank account"
+                ) : (stripeStatus as any)?.hasAccount ? (
+                  "Complete your account setup to start accepting payments"
+                ) : (
+                  "Set up payment processing to receive customer payments"
+                )}
+              </div>
+              
+              <div className="flex items-center text-xs text-gray-500">
+                <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                  You keep 96.7% • Platform fee 3.3%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Messaging Tile */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/settings?tab=whatsapp'}>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-green-100 p-2 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">WhatsApp Messaging</h4>
+                    <p className="text-sm text-gray-600">Business Communication</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {(whatsappStatus as any)?.whatsappProvider && (whatsappStatus as any)?.serviceProvider ? (
+                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                      Connected
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                      Not Connected
+                    </div>
+                  )}
+                  <ExternalLink className="h-4 w-4 text-gray-400 ml-2" />
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                {(whatsappStatus as any)?.serviceProvider ? (
+                  `Send broadcasts and updates via ${(whatsappStatus as any).serviceProvider}`
+                ) : (
+                  "Connect WhatsApp to send product updates and marketing campaigns"
+                )}
+              </div>
+              
+              <div className="flex items-center text-xs text-gray-500">
+                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                  98% open rate • Direct customer reach
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Setup Actions */}
+      {user?.role === 'wholesaler' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Puzzle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-blue-900 mb-1">Complete Your Setup</h4>
+              <p className="text-sm text-blue-800 mb-3">
+                Connect both payment processing and WhatsApp messaging to unlock the full potential of your wholesale business.
+              </p>
+              <div className="flex gap-2">
+                {!(stripeStatus as any)?.paymentsEnabled && (
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => window.location.href = '/settings?tab=billing'}
+                  >
+                    Setup Payments
+                  </Button>
+                )}
+                {!(whatsappStatus as any)?.serviceProvider && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={() => window.location.href = '/settings?tab=whatsapp'}
+                  >
+                    Setup WhatsApp
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
