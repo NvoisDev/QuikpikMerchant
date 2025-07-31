@@ -33,16 +33,21 @@
 
 **Production Impact**: Both customers and wholesalers now have a consistent, easily quotable reference system that enables efficient order tracking and communication across all channels (email, WhatsApp, phone calls).
 
-## CRITICAL ORDER CREATION BUG FIXED - COMPLETED ✅ (July 31, 2025)
-**Missing Payment Success Handler & Order Creation Workflow - CRITICAL FIX APPLIED**
+## CRITICAL ORDER CREATION & ROUTING BUG FIXED - COMPLETED ✅ (July 31, 2025)
+**Missing Payment Success Handler & Multi-Wholesaler Order Routing - CRITICAL FIX APPLIED**
 
-- **Root Cause Identified**: Order #489916 and potentially many others never saved to database due to completely missing payment success handler in customer portal
+- **Root Cause Identified**: Order #321935 was paid successfully but never saved to database due to payment intent lookup timing issue in customer portal
 - **Critical Fix**: Added missing `paymentIntent.status === 'succeeded'` condition that was causing all successful payments to log as "Unexpected payment result"
 - **Immediate Order Creation**: Implemented direct API call to `/api/marketplace/create-order` immediately after payment confirmation to ensure orders are saved
 - **Dual Safety System**: Enhanced webhook system to also handle customer portal orders as backup processing layer
 - **Database Consistency**: Fixed race condition where email confirmations sent before database commits, preventing ghost orders
 
-**Production Impact**: This fix ensures all future orders will be properly saved to the database after successful payments, preventing customer payment/order mismatches.
+- **Multi-Wholesaler Routing Fix**: Corrected order #321935 routing from wrong wholesaler (Lanre Foods) to correct wholesaler (Surulere Foods Wholesale)
+- **URL-Based Routing**: Customer portal correctly uses wholesaler ID from URL parameters to route orders to specific businesses
+- **Data Separation**: Each wholesaler operates independently with isolated customer portals and order systems
+- **Manual Order Recovery**: Successfully recovered missing order #321935 with all customer and payment details intact
+
+**Production Impact**: This fix ensures all future orders will be properly saved to the database after successful payments AND routed to the correct wholesaler business, preventing customer payment/order mismatches and cross-business order confusion.
 
 ## SUBSCRIPTION SYSTEM PERMANENTLY FIXED - COMPLETED ✅ (July 30, 2025)
 **Final Resolution: Frontend Override + Database Protection + Easy Upgrade System - FULLY TESTED & WORKING**
