@@ -4527,8 +4527,15 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Check if WhatsApp is properly configured
+      const isConfigured = user.whatsappProvider === 'direct' 
+        ? !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
+        : !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber);
+
       res.json({
         enabled: user.whatsappEnabled || false,
+        isConfigured, // Frontend expects this field
+        provider: user.whatsappProvider || 'twilio',
         whatsappProvider: user.whatsappProvider || 'twilio',
         // Twilio fields
         twilioAccountSid: user.twilioAccountSid || null,
@@ -4542,9 +4549,7 @@ Write a professional, sales-focused description that highlights the key benefits
         whatsappBusinessName: user.whatsappBusinessName || null,
         // Legacy fields
         serviceProvider: user.whatsappProvider === 'direct' ? "Direct WhatsApp Business API" : "Twilio WhatsApp",
-        configured: user.whatsappProvider === 'direct' 
-          ? !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
-          : !!(user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber)
+        configured: isConfigured // Keep for backward compatibility
       });
     } catch (error: any) {
       console.error("Error fetching WhatsApp status:", error);
