@@ -548,20 +548,47 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           title: errorTitle,
           message: errorMessage
         });
+
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded - ensure order creation with delivery data
+        // Payment succeeded - immediately create order to ensure it saves to database
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
-        console.log('✅ Triggering webhook manually to ensure delivery order creation');
+        console.log('💾 Creating order immediately to ensure it saves to database');
         
-        // DISABLED: Manual webhook trigger was causing incomplete data processing
-        // Relying on Stripe's automatic webhook system which has complete payment intent data
-        console.log('✅ Payment successful - order will be created by Stripe webhook automatically');
-        console.log('🚚 Delivery data preserved in payment intent metadata for webhook processing');
+        try {
+          // Call the order creation endpoint directly to ensure order is saved
+          const response = await fetch("/api/marketplace/create-order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id
+            })
+          });
+          
+          if (response.ok) {
+            const orderData = await response.json();
+            console.log('✅ Order created successfully:', orderData);
+            
+            toast({
+              title: "Payment Successful!",
+              description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
+            });
+          } else {
+            console.error('❌ Order creation failed:', response.status);
+            toast({
+              title: "Payment Successful!",
+              description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+            });
+          }
+        } catch (orderError) {
+          console.error('❌ Error creating order:', orderError);
+          toast({
+            title: "Payment Successful!",
+            description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+          });
+        }
         
-        toast({
-          title: "Payment Successful!",
-          description: "Your order has been placed successfully. You'll receive a confirmation email shortly.",
-        });
         onSuccess();
       } else {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });

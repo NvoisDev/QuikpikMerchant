@@ -64,7 +64,9 @@ export function registerWebhookRoutes(app: Express) {
         
         const userId = paymentIntent?.metadata?.userId;
         const tier = paymentIntent?.metadata?.tier || paymentIntent?.metadata?.targetTier;
+        const orderType = paymentIntent?.metadata?.orderType;
         
+        // Handle subscription upgrades
         if (userId && tier) {
           console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
           
@@ -86,6 +88,50 @@ export function registerWebhookRoutes(app: Express) {
             tier: tier,
             productLimit: productLimit
           });
+        }
+        
+        // Handle customer portal orders
+        if (orderType === 'customer_portal') {
+          console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
+          
+          try {
+            // Create order through the same endpoint used by frontend
+            const orderEndpoint = await import('./routes');
+            // Simulate the API call that frontend would make
+            const orderResponse = await fetch(`http://localhost:5000/api/marketplace/create-order`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                paymentIntentId: paymentIntent.id
+              })
+            });
+            
+            if (orderResponse.ok) {
+              const orderData = await orderResponse.json();
+              console.log(`✅ Webhook created order successfully: ${orderData.orderNumber || orderData.id}`);
+              
+              return res.json({
+                received: true,
+                message: `Customer order created successfully`,
+                orderId: orderData.id,
+                orderNumber: orderData.orderNumber
+              });
+            } else {
+              console.error(`❌ Webhook order creation failed:`, orderResponse.status);
+              return res.status(400).json({
+                error: 'Failed to create order from webhook',
+                paymentIntentId: paymentIntent.id
+              });
+            }
+          } catch (orderError) {
+            console.error(`❌ Webhook order processing error:`, orderError);
+            return res.status(500).json({
+              error: 'Order processing failed in webhook',
+              paymentIntentId: paymentIntent.id
+            });
+          }
         }
       }
       
