@@ -842,7 +842,7 @@ function WhatsAppIntegrationSection() {
   });
 
   // Fetch WhatsApp status
-  const { data: whatsappStatus, isLoading } = useQuery({
+  const { data: whatsappStatus = {}, isLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
   });
 
@@ -850,22 +850,22 @@ function WhatsAppIntegrationSection() {
   useEffect(() => {
     if (whatsappStatus) {
       // Set the current provider from backend data
-      setSelectedProvider(whatsappStatus.whatsappProvider || 'twilio');
+      setSelectedProvider((whatsappStatus as any).whatsappProvider || 'twilio');
       
       // Populate Twilio config
       setTwilioConfig({
-        accountSid: whatsappStatus.twilioAccountSid || "",
-        authToken: whatsappStatus.twilioAuthToken === "configured" ? "" : whatsappStatus.twilioAuthToken || "",
-        phoneNumber: whatsappStatus.twilioPhoneNumber || ""
+        accountSid: (whatsappStatus as any).twilioAccountSid || "",
+        authToken: (whatsappStatus as any).twilioAuthToken === "configured" ? "" : (whatsappStatus as any).twilioAuthToken || "",
+        phoneNumber: (whatsappStatus as any).twilioPhoneNumber || ""
       });
       
       // Populate Direct WhatsApp config
       setDirectConfig({
-        businessPhoneId: whatsappStatus.whatsappBusinessPhoneId || "",
-        accessToken: whatsappStatus.whatsappAccessToken === "configured" ? "" : whatsappStatus.whatsappAccessToken || "",
-        appId: whatsappStatus.whatsappAppId || "",
-        businessPhone: whatsappStatus.whatsappBusinessPhone || "",
-        businessName: whatsappStatus.whatsappBusinessName || ""
+        businessPhoneId: (whatsappStatus as any).whatsappBusinessPhoneId || "",
+        accessToken: (whatsappStatus as any).whatsappAccessToken === "configured" ? "" : (whatsappStatus as any).whatsappAccessToken || "",
+        appId: (whatsappStatus as any).whatsappAppId || "",
+        businessPhone: (whatsappStatus as any).whatsappBusinessPhone || "",
+        businessName: (whatsappStatus as any).whatsappBusinessName || ""
       });
     }
   }, [whatsappStatus]);
@@ -961,7 +961,7 @@ function WhatsAppIntegrationSection() {
       });
       return;
     }
-    saveConfigMutation.mutate(twilioConfig);
+    saveConfigMutation.mutate();
   };
 
   const handleVerifyTwilioConfig = () => {
@@ -973,7 +973,7 @@ function WhatsAppIntegrationSection() {
       });
       return;
     }
-    verifyConfigMutation.mutate(twilioConfig);
+    verifyConfigMutation.mutate();
   };
 
   const handleTest = () => {
@@ -992,9 +992,9 @@ function WhatsAppIntegrationSection() {
     return <div>Loading WhatsApp integration status...</div>;
   }
 
-  const isConfigured = whatsappStatus?.whatsappProvider === 'direct' 
-    ? (whatsappStatus?.whatsappBusinessPhoneId && whatsappStatus?.whatsappAccessToken && whatsappStatus?.whatsappAppId)
-    : (whatsappStatus?.twilioAccountSid && whatsappStatus?.twilioAuthToken && whatsappStatus?.twilioPhoneNumber);
+  const isConfigured = (whatsappStatus as any)?.whatsappProvider === 'direct' 
+    ? ((whatsappStatus as any)?.whatsappBusinessPhoneId && (whatsappStatus as any)?.whatsappAccessToken && (whatsappStatus as any)?.whatsappAppId)
+    : ((whatsappStatus as any)?.twilioAccountSid && (whatsappStatus as any)?.twilioAuthToken && (whatsappStatus as any)?.twilioPhoneNumber);
 
   return (
     <div className="space-y-6">
@@ -1119,12 +1119,12 @@ function WhatsAppIntegrationSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-800 font-medium">
-                  ✅ {whatsappStatus?.serviceProvider} is configured and ready to use!
+                  ✅ {(whatsappStatus as any)?.serviceProvider} is configured and ready to use!
                 </p>
                 <p className="text-green-700 text-sm mt-1">
-                  {whatsappStatus?.whatsappProvider === 'direct' 
-                    ? `Business Phone: ${whatsappStatus?.whatsappBusinessPhone}` 
-                    : `WhatsApp Phone: ${whatsappStatus?.twilioPhoneNumber}`}
+                  {(whatsappStatus as any)?.whatsappProvider === 'direct' 
+                    ? `Business Phone: ${(whatsappStatus as any)?.whatsappBusinessPhone}` 
+                    : `WhatsApp Phone: ${(whatsappStatus as any)?.twilioPhoneNumber}`}
                 </p>
                 <p className="text-green-700 text-sm">
                   You can now create campaigns and send messages to your customer groups.
@@ -1224,7 +1224,7 @@ function StripeConnectSection() {
   const { toast } = useToast();
 
   // Fetch Stripe Connect status
-  const { data: stripeStatus, isLoading } = useQuery({
+  const { data: stripeStatus = {}, isLoading } = useQuery({
     queryKey: ["/api/stripe/connect-status"],
   });
 
@@ -1276,7 +1276,7 @@ function StripeConnectSection() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!stripeStatus?.hasAccount ? (
+              {!(stripeStatus as any)?.hasAccount ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">Setup Payment Processing</h4>
@@ -1304,15 +1304,15 @@ function StripeConnectSection() {
                   <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div>
                       <h4 className="font-medium text-green-900">
-                        {stripeStatus.paymentsEnabled ? "✓ Payment Processing Active" : "⚠ Account Setup Required"}
+                        {(stripeStatus as any).paymentsEnabled ? "✓ Payment Processing Active" : "⚠ Account Setup Required"}
                       </h4>
                       <p className="text-green-800 text-sm">
-                        {stripeStatus.paymentsEnabled 
+                        {(stripeStatus as any).paymentsEnabled 
                           ? "Your account is ready to accept payments" 
                           : "Please complete your account setup to accept payments"}
                       </p>
                     </div>
-                    {!stripeStatus.paymentsEnabled && (
+                    {!(stripeStatus as any).paymentsEnabled && (
                       <Button 
                         onClick={() => startOnboardingMutation.mutate()}
                         disabled={startOnboardingMutation.isPending}
@@ -1327,13 +1327,13 @@ function StripeConnectSection() {
                     <div className="p-3 bg-gray-50 rounded-lg">
                       <div className="text-sm text-gray-600">Account Status</div>
                       <div className="font-medium">
-                        {stripeStatus.detailsSubmitted ? "✓ Verified" : "⚠ Pending"}
+                        {(stripeStatus as any).detailsSubmitted ? "✓ Verified" : "⚠ Pending"}
                       </div>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">
                       <div className="text-sm text-gray-600">Payment Processing</div>
                       <div className="font-medium">
-                        {stripeStatus.paymentsEnabled ? "✓ Enabled" : "⚠ Disabled"}
+                        {(stripeStatus as any).paymentsEnabled ? "✓ Enabled" : "⚠ Disabled"}
                       </div>
                     </div>
                   </div>
