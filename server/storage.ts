@@ -93,6 +93,7 @@ export interface IStorage {
   getOrder(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User }) | undefined>;
   getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
+  getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
@@ -895,6 +896,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return updatedOrder;
+  }
+
+  async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {
+    const [lastOrder] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.wholesalerId, wholesalerId))
+      .orderBy(desc(orders.id))
+      .limit(1);
+    
+    return lastOrder;
   }
 
   async getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {

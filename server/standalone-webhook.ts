@@ -79,6 +79,8 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       const userId = paymentIntent?.metadata?.userId;
       const tier = paymentIntent?.metadata?.tier || paymentIntent?.metadata?.targetTier;
       
+      const orderType = paymentIntent?.metadata?.orderType;
+      
       if (userId && tier) {
         console.log(`🔄 Processing payment upgrade: ${userId} → ${tier}`);
         
@@ -100,6 +102,39 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
           tier: tier,
           productLimit: productLimit
         });
+      }
+      
+      // Handle customer portal orders directly in webhook
+      if (orderType === 'customer_portal') {
+        console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
+        
+        try {
+          // Import order processing logic directly
+          const { processCustomerPortalOrder } = await import('./order-processor');
+          
+          console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
+          
+          // Process order directly without HTTP call
+          const orderResult = await processCustomerPortalOrder(paymentIntent);
+          
+          console.log(`✅ Webhook created order successfully: ${orderResult.orderNumber || orderResult.id}`);
+          
+          return res.json({
+            received: true,
+            message: `Customer order created successfully`,
+            orderId: orderResult.id,
+            orderNumber: orderResult.orderNumber
+          });
+          
+        } catch (orderError: any) {
+          console.error(`❌ Webhook order processing error:`, orderError);
+          console.error(`❌ Full error details:`, orderError.stack);
+          return res.status(500).json({
+            error: 'Order processing failed in webhook',
+            paymentIntentId: paymentIntent.id,
+            errorMessage: orderError.message
+          });
+        }
       }
     }
     

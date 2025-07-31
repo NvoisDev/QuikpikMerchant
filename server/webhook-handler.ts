@@ -90,48 +90,40 @@ export function registerWebhookRoutes(app: Express) {
           });
         }
         
-        // Handle customer portal orders
+        // Handle customer portal orders directly in webhook
+        console.log(`🔍 Checking orderType: "${orderType}" (type: ${typeof orderType})`);
         if (orderType === 'customer_portal') {
           console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
           
           try {
-            // Create order through the same endpoint used by frontend
-            const orderEndpoint = await import('./routes');
-            // Simulate the API call that frontend would make
-            const orderResponse = await fetch(`http://localhost:5000/api/marketplace/create-order`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                paymentIntentId: paymentIntent.id
-              })
+            // Import order processing logic directly
+            const { processCustomerPortalOrder, parseCustomerName } = await import('./order-processor');
+            
+            console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
+            
+            // Process order directly without HTTP call
+            const orderResult = await processCustomerPortalOrder(paymentIntent);
+            
+            console.log(`✅ Webhook created order successfully: ${orderResult.orderNumber || orderResult.id}`);
+            
+            return res.json({
+              received: true,
+              message: `Customer order created successfully`,
+              orderId: orderResult.id,
+              orderNumber: orderResult.orderNumber
             });
             
-            if (orderResponse.ok) {
-              const orderData = await orderResponse.json();
-              console.log(`✅ Webhook created order successfully: ${orderData.orderNumber || orderData.id}`);
-              
-              return res.json({
-                received: true,
-                message: `Customer order created successfully`,
-                orderId: orderData.id,
-                orderNumber: orderData.orderNumber
-              });
-            } else {
-              console.error(`❌ Webhook order creation failed:`, orderResponse.status);
-              return res.status(400).json({
-                error: 'Failed to create order from webhook',
-                paymentIntentId: paymentIntent.id
-              });
-            }
           } catch (orderError) {
             console.error(`❌ Webhook order processing error:`, orderError);
+            console.error(`❌ Full error details:`, orderError.stack);
             return res.status(500).json({
               error: 'Order processing failed in webhook',
-              paymentIntentId: paymentIntent.id
+              paymentIntentId: paymentIntent.id,
+              errorMessage: orderError.message
             });
           }
+        } else {
+          console.log(`⚠️ OrderType "${orderType}" does not match "customer_portal" - skipping order processing`);
         }
       }
       
