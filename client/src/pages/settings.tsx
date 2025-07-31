@@ -348,17 +348,7 @@ function Settings() {
                   <Building2 className="h-5 w-5 mr-3" />
                   <span>Business</span>
                 </div>
-                <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
-                    activeTab === "billing" 
-                      ? "bg-blue-50 text-blue-700" 
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setActiveTab("billing")}
-                >
-                  <CreditCard className="h-5 w-5 mr-3" />
-                  <span>Payments</span>
-                </div>
+
                 <div 
                   className={`flex items-center p-3 rounded-lg cursor-pointer ${
                     activeTab === "notifications" 
@@ -381,17 +371,7 @@ function Settings() {
                   <Puzzle className="h-5 w-5 mr-3" />
                   <span>Integrations</span>
                 </div>
-                <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
-                    activeTab === "whatsapp" 
-                      ? "bg-blue-50 text-blue-700" 
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setActiveTab("whatsapp")}
-                >
-                  <MessageSquare className="h-5 w-5 mr-3" />
-                  <span>WhatsApp Integration</span>
-                </div>
+
               </nav>
             </CardContent>
           </Card>
@@ -405,10 +385,8 @@ function Settings() {
                 <Settings2 className="h-6 w-6 mr-2" />
                 {activeTab === "account" && "Account Settings"}
                 {activeTab === "business" && "Business Settings"}
-                {activeTab === "billing" && "Billing & Subscription"}
                 {activeTab === "notifications" && "Notification Settings"}
                 {activeTab === "integrations" && "Integrations"}
-                {activeTab === "whatsapp" && "WhatsApp Integration"}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -803,10 +781,6 @@ function Settings() {
                 </Form>
               )}
 
-              {activeTab === "billing" && (
-                <StripeConnectSection />
-              )}
-
               {activeTab === "notifications" && (
                 <div className="space-y-6">
                   <div>
@@ -822,10 +796,6 @@ function Settings() {
               {activeTab === "integrations" && (
                 <IntegrationsSection />
               )}
-
-              {activeTab === "whatsapp" && (
-                <WhatsAppIntegrationSection />
-              )}
             </CardContent>
           </Card>
         </div>
@@ -836,12 +806,48 @@ function Settings() {
 
 function IntegrationsSection() {
   const { user } = useAuth();
-  const { data: stripeStatus = {} } = useQuery({
+  const { toast } = useToast();
+  
+  // Stripe Connect integration
+  const { data: stripeStatus = {}, isLoading: stripeLoading } = useQuery({
     queryKey: ["/api/stripe/connect-status"],
   });
-  const { data: whatsappStatus = {} } = useQuery({
+
+  const startOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/stripe/connect-onboarding");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      window.location.href = data.onboardingUrl;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Onboarding Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // WhatsApp integration
+  const { data: whatsappStatus = {}, isLoading: whatsappLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
   });
+
+  const [showWhatsAppGuide, setShowWhatsAppGuide] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct' | null>(null);
+
+  if (stripeLoading || whatsappLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -851,8 +857,8 @@ function IntegrationsSection() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Payment Processing Tile */}
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/settings?tab=billing'}>
+        {/* Payment Processing Integration */}
+        <Card>
           <CardContent className="p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -879,7 +885,6 @@ function IntegrationsSection() {
                       Not Connected
                     </div>
                   )}
-                  <ExternalLink className="h-4 w-4 text-gray-400 ml-2" />
                 </div>
               </div>
               
@@ -893,17 +898,54 @@ function IntegrationsSection() {
                 )}
               </div>
               
-              <div className="flex items-center text-xs text-gray-500">
+              <div className="flex items-center text-xs text-gray-500 mb-3">
                 <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
                   You keep 96.7% • Platform fee 3.3%
                 </span>
               </div>
+
+              {/* Payment Setup Actions */}
+              {user?.role === 'wholesaler' && (
+                <div className="space-y-3">
+                  {!(stripeStatus as any)?.hasAccount ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="text-sm text-blue-800 space-y-1">
+                          <p>• Secure payment processing</p>
+                          <p>• Automatic fund transfers to your bank</p>
+                          <p>• Quikpik handles all payment security</p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => startOnboardingMutation.mutate()}
+                        disabled={startOnboardingMutation.isPending}
+                        className="w-full"
+                      >
+                        {startOnboardingMutation.isPending ? "Setting up..." : "Set up Payment Processing"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {!(stripeStatus as any).paymentsEnabled && (
+                        <Button 
+                          onClick={() => startOnboardingMutation.mutate()}
+                          disabled={startOnboardingMutation.isPending}
+                          size="sm"
+                          className="w-full"
+                        >
+                          Complete Setup
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* WhatsApp Messaging Tile */}
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/settings?tab=whatsapp'}>
+        {/* WhatsApp Messaging Integration */}
+        <Card>
           <CardContent className="p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -917,7 +959,7 @@ function IntegrationsSection() {
                   </div>
                 </div>
                 <div className="flex items-center">
-                  {(whatsappStatus as any)?.whatsappProvider && (whatsappStatus as any)?.serviceProvider ? (
+                  {(whatsappStatus as any)?.isConfigured && (whatsappStatus as any)?.provider ? (
                     <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                       Connected
                     </div>
@@ -926,29 +968,59 @@ function IntegrationsSection() {
                       Not Connected
                     </div>
                   )}
-                  <ExternalLink className="h-4 w-4 text-gray-400 ml-2" />
                 </div>
               </div>
               
               <div className="text-sm text-gray-600">
-                {(whatsappStatus as any)?.serviceProvider ? (
-                  `Send broadcasts and updates via ${(whatsappStatus as any).serviceProvider}`
+                {(whatsappStatus as any)?.isConfigured ? (
+                  `Send broadcasts and updates via ${(whatsappStatus as any).provider || 'WhatsApp'}`
                 ) : (
                   "Connect WhatsApp to send product updates and marketing campaigns"
                 )}
               </div>
               
-              <div className="flex items-center text-xs text-gray-500">
+              <div className="flex items-center text-xs text-gray-500 mb-3">
                 <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
                   98% open rate • Direct customer reach
                 </span>
               </div>
+
+              {/* WhatsApp Setup Actions */}
+              {user?.role === 'wholesaler' && (
+                <div className="space-y-3">
+                  {!(whatsappStatus as any)?.isConfigured ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="text-sm text-green-800 space-y-1">
+                          <p>• Send product updates to customers</p>
+                          <p>• Broadcast marketing campaigns</p>
+                          <p>• High engagement rates</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowWhatsAppGuide(true)}
+                        className="w-full"
+                      >
+                        Setup WhatsApp Integration
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs text-green-700 bg-green-50 p-2 rounded">
+                        ✓ WhatsApp configured via {(whatsappStatus as any).provider}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Setup Actions */}
+      {/* Quick Setup Summary */}
       {user?.role === 'wholesaler' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -958,26 +1030,59 @@ function IntegrationsSection() {
               <p className="text-sm text-blue-800 mb-3">
                 Connect both payment processing and WhatsApp messaging to unlock the full potential of your wholesale business.
               </p>
-              <div className="flex gap-2">
-                {!(stripeStatus as any)?.paymentsEnabled && (
-                  <Button 
-                    size="sm" 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => window.location.href = '/settings?tab=billing'}
-                  >
-                    Setup Payments
-                  </Button>
-                )}
-                {!(whatsappStatus as any)?.serviceProvider && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                    onClick={() => window.location.href = '/settings?tab=whatsapp'}
-                  >
-                    Setup WhatsApp
-                  </Button>
-                )}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-xs">
+                  <span className="font-medium">Payment: </span>
+                  <span className={`${(stripeStatus as any)?.paymentsEnabled ? 'text-green-700' : 'text-gray-600'}`}>
+                    {(stripeStatus as any)?.paymentsEnabled ? '✓ Active' : '○ Pending'}
+                  </span>
+                </div>
+                <div className="text-xs">
+                  <span className="font-medium">WhatsApp: </span>
+                  <span className={`${(whatsappStatus as any)?.isConfigured ? 'text-green-700' : 'text-gray-600'}`}>
+                    {(whatsappStatus as any)?.isConfigured ? '✓ Active' : '○ Pending'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Setup Guide Modal */}
+      {showWhatsAppGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">WhatsApp Setup</h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setShowWhatsAppGuide(false);
+                  setSelectedProvider(null);
+                }}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-600">Choose your WhatsApp integration method:</p>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setShowWhatsAppGuide(false);
+                    window.location.href = '/settings?tab=whatsapp';
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Configure WhatsApp Integration
+                </Button>
+              </div>
+              <div className="text-xs text-gray-500">
+                This will take you to the full WhatsApp setup page where you can choose between Twilio and Direct API integration.
               </div>
             </div>
           </div>
