@@ -11,7 +11,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle, HelpCircle, ExternalLink, Puzzle } from "lucide-react";
+import { User, Settings2, Building2, CreditCard, Bell, MessageSquare, MapPin, Globe, AlertTriangle, HelpCircle, ExternalLink, Puzzle, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TaglineGenerator } from "@/components/TaglineGenerator";
@@ -830,13 +830,98 @@ function IntegrationsSection() {
     },
   });
 
-  // WhatsApp integration
+  // WhatsApp integration - full setup state
   const { data: whatsappStatus = {}, isLoading: whatsappLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
   });
 
-  const [showWhatsAppGuide, setShowWhatsAppGuide] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct' | null>(null);
+  const [showWhatsAppSetup, setShowWhatsAppSetup] = useState(false);
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'twilio' | 'direct'>('twilio');
+  const [isEditingConfig, setIsEditingConfig] = useState(false);
+  const [showProviderSelection, setShowProviderSelection] = useState(false);
+  
+  // WhatsApp configuration states
+  const [twilioConfig, setTwilioConfig] = useState({
+    accountSid: "",
+    authToken: "",
+    phoneNumber: "",
+  });
+  
+  const [directConfig, setDirectConfig] = useState({
+    businessPhoneId: "",
+    accessToken: "",
+    appId: "",
+    businessPhone: "",
+    businessName: "",
+  });
+
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+
+  // WhatsApp mutations
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: any) => {
+      const response = await apiRequest("POST", "/api/whatsapp/config", config);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configuration Saved",
+        description: "WhatsApp integration has been configured successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      setShowWhatsAppSetup(false);
+      setIsEditingConfig(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Configuration Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyConfigMutation = useMutation({
+    mutationFn: async ({ phoneNumber }: { phoneNumber: string }) => {
+      const response = await apiRequest("POST", "/api/whatsapp/test", { phoneNumber });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test Message Sent",
+        description: "Check your WhatsApp for the test message.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Test Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler functions
+  const handleSaveWhatsAppConfig = () => {
+    const config = selectedProvider === 'twilio' 
+      ? { provider: 'twilio', ...twilioConfig }
+      : { provider: 'direct', ...directConfig };
+    
+    saveConfigMutation.mutate(config);
+  };
+
+  const handleVerifyWhatsAppConfig = () => {
+    if (!testPhoneNumber) {
+      toast({
+        title: "Phone Number Required",
+        description: "Please enter a phone number to test with.",
+        variant: "destructive",
+      });
+      return;
+    }
+    verifyConfigMutation.mutate({ phoneNumber: testPhoneNumber });
+  };
 
   if (stripeLoading || whatsappLoading) {
     return (
@@ -856,169 +941,107 @@ function IntegrationsSection() {
         <p className="text-gray-600">Connect your business tools to streamline operations</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Payment Processing Integration */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
+      {!showPaymentSetup && !showWhatsAppSetup ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Payment Processing Integration */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowPaymentSetup(true)}>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 p-2 rounded-lg">
+                      <CreditCard className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">Payment Processing</h4>
+                      <p className="text-sm text-gray-600">Stripe Connect</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold">Payment Processing</h4>
-                    <p className="text-sm text-gray-600">Stripe Connect</p>
+                  <div className="flex items-center">
+                    {(stripeStatus as any)?.paymentsEnabled ? (
+                      <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Connected
+                      </div>
+                    ) : (stripeStatus as any)?.hasAccount ? (
+                      <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Setup Required
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                        Not Connected
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center">
+                
+                <div className="text-sm text-gray-600">
                   {(stripeStatus as any)?.paymentsEnabled ? (
-                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                      Connected
-                    </div>
+                    "Accept payments and receive funds directly to your bank account"
                   ) : (stripeStatus as any)?.hasAccount ? (
-                    <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
-                      Setup Required
-                    </div>
+                    "Complete your account setup to start accepting payments"
                   ) : (
-                    <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
-                      Not Connected
-                    </div>
+                    "Set up payment processing to receive customer payments"
                   )}
                 </div>
-              </div>
-              
-              <div className="text-sm text-gray-600">
-                {(stripeStatus as any)?.paymentsEnabled ? (
-                  "Accept payments and receive funds directly to your bank account"
-                ) : (stripeStatus as any)?.hasAccount ? (
-                  "Complete your account setup to start accepting payments"
-                ) : (
-                  "Set up payment processing to receive customer payments"
-                )}
-              </div>
-              
-              <div className="flex items-center text-xs text-gray-500 mb-3">
-                <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
-                  You keep 96.7% • Platform fee 3.3%
-                </span>
-              </div>
-
-              {/* Payment Setup Actions */}
-              {user?.role === 'wholesaler' && (
-                <div className="space-y-3">
-                  {!(stripeStatus as any)?.hasAccount ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-sm text-blue-800 space-y-1">
-                          <p>• Secure payment processing</p>
-                          <p>• Automatic fund transfers to your bank</p>
-                          <p>• Quikpik handles all payment security</p>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => startOnboardingMutation.mutate()}
-                        disabled={startOnboardingMutation.isPending}
-                        className="w-full"
-                      >
-                        {startOnboardingMutation.isPending ? "Setting up..." : "Set up Payment Processing"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {!(stripeStatus as any).paymentsEnabled && (
-                        <Button 
-                          onClick={() => startOnboardingMutation.mutate()}
-                          disabled={startOnboardingMutation.isPending}
-                          size="sm"
-                          className="w-full"
-                        >
-                          Complete Setup
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                
+                <div className="flex items-center text-xs text-gray-500">
+                  <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                    You keep 96.7% • Platform fee 3.3%
+                  </span>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* WhatsApp Messaging Integration */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <MessageSquare className="h-6 w-6 text-green-600" />
+          {/* WhatsApp Messaging Integration */}
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowWhatsAppSetup(true)}>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-green-100 p-2 rounded-lg">
+                      <MessageSquare className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">WhatsApp Messaging</h4>
+                      <p className="text-sm text-gray-600">Business Communication</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold">WhatsApp Messaging</h4>
-                    <p className="text-sm text-gray-600">Business Communication</p>
+                  <div className="flex items-center">
+                    {(whatsappStatus as any)?.isConfigured && (whatsappStatus as any)?.provider ? (
+                      <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Connected
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                        Not Connected
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center">
-                  {(whatsappStatus as any)?.isConfigured && (whatsappStatus as any)?.provider ? (
-                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                      Connected
-                    </div>
+                
+                <div className="text-sm text-gray-600">
+                  {(whatsappStatus as any)?.isConfigured ? (
+                    `Send broadcasts and updates via ${(whatsappStatus as any).provider || 'WhatsApp'}`
                   ) : (
-                    <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
-                      Not Connected
-                    </div>
+                    "Connect WhatsApp to send product updates and marketing campaigns"
                   )}
                 </div>
-              </div>
-              
-              <div className="text-sm text-gray-600">
-                {(whatsappStatus as any)?.isConfigured ? (
-                  `Send broadcasts and updates via ${(whatsappStatus as any).provider || 'WhatsApp'}`
-                ) : (
-                  "Connect WhatsApp to send product updates and marketing campaigns"
-                )}
-              </div>
-              
-              <div className="flex items-center text-xs text-gray-500 mb-3">
-                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                  98% open rate • Direct customer reach
-                </span>
-              </div>
-
-              {/* WhatsApp Setup Actions */}
-              {user?.role === 'wholesaler' && (
-                <div className="space-y-3">
-                  {!(whatsappStatus as any)?.isConfigured ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="text-sm text-green-800 space-y-1">
-                          <p>• Send product updates to customers</p>
-                          <p>• Broadcast marketing campaigns</p>
-                          <p>• High engagement rates</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowWhatsAppGuide(true)}
-                        className="w-full"
-                      >
-                        Setup WhatsApp Integration
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="text-xs text-green-700 bg-green-50 p-2 rounded">
-                        ✓ WhatsApp configured via {(whatsappStatus as any).provider}
-                      </div>
-                    </div>
-                  )}
+                
+                <div className="flex items-center text-xs text-gray-500">
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                    98% open rate • Direct customer reach
+                  </span>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : showPaymentSetup ? (
+        <StripeConnectSection onBack={() => setShowPaymentSetup(false)} />
+      ) : showWhatsAppSetup ? (
+        <WhatsAppIntegrationSection onBack={() => setShowWhatsAppSetup(false)} />
+      ) : null}
 
       {/* Quick Setup Summary */}
       {user?.role === 'wholesaler' && (
@@ -1049,50 +1072,12 @@ function IntegrationsSection() {
         </div>
       )}
 
-      {/* WhatsApp Setup Guide Modal */}
-      {showWhatsAppGuide && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">WhatsApp Setup</h3>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => {
-                  setShowWhatsAppGuide(false);
-                  setSelectedProvider(null);
-                }}
-              >
-                ×
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <p className="text-gray-600">Choose your WhatsApp integration method:</p>
-              <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setShowWhatsAppGuide(false);
-                    window.location.href = '/settings?tab=whatsapp';
-                  }}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Configure WhatsApp Integration
-                </Button>
-              </div>
-              <div className="text-xs text-gray-500">
-                This will take you to the full WhatsApp setup page where you can choose between Twilio and Direct API integration.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
 
-function WhatsAppIntegrationSection() {
+function WhatsAppIntegrationSection({ onBack }: { onBack?: () => void }) {
   const { toast } = useToast();
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [isEditingConfig, setIsEditingConfig] = useState(false);
@@ -1273,8 +1258,9 @@ function WhatsAppIntegrationSection() {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-medium">WhatsApp Integration</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">WhatsApp Integration</h3>
           <ContextualHelpBubble
             topic="WhatsApp troubleshooting"
             title="Common WhatsApp Issues"
@@ -1287,6 +1273,13 @@ function WhatsAppIntegrationSection() {
             steps={whatsappHelpContent.bestPractices.steps}
             position="right"
           />
+          </div>
+          {onBack && (
+            <Button variant="ghost" onClick={onBack} className="flex items-center">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Integrations
+            </Button>
+          )}
         </div>
         <p className="text-gray-600 text-sm">
           Choose your WhatsApp integration method and configure your credentials to send product broadcasts and updates to customer groups.
@@ -1493,7 +1486,7 @@ function WhatsAppIntegrationSection() {
   );
 }
 
-function StripeConnectSection() {
+function StripeConnectSection({ onBack }: { onBack?: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -1534,9 +1527,17 @@ function StripeConnectSection() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium mb-4">Payment Setup</h3>
-        <p className="text-gray-600">Set up your payment processing to receive payments from customers.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium mb-4">Payment Setup</h3>
+          <p className="text-gray-600">Set up your payment processing to receive payments from customers.</p>
+        </div>
+        {onBack && (
+          <Button variant="ghost" onClick={onBack} className="flex items-center">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Integrations
+          </Button>
+        )}
       </div>
 
       {user?.role === 'wholesaler' ? (
