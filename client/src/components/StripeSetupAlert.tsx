@@ -52,7 +52,7 @@ export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
               Connect your Stripe account to accept customer payments and receive payouts. This is essential for processing orders and managing your revenue.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/settings?tab=billing">
+              <Link href="/settings?tab=integrations">
                 <Button 
                   size="sm" 
                   className="bg-blue-600 hover:bg-blue-700 text-white"

@@ -17,7 +17,7 @@ export function WhatsAppSetupAlert() {
   });
 
   // Don't show if dismissed or WhatsApp is already configured
-  if (dismissed || whatsappStatus?.isConfigured) {
+  if (dismissed || (whatsappStatus as any)?.isConfigured) {
     return null;
   }
 
@@ -45,7 +45,7 @@ export function WhatsAppSetupAlert() {
             </AlertDescription>
             
             <div className="flex items-center gap-3">
-              <Link href="/settings?tab=whatsapp">
+              <Link href="/settings?tab=integrations">
                 <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
                   <Settings className="h-4 w-4 mr-2" />
                   Set Up WhatsApp
@@ -87,12 +87,12 @@ export function WhatsAppStatusIndicator() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      {whatsappStatus?.isConfigured ? (
+      {(whatsappStatus as any)?.isConfigured ? (
         <>
           <CheckCircle className="h-4 w-4 text-green-500" />
           <span className="text-green-700">WhatsApp Connected</span>
           <Badge variant="outline" className="text-green-700 border-green-200">
-            {whatsappStatus.provider === 'twilio' ? 'Twilio' : 'Direct'}
+            {(whatsappStatus as any).provider === 'twilio' ? 'Twilio' : 'Direct'}
           </Badge>
         </>
       ) : (
