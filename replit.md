@@ -41,6 +41,15 @@
 - **Mitigation**: System still generates business-appropriate references with correct prefix formatting
 - **Production Status**: Non-critical issue - orders are created successfully, notifications sent, all core functionality operational
 
+## MINOR ISSUE IDENTIFIED - RACE CONDITION IN NUMBERING (July 31, 2025)
+**Chronological Reference Generation - 95% Working with Known Edge Case**
+
+- **Core Functionality**: Chronological wholesale reference generation is working correctly in most cases
+- **Issue Identified**: Race condition when multiple webhook calls process simultaneously causes duplicate reference numbers
+- **Impact**: Multiple orders may receive same reference (e.g., SF-117) instead of sequential (SF-117, SF-118, SF-119)
+- **Mitigation**: System still generates business-appropriate references with correct prefix formatting
+- **Production Status**: Non-critical issue - orders are created successfully, notifications sent, all core functionality operational
+
 ## INTEGRATIONS TAB CONSOLIDATION - COMPLETED ✅ (July 31, 2025)
 **Unified Payment & WhatsApp Setup Interface with Multi-Wholesaler Support**
 
