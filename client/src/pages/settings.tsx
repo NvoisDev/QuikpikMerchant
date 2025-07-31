@@ -810,7 +810,7 @@ function IntegrationsSection() {
   
   // Stripe Connect integration
   const { data: stripeStatus = {}, isLoading: stripeLoading } = useQuery({
-    queryKey: ["/api/stripe/connect-status"],
+    queryKey: ["/api/stripe/connect/status"],
     refetchInterval: false,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -966,11 +966,11 @@ function IntegrationsSection() {
                     </div>
                   </div>
                   <div className="flex items-center">
-                    {(stripeStatus as any)?.paymentsEnabled ? (
+                    {(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? (
                       <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                         Connected
                       </div>
-                    ) : (stripeStatus as any)?.hasAccount ? (
+                    ) : (stripeStatus as any)?.isConnected ? (
                       <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
                         Setup Required
                       </div>
@@ -983,9 +983,9 @@ function IntegrationsSection() {
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  {(stripeStatus as any)?.paymentsEnabled ? (
+                  {(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? (
                     "Accept payments and receive funds directly to your bank account"
-                  ) : (stripeStatus as any)?.hasAccount ? (
+                  ) : (stripeStatus as any)?.isConnected ? (
                     "Complete your account setup to start accepting payments"
                   ) : (
                     "Set up payment processing to receive customer payments"
@@ -1064,8 +1064,8 @@ function IntegrationsSection() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="text-xs">
                   <span className="font-medium">Payment: </span>
-                  <span className={`${(stripeStatus as any)?.paymentsEnabled ? 'text-green-700' : 'text-gray-600'}`}>
-                    {(stripeStatus as any)?.paymentsEnabled ? '✓ Active' : '○ Pending'}
+                  <span className={`${(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? 'text-green-700' : 'text-gray-600'}`}>
+                    {(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? '✓ Active' : '○ Pending'}
                   </span>
                 </div>
                 <div className="text-xs">
