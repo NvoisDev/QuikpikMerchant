@@ -161,7 +161,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const lastOrder = await storage.getLastOrderForWholesaler(wholesalerId);
   const lastOrderNumber = lastOrder?.orderNumber || `${businessPrefix}-000`;
   
-  // Extract number from last order (e.g., "SF-115" -> 115)
+  // Extract number from last order (e.g., "SF-115" -> 115) 
   const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
   const nextNumber = lastNumber + 1;
   const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;

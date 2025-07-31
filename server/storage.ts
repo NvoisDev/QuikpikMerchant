@@ -899,11 +899,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {
+    // Get the most recent order by creation time to find the highest order number
     const [lastOrder] = await db
       .select()
       .from(orders)
       .where(eq(orders.wholesalerId, wholesalerId))
-      .orderBy(desc(orders.id))
+      .orderBy(desc(orders.createdAt))
       .limit(1);
     
     return lastOrder;
