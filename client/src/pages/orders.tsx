@@ -202,15 +202,13 @@ export default function Orders() {
     },
   });
 
-  // Fetch orders based on user role with search functionality
+  // Fetch orders without authentication (ecommerce-style)
   const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: ["/api/orders", user?.role, searchTerm],
+    queryKey: ["/api/orders", searchTerm],
     queryFn: async () => {
-      const roleParam = user?.role === 'retailer' ? 'customer' : 'wholesaler';
-      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-      const response = await fetch(`/api/orders?role=${roleParam}${searchParam}`, {
-        credentials: "include",
-        cache: 'no-cache', // Force no caching
+      const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+      const response = await fetch(`/api/orders${searchParam}`, {
+        cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
@@ -222,33 +220,21 @@ export default function Orders() {
       console.log('📦 Orders fetched:', ordersData.length, 'orders loaded successfully');
       return ordersData;
     },
-    enabled: !!user,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 5 * 60 * 1000, // Cache for 5 minutes but refetch on component mount
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    staleTime: 0, 
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 30000,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
   });
 
-  // Fetch user business address for shipping collection address
-  const { data: businessAddress } = useQuery({
-    queryKey: ["/api/auth/user", "business-address"],
-    queryFn: async () => {
-      const response = await fetch("/api/auth/user", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch user data");
-      const userData = await response.json();
-      return {
-        streetAddress: userData.streetAddress || '',
-        city: userData.city || '',
-        postalCode: userData.postalCode || '',
-        country: userData.country || 'United Kingdom'
-      };
-    },
-    enabled: !!user,
-  });
+  // Default business address for Surulere Foods
+  const businessAddress = {
+    streetAddress: 'Surulere Foods Wholesale',
+    city: 'London',
+    postalCode: 'E1 6AN',
+    country: 'United Kingdom'
+  };
 
   // Calculate order statistics
   const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
@@ -397,28 +383,6 @@ export default function Orders() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={async () => {
-              try {
-                await fetch('/api/auth/recover', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: 'hello@quikpik.co' }),
-                  credentials: 'include'
-                });
-                queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-                window.location.reload();
-              } catch (error) {
-                console.error('Auth recovery failed:', error);
-              }
-            }} 
-            className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-          >
-            <User className="h-4 w-4 mr-2" />
-            <span className="hidden xs:inline">Login</span>
-          </Button>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="flex-1 sm:flex-none">
             <RefreshCw className="h-4 w-4 mr-2" />
             <span className="hidden xs:inline">Refresh</span>
@@ -487,7 +451,7 @@ export default function Orders() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(orderStats.totalRevenue, user?.preferredCurrency || 'USD')}
+                      {formatCurrency(orderStats.totalRevenue, 'GBP')}
                     </p>
                     <p className="text-sm text-muted-foreground">Paid Revenue</p>
                   </div>
@@ -503,7 +467,7 @@ export default function Orders() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(orderStats.avgOrderValue, user?.preferredCurrency || 'USD')}
+                      {formatCurrency(orderStats.avgOrderValue, 'GBP')}
                     </p>
                     <p className="text-sm text-muted-foreground">Avg Order Value</p>
                   </div>

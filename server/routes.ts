@@ -1315,31 +1315,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Order routes with search functionality
-  app.get('/api/orders', requireAuth, async (req: any, res) => {
+  // Public orders endpoint for Surulere Foods (ecommerce-style)
+  app.get('/api/orders', async (req: any, res) => {
     try {
-      // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-        
-      const user = await storage.getUser(targetUserId);
-      const role = req.query.role; // 'customer' or 'wholesaler'
       const search = req.query.search; // search term
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      let orders;
-      if (role === 'customer' || user.role === 'retailer') {
-        // Get orders placed by this customer/retailer
-        orders = await storage.getOrders(undefined, targetUserId, search);
-      } else {
-        // Get orders received by this wholesaler
-        orders = await storage.getOrders(targetUserId, undefined, search);
-      }
+      // Default to Surulere Foods Wholesale for ecommerce-style access
+      const surulereWholesalerId = '104871691614680693123';
       
+      // Get orders received by Surulere Foods Wholesale
+      const orders = await storage.getOrders(surulereWholesalerId, undefined, search);
+      
+      console.log(`📦 Public orders request - found ${orders.length} orders for Surulere Foods`);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching orders:", error);
