@@ -4298,14 +4298,17 @@ Write a professional, sales-focused description that highlights the key benefits
       }
 
       // Check if Stripe Connect is properly configured
-      const isConnected = !!(user.stripeConnectAccountId);
-      const hasPayoutsEnabled = !!(user.stripeConnectAccountId && user.stripePayoutsEnabled);
+      const isConnected = !!(user.stripeAccountId);
+      
+      // For now, we'll assume payouts are enabled if account is connected
+      // Later we can add a proper payouts check via Stripe API
+      const hasPayoutsEnabled = isConnected;
       
       res.json({
         isConnected,
-        accountId: user.stripeConnectAccountId,
+        accountId: user.stripeAccountId,
         hasPayoutsEnabled,
-        requiresInfo: isConnected && !hasPayoutsEnabled
+        requiresInfo: false // For now, no additional info required
       });
     } catch (error) {
       console.error("Error fetching Stripe Connect status:", error);
