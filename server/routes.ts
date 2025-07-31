@@ -4535,7 +4535,7 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json({
         enabled: user.whatsappEnabled || false,
         isConfigured, // Frontend expects this field
-        provider: user.whatsappProvider || 'twilio',
+        provider: (user.whatsappProvider || 'twilio') + (isConfigured && user.twilioAccountSid === 'test_sid' ? ' (development)' : ''),
         whatsappProvider: user.whatsappProvider || 'twilio',
         // Twilio fields
         twilioAccountSid: user.twilioAccountSid || null,
