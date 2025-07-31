@@ -811,6 +811,10 @@ function IntegrationsSection() {
   // Stripe Connect integration
   const { data: stripeStatus = {}, isLoading: stripeLoading } = useQuery({
     queryKey: ["/api/stripe/connect-status"],
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   const startOnboardingMutation = useMutation({
@@ -833,6 +837,10 @@ function IntegrationsSection() {
   // WhatsApp integration - full setup state
   const { data: whatsappStatus = {}, isLoading: whatsappLoading } = useQuery({
     queryKey: ["/api/whatsapp/status"],
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   const [showWhatsAppSetup, setShowWhatsAppSetup] = useState(false);
