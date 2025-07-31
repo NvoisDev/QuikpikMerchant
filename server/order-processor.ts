@@ -267,12 +267,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
       const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
       
-      await sendEmail({
-        to: wholesaler.email,
-        from: 'hello@quikpik.co',
-        subject: `New Order Received: ${wholesaleRef} from ${customerName}`,
-        html: emailTemplate
-      });
+      await sendEmail(
+        `New Order Received: ${wholesaleRef} from ${customerName}`,
+        emailTemplate,
+        wholesaler.email
+      );
       
       console.log(`📧 Wholesaler notification sent to ${wholesaler.email} for order ${wholesaleRef}`);
       
