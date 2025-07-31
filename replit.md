@@ -42,7 +42,7 @@
 - **Production Status**: Non-critical issue - orders are created successfully, notifications sent, all core functionality operational
 
 ## INTEGRATIONS TAB CONSOLIDATION - COMPLETED ✅ (July 31, 2025)
-**Unified Payment & WhatsApp Setup Interface**
+**Unified Payment & WhatsApp Setup Interface with Multi-Wholesaler Support**
 
 - **Integrations Tab Created**: New centralized tab consolidating payment and messaging setup
   - **Payment Processing Tile**: Shows Stripe Connect status with functional Connected/Not Connected indicators
@@ -50,15 +50,21 @@
   - **Full Setup Functionality**: Complete payment onboarding and WhatsApp configuration integrated into tiles
   - **Status Detection**: Real-time status checking for both integrations with proper API integration
 
+- **Multi-Wholesaler Architecture Confirmed**: System properly isolates data and integrations by business
+  - **Lanre Foods** (michael@nvois.co): Stripe account `acct_1Rqv3LPdpDp7ShAk`
+  - **Surulere Foods Wholesale** (hello@quikpik.co): Stripe account `acct_1RnJiIPkpmhGjyKR`
+  - Each wholesaler maintains independent Stripe Connect accounts and payment processing
+  - Status indicators correctly show integrations for currently logged-in wholesaler only
+
 - **Navigation Simplified**: Removed separate "Payments" and "WhatsApp Integration" tabs
   - **Clean Interface**: Single integrations hub instead of scattered setup options
   - **Consistent UX**: Tile-based interface for better visual organization
   - **Quick Setup Actions**: Smart buttons based on current integration status
 
-- **Stripe Onboarding Enhancement**: Fixed redirect URLs for better user experience
-  - **Issue Resolved**: Changed redirect from `/business-performance/financials` to `/settings?tab=integrations`
-  - **Improved Flow**: Users return to integrations tab after Stripe setup completion
-  - **Status Updates**: Real-time connection status display after onboarding
+- **Status Detection Fixed**: Resolved API field name mismatches for accurate status display
+  - **Stripe Connect**: Fixed `stripeConnectAccountId` vs `stripeAccountId` field mismatch
+  - **WhatsApp Integration**: Fixed `configured` vs `isConfigured` field mismatch
+  - **Real-time Updates**: Both integrations now show accurate connection status
 
 ## WHOLESALE REFERENCE SYSTEM ENHANCEMENT - COMPLETED ✅ (July 31, 2025)
 **Complete Order Confirmation Enhancement with Cross-Party Reference System**
