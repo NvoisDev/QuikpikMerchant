@@ -1800,7 +1800,11 @@ export default function CustomerPortal() {
                     <button
                       key={wholesalerItem.id}
                       onClick={() => {
+                        // Close the search modal first
+                        setShowWholesalerSearch(false);
+                        
                         // Navigate to the selected wholesaler's store
+                        // This will trigger the SMS verification flow if not authenticated
                         window.location.href = `/store/${wholesalerItem.id}`;
                       }}
                       className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"

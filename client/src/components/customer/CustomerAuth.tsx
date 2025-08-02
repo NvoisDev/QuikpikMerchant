@@ -111,7 +111,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         }
       } else {
         console.log('❌ CUSTOMER VERIFY FAILED - BACK TO STEP 1');
-        setError(verifyData.error || 'Customer not found');
+        // Show customer not found message with contact instructions
+        setError("CUSTOMER_NOT_FOUND");
         setAuthStep('step1');
       }
     } catch (error) {
@@ -280,7 +281,12 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         }
       } else {
         console.error('❌ Customer verification failed:', verifyData);
-        setError(verifyData.error || "Customer not found. Please check the last 4 digits of your phone number.");
+        // Enhanced error handling - distinguish between different error types
+        if (verifyData.error?.includes("Customer not found") || verifyData.error?.includes("not found")) {
+          setError("CUSTOMER_NOT_FOUND");
+        } else {
+          setError(verifyData.error || "Customer not found. Please check the last 4 digits of your phone number.");
+        }
       }
     } catch (error) {
       console.error('⚠️ Authentication error:', error);
@@ -869,8 +875,29 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     </div>
 
                     {error && (
-                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
-                        <AlertDescription className="text-center">{error}</AlertDescription>
+                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-xl border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
+                        {error === "CUSTOMER_NOT_FOUND" ? (
+                          <AlertDescription className="text-center space-y-3">
+                            <div className="flex items-center justify-center mb-2">
+                              <Mail className="w-5 h-5 text-blue-600 mr-2" />
+                              <span className="text-blue-800 font-semibold">Not yet a customer?</span>
+                            </div>
+                            <p className="text-blue-700 text-sm mb-3">
+                              You're not registered with {wholesaler?.businessName || 'this store'} yet. 
+                              Contact them to get added as a customer and start shopping.
+                            </p>
+                            <Button
+                              onClick={() => window.location.href = '/'}
+                              variant="outline"
+                              className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Mail className="w-4 h-4 mr-2" />
+                              Contact {wholesaler?.businessName || 'Wholesaler'}
+                            </Button>
+                          </AlertDescription>
+                        ) : (
+                          <AlertDescription className="text-center">{error}</AlertDescription>
+                        )}
                       </Alert>
                     )}
 
