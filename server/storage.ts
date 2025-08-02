@@ -1020,15 +1020,15 @@ export class DatabaseStorage implements IStorage {
           u.last_name,
           COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
           u.email,
-          u.phone_number as phone,
+          COALESCE(u.phone_number, u.business_phone) as phone,
           u.role,
           cg.id as group_id,
           cg.name as group_name
         FROM users u
         JOIN customer_group_members cgm ON u.id = cgm.customer_id
         JOIN customer_groups cg ON cgm.group_id = cg.id
-        WHERE u.phone_number IS NOT NULL 
-          AND u.phone_number != ''
+        WHERE (u.phone_number IS NOT NULL AND u.phone_number != '')
+          OR (u.business_phone IS NOT NULL AND u.business_phone != '')
           AND cg.wholesaler_id = ${wholesalerId}
       `);
       
