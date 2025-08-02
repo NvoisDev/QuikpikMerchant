@@ -74,3 +74,4 @@ Preferred communication style: Simple, everyday language.
   - 5-minute code expiration properly enforced
   - Database storage and security measures working correctly
   - Complete authentication flow from customer lookup to session creation
+  - **CRITICAL FIX**: Wholesaler ID isolation properly implemented - customers are filtered by wholesaler before phone verification

@@ -1012,8 +1012,8 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
       
-      // Simplified approach: search ALL users for potential customers matching last 4 digits
-      const allUsersWithPhones = await db.execute(sql`
+      // CRITICAL FIX: Only search customers belonging to the specific wholesaler
+      const wholesalerCustomers = await db.execute(sql`
         SELECT 
           u.id as customer_id,
           u.first_name,
@@ -1021,21 +1021,27 @@ export class DatabaseStorage implements IStorage {
           COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
           u.email,
           u.phone_number as phone,
-          u.role
+          u.role,
+          cg.id as group_id,
+          cg.name as group_name
         FROM users u
-        WHERE u.phone_number IS NOT NULL AND u.phone_number != ''
+        JOIN customer_group_members cgm ON u.id = cgm.customer_id
+        JOIN customer_groups cg ON cgm.group_id = cg.id
+        WHERE u.phone_number IS NOT NULL 
+          AND u.phone_number != ''
+          AND cg.wholesaler_id = ${wholesalerId}
       `);
       
-      // Find all users whose phone number ends with the provided last 4 digits
-      const matchingCustomers = allUsersWithPhones.rows.filter((customer: any) => {
+      // Find customers of this wholesaler whose phone number ends with the provided last 4 digits
+      const matchingCustomers = wholesalerCustomers.rows.filter((customer: any) => {
         const phoneLastFour = customer.phone?.slice(-4);
         return phoneLastFour === lastFourDigits;
       });
 
-      console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits}`);
+      console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
       
       if (matchingCustomers.length === 0) {
-        console.log(`No customer found with last 4 digits: ${lastFourDigits}`);
+        console.log(`No customer found with last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
         return null;
       }
 
@@ -1113,14 +1119,14 @@ export class DatabaseStorage implements IStorage {
       }
 
       
-      console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone})`);
+      console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone}) for wholesaler: ${wholesalerId}`);
       return {
         id: matchingCustomer.customer_id, // Use the actual user ID, not the member ID
         name: matchingCustomer.name,
         email: matchingCustomer.email,
         phone: matchingCustomer.phone,
-        groupId: matchingCustomer.groupId,
-        groupName: matchingCustomer.groupName
+        groupId: matchingCustomer.group_id,
+        groupName: matchingCustomer.group_name
       };
     } catch (error) {
       console.error("Error finding customer by last 4 digits:", error);
