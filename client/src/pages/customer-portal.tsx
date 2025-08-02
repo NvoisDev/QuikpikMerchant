@@ -1742,7 +1742,7 @@ export default function CustomerPortal() {
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Find Other Stores</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Find Other Sellers</h3>
                 <Button
                   onClick={() => setShowWholesalerSearch(false)}
                   variant="ghost"
