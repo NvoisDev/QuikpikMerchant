@@ -1644,8 +1644,8 @@ export default function CustomerPortal() {
                 </Button>
               )}
               
-              {/* Find Seller button for authenticated customers */}
-              {isAuthenticated && !isPreviewMode && (
+              {/* Find Seller button - always show for debugging */}
+              {!isPreviewMode && (
                 <Button
                   onClick={() => setShowWholesalerSearch(true)}
                   variant="outline"
