@@ -504,33 +504,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            {/* Find Seller Button */}
-            <Button
-              onClick={() => window.location.href = '/customer-portal'}
-              variant="outline"
-              size="sm"
-              className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 h-8 px-3"
-            >
-              <Search className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Find Seller</span>
-              <span className="sm:hidden">Seller</span>
-            </Button>
-            
-            {/* Order History Title Section */}
-            <div className="flex items-center space-x-2">
-              <Package className="h-5 w-5" />
-              <span className="text-lg font-semibold">Order History</span>
-              <Badge variant="secondary" className="ml-2">
-                {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
-              </Badge>
-              {isFetching && (
-                <div className="flex items-center space-x-1 text-xs text-gray-500">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  <span>Updating...</span>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center space-x-2">
+            <Package className="h-5 w-5" />
+            <span className="text-lg font-semibold">Order History</span>
+            <Badge variant="secondary" className="ml-2">
+              {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
+            </Badge>
+            {isFetching && (
+              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Updating...</span>
+              </div>
+            )}
           </div>
           <Button
             onClick={handleRefresh}
