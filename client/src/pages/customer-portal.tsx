@@ -1644,6 +1644,20 @@ export default function CustomerPortal() {
                 </Button>
               )}
               
+              {/* Find Seller button for authenticated customers */}
+              {isAuthenticated && !isPreviewMode && (
+                <Button
+                  onClick={() => setShowWholesalerSearch(true)}
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm"
+                >
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Find Seller</span>
+                  <span className="sm:hidden">Seller</span>
+                </Button>
+              )}
+
               {/* Home and Logout buttons for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
                 <>
