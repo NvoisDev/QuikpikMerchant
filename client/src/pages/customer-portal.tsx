@@ -1554,8 +1554,8 @@ export default function CustomerPortal() {
       <div className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            {/* Wholesaler Search - Top Left */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Left Section - Find Seller Button */}
+            <div className="flex items-center">
               <Button
                 onClick={() => setShowWholesalerSearch(!showWholesalerSearch)}
                 variant="outline"
@@ -1568,8 +1568,8 @@ export default function CustomerPortal() {
               </Button>
             </div>
 
-            {/* Store Info - Mobile Optimized */}
-            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+            {/* Center Section - Store Info with Logo */}
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1 sm:justify-center">
               {/* Wholesaler Logo */}
               {wholesaler?.logoUrl ? (
                 <img 
