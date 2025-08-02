@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search } from "lucide-react";
+import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CustomerOrderHistory } from "./CustomerOrderHistory";
@@ -39,8 +39,26 @@ export function CustomerHome({
   onFindSeller
 }: CustomerHomeProps) {
   const [isEditBusinessNameOpen, setIsEditBusinessNameOpen] = useState(false);
+  const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
+  const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch available wholesalers for search
+  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
+    queryKey: ["/api/marketplace/wholesalers", wholesalerSearchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (wholesalerSearchQuery) params.append("search", wholesalerSearchQuery);
+      
+      const response = await fetch(`/api/marketplace/wholesalers?${params}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch wholesalers");
+      return response.json();
+    },
+    enabled: showWholesalerSearch, // Only fetch when search is open
+  });
 
   const businessNameForm = useForm<z.infer<typeof businessNameSchema>>({
     resolver: zodResolver(businessNameSchema),
@@ -105,22 +123,17 @@ export function CustomerHome({
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             {/* Find Seller Button - Left Side */}
-            {onFindSeller && (
-              <div className="absolute top-4 left-4">
-                <Button
-                  onClick={() => {
-                    console.log('🔍 Find Seller button clicked in CustomerHome component');
-                    onFindSeller();
-                  }}
-                  variant="outline"
-                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 font-medium"
-                  size="sm"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Find Seller
-                </Button>
-              </div>
-            )}
+            <div className="absolute top-4 left-4">
+              <Button
+                onClick={() => setShowWholesalerSearch(true)}
+                variant="outline"
+                className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 font-medium"
+                size="sm"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Find Seller
+              </Button>
+            </div>
             
             <div className="flex-1 text-center">
               <div className="flex items-center justify-center mb-4">
@@ -353,6 +366,116 @@ export function CustomerHome({
           </CardContent>
         </Card>
       </div>
+
+      {/* Wholesaler Search Modal */}
+      {showWholesalerSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Find Other Sellers</h3>
+                <Button
+                  onClick={() => setShowWholesalerSearch(false)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="mt-3">
+                <Input
+                  placeholder="Search by business name..."
+                  value={wholesalerSearchQuery}
+                  onChange={(e) => setWholesalerSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            
+            <div className="max-h-80 overflow-y-auto">
+              {wholesalersLoading ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3 animate-pulse">
+                      <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : availableWholesalers.length > 0 ? (
+                <div className="p-2">
+                  {availableWholesalers.map((wholesalerItem: any) => (
+                    <button
+                      key={wholesalerItem.id}
+                      onClick={() => {
+                        // Close the search modal first
+                        setShowWholesalerSearch(false);
+                        
+                        // Navigate to the selected wholesaler's store
+                        // This will trigger the SMS verification flow if not authenticated
+                        window.location.href = `/store/${wholesalerItem.id}`;
+                      }}
+                      className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      {/* Wholesaler Logo */}
+                      {wholesalerItem.logoUrl ? (
+                        <img 
+                          src={wholesalerItem.logoUrl} 
+                          alt={wholesalerItem.businessName || "Business logo"} 
+                          className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-white">
+                            {wholesalerItem.businessName ? (
+                              wholesalerItem.businessName
+                                .split(' ')
+                                .map((word: string) => word.charAt(0).toUpperCase())
+                                .join('')
+                                .substring(0, 2)
+                            ) : 'WS'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 text-left">
+                        <h4 className="font-medium text-gray-900">{wholesalerItem.businessName || "Business"}</h4>
+                        <p className="text-sm text-gray-600">{wholesalerItem.storeTagline || "Wholesale products"}</p>
+                        {wholesalerItem.location && (
+                          <p className="text-xs text-gray-500 flex items-center mt-1">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {wholesalerItem.location}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {wholesalerItem.rating && (
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                            <span className="text-sm text-gray-600 ml-1">{wholesalerItem.rating}</span>
+                          </div>
+                        )}
+                        <Building2 className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">
+                    {wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
