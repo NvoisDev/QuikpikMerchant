@@ -1692,7 +1692,10 @@ export default function CustomerPortal() {
               {/* Find Seller button for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
                 <Button
-                  onClick={() => setShowWholesalerSearch(true)}
+                  onClick={() => {
+                    console.log('🔍 Find Seller button clicked from header');
+                    setShowWholesalerSearch(true);
+                  }}
                   variant="outline"
                   size="sm"
                   className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
@@ -1739,6 +1742,7 @@ export default function CustomerPortal() {
 
       {/* Wholesaler Search Modal */}
       {showWholesalerSearch && (
+        console.log('🔍 Rendering Wholesaler Search Modal') ||
         <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
             <div className="p-4 border-b">
