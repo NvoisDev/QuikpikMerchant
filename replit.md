@@ -75,3 +75,16 @@ Preferred communication style: Simple, everyday language.
   - Database storage and security measures working correctly
   - Complete authentication flow from customer lookup to session creation
   - **CRITICAL FIX**: Wholesaler ID isolation properly implemented - customers are filtered by wholesaler before phone verification
+
+## WEBHOOK ORDER RECOVERY SYSTEM ✅ (August 2, 2025)
+**Critical Order Processing Issue Resolved**
+
+- **Issue Identified**: Order #228955 (£25.12) successfully processed by Stripe but missing from database due to webhook failure
+- **Root Cause**: Webhook processing error prevented order creation despite successful payment
+- **Resolution Applied**:
+  - ✅ Manually recreated missing order #228955 with correct wholesaler association
+  - ✅ Verified order appears in order history for Surulere Foods Wholesale
+  - ✅ Webhook system restarted and monitoring for future order processing
+  - ✅ Customer lookup improved to check both `phone_number` and `business_phone` fields
+
+- **Prevention Measures**: Enhanced webhook monitoring and error recovery procedures implemented
