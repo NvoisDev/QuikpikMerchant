@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
+import MultiWholesalerDashboard from "@/components/MultiWholesalerDashboard";
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
 import { 
   DollarSign, 
@@ -520,6 +521,15 @@ export default function WholesalerDashboard() {
               gradientFrom="from-orange-50"
               gradientTo="to-orange-100"
             />
+          </div>
+
+          {/* Multi-Wholesaler Dashboard Widgets */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Trophy className="h-6 w-6 text-yellow-500" />
+              <h2 className="text-2xl font-bold">Platform Insights</h2>
+            </div>
+            <MultiWholesalerDashboard />
           </div>
 
           {/* Top Selling Product Section */}

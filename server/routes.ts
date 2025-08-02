@@ -1936,6 +1936,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
+  // Multi-Wholesaler Dashboard Widgets API (public endpoint)
+  app.get('/api/dashboard/multi-wholesaler-stats', async (req: any, res) => {
+    try {
+      const multiWholesalerStats = await db.execute(`
+        SELECT 
+          u.id as wholesaler_id,
+          u.business_name,
+          u.email,
+          COUNT(DISTINCT o.id) as total_orders,
+          COALESCE(SUM(o.total), 0) as total_revenue,
+          COUNT(DISTINCT p.id) as total_products,
+          COUNT(DISTINCT cg.id) as customer_groups,
+          COUNT(DISTINCT cgm.customer_id) as total_customers,
+          CASE 
+            WHEN COUNT(DISTINCT o.id) >= 50 THEN 'platinum'
+            WHEN COUNT(DISTINCT o.id) >= 20 THEN 'gold'
+            WHEN COUNT(DISTINCT o.id) >= 10 THEN 'silver'
+            ELSE 'bronze'
+          END as tier,
+          CASE 
+            WHEN COUNT(DISTINCT o.id) >= 50 THEN 4
+            WHEN COUNT(DISTINCT o.id) >= 20 THEN 3
+            WHEN COUNT(DISTINCT o.id) >= 10 THEN 2
+            ELSE 1
+          END as tier_level
+        FROM users u
+        LEFT JOIN orders o ON u.id = o.wholesaler_id AND o.status != 'cancelled'
+        LEFT JOIN products p ON u.id = p.wholesaler_id
+        LEFT JOIN customer_groups cg ON u.id = cg.wholesaler_id
+        LEFT JOIN customer_group_members cgm ON cg.id = cgm.group_id
+        WHERE u.role = 'wholesaler' AND u.business_name IS NOT NULL
+        GROUP BY u.id, u.business_name, u.email
+        HAVING COUNT(DISTINCT o.id) > 0 OR COUNT(DISTINCT p.id) > 0
+        ORDER BY total_revenue DESC, total_orders DESC
+        LIMIT 10
+      `);
+
+      const platformStats = await db.execute(`
+        SELECT 
+          COUNT(DISTINCT CASE WHEN u.role = 'wholesaler' THEN u.id END) as total_wholesalers,
+          COUNT(DISTINCT CASE WHEN u.role = 'retailer' THEN u.id END) as total_customers,
+          COUNT(DISTINCT o.id) as total_orders,
+          COALESCE(SUM(o.total), 0) as total_platform_revenue,
+          COUNT(DISTINCT p.id) as total_products
+        FROM users u
+        LEFT JOIN orders o ON (u.id = o.wholesaler_id OR u.id = o.retailer_id) AND o.status != 'cancelled'
+        LEFT JOIN products p ON u.id = p.wholesaler_id
+      `);
+
+      const growthStats = await db.execute(`
+        SELECT 
+          COUNT(DISTINCT CASE WHEN o.created_at >= CURRENT_DATE - INTERVAL '7 days' THEN o.id END) as orders_this_week,
+          COUNT(DISTINCT CASE WHEN o.created_at >= CURRENT_DATE - INTERVAL '14 days' AND o.created_at < CURRENT_DATE - INTERVAL '7 days' THEN o.id END) as orders_last_week,
+          COUNT(DISTINCT CASE WHEN u.created_at >= CURRENT_DATE - INTERVAL '30 days' AND u.role = 'wholesaler' THEN u.id END) as new_wholesalers_this_month
+        FROM orders o
+        RIGHT JOIN users u ON u.id = o.wholesaler_id OR u.id = o.retailer_id
+      `);
+
+      res.json({
+        leaderboard: multiWholesalerStats.rows,
+        platform: platformStats.rows[0],
+        growth: growthStats.rows[0]
+      });
+    } catch (error) {
+      console.error("Multi-wholesaler stats error:", error);
+      res.status(500).json({ error: "Failed to fetch multi-wholesaler stats" });
+    }
+  });
+
   app.patch('/api/orders/:id/status', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
