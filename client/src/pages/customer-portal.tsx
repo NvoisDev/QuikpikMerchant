@@ -1519,7 +1519,10 @@ export default function CustomerPortal() {
         // Redirect to customer login page (Find Your Store)
         window.location.href = "/customer-login";
       }}
-      onFindSeller={() => setShowWholesalerSearch(true)}
+      onFindSeller={() => {
+        console.log('🔍 Setting showWholesalerSearch to true');
+        setShowWholesalerSearch(true);
+      }}
     />;
   }
 
