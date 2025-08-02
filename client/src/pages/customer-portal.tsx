@@ -22,7 +22,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home, HelpCircle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home, HelpCircle, Building2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -732,6 +732,26 @@ export default function CustomerPortal() {
     return urlFeatured ? parseInt(urlFeatured, 10) : null;
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  
+  // Wholesaler search state
+  const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
+  const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
+  
+  // Fetch available wholesalers for search
+  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
+    queryKey: ["/api/marketplace/wholesalers", wholesalerSearchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (wholesalerSearchQuery) params.append("search", wholesalerSearchQuery);
+      
+      const response = await fetch(`/api/marketplace/wholesalers?${params}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch wholesalers");
+      return response.json();
+    },
+    enabled: showWholesalerSearch, // Only fetch when search is open
+  });
 
   // Early return if no wholesaler ID
   if (!wholesalerId) {
@@ -1554,6 +1574,20 @@ export default function CustomerPortal() {
       <div className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            {/* Wholesaler Search - Top Left */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button
+                onClick={() => setShowWholesalerSearch(!showWholesalerSearch)}
+                variant="outline"
+                size="sm"
+                className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm"
+              >
+                <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Find Stores</span>
+                <span className="sm:hidden">Stores</span>
+              </Button>
+            </div>
+
             {/* Store Info - Mobile Optimized */}
             <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
               {/* Wholesaler Logo */}
@@ -1721,6 +1755,112 @@ export default function CustomerPortal() {
           </div>
         </div>
       </div>
+
+      {/* Wholesaler Search Modal */}
+      {showWholesalerSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Find Other Stores</h3>
+                <Button
+                  onClick={() => setShowWholesalerSearch(false)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="mt-3">
+                <Input
+                  placeholder="Search by business name..."
+                  value={wholesalerSearchQuery}
+                  onChange={(e) => setWholesalerSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            
+            <div className="max-h-80 overflow-y-auto">
+              {wholesalersLoading ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3 animate-pulse">
+                      <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : availableWholesalers.length > 0 ? (
+                <div className="p-2">
+                  {availableWholesalers.map((wholesalerItem: any) => (
+                    <button
+                      key={wholesalerItem.id}
+                      onClick={() => {
+                        // Navigate to the selected wholesaler's store
+                        window.location.href = `/store/${wholesalerItem.id}`;
+                      }}
+                      className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      {/* Wholesaler Logo */}
+                      {wholesalerItem.logoUrl ? (
+                        <img 
+                          src={wholesalerItem.logoUrl} 
+                          alt={wholesalerItem.businessName || "Business logo"} 
+                          className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-white">
+                            {wholesalerItem.businessName ? (
+                              wholesalerItem.businessName
+                                .split(' ')
+                                .map((word: string) => word.charAt(0).toUpperCase())
+                                .join('')
+                                .substring(0, 2)
+                            ) : 'WS'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 text-left">
+                        <h4 className="font-medium text-gray-900">{wholesalerItem.businessName || "Business"}</h4>
+                        <p className="text-sm text-gray-600">{wholesalerItem.storeTagline || "Wholesale products"}</p>
+                        {wholesalerItem.location && (
+                          <p className="text-xs text-gray-500 flex items-center mt-1">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {wholesalerItem.location}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {wholesalerItem.rating && (
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                            <span className="text-sm text-gray-600 ml-1">{wholesalerItem.rating}</span>
+                          </div>
+                        )}
+                        <Building2 className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">
+                    {wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {/* Guest Mode Notice */}
