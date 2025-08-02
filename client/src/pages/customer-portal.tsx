@@ -735,6 +735,9 @@ export default function CustomerPortal() {
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
+  
+  // Debug modal state
+  console.log('🔍 Modal state - showWholesalerSearch:', showWholesalerSearch);
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
   // Fetch available wholesalers for search
@@ -1519,7 +1522,10 @@ export default function CustomerPortal() {
         // Redirect to customer login page (Find Your Store)
         window.location.href = "/customer-login";
       }}
-      onFindSeller={() => setShowWholesalerSearch(true)}
+      onFindSeller={() => {
+        console.log('🔍 Find Seller clicked from home page - setting modal to true');
+        setShowWholesalerSearch(true);
+      }}
     />;
   }
 

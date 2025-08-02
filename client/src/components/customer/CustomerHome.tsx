@@ -108,7 +108,10 @@ export function CustomerHome({
             {onFindSeller && (
               <div className="absolute top-4 left-4">
                 <Button
-                  onClick={onFindSeller}
+                  onClick={() => {
+                    console.log('🔍 Find Seller button clicked in CustomerHome component');
+                    onFindSeller();
+                  }}
                   variant="outline"
                   className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 font-medium"
                   size="sm"
