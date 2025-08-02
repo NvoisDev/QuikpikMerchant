@@ -1518,9 +1518,8 @@ export default function CustomerPortal() {
         });
         // Redirect to customer login page (Find Your Store)
         window.location.href = "/customer-login";
-        // Redirect to customer login page (Find Your Store)
-        window.location.href = "/customer-login";
       }}
+      onFindSeller={() => setShowWholesalerSearch(true)}
     />;
   }
 
@@ -1554,20 +1553,6 @@ export default function CustomerPortal() {
       <div className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            {/* Left Section - Find Seller Button */}
-            <div className="flex items-center">
-              <Button
-                onClick={() => setShowWholesalerSearch(!showWholesalerSearch)}
-                variant="outline"
-                size="sm"
-                className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm"
-              >
-                <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Find Seller</span>
-                <span className="sm:hidden">Seller</span>
-              </Button>
-            </div>
-
             {/* Center Section - Store Info with Logo */}
             <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1 sm:justify-center">
               {/* Wholesaler Logo */}

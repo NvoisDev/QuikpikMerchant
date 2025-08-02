@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X } from "lucide-react";
+import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ interface CustomerHomeProps {
   onViewFeaturedProduct?: () => void;
   customerData?: any;
   onLogout?: () => void;
+  onFindSeller?: () => void;
 }
 
 const businessNameSchema = z.object({
@@ -34,7 +35,8 @@ export function CustomerHome({
   onViewAllProducts, 
   onViewFeaturedProduct,
   customerData,
-  onLogout
+  onLogout,
+  onFindSeller
 }: CustomerHomeProps) {
   const [isEditBusinessNameOpen, setIsEditBusinessNameOpen] = useState(false);
   const { toast } = useToast();
@@ -102,6 +104,21 @@ export function CustomerHome({
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
+            {/* Find Seller Button - Left Side */}
+            {onFindSeller && (
+              <div className="absolute top-4 left-4">
+                <Button
+                  onClick={onFindSeller}
+                  variant="outline"
+                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 font-medium"
+                  size="sm"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Find Seller
+                </Button>
+              </div>
+            )}
+            
             <div className="flex-1 text-center">
               <div className="flex items-center justify-center mb-4">
                 <Logo 
