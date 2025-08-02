@@ -1401,27 +1401,26 @@ export default function CustomerPortal() {
       return;
     }
 
+    // DISABLED: LocalStorage authentication bypass - always require SMS verification for security
     // Check for saved authentication state first
     const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
     if (savedAuth) {
       try {
         const authData = JSON.parse(savedAuth);
-        // Check if auth is less than 24 hours old
-        const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
+        // Check if auth is less than 2 hours old (reduced from 24 hours for security)
+        const isRecent = Date.now() - authData.timestamp < 2 * 60 * 60 * 1000;
         
         if (authData.isAuthenticated && authData.customer && isRecent) {
-          console.log('🔄 Restoring authentication from localStorage');
+          console.log('🔄 Restoring recent authentication from localStorage');
           setIsAuthenticated(true);
           setAuthenticatedCustomer(authData.customer);
           setShowAuth(false);
           setIsGuestMode(false);
           return;
         } else if (!isRecent) {
-          console.log('🕐 Authentication expired in portal, clearing and redirecting');
+          console.log('🕐 Authentication expired in portal, clearing and requiring fresh SMS verification');
           localStorage.removeItem(`customer_auth_${wholesalerId}`);
-          // Redirect to customer login page
-          window.location.href = '/customer-login';
-          return;
+          // Don't redirect - just require fresh authentication
         }
       } catch (error) {
         console.error('Error parsing saved auth:', error);
