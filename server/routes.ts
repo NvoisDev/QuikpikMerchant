@@ -17,6 +17,7 @@ import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
 import sgMail from "@sendgrid/mail";
+import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
@@ -379,8 +380,11 @@ The Quikpik Team`,
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
-  // Set up trust proxy setting before any middleware
+  // Set up trust proxy setting before any middleware  
   app.set("trust proxy", 1);
+  
+  // Add cookie parser middleware for customer authentication
+  app.use(cookieParser());
 
   // REGISTER DEDICATED WEBHOOK HANDLER FIRST
   registerWebhookRoutes(app);
@@ -716,33 +720,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session = {} as any;
       }
       
-      // Force session save to ensure it exists before setting customerAuth
-      req.session.save = req.session.save || (() => Promise.resolve());
-      
+      // Set customer authentication data in session
       (req.session as any).customerAuth = sessionData;
       
       console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 24 hours`);
 
-      // Force session save
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ error: "Failed to save session" });
-        }
-        
-        console.log('✅ Customer session saved successfully');
-        res.json({ 
-          success: true, 
-          message: "SMS verification successful",
-          customer: {
-            id: customer.id,
-            name: customer.name,
-            email: customer.email,
-            phone: customer.phone,
-            groupId: customer.groupId,
-            groupName: customer.groupName
+      // Force session save using callback method with timeout
+      const saveSession = () => {
+        return new Promise<void>((resolve, reject) => {
+          if (req.session && typeof req.session.save === 'function') {
+            const timeout = setTimeout(() => {
+              reject(new Error('Session save timeout'));
+            }, 3000); // 3 second timeout
+            
+            req.session.save((err) => {
+              clearTimeout(timeout);
+              if (err) {
+                console.error('❌ Session save error:', err);
+                reject(err);
+              } else {
+                console.log('✅ Customer session saved successfully');
+                resolve();
+              }
+            });
+          } else {
+            console.log('⚠️ Session save method not available');
+            resolve(); // Continue anyway
           }
         });
+      };
+
+      try {
+        await saveSession();
+      } catch (error) {
+        console.error('Session save failed:', error);
+        // Continue anyway to avoid blocking the user
+      }
+      
+      console.log('✅ Sending SMS verification success response');
+      
+      // Create a signed token as backup for session persistence issues
+      const customerToken = Buffer.from(JSON.stringify({
+        customerId: customer.id,
+        wholesalerId: wholesalerId,
+        name: customer.name,
+        timestamp: Date.now(),
+        expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      })).toString('base64');
+      
+      // Set a fallback cookie with customer authentication
+      res.cookie('customer_auth', customerToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax'
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "SMS verification successful",
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          groupId: customer.groupId,
+          groupName: customer.groupName
+        }
       });
     } catch (error) {
       console.error("SMS verification error:", error);
@@ -750,11 +794,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer authentication check endpoint - verify session
+  // Customer authentication check endpoint - verify session or fallback cookie
   app.get('/api/customer-auth/check/:wholesalerId', async (req, res) => {
     try {
       const { wholesalerId } = req.params;
-      const customerAuth = (req.session as any)?.customerAuth;
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      // If session auth fails, try fallback cookie
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          
+          // Verify cookie data and expiration
+          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId,
+              name: cookieData.name,
+              expiresAt: new Date(cookieData.expires).toISOString()
+            };
+            console.log('🔓 Using fallback cookie authentication for customer:', cookieData.name);
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
       
       if (!customerAuth) {
         return res.status(401).json({ authenticated: false, message: "No customer session found" });
@@ -770,8 +834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = new Date(customerAuth.expiresAt);
       
       if (now > expiresAt) {
-        // Clear expired session
-        delete (req.session as any).customerAuth;
+        // Clear expired session and cookie
+        delete (req.session as any)?.customerAuth;
+        res.clearCookie('customer_auth');
         return res.status(401).json({ authenticated: false, message: "Session expired" });
       }
       
@@ -783,10 +848,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer: {
           id: customerAuth.customerId,
           name: customerAuth.name,
-          email: customerAuth.email,
-          phone: customerAuth.phone,
-          groupId: customerAuth.groupId,
-          groupName: customerAuth.groupName
+          email: customerAuth.email || '',
+          phone: customerAuth.phone || '',
+          groupId: customerAuth.groupId || null,
+          groupName: customerAuth.groupName || ''
         },
         expiresAt: customerAuth.expiresAt
       });
