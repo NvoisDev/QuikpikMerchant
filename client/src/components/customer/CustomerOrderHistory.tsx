@@ -347,14 +347,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         throw new Error('Failed to fetch order history');
       }
       const data = await response.json();
+      
+      // Ensure we always return an array
+      const ordersArray = Array.isArray(data) ? data : [];
+      
       console.log('📦 Customer orders loaded:', { 
-        totalOrders: data?.length || 0,
-        orderIds: data?.map((o: any) => o.id) || [],
-        mostRecentOrder: data?.[0] ? `#${data[0].id} - ${data[0].total}` : 'none',
+        totalOrders: ordersArray.length,
+        orderIds: ordersArray.map((o: any) => o.id),
+        mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
         timestamp: new Date().toLocaleTimeString(),
-        rawData: data
+        isArray: Array.isArray(ordersArray),
+        dataType: typeof data
       });
-      return data;
+      return ordersArray;
     },
     enabled: !!wholesalerId && !!customerPhone,
     refetchInterval: false, // Disable auto-refetch to prevent conflicts
@@ -365,9 +370,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     refetchOnMount: true // Enable refetch on component mount to show fresh orders
   });
 
+  // Debug logging for orders state
+  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error });
+  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
+  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
+
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
-    if (!orders || !Array.isArray(orders)) return [];
+    console.log('🔍 FilteredOrders - input data:', { orders, isArray: Array.isArray(orders), length: orders?.length });
+    
+    if (!orders || !Array.isArray(orders)) {
+      console.log('❌ FilteredOrders - returning empty array due to invalid orders data');
+      return [];
+    }
     
     if (!searchTerm) return orders;
     
