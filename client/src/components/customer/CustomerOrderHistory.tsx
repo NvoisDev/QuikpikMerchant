@@ -327,8 +327,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     queryFn: async () => {
       // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
-      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone });
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`);
+      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone, timestamp: new Date().toLocaleTimeString() });
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+        credentials: 'include',
+        cache: 'no-cache' // Force fresh request every time
+      });
       if (!response.ok) {
         if (response.status === 403) {
           throw new Error('You must be added to this wholesaler\'s customer list to view orders');
@@ -336,20 +339,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         throw new Error('Failed to fetch order history');
       }
       const data = await response.json();
-      console.log('📦 Customer orders API response:', { 
-        dataType: typeof data, 
-        isArray: Array.isArray(data), 
-        length: data?.length || 0,
-        firstOrder: data?.[0] || null,
-        allOrders: data
+      console.log('📦 Customer orders loaded:', { 
+        totalOrders: data?.length || 0,
+        orderIds: data?.map((o: any) => o.id) || [],
+        mostRecentOrder: data?.[0] ? `#${data[0].id} - ${data[0].total}` : 'none',
+        timestamp: new Date().toLocaleTimeString()
       });
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: false, // Disable auto-refresh to prevent infinite loops
-    refetchIntervalInBackground: false, // Disable background refetching
-    staleTime: 0, // Always fetch fresh data - was 5 * 60 * 1000
-    gcTime: 1 * 60 * 1000, // Keep data in cache for 1 min - was 10 * 60 * 1000
+    refetchInterval: 20 * 1000, // Check for new orders every 20 seconds
+    refetchIntervalInBackground: true, // Enable background refetching
+    staleTime: 0, // Always consider data stale - fetch fresh every time
+    gcTime: 30 * 1000, // Keep data in cache for 30 seconds only
     refetchOnWindowFocus: true, // Enable refetch on window focus to show new orders
     refetchOnMount: true // Enable refetch on component mount to show fresh orders
   });

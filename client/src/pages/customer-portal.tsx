@@ -708,9 +708,36 @@ export default function CustomerPortal() {
 
 
 
-  // Customer authentication state - simpler initialization
+  // Customer authentication state - using server sessions
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
+
+  // Check for existing customer session on load
+  const { data: sessionData, isLoading: sessionLoading, refetch: refetchSession } = useQuery({
+    queryKey: ["/api/customer-auth/check", wholesalerId],
+    queryFn: async () => {
+      if (!wholesalerId) throw new Error("No wholesaler ID");
+      
+      const response = await fetch(`/api/customer-auth/check/${wholesalerId}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Session expired or doesn't exist
+          return null;
+        }
+        throw new Error("Failed to check authentication");
+      }
+      
+      return response.json();
+    },
+    enabled: !!wholesalerId && !isPreviewMode,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true,
+    refetchInterval: 10 * 60 * 1000, // Check every 10 minutes
+  });
   const [showHomePage, setShowHomePage] = useState(true);
   // Check if coming from CustomerLogin with auth parameter
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
@@ -1359,10 +1386,37 @@ export default function CustomerPortal() {
     setShowAuth(false);
     setIsGuestMode(false);
     
+    // Refetch session to confirm it's saved
+    refetchSession();
+    
     toast({
       title: "Welcome!",
       description: `Hello ${customer.name}, you're now logged in.`,
     });
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/customer-auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setIsAuthenticated(false);
+        setAuthenticatedCustomer(null);
+        setShowAuth(true);
+        setIsGuestMode(true);
+        
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   // Authentication is now required - no guest mode allowed;
@@ -1377,7 +1431,7 @@ export default function CustomerPortal() {
     setShowAllProducts(false);
   };
 
-  // Single authentication state management effect - prevents infinite loops
+  // Authentication state management using server sessions
   useEffect(() => {
     if (isPreviewMode) {
       // In preview mode, skip authentication
@@ -1386,36 +1440,34 @@ export default function CustomerPortal() {
       return;
     }
 
-    if (!wholesalerId) {
-      return; // Wait for wholesalerId to be available
+    if (!wholesalerId || sessionLoading) {
+      return; // Wait for wholesalerId and session check to complete
     }
 
-    if (isAuthenticated && authenticatedCustomer) {
-      // User is authenticated - show main content and save state
+    // Check if we have a valid server session
+    if (sessionData?.authenticated && sessionData?.customer) {
+      console.log('✅ Valid server session found for:', sessionData.customer.name);
+      setIsAuthenticated(true);
+      setAuthenticatedCustomer(sessionData.customer);
       setShowAuth(false);
       setIsGuestMode(false);
-      // Save authentication state to localStorage for session persistence
-      localStorage.setItem(`customer_auth_${wholesalerId}`, JSON.stringify({
-        isAuthenticated: true,
-        customer: authenticatedCustomer,
-        timestamp: Date.now()
-      }));
       return;
     }
 
-    // SECURITY: Always require SMS verification - no localStorage bypass
-    // Clear any existing localStorage to force fresh authentication
-    const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-    if (savedAuth) {
-      console.log('🔒 Clearing saved authentication - SMS verification required for security');
-      localStorage.removeItem(`customer_auth_${wholesalerId}`);
+    // If user completed local authentication but no server session yet, maintain local state
+    if (isAuthenticated && authenticatedCustomer) {
+      setShowAuth(false);
+      setIsGuestMode(false);
+      return;
     }
     
-    // No valid saved auth - show authentication screen
-    console.log('🔐 No valid saved authentication, showing auth screen');
+    // No valid authentication - show authentication screen
+    console.log('🔐 No valid authentication found, showing auth screen');
+    setIsAuthenticated(false);
+    setAuthenticatedCustomer(null);
     setShowAuth(true);
     setIsGuestMode(true);
-  }, [isAuthenticated, isPreviewMode, wholesalerId]); // Removed authenticatedCustomer to prevent infinite loop
+  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, isAuthenticated, authenticatedCustomer]);
 
 
 
@@ -1509,18 +1561,7 @@ export default function CustomerPortal() {
       onViewAllProducts={handleViewAllProducts}
       onViewFeaturedProduct={handleViewFeaturedProduct}
       customerData={authenticatedCustomer}
-      onLogout={() => {
-        setIsAuthenticated(false);
-        setAuthenticatedCustomer(null);
-        setShowAuth(true);
-        setIsGuestMode(true);
-        toast({
-          title: "Logged out",
-          description: "You have been successfully logged out.",
-        });
-        // Redirect to customer login page (Find Your Store)
-        window.location.href = "/customer-login";
-      }}
+      onLogout={handleLogout}
 
     />;
   }

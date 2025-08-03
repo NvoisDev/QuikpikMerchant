@@ -697,6 +697,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark code as used
       await storage.markSMSCodeAsUsed(verificationRecord.id);
 
+      // Create customer session for 24 hours
+      const sessionData = {
+        customerId: customer.id,
+        wholesalerId: wholesalerId,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        groupId: customer.groupId,
+        groupName: customer.groupName,
+        authenticatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      };
+
+      // Store customer session
+      (req.session as any).customerAuth = sessionData;
+      
+      console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 24 hours`);
+
       res.json({ 
         success: true, 
         message: "SMS verification successful",
@@ -712,6 +730,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("SMS verification error:", error);
       res.status(500).json({ error: "SMS verification failed" });
+    }
+  });
+
+  // Customer authentication check endpoint - verify session
+  app.get('/api/customer-auth/check/:wholesalerId', async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      const customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth) {
+        return res.status(401).json({ authenticated: false, message: "No customer session found" });
+      }
+      
+      // Check if session matches the wholesaler
+      if (customerAuth.wholesalerId !== wholesalerId) {
+        return res.status(401).json({ authenticated: false, message: "Session does not match wholesaler" });
+      }
+      
+      // Check if session is expired (24 hours)
+      const now = new Date();
+      const expiresAt = new Date(customerAuth.expiresAt);
+      
+      if (now > expiresAt) {
+        // Clear expired session
+        delete (req.session as any).customerAuth;
+        return res.status(401).json({ authenticated: false, message: "Session expired" });
+      }
+      
+      console.log(`✅ Customer session valid for ${customerAuth.name} (expires: ${customerAuth.expiresAt})`);
+      
+      // Valid session found
+      res.json({
+        authenticated: true,
+        customer: {
+          id: customerAuth.customerId,
+          name: customerAuth.name,
+          email: customerAuth.email,
+          phone: customerAuth.phone,
+          groupId: customerAuth.groupId,
+          groupName: customerAuth.groupName
+        },
+        expiresAt: customerAuth.expiresAt
+      });
+    } catch (error) {
+      console.error("Customer auth check error:", error);
+      res.status(500).json({ error: "Failed to check authentication" });
+    }
+  });
+
+  // Customer logout endpoint
+  app.post('/api/customer-auth/logout', async (req, res) => {
+    try {
+      const customerAuth = (req.session as any)?.customerAuth;
+      
+      if (customerAuth) {
+        console.log(`🔓 Customer logout: ${customerAuth.name} (${customerAuth.phone})`);
+        delete (req.session as any).customerAuth;
+      }
+      
+      res.json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Customer logout error:", error);
+      res.status(500).json({ error: "Logout failed" });
     }
   });
 
