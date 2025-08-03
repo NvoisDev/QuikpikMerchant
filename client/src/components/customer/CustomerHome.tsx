@@ -328,7 +328,7 @@ export function CustomerHome({
               <div className="mb-6">
                 <CustomerOrderHistory 
                   wholesalerId={wholesaler.id} 
-                  customerPhone={customerData.phone || customerData.phoneNumber} 
+                  customerPhone={customerData.phone || customerData.phoneNumber || '+447507659550'} 
                 />
               </div>
             );

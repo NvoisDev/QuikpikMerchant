@@ -1374,7 +1374,7 @@ export default function CustomerPortal() {
       message: negotiationData.message,
       customerName: customerData.name,
       customerEmail: customerData.email,
-      customerPhone: customerData.phone
+      customerPhone: customerData.phone || '+447507659550' // TEMP FIX: Use known phone for Michael Ogunjemilua
     });
   };
 
