@@ -899,15 +899,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {
-    // Get the most recent order by creation time to find the highest order number
-    const [lastOrder] = await db
+    // CRITICAL FIX: Get the order with the highest numeric order number, not just most recent by date
+    // This prevents issues when multiple orders have the same order number due to concurrent processing
+    const allOrders = await db
       .select()
       .from(orders)
-      .where(eq(orders.wholesalerId, wholesalerId))
-      .orderBy(desc(orders.createdAt))
-      .limit(1);
+      .where(eq(orders.wholesalerId, wholesalerId));
     
-    return lastOrder;
+    if (allOrders.length === 0) return undefined;
+    
+    // Find the order with the highest numeric suffix (e.g., SF-117 -> 117)
+    let highestOrder = allOrders[0];
+    let highestNumber = 0;
+    
+    for (const order of allOrders) {
+      if (order.orderNumber) {
+        const numberPart = parseInt(order.orderNumber.split('-')[1] || '0');
+        if (numberPart > highestNumber) {
+          highestNumber = numberPart;
+          highestOrder = order;
+        }
+      }
+    }
+    
+    return highestOrder;
   }
 
   async getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
