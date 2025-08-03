@@ -176,7 +176,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerName, // Store customer name
     customerEmail, // Store customer email
     customerPhone, // Store customer phone
-    subtotal: productSubtotal, // Product subtotal (what wholesaler gets)
+    // CRITICAL FIX: Ensure we use the correct product subtotal, not the net amount after fees
+    subtotal: productSubtotal, // Raw product total (£3.00), not wholesaler net amount (£2.33)
     platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
     customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
     total: correctTotal, // Total = subtotal + customer transaction fee
