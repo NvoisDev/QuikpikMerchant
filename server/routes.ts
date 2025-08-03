@@ -1860,10 +1860,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`🏢 Generated wholesale reference: ${wholesaleRef} for ${wholesaler?.businessName || 'Unknown Business'}`);;
         
-        // Ensure subtotal has a valid value - calculate from total if missing
+        // CRITICAL FIX: Always use productSubtotal directly - never calculate from totalAmount
         const safeSubtotal = productSubtotal && productSubtotal !== 'null' 
           ? parseFloat(productSubtotal).toFixed(2)
-          : (parseFloat(totalAmount) - parseFloat(customerTransactionFee || '0')).toFixed(2);
+          : '0.00'; // Should never happen if payment intent metadata is correct
         
         console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
@@ -1875,7 +1875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName, // Store customer name
           customerEmail, // Store customer email
           customerPhone, // Store customer phone
-          subtotal: safeSubtotal, // Ensure non-null product subtotal (what wholesaler gets)
+          subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
           platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
           customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
           total: correctTotal, // Total = subtotal + customer transaction fee
