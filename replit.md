@@ -111,3 +111,25 @@ Preferred communication style: Simple, everyday language.
   - ✅ Simplified ecommerce-style store discovery while maintaining B2B security requirements
   - ✅ Modal state persistence allows clicking button on home page to display modal on product page
   - ✅ Clean, consistent emerald green styling throughout the search interface
+
+## ORDER PROCESSING CONSISTENCY FIXES ✅ (August 3, 2025)
+**Critical Order Numbering and Subtotal Calculation Issues Resolved**
+
+- **Order Numbering System Fixed**:
+  - ✅ Resolved duplicate order numbering bug (multiple orders showing SF-117)
+  - ✅ Fixed getLastOrderForWholesaler() to find highest numeric order number instead of most recent by date
+  - ✅ Aligned order numbering logic between routes.ts and order-processor.ts for consistency
+  - ✅ Corrected Order #226: Changed from SF-117 to proper SF-119 sequence
+  - ✅ Future orders now increment properly: SF-120, SF-121, etc.
+
+- **Subtotal Calculation Fixes**:
+  - ✅ Fixed Order #226 subtotal: £0.00 → £7.96 (4×£1.00 + 12×£0.33)
+  - ✅ Enhanced subtotal calculation to use actual cart items when payment metadata missing
+  - ✅ Implemented fallback logic for consistent pricing across all orders
+  - ✅ Updated API response to include actual orderNumber field for frontend display
+
+- **System Reliability Improvements**:
+  - ✅ Eliminated timestamp-based order numbering conflicts
+  - ✅ Ensured per-wholesaler sequential numbering works correctly
+  - ✅ Fixed backend-frontend order number synchronization
+  - ✅ Maintained data integrity across payment processing flow

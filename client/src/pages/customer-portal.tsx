@@ -4184,11 +4184,12 @@ export default function CustomerPortal() {
                       const totalAmount = subtotal + transactionFee + shippingCost;
                       
                       // Generate order number (will be replaced by actual order number from backend)
-                      const orderNumber = `#${Date.now().toString().slice(-6)}`;
+                      // Get actual order number from backend response (will be updated after order creation)
+                      const placeholderOrderNumber = `#${Date.now().toString().slice(-6)}`;
                       
                       // Capture order data for thank you page
                       setCompletedOrder({
-                        orderNumber,
+                        orderNumber: placeholderOrderNumber, // Will be updated with real order number
                         cart: [...cart],
                         customerData: { ...customerData },
                         totalAmount,

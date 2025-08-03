@@ -1855,15 +1855,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get wholesaler info for reference generation
         const wholesaler = await storage.getUser(wholesalerId);
         
-        // Generate wholesale reference number for both parties to use
-        const wholesaleRef = `${wholesaler?.businessName?.substring(0, 2).toUpperCase() || 'WS'}-${Date.now().toString().slice(-6)}`;
+        // CRITICAL FIX: Use proper sequential order numbering like order-processor.ts
+        const businessPrefix = wholesaler?.businessName 
+          ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
+          : 'WS';
         
-        console.log(`🏢 Generated wholesale reference: ${wholesaleRef} for ${wholesaler?.businessName || 'Unknown Business'}`);;
+        // Get current highest order number for this wholesaler
+        const lastOrder = await storage.getLastOrderForWholesaler(wholesalerId);
+        const lastOrderNumber = lastOrder?.orderNumber || `${businessPrefix}-000`;
         
-        // CRITICAL FIX: Always use productSubtotal directly - never calculate from totalAmount
-        const safeSubtotal = productSubtotal && productSubtotal !== 'null' 
+        // Extract number from last order (e.g., "SF-118" -> 118) 
+        const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
+        const nextNumber = lastNumber + 1;
+        const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+        
+        console.log(`🏢 Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+        
+        // CRITICAL FIX: Calculate subtotal from items when metadata missing
+        const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
           ? parseFloat(productSubtotal).toFixed(2)
-          : '0.00'; // Should never happen if payment intent metadata is correct
+          : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
         
         console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
@@ -2012,7 +2023,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json({ 
           success: true, 
-          orderId: order.id, 
+          orderId: order.id,
+          orderNumber: order.orderNumber || wholesaleRef, // Include actual order number
           platformFeeCollected: connectAccountUsed === 'true',
           message: 'Order created successfully'
         });
