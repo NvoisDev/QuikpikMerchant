@@ -710,22 +710,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       };
 
-      // Store customer session
+      // Ensure session exists and store customer session
+      if (!req.session) {
+        console.error("Session not initialized - regenerating session");
+        req.session = {} as any;
+      }
+      
+      // Force session save to ensure it exists before setting customerAuth
+      req.session.save = req.session.save || (() => Promise.resolve());
+      
       (req.session as any).customerAuth = sessionData;
       
       console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 24 hours`);
 
-      res.json({ 
-        success: true, 
-        message: "SMS verification successful",
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          groupId: customer.groupId,
-          groupName: customer.groupName
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: "Failed to save session" });
         }
+        
+        console.log('✅ Customer session saved successfully');
+        res.json({ 
+          success: true, 
+          message: "SMS verification successful",
+          customer: {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            groupId: customer.groupId,
+            groupName: customer.groupName
+          }
+        });
       });
     } catch (error) {
       console.error("SMS verification error:", error);
