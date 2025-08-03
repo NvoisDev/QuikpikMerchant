@@ -672,6 +672,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Customer not found" });
       }
 
+      console.log('🔧 SMS Verification - Customer data:', {
+        id: customer.id || customer.customer_id,
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        hasPhone: !!customer.phone,
+        phoneLength: customer.phone?.length
+      });
+
       // Verify SMS code
       const verificationRecord = await storage.getSMSVerificationCode(wholesalerId, customer.id, smsCode);
       
@@ -703,16 +712,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create customer session for 24 hours
       const sessionData = {
-        customerId: customer.id,
+        customerId: customer.id || customer.customer_id,
         wholesalerId: wholesalerId,
         name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        groupId: customer.groupId,
-        groupName: customer.groupName,
+        email: customer.email || '',
+        phone: customer.phone || '',
+        groupId: customer.groupId || customer.group_id,
+        groupName: customer.groupName || customer.group_name,
         authenticatedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       };
+
+      console.log('🔧 SMS Verification - Session data created:', sessionData);
 
       // Ensure session exists and store customer session
       if (!req.session) {
@@ -761,9 +772,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a signed token as backup for session persistence issues
       const customerToken = Buffer.from(JSON.stringify({
-        customerId: customer.id,
+        customerId: customer.id || customer.customer_id,
         wholesalerId: wholesalerId,
         name: customer.name,
+        email: customer.email || '',
+        phone: customer.phone || '',
+        groupId: customer.groupId || customer.group_id,
+        groupName: customer.groupName || customer.group_name,
         timestamp: Date.now(),
         expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
       })).toString('base64');
@@ -811,6 +826,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               customerId: cookieData.customerId,
               wholesalerId: cookieData.wholesalerId,
               name: cookieData.name,
+              email: cookieData.email || '',
+              phone: cookieData.phone || '',
+              groupId: cookieData.groupId || null,
+              groupName: cookieData.groupName || '',
               expiresAt: new Date(cookieData.expires).toISOString()
             };
             console.log('🔓 Using fallback cookie authentication for customer:', cookieData.name);
@@ -906,7 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id);
+      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id || customer.customer_id);
 
       // REMOVED: Customer group requirement - customers can see orders even without pre-registration
 
