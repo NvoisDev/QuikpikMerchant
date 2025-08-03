@@ -323,15 +323,23 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const queryClient = useQueryClient();
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone], // Fixed query key
     queryFn: async () => {
       // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
       console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone, timestamp: new Date().toLocaleTimeString() });
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?t=${Date.now()}`, {
         credentials: 'include',
-        cache: 'no-cache' // Force fresh request every time
+        cache: 'no-store', // Force fresh request every time
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
+      
+      console.log('📡 Response status:', response.status, response.statusText);
+      
       if (!response.ok) {
         if (response.status === 403) {
           throw new Error('You must be added to this wholesaler\'s customer list to view orders');
@@ -343,16 +351,17 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         totalOrders: data?.length || 0,
         orderIds: data?.map((o: any) => o.id) || [],
         mostRecentOrder: data?.[0] ? `#${data[0].id} - ${data[0].total}` : 'none',
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        rawData: data
       });
       return data;
     },
     enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: 20 * 1000, // Check for new orders every 20 seconds
-    refetchIntervalInBackground: true, // Enable background refetching
+    refetchInterval: false, // Disable auto-refetch to prevent conflicts
+    refetchIntervalInBackground: false,
     staleTime: 0, // Always consider data stale - fetch fresh every time
-    gcTime: 30 * 1000, // Keep data in cache for 30 seconds only
-    refetchOnWindowFocus: true, // Enable refetch on window focus to show new orders
+    gcTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Disable to prevent conflicts
     refetchOnMount: true // Enable refetch on component mount to show fresh orders
   });
 
@@ -391,6 +400,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     setIsRefreshing(true);
     try {
       // Clear cache and force fresh fetch
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
       queryClient.removeQueries({ queryKey: [`/api/customer-orders`, wholesalerId, customerPhone] });
       await refetch();
     } finally {
