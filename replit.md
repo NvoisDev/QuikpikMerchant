@@ -157,6 +157,19 @@ Preferred communication style: Simple, everyday language.
   - ✅ **Registration required per seller**: Each wholesaler decides which customers they want to work with
   - ✅ **Contact message for unregistered**: "Contact Wholesaler to Register" message with redirect to wholesaler contact
 
+## PHONE NUMBER DISPLAY FIX ✅ (August 4, 2025)
+**Order Confirmation Page Now Shows Wholesaler Phone Number**
+
+- **Database Issue Fixed**:
+  - ✅ Updated user role from 'customer' to 'wholesaler' for proper profile access
+  - ✅ Added business phone number (+447507659550) to wholesaler profile
+  - ✅ Fixed API endpoint to return complete wholesaler data including phone number
+
+- **ThankYouPage Component Updated**:
+  - ✅ Modified to use correct field name (businessPhone) from wholesaler API response
+  - ✅ Added fallback logic: businessPhone || phone || phoneNumber for maximum compatibility
+  - ✅ Phone number now displays properly in "Need Help?" section of order confirmation
+
 - **System Reliability Improvements**:
   - ✅ Eliminated order number duplication across both platforms
   - ✅ Fixed backend-frontend order synchronization for both customer and wholesaler portals

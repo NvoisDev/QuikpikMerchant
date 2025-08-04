@@ -207,7 +207,7 @@ export const ThankYouPage = ({
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><strong>Business:</strong> {wholesaler.businessName}</p>
                   <p><strong>Email:</strong> {wholesaler.email}</p>
-                  <p><strong>Phone:</strong> {wholesaler.phone}</p>
+                  <p><strong>Phone:</strong> {wholesaler.businessPhone || wholesaler.phone || wholesaler.phoneNumber}</p>
                 </div>
               </CardContent>
             </Card>
