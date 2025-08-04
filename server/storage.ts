@@ -557,10 +557,16 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orders);
 
-    // Apply basic filters
+    // Apply basic filters - CRITICAL FIX: Include orders where user is EITHER wholesaler OR retailer
     const conditions = [];
     if (wholesalerId) {
-      conditions.push(eq(orders.wholesalerId, wholesalerId));
+      // Show orders where this user is either the wholesaler OR the retailer (covers both order systems)
+      conditions.push(
+        or(
+          eq(orders.wholesalerId, wholesalerId),
+          eq(orders.retailerId, wholesalerId)
+        )
+      );
     }
     if (retailerId) {
       conditions.push(eq(orders.retailerId, retailerId));
