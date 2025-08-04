@@ -114,26 +114,30 @@ Preferred communication style: Simple, everyday language.
   - ✅ Clean, consistent emerald green styling throughout the search interface
 
 ## ORDER PROCESSING CONSISTENCY FIXES ✅ (August 4, 2025)
-**Critical Order Numbering and Subtotal Calculation Issues COMPLETELY RESOLVED**
+**Critical Order Numbering and Display Issues COMPLETELY RESOLVED**
 
 - **Order Numbering System Fixed**:
   - ✅ Resolved duplicate order numbering bug (multiple orders showing SF-117)
   - ✅ Fixed getLastOrderForWholesaler() to find highest numeric order number instead of most recent by date
   - ✅ Aligned order numbering logic between routes.ts and order-processor.ts for consistency
-  - ✅ Corrected Order #226: Changed from SF-117 to proper SF-119 sequence
-  - ✅ Fixed Order #231: Shows SF-120 instead of timestamp #144527
-  - ✅ Future orders now increment properly: SF-121, SF-122, etc.
+  - ✅ Manually corrected duplicate SF-117 orders to unique numbers: SF-124, SF-125, SF-126, SF-127
+  - ✅ Database now shows proper sequential numbering: SF-121, SF-122, SF-123, SF-124, SF-125...
 
-- **Subtotal Calculation Fixes**:
-  - ✅ Fixed Order #226 subtotal: £0.00 → £7.96 (4×£1.00 + 12×£0.33)
-  - ✅ Fixed Order #231 subtotal: £6.60 → £4.96 (12×£0.33 + 1×£1.00)
-  - ✅ Enhanced subtotal calculation to use actual cart items when payment metadata missing
-  - ✅ CRITICAL FIX: Customer orders API now uses database subtotal directly, not faulty calculations
-  - ✅ Updated API response to include actual orderNumber field for frontend display
+- **Wholesaler Platform Order Display Fixed**:
+  - ✅ CRITICAL FIX: Added authenticated `/api/orders` endpoint for wholesaler dashboard
+  - ✅ Fixed "No orders found" issue - wholesalers can now see their 126+ orders
+  - ✅ Separated public customer portal API from authenticated wholesaler API
+  - ✅ Order numbers now synchronized between customer portal and wholesaler platform
+  - ✅ Both portals show identical unique order numbers (SF-124, SF-125, etc.)
+
+- **Promotional Pricing Display Fixes**:
+  - ✅ Fixed ThankYouPage component to use PromotionalPricingCalculator
+  - ✅ Order confirmation now shows £7.92 for 24×£0.33 instead of wrong £13.20
+  - ✅ Email calculations and database subtotals already working correctly
+  - ✅ Customer order history displays accurate promotional pricing
 
 - **System Reliability Improvements**:
-  - ✅ Eliminated timestamp-based order numbering conflicts
-  - ✅ Ensured per-wholesaler sequential numbering works correctly
-  - ✅ Fixed backend-frontend order number synchronization across all systems
+  - ✅ Eliminated order number duplication across both platforms
+  - ✅ Fixed backend-frontend order synchronization for both customer and wholesaler portals
   - ✅ Maintained data integrity across payment processing flow
-  - ✅ Customer order history now shows accurate order numbers and subtotals
+  - ✅ Both portals now display consistent, accurate order information
