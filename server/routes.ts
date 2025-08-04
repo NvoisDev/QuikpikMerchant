@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search; // search term
       
       // Default to Surulere Foods Wholesale for public access
-      const surulereWholesalerId = '104871691614680693123';
+      const surulereWholesalerId = 'user_1753060083607_7uzx8l830';
       
       // Get orders received by Surulere Foods Wholesale
       console.log(`📦 Fetching orders for wholesaler: ${surulereWholesalerId}, search: ${search || 'none'}`);
@@ -1546,7 +1546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search; // search term
       
       // Default to Surulere Foods Wholesale for ecommerce-style access
-      const surulereWholesalerId = '104871691614680693123';
+      const surulereWholesalerId = 'user_1753060083607_7uzx8l830';
       
       // Get orders received by Surulere Foods Wholesale
       const orders = await storage.getOrders(surulereWholesalerId, undefined, search);

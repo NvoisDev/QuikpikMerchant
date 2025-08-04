@@ -141,6 +141,7 @@ Preferred communication style: Simple, everyday language.
   - ✅ Removed unnecessary "Find Seller" button from wholesaler dashboard
   - ✅ Disabled SMS verification system to prevent unwanted text messages
   - ✅ Orders now accessible without login as requested
+  - ✅ CRITICAL FIX: Corrected hardcoded wholesaler ID in orders endpoint - orders now display correctly in dashboard
 
 - **System Reliability Improvements**:
   - ✅ Eliminated order number duplication across both platforms
