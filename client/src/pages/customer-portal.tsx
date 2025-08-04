@@ -1422,6 +1422,12 @@ export default function CustomerPortal() {
       });
 
       if (response.ok) {
+        // Clear localStorage and sessionStorage
+        localStorage.removeItem(`customer_auth_${wholesalerId}`);
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Update state
         setIsAuthenticated(false);
         setAuthenticatedCustomer(null);
         setShowAuth(true);
@@ -1429,11 +1435,19 @@ export default function CustomerPortal() {
         
         toast({
           title: "Logged out",
-          description: "You have been logged out successfully.",
+          description: "You have been successfully logged out.",
         });
+        
+        // Redirect to customer-login page
+        window.location.href = '/customer-login';
       }
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        title: "Logout Error",
+        description: "There was an issue logging out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1722,24 +1736,7 @@ export default function CustomerPortal() {
                     {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
                   </Button>
                   <Button
-                    onClick={() => {
-                      // Clear localStorage
-                      localStorage.removeItem(`customer_auth_${wholesalerId}`);
-                      localStorage.clear();
-                      sessionStorage.clear();
-                      
-                      setIsAuthenticated(false);
-                      setAuthenticatedCustomer(null);
-                      setShowAuth(true);
-                      setIsGuestMode(true);
-                      toast({
-                        title: "Logged out",
-                        description: "You have been successfully logged out.",
-                      });
-                      
-                      // Redirect to customer-login page
-                      window.location.href = '/customer-login';
-                    }}
+                    onClick={handleLogout}
                     variant="outline"
                     size="sm"
                     className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
