@@ -757,11 +757,12 @@ export default function CustomerPortal() {
     refetchInterval: 10 * 60 * 1000, // Check every 10 minutes
   });
   const [showHomePage, setShowHomePage] = useState(true);
-  // Check if coming from CustomerLogin with auth parameter
+  // Check if coming from CustomerLogin with auth parameter or if user wants to login
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const hasAuthParam = urlParams.has('auth');
+  const forceLoginParam = urlParams.has('login');
   
-  const [showAuth, setShowAuth] = useState(!isPreviewMode && !hasAuthParam);
+  const [showAuth, setShowAuth] = useState(!isPreviewMode && (!hasAuthParam || forceLoginParam));
   const [isGuestMode, setIsGuestMode] = useState(true);
 
   // State management
@@ -1476,6 +1477,16 @@ export default function CustomerPortal() {
       return; // Wait for wholesalerId and session check to complete
     }
 
+    // Check if user explicitly wants to login (force login parameter)
+    if (forceLoginParam) {
+      console.log('🔑 Force login requested - showing auth screen');
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(true);
+      setIsGuestMode(true);
+      return;
+    }
+
     // Check if we have a valid server session
     if (sessionData?.authenticated && sessionData?.customer) {
       console.log('✅ Valid server session found for:', sessionData.customer.name);
@@ -1499,7 +1510,7 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(null);
     setShowAuth(true);
     setIsGuestMode(true);
-  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, isAuthenticated, authenticatedCustomer]);
+  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, isAuthenticated, authenticatedCustomer, forceLoginParam]);
 
 
 
@@ -1736,7 +1747,17 @@ export default function CustomerPortal() {
                     {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
                   </Button>
                   <Button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      // Clear authentication and redirect to login screen
+                      setIsAuthenticated(false);
+                      setAuthenticatedCustomer(null);
+                      setShowAuth(true);
+                      setIsGuestMode(true);
+                      // Add login parameter to force showing login screen
+                      const currentUrl = new URL(window.location.href);
+                      currentUrl.searchParams.set('login', 'true');
+                      window.history.replaceState({}, '', currentUrl.toString());
+                    }}
                     variant="outline"
                     size="sm"
                     className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
