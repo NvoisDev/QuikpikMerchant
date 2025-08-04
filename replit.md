@@ -139,9 +139,23 @@ Preferred communication style: Simple, everyday language.
 - **Wholesaler Platform Simplification (August 4, 2025)**:
   - ✅ Removed authentication requirement from orders endpoint for maximum simplicity
   - ✅ Removed unnecessary "Find Seller" button from wholesaler dashboard
-  - ✅ Disabled SMS verification system to prevent unwanted text messages
   - ✅ Orders now accessible without login as requested
   - ✅ CRITICAL FIX: Corrected hardcoded wholesaler ID in orders endpoint - orders now display correctly in dashboard
+
+## SMS VERIFICATION SYSTEM RE-ENABLED ✅ (August 4, 2025)
+**Customer Authentication Flow Restored with 5-Minute Code Expiration**
+
+- **Authentication Flow Implemented**:
+  - ✅ **First time**: Customer enters phone number → Gets SMS code → Enters code (5-minute window)
+  - ✅ **Session active**: Customer can freely browse your store and other stores found via "Find Seller"
+  - ✅ **No re-authentication needed**: They can switch between different wholesaler stores without new SMS codes
+  - ✅ **Session expires**: Only when their browser session expires (usually after many hours or days) will they need to authenticate again
+
+- **Multi-Seller Registration Requirements**:
+  - ✅ **Can browse freely**: Customers can view any wholesaler's products and prices
+  - ✅ **Cannot purchase without registration**: When they try to checkout, the system checks if they're registered with that specific wholesaler
+  - ✅ **Registration required per seller**: Each wholesaler decides which customers they want to work with
+  - ✅ **Contact message for unregistered**: "Contact Wholesaler to Register" message with redirect to wholesaler contact
 
 - **System Reliability Improvements**:
   - ✅ Eliminated order number duplication across both platforms

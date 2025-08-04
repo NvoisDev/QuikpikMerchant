@@ -70,18 +70,7 @@ export class ReliableSMSService {
       };
     }
 
-    // SMS DISABLED: Skip sending real SMS for platform simplicity
-    console.log(`🚫 SMS sending disabled for platform simplicity - code would be: ${code}`);
-    
-    // Return success without actually sending SMS
-    return {
-      success: true,
-      messageId: 'sms_disabled_for_simplicity',
-      debugCode: code // Provide code for development purposes
-    };
-
-    // OLD CODE: Attempt to send real SMS (disabled for simplicity)
-    /*
+    // SMS ENABLED: Send real SMS codes with 5-minute expiration
     try {
       console.log(`📤 Attempting SMS to ${phoneNumber}`);
       
@@ -113,39 +102,15 @@ export class ReliableSMSService {
           '30007': 'Message delivery failed'
         };
         
-        if (errorMessages[error.code]) {
-          console.error(`Error Details: ${errorMessages[error.code]}`);
-        }
+        const errorMessage = errorMessages[error.code] || 'Unknown SMS error';
+        console.error(`Error details: ${errorMessage}`);
       }
-
-      // In development mode, provide fallback functionality
-      if (isDevelopment) {
-        console.log('🧪 Development Mode: Providing SMS fallback');
-        console.log(`📋 VERIFICATION CODE FOR ${phoneNumber}: ${code}`);
-        
-        // Display verification code prominently in console
-        console.log('┌─────────────────────────────────────────┐');
-        console.log('│           SMS VERIFICATION CODE         │');
-        console.log('├─────────────────────────────────────────┤');
-        console.log(`│  Phone: ${phoneNumber.padEnd(20)}      │`);
-        console.log(`│  Code:  ${code.padEnd(20)}              │`);
-        console.log(`│  Business: ${businessName.padEnd(15)}   │`);
-        console.log('│  Valid for: 5 minutes                  │');
-        console.log('└─────────────────────────────────────────┘');
-        
-        return {
-          success: true,
-          messageId: `dev_${Date.now()}`,
-          debugCode: code
-        };
-      }
-
+      
       return {
         success: false,
-        error: error.message
+        error: error.message || 'SMS sending failed'
       };
     }
-    */
   }
 
   // Check if SMS service is properly configured
