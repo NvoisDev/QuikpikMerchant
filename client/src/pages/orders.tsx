@@ -383,16 +383,7 @@ export default function Orders() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => window.location.href = '/customer-portal'}
-            className="flex-1 sm:flex-none border-emerald-300 text-emerald-600 hover:bg-emerald-50"
-          >
-            <Search className="h-4 w-4 mr-2" />
-            <span className="hidden xs:inline">Find Seller</span>
-            <span className="xs:hidden">Seller</span>
-          </Button>
+
           <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="flex-1 sm:flex-none">
             <RefreshCw className="h-4 w-4 mr-2" />
             <span className="hidden xs:inline">Refresh</span>

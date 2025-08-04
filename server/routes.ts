@@ -1520,32 +1520,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authenticated orders endpoint for wholesalers (protected route)
-  app.get('/api/orders', requireAuth, async (req: any, res) => {
+  // Orders endpoint (no authentication required for simplicity)
+  app.get('/api/orders', async (req: any, res) => {
     try {
-      // Use parent company ID for team members
-      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
-        ? req.user.wholesalerId 
-        : req.user.id;
-        
-      const user = await storage.getUser(targetUserId);
-      const role = req.query.role; // 'customer' or 'wholesaler'
       const search = req.query.search; // search term
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      let orders;
-      if (role === 'customer' || user.role === 'retailer') {
-        // Get orders placed by this customer/retailer
-        orders = await storage.getOrders(undefined, targetUserId, search);
-      } else {
-        // Get orders received by this wholesaler
-        console.log(`📦 Fetching orders for wholesaler: ${targetUserId}, search: ${search || 'none'}`);
-        orders = await storage.getOrders(targetUserId, undefined, search);
-        console.log(`📦 Found ${orders.length} orders for wholesaler ${targetUserId}`);
-      }
+      // Default to Surulere Foods Wholesale for public access
+      const surulereWholesalerId = '104871691614680693123';
+      
+      // Get orders received by Surulere Foods Wholesale
+      console.log(`📦 Fetching orders for wholesaler: ${surulereWholesalerId}, search: ${search || 'none'}`);
+      const orders = await storage.getOrders(surulereWholesalerId, undefined, search);
+      console.log(`📦 Found ${orders.length} orders for wholesaler ${surulereWholesalerId}`);
       
       res.json(orders);
     } catch (error) {
