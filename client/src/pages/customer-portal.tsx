@@ -33,25 +33,43 @@ import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/pro
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 
-// Extended Product type that handles all the properties used in the component
-type ExtendedProduct = ProductType & {
+// Type-safe Product interface that matches actual database schema
+interface ExtendedProduct {
+  id: number;
+  name: string;
+  description?: string | null;
+  imageUrl?: string;
+  images?: string | string[] | null;
+  price: string;
+  promoPrice?: string | null;
+  currency?: string | null;
+  stock?: number;
+  category?: string;
+  categories?: string[];
+  status?: string;
+  wholesalerId?: string;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
   wholesaler?: {
     businessName: string;
     businessPhone?: string;
   };
-  // Type assertion for properties that might need special handling
-  images?: string[] | null;
-  palletPrice?: string | null;
+  
+  // Additional properties that may exist in database
+  palletPrice?: string | number | null;
   palletMoq?: number | null;
   palletStock?: number | null;
   unitsPerPallet?: number | null;
-  palletWeight?: string | null;
-  pallet_weight?: string | null;
+  palletWeight?: string | number | null;
+  pallet_weight?: string | number | null;
   sellingFormat?: string | null;
   sizePerUnit?: string | null;
-  individualUnitWeight?: string | null;
+  individualUnitWeight?: string | number | null;
   packageDimensions?: any;
-};
+  negotiationEnabled?: boolean;
+  deliveryExcluded?: boolean;
+  moq?: number;
+}
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -2331,14 +2349,14 @@ export default function CustomerPortal() {
               ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" 
               : "space-y-3 sm:space-y-4"
             }`}>
-              {otherProducts.slice(0, 6).map((product: ExtendedProduct) => (
+              {otherProducts.slice(0, 6).map((product) => (
                 viewMode === "grid" ? (
                   // Grid View - Mobile Responsive
                   <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
                     <CardContent className="p-3 sm:p-4 lg:p-6">
                       {/* Product Image - Mobile Optimized */}
                       <div className="mb-3 sm:mb-4">
-                        {product.imageUrl || (product.images && product.images.length > 0) ? (
+                        {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
                           <img 
                             src={product.imageUrl || product.images[0]} 
                             alt={product.name}
@@ -2750,7 +2768,7 @@ export default function CustomerPortal() {
                     <p className="text-gray-500">No products available at the moment</p>
                   </div>
                 ) : (
-                  filteredProducts.map((product: ExtendedProduct, productIndex: number) => (
+                  filteredProducts.map((product, productIndex: number) => (
                     viewMode === "grid" ? (
                       // Grid View
                       <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
