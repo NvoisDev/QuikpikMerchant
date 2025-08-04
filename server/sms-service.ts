@@ -70,7 +70,18 @@ export class ReliableSMSService {
       };
     }
 
-    // Attempt to send real SMS
+    // SMS DISABLED: Skip sending real SMS for platform simplicity
+    console.log(`🚫 SMS sending disabled for platform simplicity - code would be: ${code}`);
+    
+    // Return success without actually sending SMS
+    return {
+      success: true,
+      messageId: 'sms_disabled_for_simplicity',
+      debugCode: code // Provide code for development purposes
+    };
+
+    // OLD CODE: Attempt to send real SMS (disabled for simplicity)
+    /*
     try {
       console.log(`📤 Attempting SMS to ${phoneNumber}`);
       
@@ -134,6 +145,7 @@ export class ReliableSMSService {
         error: error.message
       };
     }
+    */
   }
 
   // Check if SMS service is properly configured
