@@ -906,15 +906,21 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(eq(orders.wholesalerId, wholesalerId));
     
-    if (allOrders.length === 0) return undefined;
+    if (allOrders.length === 0) {
+      console.log(`📊 No orders found for wholesaler ${wholesalerId}`);
+      return undefined;
+    }
     
     // Find the order with the highest numeric suffix (e.g., SF-117 -> 117)
     let highestOrder = allOrders[0];
     let highestNumber = 0;
     
+    console.log(`📊 Analyzing ${allOrders.length} orders for wholesaler ${wholesalerId}:`);
+    
     for (const order of allOrders) {
       if (order.orderNumber) {
         const numberPart = parseInt(order.orderNumber.split('-')[1] || '0');
+        console.log(`  - Order #${order.id}: ${order.orderNumber} -> ${numberPart} (created: ${order.createdAt})`);
         if (numberPart > highestNumber) {
           highestNumber = numberPart;
           highestOrder = order;
@@ -922,6 +928,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    console.log(`📊 Selected highest order: #${highestOrder.id} (${highestOrder.orderNumber}) with number ${highestNumber}`);
     return highestOrder;
   }
 

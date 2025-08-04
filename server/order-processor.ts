@@ -157,16 +157,23 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
     : 'WS';
   
-  // Get current highest order number for this wholesaler
+  // CRITICAL FIX: Get order number with detailed logging to prevent duplicates
   const lastOrder = await storage.getLastOrderForWholesaler(wholesalerId);
   const lastOrderNumber = lastOrder?.orderNumber || `${businessPrefix}-000`;
+  
+  console.log(`🔍 Order numbering analysis for ${wholesaler?.businessName}:`, {
+    lastOrderId: lastOrder?.id,
+    lastOrderNumber: lastOrderNumber,
+    lastOrderCreated: lastOrder?.createdAt,
+    businessPrefix: businessPrefix
+  });
   
   // Extract number from last order (e.g., "SF-115" -> 115) 
   const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
   const nextNumber = lastNumber + 1;
   const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
   
-  console.log(`🏢 Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+  console.log(`🏢 CRITICAL: Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}, lastNumber: ${lastNumber}, nextNumber: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
   
   // Create order with customer details AND SHIPPING DATA
   const orderData = {
