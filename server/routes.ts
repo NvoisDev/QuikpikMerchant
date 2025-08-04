@@ -596,6 +596,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Customer not found" });
       }
 
+      // CRITICAL FIX: Check for recent SMS codes to prevent spam
+      const recentCodes = await db
+        .select()
+        .from(smsVerificationCodes)
+        .where(
+          and(
+            eq(smsVerificationCodes.customerId, customer.id),
+            eq(smsVerificationCodes.isUsed, false),
+            gt(smsVerificationCodes.createdAt, new Date(Date.now() - 2 * 60 * 1000)) // Last 2 minutes
+          )
+        )
+        .orderBy(desc(smsVerificationCodes.createdAt))
+        .limit(1);
+
+      if (recentCodes.length > 0) {
+        console.log(`🚫 SMS throttling: Recent code exists for ${customer.name}, not sending new SMS`);
+        return res.json({ 
+          success: true, 
+          message: "SMS verification code already sent recently. Please check your messages or wait 2 minutes.",
+          throttled: true
+        });
+      }
+
       console.log("Customer found for SMS:", customer);
 
       // Get wholesaler info for business name
