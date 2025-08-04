@@ -1293,6 +1293,131 @@ For technical problems:
         `
       }
     ]
+  },
+  {
+    id: "marketplace-registration",
+    title: "Customer Registration & Marketplace",
+    icon: Users,
+    description: "Understanding customer registration requirements and marketplace functionality",
+    articles: [
+      {
+        title: "Customer Registration Requirements",
+        content: `
+### How Customer Registration Works in Quikpik Marketplace
+
+#### Multi-Wholesaler Platform Overview
+Quikpik operates as a **multi-wholesaler marketplace** where:
+- Multiple independent wholesalers run their own stores
+- Customers can discover and browse all wholesaler stores
+- Each wholesaler maintains their own customer database
+- Registration is required **per wholesaler** before purchasing
+
+#### Customer Registration Requirements
+
+**Browsing vs Purchasing**:
+- ✅ **Browse freely**: Customers can view any wholesaler's products and prices
+- ❌ **Purchase requires registration**: Customers must be registered with each specific wholesaler
+
+#### Why Per-Wholesaler Registration?
+This approach maintains the **B2B wholesale model** because:
+
+1. **Credit Terms**: Wholesalers need to establish individual credit agreements
+2. **Business Compliance**: Each wholesaler has their own verification requirements  
+3. **Pricing Agreements**: Special pricing tiers and terms are negotiated individually
+4. **Relationship Management**: Wholesalers control which businesses they work with
+5. **Legal Requirements**: Some products require verified business relationships
+
+#### How Customers Find Your Store
+
+**Discovery Methods**:
+1. **Direct Link**: You share your store URL directly with customers
+2. **"Find Seller" Feature**: Customers use the marketplace search to discover new wholesalers
+3. **Customer Referrals**: Existing customers recommend your store to others
+
+**Customer Journey**:
+1. Customer discovers your store (via link or marketplace search)
+2. Customer can browse all your products and see pricing
+3. When ready to purchase, they must be registered in your customer database
+4. If not registered, they see "Contact Wholesaler to Register" message
+5. You approve their registration and add them to your customer groups
+6. Customer can then purchase from your store using SMS verification
+
+### Managing Customer Registration
+
+#### Adding New Customers
+1. **Go to Customer Groups** in your dashboard
+2. **Select appropriate group** for the customer
+3. **Click "Add Customer"** 
+4. **Enter customer details**:
+   - Business name and contact person
+   - Phone number (required for SMS authentication)
+   - Email address for order confirmations
+   - Business address for delivery/invoicing
+
+#### Customer Approval Process
+When potential customers contact you for registration:
+1. **Verify business credentials** as needed
+2. **Discuss terms** (credit limits, payment terms, minimum orders)
+3. **Add to appropriate customer group** based on their business type
+4. **Notify customer** that registration is complete
+5. **Share your store link** for them to start shopping
+
+#### Registration Best Practices
+- **Clear Communication**: Let customers know they need registration before first purchase
+- **Quick Response**: Approve legitimate business registrations promptly
+- **Group Organization**: Organize customers into logical groups (by region, business type, etc.)
+- **Terms Documentation**: Keep records of agreed terms and pricing
+
+### Customer Authentication Flow
+
+#### SMS Verification System
+Once registered, customers access your store using:
+1. **Phone Number Entry**: Last 4 digits of their registered phone number
+2. **SMS Code Verification**: 6-digit code sent via SMS (5-minute expiry)
+3. **Session Creation**: Persistent session allows browsing multiple stores
+4. **Cross-Store Access**: Session works across different wholesaler stores they're registered with
+
+#### Session Management
+- **Single Authentication**: Once verified, customers can access all their registered stores
+- **Session Persistence**: Lasts for several hours/days depending on browser settings
+- **No Re-verification**: Customers don't need new SMS codes when switching between stores
+- **Secure Isolation**: Customers only see stores where they're registered
+
+### Marketplace Benefits
+
+#### For Wholesalers:
+- **Customer Discovery**: Reach new customers through marketplace search
+- **Relationship Control**: Maintain approval process for new customers
+- **Data Isolation**: Your customer data remains private and separate
+- **Competitive Advantage**: Customers can compare but relationships matter
+
+#### For Customers:
+- **Easy Discovery**: Find new suppliers using "Find Seller" feature
+- **Simplified Shopping**: Browse multiple stores with single authentication
+- **Comparison Shopping**: Compare products and prices across wholesalers
+- **Trusted Platform**: Secure payment processing and order management
+
+### Common Questions
+
+**Q: Can customers see other wholesalers' customer lists?**
+A: No, customer data is completely isolated between wholesalers.
+
+**Q: Can customers place orders without registration?**
+A: No, registration with each wholesaler is required before purchasing.
+
+**Q: How do customers know they need registration?**
+A: When unregistered customers try to purchase, they see clear messaging directing them to contact the wholesaler.
+
+**Q: Can I set different terms for different customers?**
+A: Yes, organize customers into groups with different pricing or terms as needed.
+
+**Q: What happens if a customer is registered with multiple wholesalers?**
+A: They can access all their registered stores with a single SMS authentication session.
+
+This system balances marketplace discovery with traditional B2B relationship management, giving you the best of both worlds.
+        `
+      }
+    ]
   }
 ];
 

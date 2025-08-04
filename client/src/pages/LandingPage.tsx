@@ -20,7 +20,8 @@ import {
   Calendar,
   Users2,
   Phone,
-  Video
+  Video,
+  Search
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -217,9 +218,66 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Key Benefits Section */}
+      {/* How It Works Section */}
       <section className="py-12 sm:py-16 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+              How the Marketplace Works
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Quikpik connects multiple wholesalers with their retail customers in one platform
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 mb-12">
+            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Users className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-blue-800">1. Wholesalers Set Up Stores</h3>
+              <p className="text-blue-700 text-sm">
+                Each wholesaler creates their own store with products, pricing, and customer lists
+              </p>
+            </Card>
+            
+            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Search className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-green-800">2. Customers Find Sellers</h3>
+              <p className="text-green-700 text-sm">
+                Customers can browse and discover multiple wholesaler stores using the "Find Seller" feature
+              </p>
+            </Card>
+            
+            <Card className="p-6 text-center border-0 shadow-lg bg-white hover:shadow-xl transition-all duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3 text-purple-800">3. Registration Required</h3>
+              <p className="text-purple-700 text-sm">
+                Customers must be registered with each wholesaler before they can purchase from that store
+              </p>
+            </Card>
+          </div>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8">
+            <div className="flex items-start space-x-3">
+              <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-white text-sm font-bold">!</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-amber-800 mb-2">Important: Customer Registration Requirements</h4>
+                <div className="text-amber-700 text-sm space-y-2">
+                  <p><strong>Browsing is free:</strong> Customers can view any wholesaler's products and prices without registration</p>
+                  <p><strong>Purchasing requires registration:</strong> Each wholesaler maintains their own customer database. Customers must be approved by each wholesaler before making purchases</p>
+                  <p><strong>Why this approach?</strong> This maintains B2B relationships where wholesalers control credit terms, pricing agreements, and business compliance requirements</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
               Everything You Need to Scale
