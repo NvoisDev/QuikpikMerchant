@@ -252,7 +252,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerAddress: typeof customerAddress === 'string' ? customerAddress : 
           (customerAddress ? JSON.stringify(customerAddress) : undefined),
         total: correctTotal,
-        subtotal: productSubtotal,
+        subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
         customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
         wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
