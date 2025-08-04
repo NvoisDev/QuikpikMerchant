@@ -232,14 +232,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // Send email notification to wholesaler
   if (wholesaler && wholesaler.email) {
     try {
-      // Prepare order data for email template  
-      const enrichedItemsForEmail = await Promise.all(items.map(async (item: any) => {
-        const product = await storage.getProduct(item.productId);
+      // CRITICAL FIX: Use actual database order items for accurate pricing
+      const orderItemsFromDB = await storage.getOrderItems(order.id);
+      const enrichedItemsForEmail = await Promise.all(orderItemsFromDB.map(async (orderItem: any) => {
+        const product = await storage.getProduct(orderItem.productId);
         return {
-          productName: product?.name || `Product #${item.productId}`,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+          productName: product?.name || `Product #${orderItem.productId}`,
+          quantity: orderItem.quantity,
+          unitPrice: parseFloat(orderItem.unitPrice).toFixed(2), // Use database unit price
+          total: parseFloat(orderItem.total).toFixed(2) // Use database total
         };
       }));
 
@@ -273,8 +274,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       await sendEmail({
         to: wholesaler.email,
         from: 'hello@quikpik.co',
-        subject: `New Order Received: ${wholesaleRef} from ${customerName}`,
-        html: emailTemplate
+        subject: emailTemplate.subject,
+        html: emailTemplate.html
       });
       
       console.log(`📧 Wholesaler notification sent to ${wholesaler.email} for order ${wholesaleRef}`);
