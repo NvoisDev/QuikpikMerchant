@@ -2,6 +2,7 @@ import { CheckCircle, Mail, Package, ArrowLeft, ShoppingBag } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 // Image removed for production - using icon instead
 
 interface CartItem {
@@ -10,6 +11,10 @@ interface CartItem {
     name: string;
     price: string;
     image?: string;
+    promoPrice?: string;
+    promoActive?: boolean;
+    promotionalOffers?: any[];
+    palletPrice?: string;
   };
   quantity: number;
   sellingType: "units" | "pallets";
@@ -108,7 +113,22 @@ export const ThankYouPage = ({
                       </div>
                       <div className="text-right">
                         <p className="font-medium">
-                          £{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                          £{(() => {
+                            if (item.sellingType === "pallets") {
+                              return (parseFloat(item.product.palletPrice || "0") * item.quantity).toFixed(2);
+                            } else {
+                              // CRITICAL FIX: Use promotional pricing calculation for accurate display
+                              const basePrice = parseFloat(item.product.price) || 0;
+                              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                                basePrice,
+                                item.quantity,
+                                item.product.promotionalOffers || [],
+                                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                                item.product.promoActive
+                              );
+                              return pricing.totalCost.toFixed(2);
+                            }
+                          })()}
                         </p>
                       </div>
                     </div>
