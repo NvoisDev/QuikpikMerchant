@@ -1021,8 +1021,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Customer pays: Product subtotal + Transaction fee (5.5% + £0.50)
         // Wholesaler pays: Platform fee (3.3% of product subtotal)
         
-        // If we have stored subtotal, use it; otherwise calculate from total
-        const subtotal = order.subtotal ? parseFloat(order.subtotal) : total / 1.055 - 0.50; // Remove transaction fee (5.5% + £0.50)
+        // CRITICAL FIX: Always use stored subtotal from database - never calculate
+        const subtotal = parseFloat(order.subtotal || "0");
         
         // Use stored customer transaction fee from database, or calculate as fallback
         const transactionFee = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : (subtotal * 0.055) + 0.50;
@@ -1032,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           id: order.id,
-          orderNumber: `#${order.id}`,
+          orderNumber: order.orderNumber || `#${order.id}`, // Use actual order number (SF-120) not ID
           date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short', 
