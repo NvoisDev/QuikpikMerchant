@@ -46,14 +46,14 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { currentTier } = useSubscription();
   const { checkTabAccess } = useSidebarPermissions();
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
   };
 
   return (
