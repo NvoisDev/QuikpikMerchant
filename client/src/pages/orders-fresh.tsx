@@ -8,20 +8,37 @@ import {
   Clock, 
   RefreshCw
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function OrdersFresh() {
+  const { user, isLoading: authLoading } = useAuth();
   const { data: orders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await fetch('/api/orders');
+      const response = await fetch('/api/orders', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        const errorText = await response.text();
+        console.error('Orders API error:', response.status, errorText);
+        throw new Error(`API Error: ${response.status}`);
       }
-      return response.json();
-    }
+      
+      const data = await response.json();
+      console.log('Orders loaded:', data.length, 'orders');
+      return data;
+    },
+    enabled: !!user, // Only run query when user is authenticated
+    retry: 1,
+    staleTime: 30000
   });
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">

@@ -48,23 +48,37 @@ export function useAuth() {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("/api/auth/logout", "POST"),
-    onSuccess: () => {
-      // Immediately set user query data to null to clear authentication state
-      queryClient.setQueryData(["/api/auth/user"], null);
-      queryClient.clear();
-      // Only clear customer-specific localStorage data, not all localStorage
-      // This preserves wholesaler authentication while clearing customer sessions
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('customer_auth_')) {
-          localStorage.removeItem(key);
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
         }
       });
-      // Clear sessionStorage to ensure clean state
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Clear all authentication data
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.clear();
+      localStorage.clear();
       sessionStorage.clear();
-      // Redirect to wholesaler login page
+      // Force redirect to login
       window.location.href = "/login";
     },
+    onError: (error) => {
+      console.error("Logout error:", error);
+      // Force logout even if API fails
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/login";
+    }
   });
 
   return {
