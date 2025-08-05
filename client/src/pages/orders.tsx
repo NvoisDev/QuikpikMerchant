@@ -236,7 +236,13 @@ export default function Orders() {
     country: 'United Kingdom'
   };
 
-  // Calculate order statistics
+  // Calculate order statistics with debugging
+  console.log('📊 Order Statistics Debug:', {
+    ordersLength: orders.length,
+    ordersArray: Array.isArray(orders),
+    firstOrderSample: orders[0] || 'No orders'
+  });
+  
   const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
   const totalRevenue = paidOrders.reduce((sum: number, order: any) => {
     const amount = parseFloat(order.total || '0');
@@ -251,6 +257,8 @@ export default function Orders() {
     totalRevenue: totalRevenue,
     avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0
   };
+  
+  console.log('📊 Calculated Order Stats:', orderStats);
 
   // Enhanced filtering
   const filteredOrders = orders.filter((order: any) => {
@@ -353,6 +361,22 @@ export default function Orders() {
             ))}
           </div>
           <p className="text-sm font-medium text-gray-600 text-center">Loading your orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    console.error('📊 Orders Error:', error);
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 font-medium">Failed to load orders</p>
+          <p className="text-gray-500 text-sm">{error.message}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Retry
+          </Button>
         </div>
       </div>
     );
