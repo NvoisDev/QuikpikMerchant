@@ -26,6 +26,7 @@ import PublicProductPage from "@/pages/public-product";
 import Orders from "@/pages/orders";
 import OrdersNew from "@/pages/orders-new";
 import OrdersFresh from "@/pages/orders-fresh";
+import AuthTest from "@/pages/auth-test";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
 import MessageTemplates from "@/pages/message-templates";
@@ -65,6 +66,7 @@ function PublicRoutes() {
       <Route path="/advertising-preview" component={AdvertisingPreview} />
       <Route path="/upgrade-success" component={UpgradeSuccess} />
       <Route path="/auth-success" component={AuthSuccess} />
+      <Route path="/auth-test" component={AuthTest} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />
