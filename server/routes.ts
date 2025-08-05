@@ -1155,26 +1155,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Temporary authentication recovery endpoint
+  // Authentication recovery endpoint for Surulere Foods Wholesale
   app.post('/api/auth/recover', async (req: any, res) => {
     try {
       const { email } = req.body;
       
-      if (!email || email !== 'hello@quikpik.co') {
-        return res.status(403).json({ error: 'Unauthorized' });
+      // Allow recovery for the consolidated wholesaler account
+      if (!email || (email !== 'hello@quikpik.co' && email !== 'mogunjemilua@gmail.com')) {
+        return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
       }
       
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
+      // Find the wholesaler user - prioritize the consolidated account
+      let user;
+      if (email === 'mogunjemilua@gmail.com') {
+        // Find the wholesaler account, not the retailer accounts
+        user = await storage.getUser('user_1753060083607_7uzx8l830');
+      } else {
+        user = await storage.getUserByEmail(email);
+      }
+      
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
       
-      // Recreate session
-      (req.session as any).userId = user.id;
-      (req.session as any).user = user;
+      // Ensure this is a wholesaler account
+      if (user.role !== 'wholesaler') {
+        return res.status(403).json({ error: 'Access denied - Only wholesaler accounts can be recovered' });
+      }
       
-      console.log(`🔐 Session recovered for user ${user.email}`);
+      // Create comprehensive session data
+      const sessionUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        subscriptionTier: user.subscriptionTier,
+        businessName: user.businessName,
+        isTeamMember: false
+      };
+      
+      // Recreate session with both formats for compatibility
+      (req.session as any).userId = user.id;
+      (req.session as any).user = sessionUser;
+      
+      console.log(`🔐 Session recovered for wholesaler ${user.email} (${user.businessName})`);
       
       res.json({ 
         success: true, 
