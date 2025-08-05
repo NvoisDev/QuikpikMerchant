@@ -209,7 +209,8 @@ export default function Orders() {
       try {
         console.log('🔍 Starting orders fetch request...');
         const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
-        const url = `/api/orders${searchParam}`;
+        const cacheBuster = `${searchParam ? '&' : '?'}t=${Date.now()}`;
+        const url = `/api/orders${searchParam}${cacheBuster}`;
         console.log('🔍 Fetching from URL:', url);
         
         const response = await fetch(url, {
@@ -242,11 +243,11 @@ export default function Orders() {
         });
         
         return ordersData;
-      } catch (fetchError) {
+      } catch (fetchError: any) {
         console.error('❌ Fetch error details:', {
-          message: fetchError.message,
-          stack: fetchError.stack,
-          name: fetchError.name
+          message: fetchError?.message || 'Unknown error',
+          stack: fetchError?.stack || 'No stack trace',
+          name: fetchError?.name || 'Unknown error type'
         });
         throw fetchError;
       }
