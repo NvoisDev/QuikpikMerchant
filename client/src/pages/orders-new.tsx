@@ -35,19 +35,40 @@ export default function OrdersNew() {
     queryKey: ['wholesaler-orders', SURULERE_WHOLESALER_ID],
     queryFn: async () => {
       console.log('🔍 Fetching orders for Surulere Foods Wholesale...');
-      const response = await fetch(`/api/orders?wholesaler=${SURULERE_WHOLESALER_ID}&t=${Date.now()}`);
       
-      if (!response.ok) {
-        console.error('❌ API Error:', response.status, response.statusText);
-        throw new Error(`API Error: ${response.status}`);
+      try {
+        const response = await fetch(`/api/orders?t=${Date.now()}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('🔍 Response status:', response.status);
+        console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ API Error:', response.status, response.statusText, errorText);
+          throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Orders loaded successfully:', {
+          count: data.length,
+          firstOrder: data[0] ? data[0].orderNumber : 'No orders',
+          isArray: Array.isArray(data)
+        });
+        return data;
+      } catch (fetchError: any) {
+        console.error('❌ Fetch failed:', fetchError);
+        throw fetchError;
       }
-      
-      const data = await response.json();
-      console.log('✅ Orders loaded:', data.length, 'orders found');
-      return data;
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 0, // Always fetch fresh data
     refetchOnWindowFocus: true,
+    retry: 3,
   });
 
   // Calculate statistics
