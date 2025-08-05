@@ -15,6 +15,40 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CustomerOrderHistory } from "./CustomerOrderHistory";
 
+// Customer Statistics Component
+function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; customerPhone: string }) {
+  const { data: orders = [] } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
+    queryFn: async () => {
+      const encodedPhone = encodeURIComponent(customerPhone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!wholesalerId && !!customerPhone,
+  });
+
+  const totalOrders = orders.length;
+  const totalSpent = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total || '0'), 0);
+
+  return (
+    <div className="flex items-center space-x-4 text-sm">
+      <div className="flex items-center space-x-1">
+        <Package className="w-4 h-4 text-blue-600" />
+        <span className="text-gray-600">{totalOrders} order{totalOrders !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          £{totalSpent.toFixed(2)} total
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
 interface CustomerHomeProps {
   wholesaler: any;
   featuredProduct?: any;
@@ -151,8 +185,15 @@ export function CustomerHome({
                 Premium wholesale products with Love
               </p>
               {customerData && (
-                <div className="mt-4 text-lg text-green-600 font-medium">
-                  Welcome back, {customerData.name}!
+                <div className="mt-4 space-y-2">
+                  <div className="text-lg text-green-600 font-medium">
+                    Welcome back, {customerData.name}!
+                  </div>
+                  {/* Customer Statistics */}
+                  <CustomerStats 
+                    wholesalerId={wholesaler?.id} 
+                    customerPhone={customerData.phone || customerData.phoneNumber}
+                  />
                 </div>
               )}
             </div>
