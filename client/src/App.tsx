@@ -25,7 +25,7 @@ import AdvertisingPreview from "@/pages/advertising-preview";
 import PublicProductPage from "@/pages/public-product";
 import Orders from "@/pages/orders";
 import OrdersNew from "@/pages/orders-new";
-import OrdersDebug from "@/pages/orders-debug";
+import OrdersFresh from "@/pages/orders-fresh";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
 import MessageTemplates from "@/pages/message-templates";
@@ -114,7 +114,7 @@ function AuthenticatedRoutes() {
             <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
-            <Route path="/orders" component={OrdersDebug} />
+            <Route path="/orders" component={OrdersFresh} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
             <Route path="/analytics" component={Analytics} />
