@@ -206,19 +206,50 @@ export default function Orders() {
   const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ["/api/orders", searchTerm],
     queryFn: async () => {
-      const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
-      const response = await fetch(`/api/orders${searchParam}`, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+      try {
+        console.log('🔍 Starting orders fetch request...');
+        const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+        const url = `/api/orders${searchParam}`;
+        console.log('🔍 Fetching from URL:', url);
+        
+        const response = await fetch(url, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
+        console.log('🔍 Response status:', response.status, response.statusText);
+        console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Response not OK:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText
+          });
+          throw new Error(`Failed to fetch orders (${response.status}): ${errorText}`);
         }
-      });
-      if (!response.ok) throw new Error("Failed to fetch orders");
-      const ordersData = await response.json();
-      console.log('📦 Orders fetched:', ordersData.length, 'orders loaded successfully');
-      return ordersData;
+        
+        const ordersData = await response.json();
+        console.log('✅ Orders fetched successfully:', {
+          count: ordersData.length,
+          isArray: Array.isArray(ordersData),
+          firstOrder: ordersData[0] ? { id: ordersData[0].id, orderNumber: ordersData[0].orderNumber } : 'No orders'
+        });
+        
+        return ordersData;
+      } catch (fetchError) {
+        console.error('❌ Fetch error details:', {
+          message: fetchError.message,
+          stack: fetchError.stack,
+          name: fetchError.name
+        });
+        throw fetchError;
+      }
     },
     staleTime: 0, 
     gcTime: 5 * 60 * 1000,
@@ -368,15 +399,38 @@ export default function Orders() {
 
   // Show error state if there's an error
   if (error) {
-    console.error('📊 Orders Error:', error);
+    console.error('❌ Orders Error Details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      cause: error.cause
+    });
     return (
       <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <p className="text-red-600 font-medium">Failed to load orders</p>
-          <p className="text-gray-500 text-sm">{error.message}</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
-            Retry
-          </Button>
+          <p className="text-gray-500 text-sm mt-2">{error.message}</p>
+          <div className="mt-4 space-y-2">
+            <Button onClick={() => window.location.reload()} className="mr-2">
+              Retry
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                // Force clear cache and retry
+                queryClient.removeQueries({ queryKey: ["/api/orders"] });
+                window.location.reload();
+              }}
+            >
+              Clear Cache & Retry
+            </Button>
+          </div>
+          <details className="mt-4 text-left">
+            <summary className="text-xs text-gray-400 cursor-pointer">Debug Info</summary>
+            <pre className="text-xs text-gray-400 mt-2 bg-gray-100 p-2 rounded">
+              {JSON.stringify({ error: error.message, name: error.name }, null, 2)}
+            </pre>
+          </details>
         </div>
       </div>
     );
