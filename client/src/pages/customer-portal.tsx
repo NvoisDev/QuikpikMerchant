@@ -1051,11 +1051,8 @@ export default function CustomerPortal() {
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['wholesaler-products', wholesalerId],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (wholesalerId) params.append('wholesalerId', wholesalerId);
-      
       console.log(`Fetching products for wholesaler: ${wholesalerId}`);
-      const response = await fetch(`/api/marketplace/products?${params}`);
+      const response = await fetch(`/api/customer-products/${wholesalerId}`);
       if (!response.ok) {
         console.error(`Products fetch failed: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch products: ${response.status}`);
