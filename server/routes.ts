@@ -4102,6 +4102,30 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Customer-specific products endpoint for easy access
+  app.get('/api/customer-products/:wholesalerId', async (req, res) => {
+    try {
+      const wholesalerId = req.params.wholesalerId;
+      console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
+      
+      const filters = {
+        search: req.query.search as string,
+        category: req.query.category as string,
+        sortBy: req.query.sortBy as string || "featured",
+        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
+        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
+        wholesalerId: wholesalerId
+      };
+      
+      const products = await storage.getMarketplaceProducts(filters);
+      console.log(`🛍️ Found ${products.length} products for customer`);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching customer products:", error);
+      res.status(500).json({ message: "Failed to fetch customer products" });
+    }
+  });
+
   // User marketplace settings
   app.get("/api/user/marketplace-settings", requireAuth, async (req: any, res) => {
     try {
