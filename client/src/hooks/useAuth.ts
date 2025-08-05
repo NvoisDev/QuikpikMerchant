@@ -62,8 +62,8 @@ export function useAuth() {
       });
       // Clear sessionStorage to ensure clean state
       sessionStorage.clear();
-      // Redirect to customer login page (Find Your Store page)
-      window.location.href = "/customer-login";
+      // Redirect to wholesaler login page
+      window.location.href = "/login";
     },
   });
 
