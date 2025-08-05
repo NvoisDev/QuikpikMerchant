@@ -447,7 +447,7 @@ export default function Orders() {
                     <ShoppingCart className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{orderStats.total}</p>
+                    <p className="text-2xl font-bold">{orderStats.total || 0}</p>
                     <p className="text-sm text-muted-foreground">Total Orders</p>
                   </div>
                 </div>
@@ -461,7 +461,7 @@ export default function Orders() {
                     <Clock className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{orderStats.pending}</p>
+                    <p className="text-2xl font-bold">{orderStats.pending || 0}</p>
                     <p className="text-sm text-muted-foreground">Unfulfilled Orders</p>
                   </div>
                 </div>
@@ -476,7 +476,7 @@ export default function Orders() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(orderStats.totalRevenue, 'GBP')}
+                      {formatCurrency(orderStats.totalRevenue || 0, 'GBP')}
                     </p>
                     <p className="text-sm text-muted-foreground">Paid Revenue</p>
                   </div>
@@ -492,7 +492,7 @@ export default function Orders() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(orderStats.avgOrderValue, 'GBP')}
+                      {formatCurrency(orderStats.avgOrderValue || 0, 'GBP')}
                     </p>
                     <p className="text-sm text-muted-foreground">Avg Order Value</p>
                   </div>
