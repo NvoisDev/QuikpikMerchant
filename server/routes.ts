@@ -1168,8 +1168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find the wholesaler user - prioritize the consolidated account
       let user;
       if (email === 'mogunjemilua@gmail.com') {
-        // Find the wholesaler account, not the retailer accounts
-        user = await storage.getUser('user_1753060083607_7uzx8l830');
+        // Find the consolidated Google account for Surulere Foods
+        user = await storage.getUser('104871691614680693123');
       } else {
         user = await storage.getUserByEmail(email);
       }
