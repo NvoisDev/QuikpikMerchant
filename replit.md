@@ -7,6 +7,15 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
+## Primary Business Account
+**Consolidated Account**: Michael Ogunjemilua (hello@quikpik.co)
+- **Google ID**: 104871691614680693123
+- **Business**: Surulere Foods Wholesale
+- **Products**: 14 items
+- **Orders**: 165 orders (SF-001 through SF-165)
+- **Subscription**: Premium tier, active
+- **Customer Portal**: /customer/104871691614680693123
+
 ## System Architecture
 ### Frontend
 - **Framework**: React 18 with TypeScript.
