@@ -1581,18 +1581,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders endpoint (no authentication required for simplicity)
-  app.get('/api/orders', async (req: any, res) => {
+  // Orders endpoint (requires authentication for data privacy)
+  app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
       const search = req.query.search; // search term
       
-      // Use consolidated Google account for Surulere Foods Wholesale
-      const surulereWholesalerId = '104871691614680693123';
+      // Use parent company ID for team members to inherit data access
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      // Get orders received by Surulere Foods Wholesale
-      console.log(`📦 Fetching orders for wholesaler: ${surulereWholesalerId}, search: ${search || 'none'}`);
-      const orders = await storage.getOrders(surulereWholesalerId, undefined, search);
-      console.log(`📦 Found ${orders.length} orders for wholesaler ${surulereWholesalerId}`);
+      // Get orders for the authenticated wholesaler only
+      console.log(`📦 Fetching orders for wholesaler: ${targetUserId}, search: ${search || 'none'}`);
+      const orders = await storage.getOrders(targetUserId, undefined, search);
+      console.log(`📦 Found ${orders.length} orders for wholesaler ${targetUserId}`);
       
       res.json(orders);
     } catch (error) {

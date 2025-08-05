@@ -33,7 +33,7 @@ export default function OrdersFresh() {
       console.log('Orders loaded:', data.length, 'orders');
       return data;
     },
-    enabled: !!user, // Only run query when user is authenticated
+    enabled: true, // Always enabled since endpoint requires auth
     retry: 1,
     staleTime: 30000
   });
