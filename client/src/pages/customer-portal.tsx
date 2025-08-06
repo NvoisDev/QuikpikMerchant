@@ -769,7 +769,7 @@ export default function CustomerPortal() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
