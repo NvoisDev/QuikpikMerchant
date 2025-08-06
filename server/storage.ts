@@ -1843,7 +1843,9 @@ export class DatabaseStorage implements IStorage {
     wholesalerId?: string;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
     try {
-      console.log('getMarketplaceProducts called with filters:', filters);
+      console.log('🔍 getMarketplaceProducts called with filters:', filters);
+      console.log('🔧 Database connection status:', !!db);
+      console.log('🌍 Environment:', process.env.NODE_ENV);
       
       // Check if wholesalerId is provided
       if (!filters.wholesalerId) {

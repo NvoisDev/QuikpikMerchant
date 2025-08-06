@@ -4205,6 +4205,8 @@ Write a professional, sales-focused description that highlights the key benefits
     try {
       const wholesalerId = req.params.wholesalerId;
       console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
+      console.log(`💾 Database URL exists: ${!!process.env.DATABASE_URL}`);
       
       const filters = {
         search: req.query.search as string,
@@ -4215,12 +4217,24 @@ Write a professional, sales-focused description that highlights the key benefits
         wholesalerId: wholesalerId
       };
       
+      console.log(`🔍 Query filters:`, filters);
+      
       const products = await storage.getMarketplaceProducts(filters);
       console.log(`🛍️ Found ${products.length} products for customer`);
       res.json(products);
-    } catch (error) {
-      console.error("Error fetching customer products:", error);
-      res.status(500).json({ message: "Failed to fetch customer products" });
+    } catch (error: any) {
+      console.error("❌ CRITICAL ERROR in customer products endpoint:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        wholesalerId: req.params.wholesalerId,
+        query: req.query,
+        environment: process.env.NODE_ENV
+      });
+      res.status(500).json({ 
+        message: "Failed to fetch customer products", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
