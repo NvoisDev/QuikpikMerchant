@@ -24,7 +24,8 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: TanStack Query (React Query).
 - **Routing**: Wouter.
 - **Styling**: CSS variables with custom green brand colors.
-- **UI/UX Decisions**: Default table layout for orders with pagination, dynamic delivery method display, simplified interfaces, and consistent brand-integrated clean design with green theme colors.
+- **UI/UX Decisions**: Default table layout for orders with smart search and filtering, dynamic delivery method display, simplified interfaces, and consistent brand-integrated clean design with green theme colors.
+- **Recent Enhancement**: Smart Search and Filter system for Order History with real-time filtering, multi-criteria search, date range selection, and intelligent sorting options.
 
 ### Backend
 - **Runtime**: Node.js with Express.
