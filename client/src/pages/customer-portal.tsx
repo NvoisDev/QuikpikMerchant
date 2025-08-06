@@ -1053,7 +1053,16 @@ export default function CustomerPortal() {
     queryFn: async () => {
       console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
       console.log(`🌐 Current domain: ${window.location.origin}`);
-      const response = await fetch(`/api/customer-products/${wholesalerId}`);
+      
+      const response = await fetch(`/api/customer-products/${wholesalerId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
       console.log(`📡 API Response status: ${response.status}`);
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
       
@@ -1061,7 +1070,17 @@ export default function CustomerPortal() {
         const responseText = await response.text();
         console.error(`❌ Products fetch failed: ${response.status} ${response.statusText}`);
         console.error(`❌ Response body:`, responseText.substring(0, 500));
-        throw new Error(`Failed to fetch products: ${response.status}`);
+        
+        // Try to parse error response
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // Keep default error message
+        }
+        
+        throw new Error(`API Error: ${errorMessage}`);
       }
       
       const data = await response.json();
@@ -1072,12 +1091,15 @@ export default function CustomerPortal() {
     enabled: !!wholesalerId,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    retry: 3,
-    retryDelay: 1000,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    retry: (failureCount, error) => {
+      console.log(`🔄 Retry attempt ${failureCount} for products API:`, error);
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 2 * 60 * 1000, // Reduce staleness for better reliability
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,  // Enable refetch on focus
+    refetchOnMount: true,        // Enable refetch on mount
   });
 
   // Helper function to calculate promotional pricing for display
