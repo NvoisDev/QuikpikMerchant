@@ -2044,7 +2044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const nextNumber = parseInt(maxNumber.toString()) + 1;
           const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
           
-          console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+          console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
           
           // CRITICAL FIX: Calculate subtotal from items when metadata missing
           const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
