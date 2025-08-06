@@ -956,15 +956,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // NEW: Allow access to orders even if customer is not in customer groups
       // This fixes the issue where customers can't see their orders unless pre-registered
       console.log('🔍 Searching for all orders by customer regardless of group membership...');
+      console.log(`🔍 Search params: customerId=${customer.id}, wholesalerId=${wholesalerId}, customerPhone=${customer.phone}`);
       
-      // Search by retailer ID first (most reliable) - remove wholesaler restriction
+      // CRITICAL FIX: Search by multiple retailer ID patterns due to historical inconsistency
+      // Some orders have retailer_id as customer ID, others have wholesaler's Google ID
       let orderResults = await db
         .select()
         .from(orders)
-        .where(eq(orders.retailerId, customer.id))
+        .where(and(
+          or(
+            eq(orders.retailerId, customer.id),
+            eq(orders.retailerId, wholesalerId), // Historical orders may have wholesaler ID as retailer ID
+            eq(orders.customerPhone, customer.phone) // Also search by phone directly
+          ),
+          eq(orders.wholesalerId, wholesalerId)
+        ))
         .orderBy(desc(orders.createdAt));
         
-      console.log('🔍 Found orders by retailer ID:', orderResults.length);
+      console.log('🔍 Found orders by retailer ID and phone:', orderResults.length);
+      if (orderResults.length > 0) {
+        console.log('📋 Sample orders:', orderResults.slice(0, 3).map(o => ({ 
+          id: o.id, 
+          orderNumber: o.orderNumber, 
+          retailerId: o.retailerId, 
+          customerPhone: o.customerPhone 
+        })));
+      }
       
       // If no orders found by retailer ID, search by phone number variants (without wholesaler restriction)
       if (orderResults.length === 0) {
@@ -987,7 +1004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderResults = await db
           .select()
           .from(orders)
-          .where(or.apply(null, phoneConditions))
+          .where(and(
+            or.apply(null, phoneConditions),
+            eq(orders.wholesalerId, wholesalerId)
+          ))
           .orderBy(desc(orders.createdAt));
       }
       
@@ -2009,22 +2029,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({ success: true, orderId: existingOrder.id, message: 'Order already processed' });
         }
 
-        // ATOMIC ORDER NUMBER GENERATION: Use database transaction
+        // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering
         const { order, wholesaleRef } = await db.transaction(async (trx) => {
-          // Get current highest order number within transaction
-          const lastOrder = await trx
-            .select()
-            .from(orders)
-            .where(eq(orders.wholesalerId, wholesalerId))
-            .orderBy(desc(orders.id))
-            .limit(1)
-            .for('update'); // Lock for update to prevent concurrent access
+          // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record
+          const result = await trx.execute(sql`
+            SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+            FROM orders 
+            WHERE wholesaler_id = ${wholesalerId} 
+            AND order_number LIKE ${businessPrefix + '-%'}
+            FOR UPDATE
+          `);
           
-          const lastOrderNumber = lastOrder[0]?.orderNumber || `${businessPrefix}-000`;
-          
-          // Extract number from last order (e.g., "SF-118" -> 118) 
-          const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
-          const nextNumber = lastNumber + 1;
+          const maxNumber = result.rows[0]?.max_number || 0;
+          const nextNumber = parseInt(maxNumber.toString()) + 1;
           const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
           
           console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
