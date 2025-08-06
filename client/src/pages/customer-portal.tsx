@@ -2303,9 +2303,9 @@ export default function CustomerPortal() {
             }`}>
               {otherProducts.slice(0, 6).map((product) => (
                 viewMode === "grid" ? (
-                  // Grid View - Mobile Responsive
-                  <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                  // Grid View - Mobile Responsive with Fixed Height Layout
+                  <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
+                    <CardContent className="p-3 sm:p-4 lg:p-6 flex flex-col h-full">
                       {/* Product Image - Mobile Optimized */}
                       <div className="mb-3 sm:mb-4">
                         {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
@@ -2321,8 +2321,8 @@ export default function CustomerPortal() {
                         )}
                       </div>
                       
-                      {/* Product Info - Mobile Responsive */}
-                      <div className="space-y-2 sm:space-y-3">
+                      {/* Product Info - Flexible Growth Area */}
+                      <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col">
                         <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 line-clamp-2">{product.name}</h3>
                         
                         {/* Product Tags */}
@@ -2403,9 +2403,12 @@ export default function CustomerPortal() {
                           })()}
                         </div>
                         
-                        {/* Action Buttons - Mobile Responsive */}
+                        {/* Spacer to push buttons to bottom */}
+                        <div className="flex-1"></div>
+                        
+                        {/* Action Buttons - Fixed Position at Bottom */}
                         {!isGuestMode && (
-                          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4">
+                          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-2">
                             <Button 
                               onClick={() => openQuantityEditor(product)}
                               size="sm"
@@ -2427,9 +2430,9 @@ export default function CustomerPortal() {
                           </div>
                         )}
                         
-                        {/* Guest Call-to-Action - Mobile Responsive */}
+                        {/* Guest Call-to-Action - Fixed Position at Bottom */}
                         {isGuestMode && (
-                          <div className="flex justify-end mt-3 sm:mt-4">
+                          <div className="flex justify-end mt-3 sm:mt-4 pt-2">
                             <Button 
                               onClick={() => {
                                 toast({
@@ -2714,9 +2717,9 @@ export default function CustomerPortal() {
                 ) : (
                   filteredProducts.map((product, productIndex: number) => (
                     viewMode === "grid" ? (
-                      // Grid View
-                      <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                        <CardContent className="p-6">
+                      // Grid View - Fixed Height Layout for Consistent Plus Button Alignment
+                      <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
+                        <CardContent className="p-6 flex flex-col h-full">
                           {/* Product Image */}
                           <div className="mb-4">
                             {product.imageUrl || (product.images && product.images.length > 0) ? (
@@ -2732,8 +2735,8 @@ export default function CustomerPortal() {
                             )}
                           </div>
                           
-                          {/* Product Info */}
-                          <div className="space-y-3">
+                          {/* Product Info - Flexible Growth Area */}
+                          <div className="space-y-3 flex-1 flex flex-col">
                             <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{product.name}</h3>
                             
                             {/* Product Tags */}
@@ -2814,8 +2817,11 @@ export default function CustomerPortal() {
                               <span>Stock: {formatNumber(product.stock)}</span>
                             </div>
                             
-                            {/* Add to Cart Button */}
-                            <div className="flex justify-end mt-4">
+                            {/* Spacer to push button to bottom */}
+                            <div className="flex-1"></div>
+                            
+                            {/* Add to Cart Button - Fixed Position at Bottom */}
+                            <div className="flex justify-end mt-4 pt-2">
                               <Button
                                 onClick={() => openQuantityEditor(product)}
                                 className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
