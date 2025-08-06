@@ -26,6 +26,7 @@ import PublicProductPage from "@/pages/public-product";
 import Orders from "@/pages/orders";
 import OrdersNew from "@/pages/orders-new";
 import OrdersSimple from "@/pages/orders-simple";
+import OrdersDebug from "@/pages/orders-debug";
 import AuthTest from "@/pages/auth-test";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
@@ -116,7 +117,7 @@ function AuthenticatedRoutes() {
             <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
-            <Route path="/orders" component={OrdersSimple} />
+            <Route path="/orders" component={OrdersDebug} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
             <Route path="/analytics" component={Analytics} />
