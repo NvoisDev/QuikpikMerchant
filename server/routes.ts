@@ -2022,15 +2022,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
           : 'WS';
         
-        // RACE CONDITION FIX: Check if order already exists for this payment intent
-        const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
-        if (existingOrder) {
-          console.log(`⚠️ Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
-          return res.json({ success: true, orderId: existingOrder.id, message: 'Order already processed' });
-        }
-
-        // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering
+        // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering AND duplicate checking
         const { order, wholesaleRef } = await db.transaction(async (trx) => {
+          // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
+          const existingOrderResult = await trx
+            .select()
+            .from(orders)
+            .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+            .limit(1);
+          
+          if (existingOrderResult.length > 0) {
+            const existingOrder = existingOrderResult[0];
+            console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
+            throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
+          }
+
           // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record
           const result = await trx.execute(sql`
             SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
@@ -2094,7 +2100,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Use transaction-aware storage method
           const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
           return { order: createdOrder, wholesaleRef };
+        }).catch((error) => {
+          // Handle duplicate order errors gracefully
+          if (error.message.startsWith('DUPLICATE_ORDER:')) {
+            const [, orderId, orderNumber] = error.message.split(':');
+            console.log(`✅ Duplicate order detected and prevented: #${orderId} (${orderNumber})`);
+            return res.json({ success: true, orderId: parseInt(orderId), message: 'Order already processed' });
+          }
+          throw error; // Re-throw other errors
         });
+        
+        // Check if we returned early due to duplicate
+        if (typeof order === 'object' && order.success) {
+          return; // Early return already handled the response
+        }
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
