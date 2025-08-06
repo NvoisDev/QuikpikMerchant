@@ -2161,10 +2161,9 @@ export default function CustomerPortal() {
                           <Button
                             onClick={() => openQuantityEditor(featuredProduct)}
                             size="lg"
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl w-12 h-12 p-0"
                           >
-                            <Plus className="w-5 h-5 mr-3" />
-                            Add to Cart
+                            <Plus className="w-6 h-6" />
                           </Button>
                           
                           {featuredProduct.negotiationEnabled && (
@@ -2202,10 +2201,9 @@ export default function CustomerPortal() {
                               });
                             }}
                             size="lg"
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg"
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl w-12 h-12 p-0"
                           >
-                            <Plus className="w-5 h-5 mr-3" />
-                            Add to Cart
+                            <Plus className="w-6 h-6" />
                           </Button>
                           
                           {featuredProduct.negotiationEnabled && (
@@ -2469,11 +2467,9 @@ export default function CustomerPortal() {
                             <Button 
                               onClick={() => openQuantityEditor(product)}
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
                             >
-                              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              <span className="hidden sm:inline">Add to Cart</span>
-                              <span className="sm:hidden">Add</span>
+                              <Plus className="w-4 h-4" />
                             </Button>
                             {product.negotiationEnabled && (
                               <Button 
@@ -2501,7 +2497,7 @@ export default function CustomerPortal() {
                                     <Button
                                       onClick={() => window.location.href = '/'}
                                       size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                      className="bg-blue-600 hover:bg-blue-700 text-white"
                                     >
                                       Contact Wholesaler
                                     </Button>
@@ -2510,11 +2506,9 @@ export default function CustomerPortal() {
                                 });
                               }}
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
                             >
-                              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              <span className="hidden sm:inline">Add to Cart</span>
-                              <span className="sm:hidden">Add</span>
+                              <Plus className="w-4 h-4" />
                             </Button>
                           </div>
                         )}
