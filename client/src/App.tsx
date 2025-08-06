@@ -121,7 +121,6 @@ function AuthenticatedRoutes() {
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
             <Route path="/orders" component={OrdersFinal} />
-            <Route path="/orders2" component={OrdersSimple} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
             <Route path="/analytics" component={Analytics} />
