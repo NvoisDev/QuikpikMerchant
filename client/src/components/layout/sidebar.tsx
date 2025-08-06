@@ -36,6 +36,7 @@ const navigation = [
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
+  { name: "Orders 2", href: "/orders2", icon: ShoppingCart, onboardingId: "orders2", tabName: "orders2" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
