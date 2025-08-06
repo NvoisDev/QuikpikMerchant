@@ -136,11 +136,13 @@ export default function CustomerPortalV2() {
       return data;
     },
     enabled: !!wholesalerId,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 2 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30 * 1000, // Reduce stale time
+    gcTime: 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: false, // Reduce unnecessary refetches
+    refetchOnReconnect: true
   });
 
   // Filter products
@@ -363,8 +365,8 @@ export default function CustomerPortalV2() {
     );
   }
 
-  // Error state
-  if (productsError) {
+  // Error state - only show if we have a real error AND no products
+  if (productsError && products.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
