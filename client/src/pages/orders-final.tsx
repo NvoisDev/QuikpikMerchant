@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin } from "lucide-react";
+import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin, CheckCircle2, XCircle, Receipt, Handshake, Box, Car } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderItem {
@@ -61,6 +61,8 @@ export default function OrdersFinal() {
   const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/public-orders'],
@@ -164,6 +166,67 @@ export default function OrdersFinal() {
     } catch {
       return addressString;
     }
+  };
+
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    setIsUpdatingStatus(true);
+    try {
+      await apiRequest("PATCH", `/api/orders/${orderId}`, { status: newStatus });
+      // Refresh orders data
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      // Update selected order if it's the one being modified
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, status: newStatus });
+      }
+    } catch (error) {
+      console.error("Failed to update order status:", error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const getOrderTimeline = (status: string, fulfillmentType: string) => {
+    const steps = [
+      { 
+        key: 'paid', 
+        label: 'Order Placed', 
+        description: 'We have received your order.', 
+        icon: <Receipt className="w-5 h-5" />,
+        completed: true 
+      },
+      { 
+        key: 'processing', 
+        label: 'Order Confirmed', 
+        description: 'Your order has been confirmed.', 
+        icon: <Handshake className="w-5 h-5" />,
+        completed: ['processing', 'shipped', 'delivered', 'fulfilled'].includes(status)
+      },
+      { 
+        key: 'shipped', 
+        label: 'Order Processed', 
+        description: 'We are preparing your order.', 
+        icon: <Box className="w-5 h-5" />,
+        completed: ['shipped', 'delivered', 'fulfilled'].includes(status)
+      },
+      { 
+        key: 'delivered', 
+        label: fulfillmentType === 'delivery' ? 'Out for Delivery' : 'Ready to Pickup', 
+        description: fulfillmentType === 'delivery' 
+          ? 'Your order is on its way.' 
+          : 'Your order is ready for pickup.', 
+        icon: fulfillmentType === 'delivery' ? <Car className="w-5 h-5" /> : <Store className="w-5 h-5" />,
+        completed: ['delivered', 'fulfilled'].includes(status)
+      },
+      { 
+        key: 'fulfilled', 
+        label: 'Order Fulfilled', 
+        description: 'Order completed successfully.', 
+        icon: <CheckCircle2 className="w-5 h-5" />,
+        completed: status === 'fulfilled'
+      }
+    ];
+
+    return steps;
   };
 
   if (isLoading) {
@@ -500,16 +563,71 @@ export default function OrdersFinal() {
                   <CardTitle>Order {selectedOrder.orderNumber}</CardTitle>
                   <CardDescription>Order ID: {selectedOrder.id}</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  Close
-                </Button>
+                <div className="flex gap-2">
+                  {selectedOrder.status !== 'fulfilled' && (
+                    <Button 
+                      size="sm"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'fulfilled')}
+                      disabled={isUpdatingStatus}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Mark Fulfilled
+                    </Button>
+                  )}
+                  {selectedOrder.status === 'fulfilled' && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
+                      disabled={isUpdatingStatus}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Mark Unfulfilled
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrder(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Order Timeline */}
+              <div>
+                <h3 className="font-semibold mb-4">Order Timeline</h3>
+                <div className="space-y-4">
+                  {getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).map((step, index) => (
+                    <div key={step.key} className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                        step.completed 
+                          ? 'bg-green-100 text-green-600' 
+                          : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {step.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className={`font-medium ${step.completed ? 'text-green-700' : 'text-gray-500'}`}>
+                          {step.label}
+                        </div>
+                        <div className={`text-sm ${step.completed ? 'text-green-600' : 'text-gray-400'}`}>
+                          {step.description}
+                        </div>
+                      </div>
+                      {index < getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).length - 1 && (
+                        <div className={`ml-4 w-0.5 h-4 ${
+                          step.completed ? 'bg-green-200' : 'bg-gray-200'
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Order Status */}
               <div>
                 <h3 className="font-semibold mb-2">Status & Fulfillment</h3>
