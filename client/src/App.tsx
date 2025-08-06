@@ -41,6 +41,7 @@ import FinancialHealth from "@/pages/financial-health";
 import CampaignPreview from "@/pages/campaign-preview";
 import ProductOrderPage from "@/pages/product-order-page";
 import CustomerPortal from "@/pages/customer-portal";
+import CustomerPortalV2 from "@/pages/customer-portal-v2";
 import PaymentSuccess from "@/pages/payment-success";
 import StockAlerts from "@/pages/stock-alerts";
 import TeamManagement from "@/pages/team-management";
@@ -61,7 +62,8 @@ function PublicRoutes() {
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       <Route path="/product/:slug" component={PublicProductPage} />
       <Route path="/customer/:id" component={CustomerLogin} />
-      <Route path="/store/:id" component={CustomerPortal} />
+      <Route path="/store/:id" component={CustomerPortalV2} />
+      <Route path="/store-old/:id" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
