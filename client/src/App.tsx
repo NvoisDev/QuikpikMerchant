@@ -45,6 +45,7 @@ import CustomerPortalV2 from "@/pages/customer-portal-v2";
 import CustomerStore from "@/pages/customer-store";
 import SimpleStore from "@/pages/simple-store";
 import CustomerPortalFixed from "@/pages/customer-portal-fixed";
+import StoreSelection from "@/pages/store-selection";
 import PaymentSuccess from "@/pages/payment-success";
 import StockAlerts from "@/pages/stock-alerts";
 import TeamManagement from "@/pages/team-management";
@@ -65,6 +66,7 @@ function PublicRoutes() {
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       <Route path="/product/:slug" component={PublicProductPage} />
       <Route path="/customer/:id" component={CustomerLogin} />
+      <Route path="/stores" component={StoreSelection} />
       <Route path="/store/:id" component={CustomerPortalFixed} />
       <Route path="/store-new/:id" component={CustomerStore} />
       <Route path="/store-v2/:id" component={CustomerPortalV2} />
