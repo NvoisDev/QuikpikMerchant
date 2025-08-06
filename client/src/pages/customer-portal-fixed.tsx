@@ -60,6 +60,27 @@ interface CartItem {
   sellingType: "units" | "pallets";
 }
 
+interface Order {
+  id: string;
+  orderNumber: string;
+  status: string;
+  createdAt: string;
+  totalAmount: string;
+  deliveryMethod: string;
+  shippingAddress?: string;
+  items: OrderItem[];
+}
+
+interface OrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: string;
+  totalPrice: string;
+  sellingType: string;
+}
+
 export default function CustomerPortalFixed() {
   const [, params] = useRoute('/store/:wholesalerId');
   const [, setLocation] = useLocation();
@@ -86,6 +107,14 @@ export default function CustomerPortalFixed() {
   const [authStep, setAuthStep] = useState<'phone' | 'verify'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [view, setView] = useState<'products' | 'cart' | 'orders' | 'checkout'>('products');
+  const [checkoutData, setCheckoutData] = useState({
+    deliveryMethod: 'collection',
+    customerName: '',
+    customerEmail: '',
+    customerAddress: '',
+    specialInstructions: ''
+  });
 
   // Check customer authentication
   const { data: customerAuth, isLoading: authLoading } = useQuery({
@@ -114,6 +143,27 @@ export default function CustomerPortalFixed() {
     },
     enabled: !!wholesalerId,
     staleTime: 10 * 60 * 1000
+  });
+
+  // Fetch customer orders
+  const { data: customerOrders = [], isLoading: ordersLoading } = useQuery<Order[]>({
+    queryKey: ['customer-orders', customer?.id],
+    queryFn: async () => {
+      if (!customer?.id) return [];
+      
+      const response = await fetch(`/api/customer-orders/${customer.id}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) return [];
+        throw new Error('Failed to load orders');
+      }
+      
+      return response.json();
+    },
+    enabled: !!customer?.id,
+    staleTime: 5 * 60 * 1000
   });
 
   // Fetch products with robust error handling
@@ -322,11 +372,51 @@ export default function CustomerPortalFixed() {
     ));
   };
 
+  // Create order mutation
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const response = await fetch('/api/customer-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create order');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (order) => {
+      setCart([]);
+      setView('orders');
+      queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Order ${order.orderNumber} has been submitted`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to place order",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Update customer auth state
   useEffect(() => {
     if (customerAuth) {
       setCustomer(customerAuth);
       setIsGuestMode(false);
+      setCheckoutData(prev => ({
+        ...prev,
+        customerName: customerAuth.name || '',
+        customerEmail: customerAuth.email || '',
+      }));
     } else {
       setIsGuestMode(true);
     }
@@ -582,7 +672,11 @@ export default function CustomerPortalFixed() {
                   <div className="text-sm text-gray-600">
                     Welcome, {customer?.name || customer?.phone}
                   </div>
-                  <Button variant="outline" className="relative">
+                  <Button 
+                    onClick={() => setView('cart')}
+                    variant="outline" 
+                    className="relative"
+                  >
                     <ShoppingCart className="w-5 h-5" />
                     {cartStats.totalItems > 0 && (
                       <Badge className="absolute -top-2 -right-2 bg-green-600">
@@ -596,6 +690,49 @@ export default function CustomerPortalFixed() {
           </div>
         </div>
       </header>
+
+      {/* Navigation Tabs - Only show when logged in */}
+      {!isGuestMode && (
+        <nav className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-8">
+              <button
+                onClick={() => setView('products')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  view === 'products'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Package className="w-4 h-4 inline mr-2" />
+                Products
+              </button>
+              <button
+                onClick={() => setView('cart')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  view === 'cart'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4 inline mr-2" />
+                Cart ({cartStats.totalItems})
+              </button>
+              <button
+                onClick={() => setView('orders')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  view === 'orders'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Truck className="w-4 h-4 inline mr-2" />
+                My Orders ({customerOrders.length})
+              </button>
+            </div>
+          </div>
+        </nav>
+      )}
 
       {/* Featured Product Section */}
       {featuredProduct && (
@@ -619,8 +756,8 @@ export default function CustomerPortalFixed() {
         </section>
       )}
 
-      {/* Main Content */}
-      {showAllProducts && (
+      {/* Main Content - Products View */}
+      {view === 'products' && showAllProducts && (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
@@ -720,6 +857,335 @@ export default function CustomerPortalFixed() {
               ))}
             </div>
           )}
+        </main>
+      )}
+
+      {/* Cart View */}
+      {view === 'cart' && !isGuestMode && (
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Shopping Cart</h2>
+              <Button
+                onClick={() => setView('products')}
+                variant="outline"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Continue Shopping
+              </Button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="text-center py-12">
+                <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Your cart is empty</h3>
+                <p className="text-gray-600 mb-4">Add some products to get started</p>
+                <Button onClick={() => setView('products')}>Browse Products</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {cart.map((item, index) => (
+                  <Card key={`${item.product.id}-${item.sellingType}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={item.product.imageUrl || item.product.images?.[0] || '/placeholder-product.jpg'}
+                          alt={item.product.name}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{item.product.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            Selling as: {item.sellingType}
+                          </p>
+                          <p className="text-lg font-bold text-green-600">
+                            £{(item.product.promoActive && item.product.promoPrice ? 
+                              parseFloat(item.product.promoPrice) : 
+                              parseFloat(item.product.price)).toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateCartQuantity(item.product.id, item.sellingType, item.quantity - 1)}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <span className="w-12 text-center">{item.quantity}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateCartQuantity(item.product.id, item.sellingType, item.quantity + 1)}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeFromCart(item.product.id, item.sellingType)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* Cart Summary */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-lg font-semibold">
+                        <span>Total Items: {cartStats.totalItems}</span>
+                        <span>Total: £{cartStats.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <Button
+                        onClick={() => setView('checkout')}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        size="lg"
+                      >
+                        Proceed to Checkout
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+
+      {/* Orders View */}
+      {view === 'orders' && !isGuestMode && (
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">My Orders</h2>
+              <Button
+                onClick={() => setView('products')}
+                variant="outline"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Products
+              </Button>
+            </div>
+
+            {ordersLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-gray-600">Loading orders...</p>
+              </div>
+            ) : customerOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
+                <p className="text-gray-600 mb-4">You haven't placed any orders with this wholesaler</p>
+                <Button onClick={() => setView('products')}>Start Shopping</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {customerOrders.map((order) => (
+                  <Card key={order.id}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">Order {order.orderNumber}</h3>
+                          <p className="text-sm text-gray-600">
+                            Placed on {new Date(order.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge 
+                            className={`${
+                              order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                              order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                              order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </Badge>
+                          <p className="text-lg font-bold mt-1">£{parseFloat(order.totalAmount).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Order Items */}
+                      <div className="space-y-2">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <span>{item.productName} x {item.quantity}</span>
+                            <span>£{parseFloat(item.totalPrice).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Delivery Info */}
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Truck className="w-4 h-4 mr-2" />
+                          <span>
+                            {order.deliveryMethod === 'collection' ? 'Collection' : 'Delivery'}
+                            {order.shippingAddress && ` to ${order.shippingAddress}`}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+
+      {/* Checkout View */}
+      {view === 'checkout' && !isGuestMode && (
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
+              <Button
+                onClick={() => setView('cart')}
+                variant="outline"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Cart
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Checkout Form */}
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Customer Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Name</label>
+                      <Input
+                        value={checkoutData.customerName}
+                        onChange={(e) => setCheckoutData(prev => ({ ...prev, customerName: e.target.value }))}
+                        placeholder="Your full name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <Input
+                        type="email"
+                        value={checkoutData.customerEmail}
+                        onChange={(e) => setCheckoutData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                        placeholder="your@email.com"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Delivery Method</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Select
+                      value={checkoutData.deliveryMethod}
+                      onValueChange={(value) => setCheckoutData(prev => ({ ...prev, deliveryMethod: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="collection">Collection</SelectItem>
+                        <SelectItem value="delivery">Delivery</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {checkoutData.deliveryMethod === 'delivery' && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Delivery Address</label>
+                        <Input
+                          value={checkoutData.customerAddress}
+                          onChange={(e) => setCheckoutData(prev => ({ ...prev, customerAddress: e.target.value }))}
+                          placeholder="Full delivery address"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Special Instructions</label>
+                      <Input
+                        value={checkoutData.specialInstructions}
+                        onChange={(e) => setCheckoutData(prev => ({ ...prev, specialInstructions: e.target.value }))}
+                        placeholder="Any special requirements..."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Summary */}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Order Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {cart.map((item) => (
+                      <div key={`${item.product.id}-${item.sellingType}`} className="flex justify-between text-sm">
+                        <div>
+                          <p className="font-medium">{item.product.name}</p>
+                          <p className="text-gray-600">{item.quantity} x £{(item.product.promoActive && item.product.promoPrice ? 
+                            parseFloat(item.product.promoPrice) : 
+                            parseFloat(item.product.price)).toFixed(2)}</p>
+                        </div>
+                        <p className="font-medium">
+                          £{((item.product.promoActive && item.product.promoPrice ? 
+                            parseFloat(item.product.promoPrice) : 
+                            parseFloat(item.product.price)) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
+
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total</span>
+                        <span>£{cartStats.totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        const orderData = {
+                          wholesalerId,
+                          customerId: customer?.id,
+                          items: cart.map(item => ({
+                            productId: item.product.id,
+                            quantity: item.quantity,
+                            unitPrice: item.product.promoActive && item.product.promoPrice ? 
+                              item.product.promoPrice : item.product.price,
+                            sellingType: item.sellingType
+                          })),
+                          deliveryMethod: checkoutData.deliveryMethod,
+                          customerName: checkoutData.customerName,
+                          customerEmail: checkoutData.customerEmail,
+                          shippingAddress: checkoutData.deliveryMethod === 'delivery' ? checkoutData.customerAddress : null,
+                          specialInstructions: checkoutData.specialInstructions,
+                          totalAmount: cartStats.totalAmount.toFixed(2)
+                        };
+                        createOrderMutation.mutate(orderData);
+                      }}
+                      disabled={createOrderMutation.isPending || !checkoutData.customerName || !checkoutData.customerEmail || (checkoutData.deliveryMethod === 'delivery' && !checkoutData.customerAddress)}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      size="lg"
+                    >
+                      {createOrderMutation.isPending ? 'Placing Order...' : 'Place Order'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
         </main>
       )}
 
