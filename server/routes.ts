@@ -4204,7 +4204,15 @@ Write a professional, sales-focused description that highlights the key benefits
   app.get('/api/customer-products/:wholesalerId', async (req, res) => {
     try {
       const wholesalerId = req.params.wholesalerId;
-      console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
+      console.log(`🛍️ [${new Date().toISOString()}] Customer requesting products for wholesaler: ${wholesalerId}`);
+      console.log(`🛍️ Environment: ${process.env.NODE_ENV || 'unknown'}`);
+      console.log(`🛍️ Database URL exists: ${!!process.env.DATABASE_URL}`);
+      
+      // Validate wholesaler ID
+      if (!wholesalerId || wholesalerId === 'undefined' || wholesalerId === 'null') {
+        console.error(`❌ Invalid wholesaler ID: ${wholesalerId}`);
+        return res.status(400).json({ message: "Invalid wholesaler ID" });
+      }
       
       const filters = {
         search: req.query.search as string,
@@ -4215,12 +4223,29 @@ Write a professional, sales-focused description that highlights the key benefits
         wholesalerId: wholesalerId
       };
       
+      console.log(`🛍️ Filters applied:`, JSON.stringify(filters, null, 2));
+      
       const products = await storage.getMarketplaceProducts(filters);
-      console.log(`🛍️ Found ${products.length} products for customer`);
+      console.log(`✅ Found ${products.length} products for customer`);
+      console.log(`📦 Sample product:`, products[0] ? {
+        id: products[0].id,
+        name: products[0].name,
+        price: products[0].price,
+        status: products[0].status
+      } : 'None');
+      
       res.json(products);
     } catch (error) {
-      console.error("Error fetching customer products:", error);
-      res.status(500).json({ message: "Failed to fetch customer products" });
+      console.error("❌ CRITICAL ERROR in customer products endpoint:");
+      console.error("Error details:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      
+      res.status(500).json({ 
+        message: "Failed to fetch customer products",
+        error: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : 'Internal server error',
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
