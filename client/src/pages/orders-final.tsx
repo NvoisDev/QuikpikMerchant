@@ -64,6 +64,20 @@ export default function OrdersFinal() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const queryClient = useQueryClient();
 
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedOrder]);
+
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/public-orders'],
     retry: 1,
@@ -555,8 +569,15 @@ export default function OrdersFinal() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedOrder(null);
+            }
+          }}
+        >
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
