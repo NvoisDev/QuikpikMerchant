@@ -4200,51 +4200,96 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // Customer-specific products endpoint for easy access
+  // Customer-specific products endpoint for easy access - PRODUCTION SAFE VERSION
   app.get('/api/customer-products/:wholesalerId', async (req, res) => {
+    let wholesalerId = '';
     try {
-      const wholesalerId = req.params.wholesalerId;
+      wholesalerId = req.params.wholesalerId;
       console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
-      console.log(`💾 Database URL exists: ${!!process.env.DATABASE_URL}`);
       
       if (!wholesalerId) {
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
       
-      const filters = {
-        search: req.query.search as string,
-        category: req.query.category as string,
-        sortBy: (req.query.sortBy as string) || "featured",
-        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
-        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-        wholesalerId: wholesalerId
-      };
+      // Direct SQL query approach - production safe
+      const productsQuery = `
+        SELECT p.*, u.business_name, u.first_name, u.last_name, u.profile_image_url, u.logo_type, u.logo_url
+        FROM products p
+        LEFT JOIN users u ON p.wholesaler_id = u.id
+        WHERE p.wholesaler_id = $1 AND p.status = 'active'
+        ORDER BY p.created_at DESC
+      `;
       
-      console.log(`🔍 Query filters:`, filters);
+      console.log('🔍 Executing direct SQL query...');
+      const result = await db.execute(sql`
+        SELECT p.*, u.business_name, u.first_name, u.last_name, u.profile_image_url, u.logo_type, u.logo_url
+        FROM products p
+        LEFT JOIN users u ON p.wholesaler_id = u.id
+        WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
+        ORDER BY p.created_at DESC
+      `);
+      const rows = result.rows as any[];
+      console.log(`📊 Raw query returned ${rows.length} rows`);
       
-      // Add timeout protection for database queries
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 10000)
-      );
+      // Transform results to expected format
+      const products = rows.map(row => ({
+        id: row.id,
+        wholesalerId: row.wholesaler_id,
+        name: row.name,
+        description: row.description,
+        price: row.price,
+        currency: row.currency || 'GBP',
+        moq: row.moq,
+        stock: row.stock,
+        imageUrl: row.images?.[0] || row.image_url,
+        images: row.images || [],
+        category: row.category,
+        status: row.status,
+        priceVisible: row.price_visible,
+        negotiationEnabled: row.negotiation_enabled,
+        minimumBidPrice: row.minimum_bid_price,
+        packQuantity: row.pack_quantity,
+        unitOfMeasure: row.unit_of_measure,
+        unitSize: row.unit_size,
+        sellingFormat: row.selling_format || 'units',
+        unitsPerPallet: row.units_per_pallet,
+        palletPrice: row.pallet_price,
+        palletMoq: row.pallet_moq,
+        palletStock: row.pallet_stock,
+        unitWeight: row.unit_weight,
+        palletWeight: row.pallet_weight,
+        promoPrice: row.promo_price,
+        promoActive: row.promo_active,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        wholesaler: {
+          id: row.wholesaler_id,
+          businessName: row.business_name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Business',
+          profileImageUrl: row.profile_image_url,
+          logoType: row.logo_type || 'initials',
+          logoUrl: row.logo_url,
+          rating: 4.5
+        }
+      }));
       
-      const dataPromise = storage.getMarketplaceProducts(filters);
-      const products = await Promise.race([dataPromise, timeoutPromise]) as any[];
-      
-      console.log(`🛍️ Found ${products.length} products for customer`);
+      console.log(`✅ Successfully formatted ${products.length} products for response`);
       res.json(products);
-    } catch (error: any) {
+      
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("❌ CRITICAL ERROR in customer products endpoint:", {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack,
-        name: error?.name,
-        wholesalerId: req.params.wholesalerId,
+        message: err?.message || 'Unknown error',
+        stack: err?.stack,
+        name: err?.name,
+        wholesalerId: wholesalerId,
         query: req.query,
         environment: process.env.NODE_ENV
       });
+      
       res.status(500).json({ 
         message: "Failed to fetch customer products", 
-        error: process.env.NODE_ENV === 'development' ? (error?.message || 'Unknown error') : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (err?.message || 'Unknown error') : 'Internal server error'
       });
     }
   });
