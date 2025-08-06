@@ -1744,17 +1744,7 @@ export default function CustomerPortal() {
                     {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
                   </Button>
                   <Button
-                    onClick={() => {
-                      // Clear authentication and redirect to login screen
-                      setIsAuthenticated(false);
-                      setAuthenticatedCustomer(null);
-                      setShowAuth(true);
-                      setIsGuestMode(true);
-                      // Add login parameter to force showing login screen
-                      const currentUrl = new URL(window.location.href);
-                      currentUrl.searchParams.set('login', 'true');
-                      window.history.replaceState({}, '', currentUrl.toString());
-                    }}
+                    onClick={handleLogout}
                     variant="outline"
                     size="sm"
                     className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
