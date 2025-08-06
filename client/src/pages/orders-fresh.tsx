@@ -15,7 +15,7 @@ export default function OrdersFresh() {
   const { data: orders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await fetch('/api/orders', {
+      const response = await fetch('/api/public-orders', {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -37,7 +37,7 @@ export default function OrdersFresh() {
           
           if (recoverResponse.ok) {
             // Retry the orders request after recovery
-            const retryResponse = await fetch('/api/orders', {
+            const retryResponse = await fetch('/api/public-orders', {
               credentials: 'include',
               headers: {
                 'Accept': 'application/json',
@@ -67,7 +67,7 @@ export default function OrdersFresh() {
     staleTime: 30000
   });
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
