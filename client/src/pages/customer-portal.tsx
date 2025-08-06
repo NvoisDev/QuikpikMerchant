@@ -2647,11 +2647,9 @@ export default function CustomerPortal() {
                                     <Button 
                                       onClick={() => openQuantityEditor(product)}
                                       size="sm"
-                                      className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+                                      className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
                                     >
-                                      <Plus className="w-3 h-3 mr-1" />
-                                      <span className="hidden sm:inline">Add to Cart</span>
-                                      <span className="sm:hidden">Add</span>
+                                      <Plus className="w-4 h-4" />
                                     </Button>
                                   )}
                                 </div>
@@ -2677,11 +2675,9 @@ export default function CustomerPortal() {
                                     });
                                   }}
                                   size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white w-8 h-8 p-0 rounded-xl"
                                 >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  <span className="hidden sm:inline">Add to Cart</span>
-                                  <span className="sm:hidden">Add</span>
+                                  <Plus className="w-4 h-4" />
                                 </Button>
                               )}
                             </div>
@@ -2880,11 +2876,10 @@ export default function CustomerPortal() {
                             <div className="flex justify-end mt-4">
                               <Button
                                 onClick={() => openQuantityEditor(product)}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
                                 size="sm"
                               >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add to Cart
+                                <Plus className="w-4 h-4" />
                               </Button>
                             </div>
                           </div>
@@ -3026,10 +3021,9 @@ export default function CustomerPortal() {
                                       <Button 
                                         onClick={() => openQuantityEditor(product)}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
+                                        className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
                                       >
-                                        <Plus className="w-3 h-3 mr-1" />
-                                        Add to Cart
+                                        <Plus className="w-4 h-4" />
                                       </Button>
                                     )}
                                   </div>
@@ -3330,6 +3324,7 @@ export default function CustomerPortal() {
                       : parseFloat(editQuantity) > selectedProduct.stock)
                   }
                 >
+                  <Plus className="w-4 h-4 mr-2" />
                   Add to Cart
                 </Button>
               </div>
