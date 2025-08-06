@@ -22,7 +22,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Share2, Home, HelpCircle, Building2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -1226,54 +1226,7 @@ export default function CustomerPortal() {
     };
   }, [cart, customerData.shippingOption, customerData.selectedShippingService]);
 
-  // Handle sharing the store
-  const handleShare = useCallback(async () => {
-    // Ensure we have a valid wholesaler ID
-    if (!wholesalerId) {
-      toast({
-        title: "Unable to Share",
-        description: "Store information is still loading. Please try again in a moment.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    // Always use customer portal URL format for sharing
-    const customerPortalUrl = `https://quikpik.app/customer/${wholesalerId}`;
-    const storeName = wholesaler?.businessName || "Wholesale Store";
-    const shareText = `${storeName}\n${customerPortalUrl}\nCheck out ${storeName} - ${wholesaler?.storeTagline || "Premium wholesale products"} available now!`;
-    
-    console.log("🔗 Share Store Debug:", {
-      wholesalerId,
-      isPreviewMode,
-      customerPortalUrl,
-      storeName,
-      shareText,
-      userRole: user?.role,
-      userWholesalerId: user?.wholesalerId,
-      userId: user?.id
-    });
-
-    // Always use clipboard-only approach to ensure we control the exact URL being shared
-    // The Web Share API sometimes adds the current page URL automatically, so we'll bypass it
-    try {
-      await navigator.clipboard.writeText(shareText);
-      toast({
-        title: "Store Link Copied!",
-        description: `Customer portal link copied: ${customerPortalUrl}`,
-      });
-      
-      console.log("✅ Successfully copied to clipboard:", shareText);
-    } catch (error) {
-      console.error("❌ Clipboard failed:", error);
-      // Fallback: Show the link in toast for manual copying
-      toast({
-        title: "Share Store",
-        description: "Copy this link to share: " + customerPortalUrl,
-        duration: 8000,
-      });
-    }
-  }, [wholesalerId, wholesaler?.businessName, wholesaler?.storeTagline, toast, isPreviewMode, user]);
 
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
@@ -1776,18 +1729,7 @@ export default function CustomerPortal() {
                 </Button>
               )}
               
-              {!isPreviewMode && (
-                <Button
-                  onClick={handleShare}
-                  variant="outline"
-                  size="sm"
-                  className="border-green-600 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
-                >
-                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Share Store</span>
-                  <span className="sm:hidden">Share</span>
-                </Button>
-              )}
+
               {!isPreviewMode && (
                 <Button
                   onClick={() => setShowCheckout(true)}
