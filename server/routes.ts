@@ -24,6 +24,7 @@ import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { db } from "./db";
+import { orders, orderItems } from "@shared/schema";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
 import { 
   SubscriptionLogger, 
@@ -2001,63 +2002,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
           : 'WS';
         
-        // Get current highest order number for this wholesaler
-        const lastOrder = await storage.getLastOrderForWholesaler(wholesalerId);
-        const lastOrderNumber = lastOrder?.orderNumber || `${businessPrefix}-000`;
-        
-        // Extract number from last order (e.g., "SF-118" -> 118) 
-        const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
-        const nextNumber = lastNumber + 1;
-        const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
-        
-        console.log(`🏢 Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
-        
-        // CRITICAL FIX: Calculate subtotal from items when metadata missing
-        const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
-          ? parseFloat(productSubtotal).toFixed(2)
-          : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
-        
-        console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
+        // RACE CONDITION FIX: Check if order already exists for this payment intent
+        const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
+        if (existingOrder) {
+          console.log(`⚠️ Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
+          return res.json({ success: true, orderId: existingOrder.id, message: 'Order already processed' });
+        }
 
-        // Create order with customer details AND SHIPPING DATA
-        const orderData = {
-          orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
-          wholesalerId,
-          retailerId: customer.id,
-          customerName, // Store customer name
-          customerEmail, // Store customer email
-          customerPhone, // Store customer phone
-          subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
-          platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
-          customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-          total: correctTotal, // Total = subtotal + customer transaction fee
-          status: 'paid',
-          stripePaymentIntentId: paymentIntent.id,
-          deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-          // 🚚 ADDED: Shipping information processing
-          fulfillmentType: shippingInfo.option || 'pickup',
-          deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-          deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
-          shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
-        };
-        
-        console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
-          fulfillmentType: orderData.fulfillmentType,
-          deliveryCarrier: orderData.deliveryCarrier,
-          deliveryCost: orderData.deliveryCost,
-          willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+        // ATOMIC ORDER NUMBER GENERATION: Use database transaction
+        const { order, wholesaleRef } = await db.transaction(async (trx) => {
+          // Get current highest order number within transaction
+          const lastOrder = await trx
+            .select()
+            .from(orders)
+            .where(eq(orders.wholesalerId, wholesalerId))
+            .orderBy(desc(orders.id))
+            .limit(1)
+            .for('update'); // Lock for update to prevent concurrent access
+          
+          const lastOrderNumber = lastOrder[0]?.orderNumber || `${businessPrefix}-000`;
+          
+          // Extract number from last order (e.g., "SF-118" -> 118) 
+          const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
+          const nextNumber = lastNumber + 1;
+          const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+          
+          console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+          
+          // CRITICAL FIX: Calculate subtotal from items when metadata missing
+          const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
+            ? parseFloat(productSubtotal).toFixed(2)
+            : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
+          
+          console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
+
+          // Create order with customer details AND SHIPPING DATA
+          const orderData = {
+            orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
+            wholesalerId,
+            retailerId: customer.id,
+            customerName, // Store customer name
+            customerEmail, // Store customer email
+            customerPhone, // Store customer phone
+            subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
+            platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
+            customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+            total: correctTotal, // Total = subtotal + customer transaction fee
+            status: 'paid',
+            stripePaymentIntentId: paymentIntent.id,
+            deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+            // 🚚 ADDED: Shipping information processing
+            fulfillmentType: shippingInfo.option || 'pickup',
+            deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+            deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
+            shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+          };
+          
+          console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
+            fulfillmentType: orderData.fulfillmentType,
+            deliveryCarrier: orderData.deliveryCarrier,
+            deliveryCost: orderData.deliveryCost,
+            willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+          });
+
+          // Create order items with orderId for storage
+          const orderItems = items.map((item: any) => ({
+            orderId: 0, // Will be set after order creation
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: parseFloat(item.unitPrice).toFixed(2),
+            total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+          }));
+
+          // Use transaction-aware storage method
+          const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
+          return { order: createdOrder, wholesaleRef };
         });
-
-        // Create order items with orderId for storage
-        const orderItems = items.map((item: any) => ({
-          orderId: 0, // Will be set after order creation
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: parseFloat(item.unitPrice).toFixed(2),
-          total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
-        }));
-
-        const order = await storage.createOrder(orderData, orderItems);
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 

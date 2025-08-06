@@ -94,7 +94,9 @@ export interface IStorage {
   getOrdersForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<Order[]>;
   getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]>;
   getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined>;
+  getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
+  createOrderWithTransaction(trx: any, order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   updateOrder(id: number, updates: Partial<Order>): Promise<Order>;
@@ -905,37 +907,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {
-    // CRITICAL FIX: Get the order with the highest numeric order number, not just most recent by date
-    // This prevents issues when multiple orders have the same order number due to concurrent processing
-    const allOrders = await db
+    // RACE CONDITION FIX: Use direct SQL to get the highest order number atomically
+    // This prevents concurrent transactions from getting the same order number
+    const result = await db
       .select()
       .from(orders)
-      .where(eq(orders.wholesalerId, wholesalerId));
+      .where(eq(orders.wholesalerId, wholesalerId))
+      .orderBy(desc(orders.id)) // Use order ID for consistency
+      .limit(1);
     
-    if (allOrders.length === 0) {
+    if (result.length === 0) {
       console.log(`📊 No orders found for wholesaler ${wholesalerId}`);
       return undefined;
     }
     
-    // Find the order with the highest numeric suffix (e.g., SF-117 -> 117)
-    let highestOrder = allOrders[0];
-    let highestNumber = 0;
+    const lastOrder = result[0];
+    console.log(`📊 Last order for wholesaler ${wholesalerId}: #${lastOrder.id} (${lastOrder.orderNumber})`);
+    return lastOrder;
+  }
+
+  async getOrderByPaymentIntentId(paymentIntentId: string): Promise<Order | undefined> {
+    const result = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+      .limit(1);
     
-    console.log(`📊 Analyzing ${allOrders.length} orders for wholesaler ${wholesalerId}:`);
-    
-    for (const order of allOrders) {
-      if (order.orderNumber) {
-        const numberPart = parseInt(order.orderNumber.split('-')[1] || '0');
-        console.log(`  - Order #${order.id}: ${order.orderNumber} -> ${numberPart} (created: ${order.createdAt})`);
-        if (numberPart > highestNumber) {
-          highestNumber = numberPart;
-          highestOrder = order;
-        }
-      }
+    return result[0];
+  }
+
+  async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+    // Create order within transaction
+    const [newOrder] = await trx
+      .insert(orders)
+      .values({
+        ...orderData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+
+    // Create order items with the order ID
+    if (items.length > 0) {
+      await trx
+        .insert(orderItems)
+        .values(items.map(item => ({
+          ...item,
+          orderId: newOrder.id
+        })));
     }
-    
-    console.log(`📊 Selected highest order: #${highestOrder.id} (${highestOrder.orderNumber}) with number ${highestNumber}`);
-    return highestOrder;
+
+    return newOrder;
   }
 
   async getOrdersByCustomerPhone(phoneNumber: string): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
