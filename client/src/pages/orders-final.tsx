@@ -45,6 +45,7 @@ const statusColors = {
   processing: "bg-blue-100 text-blue-800",
   shipped: "bg-purple-100 text-purple-800",
   delivered: "bg-emerald-100 text-emerald-800",
+  fulfilled: "bg-teal-100 text-teal-800",
   cancelled: "bg-red-100 text-red-800"
 };
 
@@ -140,6 +141,7 @@ export default function OrdersFinal() {
     const pickupOrders = filteredOrders.filter(o => o.fulfillmentType === 'pickup' || o.fulfillmentType === 'collection').length;
     const uniqueCustomers = new Set(filteredOrders.map(o => o.customerEmail)).size;
     const paidOrders = filteredOrders.filter(o => o.status === 'paid').length;
+    const fulfilledOrders = filteredOrders.filter(o => o.status === 'fulfilled').length;
     
     return {
       totalRevenue,
@@ -148,7 +150,9 @@ export default function OrdersFinal() {
       pickupOrders,
       uniqueCustomers,
       paidOrders,
-      conversionRate: filteredOrders.length > 0 ? (paidOrders / filteredOrders.length) * 100 : 0
+      fulfilledOrders,
+      conversionRate: filteredOrders.length > 0 ? (paidOrders / filteredOrders.length) * 100 : 0,
+      fulfillmentRate: filteredOrders.length > 0 ? (fulfilledOrders / filteredOrders.length) * 100 : 0
     };
   }, [filteredOrders]);
 
@@ -241,10 +245,10 @@ export default function OrdersFinal() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Conversion Rate</p>
-                <p className="text-2xl font-bold text-orange-600">{analytics.conversionRate.toFixed(1)}%</p>
+                <p className="text-sm text-gray-600">Fulfillment Rate</p>
+                <p className="text-2xl font-bold text-teal-600">{analytics.fulfillmentRate.toFixed(1)}%</p>
               </div>
-              <Clock className="w-8 h-8 text-orange-500" />
+              <Package className="w-8 h-8 text-teal-500" />
             </div>
           </CardContent>
         </Card>
@@ -347,6 +351,7 @@ export default function OrdersFinal() {
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="fulfilled">Fulfilled</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
