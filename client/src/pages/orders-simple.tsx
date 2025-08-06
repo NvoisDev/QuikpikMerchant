@@ -20,23 +20,41 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState("date-desc");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
+      console.log('🔄 Fetching orders from /api/public-orders');
       const response = await fetch('/api/public-orders');
       if (!response.ok) {
+        console.error('❌ API response not ok:', response.status, response.statusText);
         throw new Error('Failed to load orders');
       }
       const data = await response.json();
-      console.log('Orders loaded:', data.length, 'orders');
+      console.log('✅ Orders loaded:', data.length, 'orders');
+      console.log('📦 First order sample:', data[0]);
       return data;
     },
     retry: 1,
     staleTime: 30000
   });
 
+  console.log('🎯 Current orders state:', { 
+    ordersLength: orders?.length, 
+    isLoading, 
+    hasError: !!error, 
+    ordersType: typeof orders,
+    isArray: Array.isArray(orders)
+  });
+
   // Smart filtering and search logic
   const filteredAndSortedOrders = useMemo(() => {
+    console.log('🔍 Filtering orders:', orders?.length, 'total orders');
+    
+    if (!orders || !Array.isArray(orders)) {
+      console.warn('⚠️ Orders is not an array:', orders);
+      return [];
+    }
+    
     let filtered = orders.filter((order: Order) => {
       // Search filter
       if (searchTerm) {
