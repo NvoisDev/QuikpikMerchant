@@ -85,7 +85,7 @@ export default function CustomerStore() {
   });
   
   // Get categories
-  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
   
   // Get wholesaler info from first product
   const wholesaler = products[0]?.wholesaler;
