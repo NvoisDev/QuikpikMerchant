@@ -156,7 +156,8 @@ export default function OrdersFinal() {
     };
   }, [filteredOrders]);
 
-  const parseAddress = (addressString: string) => {
+  const parseAddress = (addressString: string | null) => {
+    if (!addressString) return '';
     try {
       const addr = JSON.parse(addressString);
       return `${addr.street}, ${addr.city}, ${addr.postalCode}`;
@@ -466,7 +467,7 @@ export default function OrdersFinal() {
                         <div>{formatDate(order.createdAt)}</div>
                         <div className="text-sm text-gray-500 flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          {parseAddress(order.deliveryAddress).split(',')[1]?.trim() || 'Unknown'}
+                          {order.deliveryAddress ? parseAddress(order.deliveryAddress).split(',')[1]?.trim() || 'Unknown' : 'No address'}
                         </div>
                       </TableCell>
                       <TableCell>
