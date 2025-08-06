@@ -13,7 +13,9 @@ export default function OrdersPage() {
       if (!response.ok) {
         throw new Error('Failed to load orders');
       }
-      return await response.json();
+      const data = await response.json();
+      console.log('Orders loaded:', data.length, 'orders');
+      return data;
     },
     retry: 1,
     staleTime: 30000
@@ -57,7 +59,7 @@ export default function OrdersPage() {
         <CardContent>
           {orders.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No orders found</p>
+              <p className="text-gray-500">No orders found (loaded: {orders.length})</p>
             </div>
           ) : (
             <Table>
@@ -88,7 +90,7 @@ export default function OrdersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      £{(order.totalAmount || 0).toFixed(2)}
+                      £{((order as any).total || order.totalAmount || 0).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
