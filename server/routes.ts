@@ -36,8 +36,6 @@ import {
   logLimitReached 
 } from "./subscriptionLogger";
 import { registerWebhookRoutes } from "./webhook-handler";
-import { registerWholesalerRoutes } from "./routes/wholesalers";
-import { registerCustomerOrderRoutes } from "./routes/customer-orders";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -11530,12 +11528,6 @@ The Quikpik Team
       });
     }
   });
-
-  // Register wholesaler routes
-  registerWholesalerRoutes(app);
-  
-  // Register customer order routes
-  registerCustomerOrderRoutes(app);
 
   return httpServer;
 }
