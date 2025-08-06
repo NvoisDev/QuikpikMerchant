@@ -1051,22 +1051,29 @@ export default function CustomerPortal() {
   const { data: products = [], isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useQuery<Product[]>({
     queryKey: ['wholesaler-products', wholesalerId],
     queryFn: async () => {
-      console.log(`Fetching products for wholesaler: ${wholesalerId}`);
+      console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
+      console.log(`🌐 Current domain: ${window.location.origin}`);
       const response = await fetch(`/api/customer-products/${wholesalerId}`);
+      console.log(`📡 API Response status: ${response.status}`);
+      console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        console.error(`Products fetch failed: ${response.status} ${response.statusText}`);
+        const responseText = await response.text();
+        console.error(`❌ Products fetch failed: ${response.status} ${response.statusText}`);
+        console.error(`❌ Response body:`, responseText.substring(0, 500));
         throw new Error(`Failed to fetch products: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log(`Products received: ${data.length} items`);
+      console.log(`✅ Products received: ${data.length} items`);
+      console.log(`📦 Product sample:`, data.slice(0, 2).map(p => ({ id: p.id, name: p.name, status: p.status })));
       return data;
     },
     enabled: !!wholesalerId,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    retry: 1,
-    retryDelay: 500,
+    retry: 3,
+    retryDelay: 1000,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
