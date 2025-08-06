@@ -24,7 +24,7 @@ import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { db } from "./db";
-import { eq, and, desc, inArray, or, gt } from "drizzle-orm";
+import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
 import { 
   SubscriptionLogger, 
   logSubscriptionUpgrade, 
