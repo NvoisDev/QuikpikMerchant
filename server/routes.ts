@@ -380,6 +380,51 @@ The Quikpik Team`,
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
+
+  // Simple debug endpoint to test database operations
+  app.get('/api/debug-db/:wholesalerId', async (req, res) => {
+    try {
+      const wholesalerId = req.params.wholesalerId;
+      console.log(`🔧 Debug endpoint called for wholesaler: ${wholesalerId}`);
+      
+      // Test 1: Simple database query
+      console.log(`🔧 Test 1: Simple database connection`);
+      const testUser = await storage.getUser("test").catch(e => ({ error: e.message }));
+      console.log(`🔧 Test 1 result:`, testUser);
+      
+      // Test 2: Check if wholesaler exists
+      console.log(`🔧 Test 2: Check wholesaler exists`);
+      const wholesaler = await storage.getWholesaler(wholesalerId).catch(e => ({ error: e.message }));
+      console.log(`🔧 Test 2 result:`, wholesaler);
+      
+      // Test 3: Raw product count query
+      console.log(`🔧 Test 3: Count products for wholesaler`);
+      const productCount = await db.select().from(products)
+        .where(eq(products.wholesalerId, wholesalerId))
+        .then(rows => rows.length)
+        .catch(e => ({ error: e.message }));
+      console.log(`🔧 Test 3 result:`, productCount);
+      
+      res.json({
+        status: "debug-complete",
+        wholesalerId,
+        environment: process.env.NODE_ENV,
+        tests: {
+          userQuery: testUser,
+          wholesalerQuery: wholesaler,
+          productCount
+        }
+      });
+      
+    } catch (error) {
+      console.error(`🔧 Debug endpoint error:`, error);
+      res.status(500).json({
+        status: "debug-failed",
+        error: String(error),
+        stack: error instanceof Error ? error.stack : 'No stack'
+      });
+    }
+  });
   // Set up trust proxy setting before any middleware  
   app.set("trust proxy", 1);
   
@@ -4181,6 +4226,9 @@ Write a professional, sales-focused description that highlights the key benefits
   // Enhanced marketplace products with advanced filtering
   app.get('/api/marketplace/products', async (req, res) => {
     try {
+      console.log(`🛒 [${new Date().toISOString()}] Marketplace products request`);
+      console.log(`🛒 Query params:`, req.query);
+      
       const filters = {
         search: req.query.search as string,
         category: req.query.category as string,
@@ -4192,16 +4240,40 @@ Write a professional, sales-focused description that highlights the key benefits
         wholesalerId: req.query.wholesalerId as string
       };
       
+      console.log(`🛒 Calling getMarketplaceProducts with filters:`, filters);
       const products = await storage.getMarketplaceProducts(filters);
+      console.log(`✅ Marketplace: Found ${products.length} products`);
+      
       res.json(products);
     } catch (error) {
-      console.error("Error fetching marketplace products:", error);
-      res.status(500).json({ message: "Failed to fetch marketplace products" });
+      console.error("❌ Error fetching marketplace products:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack');
+      res.status(500).json({ 
+        message: "Failed to fetch marketplace products",
+        error: process.env.NODE_ENV === 'development' ? String(error) : 'Internal server error'
+      });
     }
   });
 
   // Customer-specific products endpoint for easy access
   app.get('/api/customer-products/:wholesalerId', async (req, res) => {
+    // Immediate response setup to prevent hanging
+    let responded = false;
+    const sendResponse = (statusCode: number, data: any) => {
+      if (!responded) {
+        responded = true;
+        res.status(statusCode).json(data);
+      }
+    };
+
+    // Set response timeout
+    const timeout = setTimeout(() => {
+      sendResponse(504, { 
+        message: "Request timeout",
+        error: "Server took too long to respond"
+      });
+    }, 25000);
+
     try {
       const wholesalerId = req.params.wholesalerId;
       console.log(`🛍️ [${new Date().toISOString()}] Customer requesting products for wholesaler: ${wholesalerId}`);
@@ -4211,8 +4283,14 @@ Write a professional, sales-focused description that highlights the key benefits
       // Validate wholesaler ID
       if (!wholesalerId || wholesalerId === 'undefined' || wholesalerId === 'null') {
         console.error(`❌ Invalid wholesaler ID: ${wholesalerId}`);
-        return res.status(400).json({ message: "Invalid wholesaler ID" });
+        clearTimeout(timeout);
+        return sendResponse(400, { message: "Invalid wholesaler ID" });
       }
+      
+      // Test database connection first
+      console.log(`🔍 Testing database connection...`);
+      const testQuery = await storage.getUser("test_user_id").catch(() => null);
+      console.log(`✅ Database connection test completed`);
       
       const filters = {
         search: req.query.search as string,
@@ -4225,6 +4303,7 @@ Write a professional, sales-focused description that highlights the key benefits
       
       console.log(`🛍️ Filters applied:`, JSON.stringify(filters, null, 2));
       
+      console.log(`🔍 Calling storage.getMarketplaceProducts...`);
       const products = await storage.getMarketplaceProducts(filters);
       console.log(`✅ Found ${products.length} products for customer`);
       console.log(`📦 Sample product:`, products[0] ? {
@@ -4234,17 +4313,28 @@ Write a professional, sales-focused description that highlights the key benefits
         status: products[0].status
       } : 'None');
       
-      res.json(products);
+      clearTimeout(timeout);
+      sendResponse(200, products);
     } catch (error) {
+      clearTimeout(timeout);
       console.error("❌ CRITICAL ERROR in customer products endpoint:");
+      console.error("Error type:", typeof error);
+      console.error("Error constructor:", error?.constructor?.name);
       console.error("Error details:", error);
       console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
       console.error("Error message:", error instanceof Error ? error.message : String(error));
       
-      res.status(500).json({ 
+      // More detailed error analysis
+      if (error && typeof error === 'object') {
+        console.error("Error keys:", Object.keys(error));
+        console.error("Error toString:", error.toString());
+      }
+      
+      sendResponse(500, { 
         message: "Failed to fetch customer products",
         error: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : 'Internal server error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        errorType: error?.constructor?.name || 'Unknown'
       });
     }
   });
