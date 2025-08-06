@@ -1615,7 +1615,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orders = await storage.getOrders(surulereWholesalerId, undefined, search);
       
       console.log(`📦 Public orders request - found ${orders.length} orders for Surulere Foods`);
-      res.json(orders);
+      
+      // Clean the response to prevent circular references and reduce size
+      const cleanOrders = orders.map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        total: order.total,
+        subtotal: order.subtotal,
+        platformFee: order.platformFee,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        deliveryAddress: order.deliveryAddress,
+        fulfillmentType: order.fulfillmentType,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: order.items?.map(item => ({
+          id: item.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+          product: {
+            id: item.product?.id,
+            name: item.product?.name,
+            imageUrl: item.product?.imageUrl
+          }
+        })) || []
+      }));
+      
+      // Check response size after cleaning
+      const responseStr = JSON.stringify(cleanOrders);
+      console.log(`📦 Clean response size: ${responseStr.length} characters (${cleanOrders.length} orders)`);
+      
+      res.json(cleanOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });

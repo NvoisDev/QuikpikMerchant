@@ -28,6 +28,7 @@ import OrdersNew from "@/pages/orders-new";
 import OrdersSimple from "@/pages/orders-simple";
 import OrdersDebug from "@/pages/orders-debug";
 import OrdersReactQueryTest from "@/pages/orders-reactquery-test";
+import OrdersTestSimple from "@/pages/orders-test-simple";
 import AuthTest from "@/pages/auth-test";
 import Analytics from "@/pages/analytics";
 import Help from "@/pages/help";
@@ -118,7 +119,7 @@ function AuthenticatedRoutes() {
             <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
-            <Route path="/orders" component={OrdersReactQueryTest} />
+            <Route path="/orders" component={OrdersTestSimple} />
             <Route path="/orders2" component={OrdersSimple} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
