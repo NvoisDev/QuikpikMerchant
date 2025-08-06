@@ -1843,21 +1843,34 @@ export class DatabaseStorage implements IStorage {
     wholesalerId?: string;
   }): Promise<(Product & { wholesaler: { id: string; businessName: string; profileImageUrl?: string; rating?: number } })[]> {
     try {
-      console.log('getMarketplaceProducts called with filters:', filters);
+      console.log(`🔍 [${new Date().toISOString()}] getMarketplaceProducts called with filters:`, filters);
+      console.log(`🔍 Environment: ${process.env.NODE_ENV || 'unknown'}`);
+      console.log(`🔍 Database URL exists: ${!!process.env.DATABASE_URL}`);
       
       // Check if wholesalerId is provided
       if (!filters.wholesalerId) {
-        console.log('No wholesaler ID provided');
+        console.log('❌ No wholesaler ID provided');
         return [];
       }
       
+      console.log(`🔍 Querying products for wholesaler: ${filters.wholesalerId}`);
+      
       // Get products using the exact same pattern as getWholesalerProfile
-      const productsResult = await db.execute(sql`
-        SELECT * FROM products 
-        WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
-      `);
-      const productsList = productsResult.rows as any[];
-      console.log('Products found:', productsList.length);
+      let productsResult: any;
+      let productsList: any[] = [];
+      
+      try {
+        console.log(`📊 Executing products query...`);
+        productsResult = await db.execute(sql`
+          SELECT * FROM products 
+          WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
+        `);
+        productsList = productsResult.rows as any[];
+        console.log(`✅ Products query successful: ${productsList.length} products found`);
+      } catch (dbError) {
+        console.error(`❌ Products query failed:`, dbError);
+        throw new Error(`Database query failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      }
 
       // Get unique wholesaler IDs
       const wholesalerIds = Array.from(new Set(productsList.map(p => p.wholesaler_id)));
@@ -1868,14 +1881,22 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get wholesaler data using same approach as getWholesalerProfile
-      const wholesalersResult = await db.execute(sql`
-        SELECT * FROM users 
-        WHERE id = ${filters.wholesalerId} AND role = 'wholesaler'
-        LIMIT 1
-      `);
-
-      const wholesalers = wholesalersResult.rows as any[];
-      console.log('Wholesalers found:', wholesalers.length);
+      let wholesalersResult: any;
+      let wholesalers: any[] = [];
+      
+      try {
+        console.log(`📊 Executing wholesaler query...`);
+        wholesalersResult = await db.execute(sql`
+          SELECT * FROM users 
+          WHERE id = ${filters.wholesalerId} AND role = 'wholesaler'
+          LIMIT 1
+        `);
+        wholesalers = wholesalersResult.rows as any[];
+        console.log(`✅ Wholesaler query successful: ${wholesalers.length} wholesalers found`);
+      } catch (dbError) {
+        console.error(`❌ Wholesaler query failed:`, dbError);
+        throw new Error(`Wholesaler query failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      }
 
       // Create wholesaler lookup map
       const wholesalerMap = new Map(wholesalers.map(w => [w.id, w]));
@@ -1972,10 +1993,13 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
-      console.log('Results prepared:', results.length);
+      console.log(`✅ Results prepared: ${results.length} products with wholesaler data`);
       return results;
     } catch (error) {
-      console.error('Error in getMarketplaceProducts:', error);
+      console.error(`❌ CRITICAL ERROR in getMarketplaceProducts:`, error);
+      console.error(`❌ Error type:`, typeof error);
+      console.error(`❌ Error message:`, error instanceof Error ? error.message : String(error));
+      console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }
