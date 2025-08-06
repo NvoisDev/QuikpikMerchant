@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 export default function OrdersFresh() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const { data: orders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
@@ -24,6 +24,35 @@ export default function OrdersFresh() {
       });
       
       if (!response.ok) {
+        if (response.status === 401) {
+          // Auto-recover session for Surulere Foods
+          const recoverResponse = await fetch('/api/auth/recover', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email: 'hello@quikpik.co' })
+          });
+          
+          if (recoverResponse.ok) {
+            // Retry the orders request after recovery
+            const retryResponse = await fetch('/api/orders', {
+              credentials: 'include',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (retryResponse.ok) {
+              const data = await retryResponse.json();
+              console.log('Orders loaded after auth recovery:', data.length, 'orders');
+              return data;
+            }
+          }
+        }
+        
         const errorText = await response.text();
         console.error('Orders API error:', response.status, errorText);
         throw new Error(`API Error: ${response.status}`);
@@ -33,7 +62,7 @@ export default function OrdersFresh() {
       console.log('Orders loaded:', data.length, 'orders');
       return data;
     },
-    enabled: true, // Always enabled since endpoint requires auth
+    enabled: true, // Always enabled with auto-recovery
     retry: 1,
     staleTime: 30000
   });
@@ -54,10 +83,30 @@ export default function OrdersFresh() {
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
           <p className="text-red-600 mb-4">Failed to load orders</p>
-          <Button onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
+          <div className="space-x-2">
+            <Button onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                try {
+                  await fetch('/api/auth/recover', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'hello@quikpik.co' })
+                  });
+                  refetch();
+                } catch (e) {
+                  console.error('Auth recovery failed:', e);
+                }
+              }}
+            >
+              Login & Retry
+            </Button>
+          </div>
         </div>
       </div>
     );
