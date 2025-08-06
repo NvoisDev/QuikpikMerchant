@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Filter, Eye, Package, Phone, Mail } from "lucide-react";
+import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderItem {
@@ -48,9 +48,16 @@ const statusColors = {
   cancelled: "bg-red-100 text-red-800"
 };
 
+const fulfillmentColors = {
+  delivery: "bg-blue-100 text-blue-800",
+  pickup: "bg-orange-100 text-orange-800",
+  collection: "bg-orange-100 text-orange-800"
+};
+
 export default function OrdersFinal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -69,8 +76,9 @@ export default function OrdersFinal() {
         order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+      const matchesFulfillment = fulfillmentFilter === "all" || order.fulfillmentType === fulfillmentFilter;
       
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesFulfillment;
     });
 
     // Sort orders
@@ -94,7 +102,7 @@ export default function OrdersFinal() {
     });
 
     return filtered;
-  }, [orders, searchTerm, statusFilter, sortBy]);
+  }, [orders, searchTerm, statusFilter, fulfillmentFilter, sortBy]);
 
   const formatCurrency = (amount: string) => {
     return `£${parseFloat(amount).toFixed(2)}`;
@@ -112,6 +120,37 @@ export default function OrdersFinal() {
       </Badge>
     );
   };
+
+  const getFulfillmentBadge = (fulfillmentType: string) => {
+    const colorClass = fulfillmentColors[fulfillmentType as keyof typeof fulfillmentColors] || "bg-gray-100 text-gray-800";
+    const icon = fulfillmentType === 'delivery' ? <Truck className="w-3 h-3 mr-1" /> : <Store className="w-3 h-3 mr-1" />;
+    return (
+      <Badge className={`${colorClass} border-0 flex items-center`}>
+        {icon}
+        {fulfillmentType.charAt(0).toUpperCase() + fulfillmentType.slice(1)}
+      </Badge>
+    );
+  };
+
+  // Calculate analytics
+  const analytics = useMemo(() => {
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+    const averageOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
+    const deliveryOrders = filteredOrders.filter(o => o.fulfillmentType === 'delivery').length;
+    const pickupOrders = filteredOrders.filter(o => o.fulfillmentType === 'pickup' || o.fulfillmentType === 'collection').length;
+    const uniqueCustomers = new Set(filteredOrders.map(o => o.customerEmail)).size;
+    const paidOrders = filteredOrders.filter(o => o.status === 'paid').length;
+    
+    return {
+      totalRevenue,
+      averageOrderValue,
+      deliveryOrders,
+      pickupOrders,
+      uniqueCustomers,
+      paidOrders,
+      conversionRate: filteredOrders.length > 0 ? (paidOrders / filteredOrders.length) * 100 : 0
+    };
+  }, [filteredOrders]);
 
   const parseAddress = (addressString: string) => {
     try {
@@ -160,6 +199,122 @@ export default function OrdersFinal() {
         </p>
       </div>
 
+      {/* Analytics Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(analytics.totalRevenue.toString())}</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Average Order</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(analytics.averageOrderValue.toString())}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Unique Customers</p>
+                <p className="text-2xl font-bold text-purple-600">{analytics.uniqueCustomers}</p>
+              </div>
+              <Users className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Conversion Rate</p>
+                <p className="text-2xl font-bold text-orange-600">{analytics.conversionRate.toFixed(1)}%</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Fulfillment Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5" />
+              Fulfillment Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-blue-500" />
+                  <span>Delivery Orders</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{analytics.deliveryOrders}</span>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {filteredOrders.length > 0 ? Math.round((analytics.deliveryOrders / filteredOrders.length) * 100) : 0}%
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Store className="w-4 h-4 text-orange-500" />
+                  <span>Pickup Orders</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{analytics.pickupOrders}</span>
+                  <Badge className="bg-orange-100 text-orange-800">
+                    {filteredOrders.length > 0 ? Math.round((analytics.pickupOrders / filteredOrders.length) * 100) : 0}%
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <Package className="w-4 h-4 mr-2" />
+                Export Orders
+              </Button>
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <Mail className="w-4 h-4 mr-2" />
+                Send Customer Updates
+              </Button>
+              <Button variant="outline" className="w-full justify-start" size="sm">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                View Analytics
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters and Search */}
       <Card>
         <CardHeader>
@@ -193,6 +348,17 @@ export default function OrdersFinal() {
                 <SelectItem value="shipped">Shipped</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={fulfillmentFilter} onValueChange={setFulfillmentFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by fulfillment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="delivery">Delivery</SelectItem>
+                <SelectItem value="pickup">Pickup</SelectItem>
+                <SelectItem value="collection">Collection</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
@@ -233,10 +399,10 @@ export default function OrdersFinal() {
                   <TableRow>
                     <TableHead>Order</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Status & Type</TableHead>
                     <TableHead>Items</TableHead>
                     <TableHead>Total</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Date & Location</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -265,7 +431,10 @@ export default function OrdersFinal() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(order.status)}
+                        <div className="space-y-1">
+                          {getStatusBadge(order.status)}
+                          {getFulfillmentBadge(order.fulfillmentType)}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -290,8 +459,9 @@ export default function OrdersFinal() {
                       </TableCell>
                       <TableCell>
                         <div>{formatDate(order.createdAt)}</div>
-                        <div className="text-sm text-gray-500">
-                          {order.fulfillmentType}
+                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {parseAddress(order.deliveryAddress).split(',')[1]?.trim() || 'Unknown'}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -336,8 +506,11 @@ export default function OrdersFinal() {
             <CardContent className="space-y-6">
               {/* Order Status */}
               <div>
-                <h3 className="font-semibold mb-2">Status</h3>
-                {getStatusBadge(selectedOrder.status)}
+                <h3 className="font-semibold mb-2">Status & Fulfillment</h3>
+                <div className="flex gap-2">
+                  {getStatusBadge(selectedOrder.status)}
+                  {getFulfillmentBadge(selectedOrder.fulfillmentType)}
+                </div>
               </div>
 
               {/* Customer Info */}
