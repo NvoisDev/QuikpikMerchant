@@ -3,28 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function OrdersReactQueryTest() {
   const ordersQuery = useQuery({
-    queryKey: ['orders'],
-    queryFn: async () => {
-      console.log('🔄 ReactQuery: Starting fetch to /api/public-orders');
-      const response = await fetch('/api/public-orders');
-      console.log('📡 ReactQuery: Response status:', response.status);
-      console.log('📡 ReactQuery: Response ok:', response.ok);
-      
-      if (!response.ok) {
-        console.error('❌ ReactQuery: Response not ok');
-        throw new Error('Failed to load orders');
-      }
-      
-      const data = await response.json();
-      console.log('✅ ReactQuery: Data received:', {
-        type: typeof data,
-        isArray: Array.isArray(data),
-        length: data?.length,
-        firstItem: data?.[0]
-      });
-      
-      return data;
-    },
+    queryKey: ['/api/public-orders'],
     retry: 1,
     staleTime: 30000
   });
@@ -60,7 +39,7 @@ export default function OrdersReactQueryTest() {
           <CardContent className="py-8">
             <div className="text-center text-red-600">
               <h3 className="font-semibold">Error loading orders</h3>
-              <p>{ordersQuery.error?.message}</p>
+              <p>{String(ordersQuery.error)}</p>
             </div>
           </CardContent>
         </Card>
@@ -87,7 +66,7 @@ export default function OrdersReactQueryTest() {
                 {JSON.stringify({
                   isLoading: ordersQuery.isLoading,
                   isError: ordersQuery.isError,
-                  error: ordersQuery.error?.message,
+                  error: String(ordersQuery.error),
                   dataType: typeof ordersQuery.data,
                   dataLength: ordersQuery.data?.length,
                   hasData: !!ordersQuery.data

@@ -21,19 +21,7 @@ export default function OrdersPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: ['orders'],
-    queryFn: async () => {
-      console.log('🔄 Fetching orders from /api/public-orders');
-      const response = await fetch('/api/public-orders');
-      if (!response.ok) {
-        console.error('❌ API response not ok:', response.status, response.statusText);
-        throw new Error('Failed to load orders');
-      }
-      const data = await response.json();
-      console.log('✅ Orders loaded:', data.length, 'orders');
-      console.log('📦 First order sample:', data[0]);
-      return data;
-    },
+    queryKey: ['/api/public-orders'],
     retry: 1,
     staleTime: 30000
   });
