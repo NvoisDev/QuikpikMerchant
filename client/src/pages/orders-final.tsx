@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -185,15 +186,19 @@ export default function OrdersFinal() {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     setIsUpdatingStatus(true);
     try {
-      await apiRequest("PATCH", `/api/orders/${orderId}`, { status: newStatus });
+      const response = await apiRequest("PATCH", `/api/orders/${orderId}`, { status: newStatus });
+      console.log("Order status updated:", response);
+      
       // Refresh orders data
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
+      
       // Update selected order if it's the one being modified
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
     } catch (error) {
       console.error("Failed to update order status:", error);
+      alert("Failed to update order status. Please try again.");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -618,37 +623,6 @@ export default function OrdersFinal() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Order Timeline */}
-              <div>
-                <h3 className="font-semibold mb-4">Order Timeline</h3>
-                <div className="space-y-4">
-                  {getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).map((step, index) => (
-                    <div key={step.key} className="flex items-start gap-3">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        step.completed 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        {step.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className={`font-medium ${step.completed ? 'text-green-700' : 'text-gray-500'}`}>
-                          {step.label}
-                        </div>
-                        <div className={`text-sm ${step.completed ? 'text-green-600' : 'text-gray-400'}`}>
-                          {step.description}
-                        </div>
-                      </div>
-                      {index < getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).length - 1 && (
-                        <div className={`ml-4 w-0.5 h-4 ${
-                          step.completed ? 'bg-green-200' : 'bg-gray-200'
-                        }`} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Order Status */}
               <div>
                 <h3 className="font-semibold mb-2">Status & Fulfillment</h3>
@@ -713,13 +687,42 @@ export default function OrdersFinal() {
                 </div>
               </div>
 
-              {/* Order Dates */}
+              {/* Order Timeline - Visual Progress Tracker */}
               <div>
-                <h3 className="font-semibold mb-2">Order Timeline</h3>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div><strong>Created:</strong> {format(new Date(selectedOrder.createdAt), "PPpp")}</div>
-                  <div><strong>Updated:</strong> {format(new Date(selectedOrder.updatedAt), "PPpp")}</div>
-                  <div><strong>Fulfillment:</strong> {selectedOrder.fulfillmentType}</div>
+                <h3 className="font-semibold mb-4">Order Timeline</h3>
+                <div className="space-y-4">
+                  {getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).map((step, index) => (
+                    <div key={step.key} className="flex items-start gap-3 relative">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                        step.completed 
+                          ? 'bg-green-100 text-green-600 border-green-300' 
+                          : 'bg-gray-100 text-gray-400 border-gray-300'
+                      }`}>
+                        {step.icon}
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className={`font-medium ${step.completed ? 'text-green-700' : 'text-gray-500'}`}>
+                          {step.label}
+                        </div>
+                        <div className={`text-sm ${step.completed ? 'text-green-600' : 'text-gray-400'}`}>
+                          {step.description}
+                        </div>
+                      </div>
+                      {index < getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).length - 1 && (
+                        <div className={`absolute left-4 top-8 w-0.5 h-6 ${
+                          step.completed ? 'bg-green-200' : 'bg-gray-200'
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Order Metadata */}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                    <div><strong>Created:</strong> {format(new Date(selectedOrder.createdAt), "PPp")}</div>
+                    <div><strong>Updated:</strong> {format(new Date(selectedOrder.updatedAt), "PPp")}</div>
+                  </div>
                 </div>
               </div>
             </CardContent>
