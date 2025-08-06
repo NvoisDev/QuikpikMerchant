@@ -1616,7 +1616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📦 Public orders request - found ${orders.length} orders for Surulere Foods`);
       
-      // Clean the response to prevent circular references and reduce size
+      // Clean the response and limit items to prevent massive response
       const cleanOrders = orders.map(order => ({
         id: order.id,
         orderNumber: order.orderNumber,
@@ -1631,7 +1631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fulfillmentType: order.fulfillmentType,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
-        items: order.items?.map(item => ({
+        // Limit items to first 3 to prevent massive response
+        items: order.items?.slice(0, 3).map(item => ({
           id: item.id,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -1641,7 +1642,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: item.product?.name,
             imageUrl: item.product?.imageUrl
           }
-        })) || []
+        })) || [],
+        itemCount: order.items?.length || 0
       }));
       
       // Check response size after cleaning
