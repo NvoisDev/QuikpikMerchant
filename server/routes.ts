@@ -4208,10 +4208,14 @@ Write a professional, sales-focused description that highlights the key benefits
       console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
       console.log(`💾 Database URL exists: ${!!process.env.DATABASE_URL}`);
       
+      if (!wholesalerId) {
+        return res.status(400).json({ error: 'Wholesaler ID is required' });
+      }
+      
       const filters = {
         search: req.query.search as string,
         category: req.query.category as string,
-        sortBy: req.query.sortBy as string || "featured",
+        sortBy: (req.query.sortBy as string) || "featured",
         minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
         maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
         wholesalerId: wholesalerId
@@ -4219,21 +4223,28 @@ Write a professional, sales-focused description that highlights the key benefits
       
       console.log(`🔍 Query filters:`, filters);
       
-      const products = await storage.getMarketplaceProducts(filters);
+      // Add timeout protection for database queries
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      const dataPromise = storage.getMarketplaceProducts(filters);
+      const products = await Promise.race([dataPromise, timeoutPromise]) as any[];
+      
       console.log(`🛍️ Found ${products.length} products for customer`);
       res.json(products);
     } catch (error: any) {
       console.error("❌ CRITICAL ERROR in customer products endpoint:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        name: error?.name,
         wholesalerId: req.params.wholesalerId,
         query: req.query,
         environment: process.env.NODE_ENV
       });
       res.status(500).json({ 
         message: "Failed to fetch customer products", 
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? (error?.message || 'Unknown error') : 'Internal server error'
       });
     }
   });

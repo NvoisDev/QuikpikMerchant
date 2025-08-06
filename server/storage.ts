@@ -1976,9 +1976,9 @@ export class DatabaseStorage implements IStorage {
 
       console.log('Results prepared:', results.length);
       return results;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in getMarketplaceProducts:', error);
-      throw error;
+      throw new Error(`Failed to get marketplace products: ${error.message}`);
     }
   }
 
