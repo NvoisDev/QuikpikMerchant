@@ -15,7 +15,7 @@ export default function OrdersFresh() {
   const { data: orders = [], isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await fetch('/api/public-orders', {
+      const response = await fetch('/api/orders', {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -37,7 +37,7 @@ export default function OrdersFresh() {
           
           if (recoverResponse.ok) {
             // Retry the orders request after recovery
-            const retryResponse = await fetch('/api/public-orders', {
+            const retryResponse = await fetch('/api/orders', {
               credentials: 'include',
               headers: {
                 'Accept': 'application/json',
