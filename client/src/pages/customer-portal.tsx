@@ -2943,8 +2943,8 @@ export default function CustomerPortal() {
                                     })()}
                                   </div>
                                   
-                                  {/* Action Buttons */}
-                                  <div className="flex space-x-2">
+                                  {/* Action Buttons - Center Aligned */}
+                                  <div className="flex justify-center space-x-2">
                                     {product.negotiationEnabled ? (
                                       <>
                                         <Button 
