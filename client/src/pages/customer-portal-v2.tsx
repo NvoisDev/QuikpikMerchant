@@ -145,7 +145,19 @@ export default function CustomerPortalV2() {
 
   // Filter products
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    console.log(`🔍 Filtering products:`, {
+      totalProducts: products.length,
+      searchTerm,
+      selectedCategory,
+      sampleProducts: products.slice(0, 3).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        status: p.status, 
+        category: p.category 
+      }))
+    });
+    
+    const filtered = products.filter(product => {
       const matchesSearch = !searchTerm || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -153,8 +165,13 @@ export default function CustomerPortalV2() {
       const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
       const isActive = product.status === 'active';
       
+      // Debug logging removed for performance
+      
       return matchesSearch && matchesCategory && isActive;
     });
+    
+    console.log(`✅ Filtered to ${filtered.length} products`);
+    return filtered;
   }, [products, searchTerm, selectedCategory]);
 
   // Get categories
@@ -236,9 +253,9 @@ export default function CustomerPortalV2() {
         <CardContent className="p-4">
           {/* Product Image */}
           <div className="mb-4 relative">
-            {product.imageUrl || (product.images?.length > 0) ? (
+            {product.imageUrl || (product.images && product.images.length > 0) ? (
               <img 
-                src={product.imageUrl || product.images[0]} 
+                src={product.imageUrl || (product.images && product.images[0])} 
                 alt={product.name}
                 className="w-full h-48 object-contain rounded-lg bg-white"
               />
@@ -330,6 +347,9 @@ export default function CustomerPortalV2() {
       </Card>
     );
   };
+
+  // Debug logging - keep for now
+  console.log(`🚀 Portal State: ${products.length} total, ${filteredProducts.length} filtered`);
 
   // Loading state
   if (authLoading || productsLoading) {
@@ -423,9 +443,9 @@ export default function CustomerPortalV2() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                {categories.map((category) => (
+                  <SelectItem key={category || 'unknown'} value={category || ''}>
+                    {category || 'Uncategorized'}
                   </SelectItem>
                 ))}
               </SelectContent>
