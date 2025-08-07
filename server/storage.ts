@@ -794,6 +794,8 @@ export class DatabaseStorage implements IStorage {
     
     // Use FOR UPDATE to lock and find the highest order number atomically
     const result = await db.transaction(async (tx) => {
+      console.log(`🔍 DEBUG: Looking for orders with wholesaler_id=${wholesalerId} and prefix=${businessPrefix}`);
+      
       // CRITICAL FIX: Use the same SPLIT_PART logic as routes.ts for consistency
       const maxOrderResult = await tx.execute(sql`
         SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
@@ -805,6 +807,8 @@ export class DatabaseStorage implements IStorage {
       
       const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
       const nextNumber = parseInt(maxNumber.toString()) + 1;
+      
+      console.log(`🔍 DEBUG: Found max_number=${maxNumber}, generating nextNumber=${nextNumber}`);
       
       // Format with leading zeros (e.g., "SF-135")
       const formattedNumber = nextNumber.toString().padStart(3, '0');
