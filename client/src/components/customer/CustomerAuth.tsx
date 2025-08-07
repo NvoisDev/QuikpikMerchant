@@ -128,23 +128,29 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   useEffect(() => {
     console.log('🔧 COMPONENT MOUNT - Initializing authentication');
     
-    // DISABLED: Automatic authentication bypass - always require SMS verification
-    // const savedAuth = localStorage.getItem(`customer_auth_${wholesalerId}`);
-    // if (savedAuth) {
-    //   try {
-    //     const authData = JSON.parse(savedAuth);
-    //     const isRecent = Date.now() - authData.timestamp < 24 * 60 * 60 * 1000;
-    //     
-    //     if (authData.isAuthenticated && authData.customer && isRecent) {
-    //       console.log('🔄 Authentication already restored, bypassing SMS');
-    //       onAuthSuccess(authData.customer);
-    //       return;
-    //     }
-    //   } catch (error) {
-    //     console.error('Error checking saved auth:', error);
-    //     localStorage.removeItem(`customer_auth_${wholesalerId}`);
-    //   }
-    // }
+    // Check for existing session first to avoid unnecessary SMS
+    const checkExistingSession = async () => {
+      if (!wholesalerId) return false;
+      
+      try {
+        console.log('🔍 Checking for existing session before SMS...');
+        const response = await fetch(`/api/customer-auth/check/${wholesalerId}`, {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const sessionData = await response.json();
+          if (sessionData.authenticated && sessionData.customer) {
+            console.log('✅ Existing session found, bypassing SMS:', sessionData.customer.name);
+            onAuthSuccess(sessionData.customer);
+            return true;
+          }
+        }
+      } catch (error) {
+        console.log('🔍 No existing session found, proceeding with authentication');
+      }
+      return false;
+    };
     
     // Check for auth parameter from CustomerLogin
     const urlParams = new URLSearchParams(window.location.search);
@@ -157,15 +163,24 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin - skip directly to step 3 (SMS verification)
-      console.log('🔗 FROM CUSTOMER LOGIN: Skipping to step 3 with digits', authParam);
+      // Customer came from CustomerLogin - check for existing session first
       setLastFourDigits(authParam);
-      // Automatically verify customer and send SMS, then go to step 3
-      handleAuthenticationFromLogin(authParam);
+      
+      checkExistingSession().then(hasSession => {
+        if (!hasSession) {
+          // No existing session, proceed with SMS verification
+          console.log('🔗 FROM CUSTOMER LOGIN: No session found, sending SMS with digits', authParam);
+          handleAuthenticationFromLogin(authParam);
+        }
+      });
     } else {
-      // Fresh start - show step 1
-      console.log('🔄 FRESH START: Starting at step 1');
-      setAuthStep('step1');
+      // Fresh start - check for existing session first
+      checkExistingSession().then(hasSession => {
+        if (!hasSession) {
+          console.log('🔄 FRESH START: No session found, starting at step 1');
+          setAuthStep('step1');
+        }
+      });
     }
   }, [wholesalerId]); // Only depend on wholesalerId to prevent infinite loops
 
