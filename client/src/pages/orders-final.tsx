@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin, CheckCircle2, XCircle, Receipt, Handshake, Box, Car } from "lucide-react";
+import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin, CheckCircle2, XCircle, Receipt, Handshake, Box, Car, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderItem {
@@ -63,6 +63,8 @@ export default function OrdersFinal() {
   const [sortBy, setSortBy] = useState("date-desc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [ordersPerPage, setOrdersPerPage] = useState(25);
   const queryClient = useQueryClient();
 
   // Prevent background scroll when modal is open
@@ -121,6 +123,52 @@ export default function OrdersFinal() {
 
     return filtered;
   }, [orders, searchTerm, statusFilter, fulfillmentFilter, sortBy]);
+
+  // Pagination logic
+  const totalOrders = filteredOrders.length;
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
+  const startIndex = (currentPage - 1) * ordersPerPage;
+  const endIndex = startIndex + ordersPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, fulfillmentFilter, sortBy]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPaginationRange = () => {
+    const range = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        range.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) range.push(i);
+        range.push('...');
+        range.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        range.push(1);
+        range.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) range.push(i);
+      } else {
+        range.push(1);
+        range.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) range.push(i);
+        range.push('...');
+        range.push(totalPages);
+      }
+    }
+    
+    return range;
+  };
 
   const formatCurrency = (amount: string) => {
     return `£${parseFloat(amount).toFixed(2)}`;
@@ -469,10 +517,31 @@ export default function OrdersFinal() {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Orders List
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Orders List
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1}-{Math.min(endIndex, totalOrders)} of {totalOrders} orders
+              </div>
+              <Select value={ordersPerPage.toString()} onValueChange={(value) => {
+                setOrdersPerPage(parseInt(value));
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {filteredOrders.length === 0 ? (
@@ -481,21 +550,22 @@ export default function OrdersFinal() {
               <p className="text-gray-600">No orders found matching your criteria</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status & Type</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Date & Location</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order: Order) => (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status & Type</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Date & Location</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentOrders.map((order: Order) => (
                     <TableRow key={order.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div>
@@ -565,9 +635,83 @@ export default function OrdersFinal() {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    {getPaginationRange().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="px-2 text-gray-400">
+                          ...
+                        </span>
+                      ) : (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(page as number)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      )
+                    ))}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    {totalOrders} total orders
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
