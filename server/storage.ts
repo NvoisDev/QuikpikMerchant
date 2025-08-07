@@ -982,14 +982,54 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // Create order items with the order ID
+    // Create order items with the order ID AND reduce stock
     if (items.length > 0) {
-      await trx
-        .insert(orderItems)
-        .values(items.map(item => ({
-          ...item,
-          orderId: newOrder.id
-        })));
+      for (const item of items) {
+        // Insert order item
+        await trx.insert(orderItems).values({ ...item, orderId: newOrder.id });
+        
+        // Get current product info before stock reduction
+        const [currentProduct] = await trx
+          .select()
+          .from(products)
+          .where(eq(products.id, item.productId));
+        
+        if (currentProduct) {
+          // Reduce product stock
+          await trx
+            .update(products)
+            .set({ 
+              stock: sql`${products.stock} - ${item.quantity}`,
+              updatedAt: new Date()
+            })
+            .where(eq(products.id, item.productId));
+          
+          const newStockLevel = currentProduct.stock - item.quantity;
+          console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+          
+          // Create stock movement record for the purchase
+          await this.createStockMovement({
+            productId: item.productId,
+            wholesalerId: currentProduct.wholesalerId,
+            movementType: 'purchase',
+            quantity: -item.quantity, // negative for stock reduction
+            stockBefore: currentProduct.stock,
+            stockAfter: newStockLevel,
+            reason: 'Customer purchase',
+            orderId: newOrder.id,
+            customerName: orderData.retailerId, // This will be improved when we have customer details
+          });
+          
+          // Check for low stock and log warnings
+          if (newStockLevel <= 10 && currentProduct.stock > 10) {
+            console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
+          } else if (newStockLevel <= 0) {
+            console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+          }
+        } else {
+          console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
+        }
+      }
     }
 
     return newOrder;
