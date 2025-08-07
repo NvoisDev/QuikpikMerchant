@@ -2040,13 +2040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
             }
 
-            // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record
+            // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record (FOR UPDATE removed for Neon compatibility)
             const result = await trx.execute(sql`
               SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
               FROM orders 
               WHERE wholesaler_id = ${wholesalerId} 
               AND order_number LIKE ${businessPrefix + '-%'}
-              FOR UPDATE
             `);
             
             const maxNumber = result.rows[0]?.max_number || 0;
