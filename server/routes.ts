@@ -10074,7 +10074,7 @@ The Quikpik Team
       // Add service recommendations and precise calculation info
       const recommendations = PreciseShippingCalculator.getServiceRecommendations(totalWeight);
       
-      const preciseCalculation = cartItems && cartItems.length > 0;
+      const preciseCalculation = req.body.cartItems && req.body.cartItems.length > 0;
       console.log(`📦 Returning enhanced demo quotes for ${totalWeight}kg package (${preciseCalculation ? 'precise' : 'estimated'} calculation)`);
       res.json({ 
         quotes: demoQuotes, 
