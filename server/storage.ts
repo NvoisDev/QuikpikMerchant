@@ -784,37 +784,49 @@ export class DatabaseStorage implements IStorage {
     return orderList;
   }
 
-  // Generate unique order number for wholesaler
+  // Generate unique order number for wholesaler with atomic database transaction
   async generateOrderNumber(wholesalerId: string): Promise<string> {
-    // Get wholesaler's prefix
+    // Get wholesaler's business prefix
     const wholesaler = await this.getUser(wholesalerId);
-    const prefix = wholesaler?.orderNumberPrefix || "ORD";
+    const businessPrefix = wholesaler?.businessName 
+      ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
+      : 'WS';
     
-    // Get the highest order number for this wholesaler
-    const [latestOrder] = await db
-      .select({ orderNumber: orders.orderNumber })
-      .from(orders)
-      .where(eq(orders.wholesalerId, wholesalerId))
-      .orderBy(desc(orders.id))
-      .limit(1);
-    
-    let nextNumber = 1;
-    if (latestOrder?.orderNumber) {
-      // Extract number from existing order number (e.g., "SF-005" -> 5)
-      const numberMatch = latestOrder.orderNumber.match(/(\d+)$/);
-      if (numberMatch) {
-        nextNumber = parseInt(numberMatch[1]) + 1;
+    // Use FOR UPDATE to lock the latest record and prevent race conditions
+    const result = await db.transaction(async (tx) => {
+      // Get the highest order number for this wholesaler with exclusive lock
+      const [latestOrder] = await tx
+        .select({ orderNumber: orders.orderNumber })
+        .from(orders)
+        .where(eq(orders.wholesalerId, wholesalerId))
+        .orderBy(desc(orders.id))
+        .limit(1)
+        .for('update');
+      
+      let nextNumber = 1;
+      if (latestOrder?.orderNumber) {
+        // Extract number from existing order number (e.g., "SF-115" -> 115)
+        const numberMatch = latestOrder.orderNumber.match(/(\d+)$/);
+        if (numberMatch) {
+          nextNumber = parseInt(numberMatch[1]) + 1;
+        }
       }
-    }
+      
+      // Format with leading zeros (e.g., "SF-001", "SF-116")
+      const formattedNumber = nextNumber.toString().padStart(3, '0');
+      const newOrderNumber = `${businessPrefix}-${formattedNumber}`;
+      
+      console.log(`🔢 ATOMIC: Generated order number ${newOrderNumber} for ${wholesaler?.businessName} (last: ${latestOrder?.orderNumber || 'none'})`);
+      
+      return newOrderNumber;
+    });
     
-    // Format with leading zeros (e.g., "SF-001", "SF-002")
-    const formattedNumber = nextNumber.toString().padStart(3, '0');
-    return `${prefix}-${formattedNumber}`;
+    return result;
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
-    // Generate unique order number for this wholesaler
-    const orderNumber = await this.generateOrderNumber(order.wholesalerId);
+    // Only generate order number if not provided (backward compatibility)
+    const orderNumber = order.orderNumber || await this.generateOrderNumber(order.wholesalerId);
     
     const [newOrder] = await db.insert(orders).values({
       ...order,

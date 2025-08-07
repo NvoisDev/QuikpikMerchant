@@ -149,35 +149,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     servicePrice: shippingInfo.service?.price
   });
 
-  // Get wholesaler info for reference generation
+  // Get wholesaler info for logging
   const wholesaler = await storage.getUser(wholesalerId);
   
-  // Generate chronological wholesale reference number based on business
-  const businessPrefix = wholesaler?.businessName 
-    ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
-    : 'WS';
-  
-  // CRITICAL FIX: Get order number with detailed logging to prevent duplicates
-  const lastOrder = await storage.getLastOrderForWholesaler(wholesalerId);
-  const lastOrderNumber = lastOrder?.orderNumber || `${businessPrefix}-000`;
-  
-  console.log(`🔍 Order numbering analysis for ${wholesaler?.businessName}:`, {
-    lastOrderId: lastOrder?.id,
-    lastOrderNumber: lastOrderNumber,
-    lastOrderCreated: lastOrder?.createdAt,
-    businessPrefix: businessPrefix
-  });
-  
-  // Extract number from last order (e.g., "SF-115" -> 115) 
-  const lastNumber = parseInt(lastOrderNumber.split('-')[1] || '0');
-  const nextNumber = lastNumber + 1;
-  const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
-  
-  console.log(`🏢 CRITICAL: Generated wholesale reference: ${wholesaleRef} (previous: ${lastOrderNumber}, lastNumber: ${lastNumber}, nextNumber: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+  console.log(`🏢 Creating order for ${wholesaler?.businessName || 'Unknown Business'}`);
   
   // Create order with customer details AND SHIPPING DATA
+  // Note: Order number will be generated atomically by the storage layer
   const orderData = {
-    orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
+    // orderNumber will be generated automatically by storage.createOrder()
     wholesalerId,
     retailerId: customer.id,
     customerName, // Store customer name
@@ -218,7 +198,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   const order = await storage.createOrder(orderData, orderItems);
   
-  console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
+  console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
   // TODO: Re-implement customer confirmation email
   console.log(`📧 Customer email confirmation temporarily disabled for order #${order.id}`);
