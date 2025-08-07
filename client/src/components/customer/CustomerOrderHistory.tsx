@@ -534,16 +534,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           <div className="flex items-center space-x-2">
             <Package className="h-5 w-5" />
             <span className="text-lg font-semibold">Order History</span>
-            <Badge variant="secondary" className="ml-2">
-              {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}
-            </Badge>
-            {/* Display total order value */}
-            <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
-              Total: £{(() => {
-                const total = orders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
-                return total.toFixed(2);
-              })()}
-            </Badge>
+
             {isFetching && (
               <div className="flex items-center space-x-1 text-xs text-gray-500">
                 <RefreshCw className="h-3 w-3 animate-spin" />

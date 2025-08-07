@@ -34,6 +34,11 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
   const totalOrders = orders.length;
   const totalSpent = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total || '0'), 0);
 
+  // Format currency with commas for amounts over 1,000
+  const formatCurrency = (amount: number) => {
+    return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <div className="flex items-center space-x-4 text-sm">
       <div className="flex items-center space-x-1">
@@ -42,7 +47,7 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
       </div>
       <div className="flex items-center space-x-1">
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          £{totalSpent.toFixed(2)} total
+          {formatCurrency(totalSpent)} total
         </Badge>
       </div>
     </div>
