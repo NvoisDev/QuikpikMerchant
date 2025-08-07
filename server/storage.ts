@@ -792,31 +792,25 @@ export class DatabaseStorage implements IStorage {
       ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
       : 'WS';
     
-    // Use FOR UPDATE to lock the latest record and prevent race conditions
+    // Use FOR UPDATE to lock and find the highest order number atomically
     const result = await db.transaction(async (tx) => {
-      // Get the highest order number for this wholesaler with exclusive lock
-      const [latestOrder] = await tx
-        .select({ orderNumber: orders.orderNumber })
-        .from(orders)
-        .where(eq(orders.wholesalerId, wholesalerId))
-        .orderBy(desc(orders.id))
-        .limit(1)
-        .for('update');
+      // Get the maximum order number directly using SQL to avoid any confusion
+      const maxOrderResult = await tx.execute(sql`
+        SELECT MAX(CAST(SUBSTRING(order_number FROM '${sql.raw(businessPrefix)}-(.*)') AS INTEGER)) as max_order_num 
+        FROM orders 
+        WHERE wholesaler_id = ${wholesalerId} 
+        AND order_number LIKE '${sql.raw(businessPrefix)}-%'
+        FOR UPDATE
+      `);
       
-      let nextNumber = 1;
-      if (latestOrder?.orderNumber) {
-        // Extract number from existing order number (e.g., "SF-115" -> 115)
-        const numberMatch = latestOrder.orderNumber.match(/(\d+)$/);
-        if (numberMatch) {
-          nextNumber = parseInt(numberMatch[1]) + 1;
-        }
-      }
+      const maxNumber = (maxOrderResult.rows[0] as any)?.max_order_num || 0;
+      const nextNumber = maxNumber + 1;
       
-      // Format with leading zeros (e.g., "SF-001", "SF-116")
+      // Format with leading zeros (e.g., "SF-132")
       const formattedNumber = nextNumber.toString().padStart(3, '0');
       const newOrderNumber = `${businessPrefix}-${formattedNumber}`;
       
-      console.log(`🔢 ATOMIC: Generated order number ${newOrderNumber} for ${wholesaler?.businessName} (last: ${latestOrder?.orderNumber || 'none'})`);
+      console.log(`🔢 ATOMIC: Generated order number ${newOrderNumber} for ${wholesaler?.businessName} (current max: ${businessPrefix}-${maxNumber.toString().padStart(3, '0')})`);
       
       return newOrderNumber;
     });

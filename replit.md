@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 - **Google ID**: 104871691614680693123
 - **Business**: Surulere Foods Wholesale
 - **Products**: 14 items
-- **Orders**: 165 orders (SF-001 through SF-165)
+- **Orders**: 136+ orders (SF-001 through SF-131, with SF-132 next in sequence)
 - **Subscription**: Premium tier, active
 - **Customer Portal**: /customer/104871691614680693123
 
@@ -39,7 +39,7 @@ Preferred communication style: Simple, everyday language.
     - **WhatsApp Marketing**: Dual provider support (Twilio, WhatsApp Business API), broadcast messaging, AI personalization, template management.
     - **Subscription & Team Management**: Tiered plans, team invitation with granular permissions, usage tracking.
     - **Business Intelligence**: Campaign performance analytics, financial reporting, stock movement analysis, advertising campaign management.
-    - **Order Processing Logic**: Critical webhook system for converting Stripe payments into database orders with multi-wholesaler references. Includes robust error handling and recovery mechanisms.
+    - **Order Processing Logic**: Critical webhook system for converting Stripe payments into database orders with multi-wholesaler references. **FIXED**: Resolved race condition causing duplicate order numbers (SF-114) by implementing atomic database transactions with exclusive locks for sequential order numbering (SF-132 onwards).
     - **Subscription System**: Full management for upgrades/downgrades, automatic processing via webhooks, and manual override capabilities. Includes a comprehensive audit system for all subscription activity.
     - **Security**: Bcryptjs for password hashing, comprehensive role-based access control, and data isolation between wholesalers.
 
