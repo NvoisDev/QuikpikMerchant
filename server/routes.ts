@@ -2023,84 +2023,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 'WS';
         
         // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering AND duplicate checking
-        const { order, wholesaleRef } = await db.transaction(async (trx) => {
-          // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
-          const existingOrderResult = await trx
-            .select()
-            .from(orders)
-            .where(eq(orders.stripePaymentIntentId, paymentIntentId))
-            .limit(1);
-          
-          if (existingOrderResult.length > 0) {
-            const existingOrder = existingOrderResult[0];
-            console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
-            throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
-          }
+        let order, wholesaleRef;
+        
+        try {
+          const result = await db.transaction(async (trx) => {
+            // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
+            const existingOrderResult = await trx
+              .select()
+              .from(orders)
+              .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+              .limit(1);
+            
+            if (existingOrderResult.length > 0) {
+              const existingOrder = existingOrderResult[0];
+              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
+              throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
+            }
 
-          // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record
-          const result = await trx.execute(sql`
-            SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-            FROM orders 
-            WHERE wholesaler_id = ${wholesalerId} 
-            AND order_number LIKE ${businessPrefix + '-%'}
-            FOR UPDATE
-          `);
-          
-          const maxNumber = result.rows[0]?.max_number || 0;
-          const nextNumber = parseInt(maxNumber.toString()) + 1;
-          const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
-          
-          console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
-          
-          // CRITICAL FIX: Calculate subtotal from items when metadata missing
-          const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
-            ? parseFloat(productSubtotal).toFixed(2)
-            : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
-          
-          console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
+            // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record
+            const result = await trx.execute(sql`
+              SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+              FROM orders 
+              WHERE wholesaler_id = ${wholesalerId} 
+              AND order_number LIKE ${businessPrefix + '-%'}
+              FOR UPDATE
+            `);
+            
+            const maxNumber = result.rows[0]?.max_number || 0;
+            const nextNumber = parseInt(maxNumber.toString()) + 1;
+            const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+            
+            console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+            
+            // CRITICAL FIX: Calculate subtotal from items when metadata missing
+            const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
+              ? parseFloat(productSubtotal).toFixed(2)
+              : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
+            
+            console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
-          // Create order with customer details AND SHIPPING DATA
-          const orderData = {
-            orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
-            wholesalerId,
-            retailerId: customer.id,
-            customerName, // Store customer name
-            customerEmail, // Store customer email
-            customerPhone, // Store customer phone
-            subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
-            platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
-            customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
-            total: correctTotal, // Total = subtotal + customer transaction fee
-            status: 'paid',
-            stripePaymentIntentId: paymentIntent.id,
-            deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-            // 🚚 ADDED: Shipping information processing
-            fulfillmentType: shippingInfo.option || 'pickup',
-            deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-            deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
-            shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
-          };
-          
-          console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
-            fulfillmentType: orderData.fulfillmentType,
-            deliveryCarrier: orderData.deliveryCarrier,
-            deliveryCost: orderData.deliveryCost,
-            willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+            // Create order with customer details AND SHIPPING DATA
+            const orderData = {
+              orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
+              wholesalerId,
+              retailerId: customer.id,
+              customerName, // Store customer name
+              customerEmail, // Store customer email
+              customerPhone, // Store customer phone
+              subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
+              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
+              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+              total: correctTotal, // Total = subtotal + customer transaction fee
+              status: 'paid',
+              stripePaymentIntentId: paymentIntent.id,
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+              // 🚚 ADDED: Shipping information processing
+              fulfillmentType: shippingInfo.option || 'pickup',
+              deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+              deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
+              shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+            };
+            
+            console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
+              fulfillmentType: orderData.fulfillmentType,
+              deliveryCarrier: orderData.deliveryCarrier,
+              deliveryCost: orderData.deliveryCost,
+              willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+            });
+
+            // Create order items with orderId for storage
+            const orderItems = items.map((item: any) => ({
+              orderId: 0, // Will be set after order creation
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice).toFixed(2),
+              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+            }));
+
+            // Use transaction-aware storage method
+            const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
+            return { order: createdOrder, wholesaleRef };
           });
-
-          // Create order items with orderId for storage
-          const orderItems = items.map((item: any) => ({
-            orderId: 0, // Will be set after order creation
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: parseFloat(item.unitPrice).toFixed(2),
-            total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
-          }));
-
-          // Use transaction-aware storage method
-          const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
-          return { order: createdOrder, wholesaleRef };
-        }).catch((error) => {
+          
+          order = result.order;
+          wholesaleRef = result.wholesaleRef;
+        } catch (error: any) {
           // Handle duplicate order errors gracefully
           if (error.message.startsWith('DUPLICATE_ORDER:')) {
             const [, orderId, orderNumber] = error.message.split(':');
@@ -2108,11 +2115,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.json({ success: true, orderId: parseInt(orderId), message: 'Order already processed' });
           }
           throw error; // Re-throw other errors
-        });
-        
-        // Check if we returned early due to duplicate
-        if (typeof order === 'object' && order.success) {
-          return; // Early return already handled the response
         }
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
