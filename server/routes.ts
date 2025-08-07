@@ -1862,7 +1862,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice)
           }))),
-          shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' })
+          shippingInfo: JSON.stringify(shippingInfo ? {
+            option: shippingInfo.option,
+            service: shippingInfo.service ? {
+              serviceId: shippingInfo.service.serviceId,
+              serviceName: shippingInfo.service.serviceName,
+              price: shippingInfo.service.price
+            } : null
+          } : { option: 'pickup' })
         }
       });
 
@@ -6877,7 +6884,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerTransactionFee: customerTransactionFee.toFixed(2),
               totalAmountWithFee: totalAmountWithFee.toFixed(2),
               connectAccountUsed: 'true',
-              shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
                 ...item,
                 productName: item.productName || 'Product'
@@ -6910,12 +6924,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerTransactionFee: customerTransactionFee.toFixed(2),
               totalAmountWithFee: totalAmountWithFee.toFixed(2),
               connectAccountUsed: 'false',
-              shippingInfo: (() => {
-                console.log('🚚 PAYMENT INTENT DEBUG: shippingInfo value before stringify:', shippingInfo);
-                const finalShipping = shippingInfo || { option: 'pickup' };
-                console.log('🚚 PAYMENT INTENT DEBUG: Final shipping info being stored:', finalShipping);
-                return JSON.stringify(finalShipping);
-              })(),
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
               items: JSON.stringify(items.map(item => ({
                 ...item,
                 productName: item.productName || 'Product'
@@ -6946,12 +6962,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             customerTransactionFee: customerTransactionFee.toFixed(2),
             totalAmountWithFee: totalAmountWithFee.toFixed(2),
             connectAccountUsed: 'false',
-            shippingInfo: (() => {
-              console.log('🚚 PAYMENT INTENT DEBUG (no connect): shippingInfo before stringify:', shippingInfo);
-              const finalShipping = shippingInfo || { option: 'pickup' };
-              console.log('🚚 PAYMENT INTENT DEBUG (no connect): Final shipping info stored:', finalShipping);
-              return JSON.stringify(finalShipping);
-            })(),
+            shippingInfo: JSON.stringify(shippingInfo ? {
+              option: shippingInfo.option,
+              service: shippingInfo.service ? {
+                serviceId: shippingInfo.service.serviceId,
+                serviceName: shippingInfo.service.serviceName,
+                price: shippingInfo.service.price
+              } : null
+            } : { option: 'pickup' }),
             items: JSON.stringify(items.map(item => ({
               ...item,
               productName: item.productName || 'Product'
