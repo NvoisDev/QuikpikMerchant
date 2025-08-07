@@ -2112,7 +2112,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (error.message.startsWith('DUPLICATE_ORDER:')) {
             const [, orderId, orderNumber] = error.message.split(':');
             console.log(`✅ Duplicate order detected and prevented: #${orderId} (${orderNumber})`);
-            return res.json({ success: true, orderId: parseInt(orderId), message: 'Order already processed' });
+            return res.json({ 
+              success: true, 
+              orderId: parseInt(orderId), 
+              orderNumber: orderNumber, // Include order number in response
+              message: 'Order already processed' 
+            });
           }
           throw error; // Re-throw other errors
         }
