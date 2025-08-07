@@ -154,10 +154,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   console.log(`🏢 Creating order for ${wholesaler?.businessName || 'Unknown Business'}`);
   
+  // CRITICAL FIX: Generate order number using same atomic logic as routes.ts
+  const orderNumber = await storage.generateOrderNumber(wholesalerId);
+  console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
+  
   // Create order with customer details AND SHIPPING DATA
-  // Note: Order number will be generated atomically by the storage layer
   const orderData = {
-    // orderNumber will be generated automatically by storage.createOrder()
+    orderNumber, // Use pre-generated atomic order number
     wholesalerId,
     retailerId: customer.id,
     customerName, // Store customer name
