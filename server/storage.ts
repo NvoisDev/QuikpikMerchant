@@ -823,61 +823,88 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
-    // Only generate order number if not provided (backward compatibility)
-    const orderNumber = order.orderNumber || await this.generateOrderNumber(order.wholesalerId);
-    
-    const [newOrder] = await db.insert(orders).values({
-      ...order,
-      orderNumber
-    }).returning();
-    
-    // Insert order items and reduce stock
-    for (const item of items) {
-      // Insert order item
-      await db.insert(orderItems).values({ ...item, orderId: newOrder.id });
+    // CRITICAL FIX: Use transaction for atomic order number generation
+    return await db.transaction(async (tx) => {
+      let orderNumber = order.orderNumber;
       
-      // Get current product info before stock reduction
-      const [currentProduct] = await db
-        .select()
-        .from(products)
-        .where(eq(products.id, item.productId));
+      // Generate order number within this transaction if not provided
+      if (!orderNumber) {
+        const wholesaler = await tx.select().from(users).where(eq(users.id, order.wholesalerId)).limit(1);
+        const businessPrefix = wholesaler[0]?.businessName 
+          ? wholesaler[0].businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
+          : 'WS';
+        
+        const maxOrderResult = await tx.execute(sql`
+          SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+          FROM orders 
+          WHERE wholesaler_id = ${order.wholesalerId} 
+          AND order_number LIKE ${businessPrefix + '-%'}
+          FOR UPDATE
+        `);
+        
+        const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
+        const nextNumber = parseInt(maxNumber.toString()) + 1;
+        const formattedNumber = nextNumber.toString().padStart(3, '0');
+        orderNumber = `${businessPrefix}-${formattedNumber}`;
+        
+        console.log(`🔢 ATOMIC: Generated order number ${orderNumber} for ${wholesaler[0]?.businessName} (current max: ${businessPrefix}-${maxNumber.toString().padStart(3, '0')})`);
+      }
       
-      if (currentProduct) {
-        // Reduce product stock
-        await db
-          .update(products)
-          .set({ 
-            stock: sql`${products.stock} - ${item.quantity}`,
-            updatedAt: new Date()
-          })
+      const [newOrder] = await tx.insert(orders).values({
+        ...order,
+        orderNumber
+      }).returning();
+      
+      // Insert order items and reduce stock within transaction
+      for (const item of items) {
+        // Insert order item
+        await tx.insert(orderItems).values({ ...item, orderId: newOrder.id });
+        
+        // Get current product info before stock reduction
+        const [currentProduct] = await tx
+          .select()
+          .from(products)
           .where(eq(products.id, item.productId));
         
-        const newStockLevel = currentProduct.stock - item.quantity;
-        console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
-        
-        // Create stock movement record for the purchase
-        await this.createStockMovement({
-          productId: item.productId,
-          wholesalerId: currentProduct.wholesalerId,
-          movementType: 'purchase',
-          quantity: -item.quantity, // negative for stock reduction
-          stockBefore: currentProduct.stock,
-          stockAfter: newStockLevel,
-          reason: 'Customer purchase',
-          orderId: newOrder.id,
-          customerName: order.retailerId, // This will be improved when we have customer details
-        });
-        
-        // Check for low stock and log warnings
-        if (newStockLevel <= 10 && currentProduct.stock > 10) {
-          console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
-        } else if (newStockLevel <= 0) {
-          console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+        if (currentProduct) {
+          // Reduce product stock
+          await tx
+            .update(products)
+            .set({ 
+              stock: sql`${products.stock} - ${item.quantity}`,
+              updatedAt: new Date()
+            })
+            .where(eq(products.id, item.productId));
+          
+          const newStockLevel = currentProduct.stock - item.quantity;
+          console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+          
+          // Create stock movement record for the purchase
+          await this.createStockMovement({
+            productId: item.productId,
+            wholesalerId: currentProduct.wholesalerId,
+            movementType: 'purchase',
+            quantity: -item.quantity, // negative for stock reduction
+            stockBefore: currentProduct.stock,
+            stockAfter: newStockLevel,
+            reason: 'Customer purchase',
+            orderId: newOrder.id,
+            customerName: order.retailerId, // This will be improved when we have customer details
+          });
+          
+          // Check for low stock and log warnings
+          if (newStockLevel <= 10 && currentProduct.stock > 10) {
+            console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
+          } else if (newStockLevel <= 0) {
+            console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+          }
+        } else {
+          console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
         }
       }
-    }
-    
-    return newOrder;
+      
+      return newOrder;
+    });
   }
 
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
