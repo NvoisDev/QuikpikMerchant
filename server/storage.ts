@@ -2977,26 +2977,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Team Members
-  async getTeamMembers(wholesalerId: string): Promise<TeamMember[]> {
-    return await db.select().from(teamMembers).where(eq(teamMembers.wholesalerId, wholesalerId));
-  }
-
-  async createTeamMember(data: InsertTeamMember): Promise<TeamMember> {
-    const [member] = await db.insert(teamMembers).values(data).returning();
-    return member;
-  }
-
+  // Team Members - Additional methods
   async updateTeamMemberStatus(id: number, status: string): Promise<TeamMember> {
     const [member] = await db.update(teamMembers)
       .set({ status, updatedAt: new Date() })
       .where(eq(teamMembers.id, id))
       .returning();
     return member;
-  }
-
-  async deleteTeamMember(id: number): Promise<void> {
-    await db.delete(teamMembers).where(eq(teamMembers.id, id));
   }
 
   async getTeamMemberCount(wholesalerId: string): Promise<number> {
