@@ -792,17 +792,16 @@ export class DatabaseStorage implements IStorage {
       ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
       : 'WS';
     
-    // Use FOR UPDATE to lock and find the highest order number atomically
+    // Use atomic transaction to find the highest order number safely
     const result = await db.transaction(async (tx) => {
       console.log(`🔍 DEBUG: Looking for orders with wholesaler_id=${wholesalerId} and prefix=${businessPrefix}`);
       
-      // CRITICAL FIX: Use the same SPLIT_PART logic as routes.ts for consistency
+      // CRITICAL FIX: Remove FOR UPDATE from aggregate query (not allowed in Neon PostgreSQL)
       const maxOrderResult = await tx.execute(sql`
         SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
         FROM orders 
         WHERE wholesaler_id = ${wholesalerId} 
         AND order_number LIKE ${businessPrefix + '-%'}
-        FOR UPDATE
       `);
       
       const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
@@ -839,7 +838,6 @@ export class DatabaseStorage implements IStorage {
           FROM orders 
           WHERE wholesaler_id = ${order.wholesalerId} 
           AND order_number LIKE ${businessPrefix + '-%'}
-          FOR UPDATE
         `);
         
         const maxNumber = maxOrderResult.rows[0]?.max_number || 0;
