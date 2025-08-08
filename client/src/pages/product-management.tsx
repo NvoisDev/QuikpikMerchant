@@ -23,6 +23,7 @@ import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionAnalytics } from "@/components/PromotionAnalytics";
+import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { Plus, Search, Download, Grid, List, Package, Upload, Sparkles, FileText, AlertCircle, CheckCircle, AlertTriangle, Bell } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { currencies, formatCurrency } from "@/lib/currencies";
@@ -110,6 +111,9 @@ const productFormSchema = z.object({
     perishable: z.boolean().optional(),
     hazardous: z.boolean().optional(),
   }).optional(),
+  
+  // Promotional offers
+  promotionalOffers: z.array(z.any()).optional(),
 });
 
 type ProductFormData = z.infer<typeof productFormSchema>;
@@ -225,7 +229,7 @@ export default function ProductManagement() {
         perishable: false,
         hazardous: false,
       },
-    },
+      promotionalOffers: [],
   });
 
   // Auto-calculate total package weight when unit configuration changes
@@ -1858,6 +1862,30 @@ export default function ProductManagement() {
                           )}
                         </div>
                       </div>
+
+                      {/* Promotional Offers Section */}
+                      <FormField
+                        control={form.control}
+                        name="promotionalOffers"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-base font-semibold">🎯 Promotional Offers</FormLabel>
+                            <div className="text-sm text-muted-foreground mb-3">
+                              Create and manage promotional offers for this product
+                            </div>
+                            <FormControl>
+                              <PromotionalOffersManager
+                                offers={field.value || []}
+                                onOffersChange={field.onChange}
+                                productPrice={parseFloat(form.watch("price")) || 0}
+                                currency={form.watch("currency") || "GBP"}
+                                className="mt-4"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
                         <Button
