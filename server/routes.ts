@@ -1281,14 +1281,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let responseUser = freshUserData;
       
       // Check if this user is a team member and get wholesaler info
-      if (responseUser.role === 'team_member' && responseUser.wholesalerId) {
-        const wholesalerInfo = await storage.getUser(responseUser.wholesalerId);
+      if (responseUser.role === 'team_member' && (responseUser as any).wholesalerId) {
+        const wholesalerInfo = await storage.getUser((responseUser as any).wholesalerId);
         if (wholesalerInfo) {
           responseUser = {
             ...responseUser,
             subscriptionTier: wholesalerInfo.subscriptionTier,
             businessName: wholesalerInfo.businessName,
-            isTeamMember: true,
+            isTeamMember: true as any,
             role: 'team_member'
           };
         }
@@ -2903,7 +2903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid group data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create customer group", error: error.message });
+      res.status(500).json({ message: "Failed to create customer group", error: (error as Error).message });
     }
   });
 
@@ -10394,7 +10394,7 @@ The Quikpik Team
         property: user.businessAddress?.split(',')[0] || '1',
         street: user.businessAddress?.split(',')[1] || 'Business Street',
         town: user.businessAddress?.split(',')[2] || 'City',
-        postcode: user.businessPostcode || 'SW1A 1AA',
+        postcode: (user as any).businessPostcode || 'SW1A 1AA',
         countryIsoCode: 'GBR'
       };
 
