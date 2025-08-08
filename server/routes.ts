@@ -1531,8 +1531,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Debug: Log the incoming request body
+      console.log('🔍 Product update request body:', JSON.stringify(req.body, null, 2));
+      
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
+      
+      // Debug: Log the parsed product data
+      console.log('✅ Parsed product data:', JSON.stringify(productData, null, 2));
       
       // Increment edit count and update the product
       const productDataWithEditCount = {
