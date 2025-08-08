@@ -4288,10 +4288,10 @@ Write a professional, sales-focused description that highlights the key benefits
       const queryStart = Date.now();
       
       try {
-        // Complete query with promotional fields
+        // Complete query with promotional fields INCLUDING image_url
         const result = await db.execute(sql`
           SELECT p.id, p.name, p.description, p.price, p.currency, p.moq, p.stock,
-                 p.images, p.category, p.status, p.wholesaler_id, p.created_at,
+                 p.image_url, p.images, p.category, p.status, p.wholesaler_id, p.created_at,
                  p.promo_price, p.promo_active, p.promotional_offers, p.negotiation_enabled,
                  p.price_visible, p.minimum_bid_price, p.pack_quantity, p.unit_of_measure,
                  p.unit_size, p.selling_format, p.delivery_excluded,
@@ -4321,7 +4321,7 @@ Write a professional, sales-focused description that highlights the key benefits
           currency: row.currency || 'GBP',
           moq: row.moq || 1,
           stock: row.stock || 0,
-          imageUrl: (Array.isArray(row.images) && row.images[0]) || '',
+          imageUrl: row.image_url || (Array.isArray(row.images) && row.images[0]) || '',
           images: Array.isArray(row.images) ? row.images : [],
           category: row.category || '',
           status: 'active',
