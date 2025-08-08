@@ -4288,10 +4288,13 @@ Write a professional, sales-focused description that highlights the key benefits
       const queryStart = Date.now();
       
       try {
-        // Ultra-fast minimal query - only essential fields
+        // Complete query with promotional fields
         const result = await db.execute(sql`
           SELECT p.id, p.name, p.description, p.price, p.currency, p.moq, p.stock,
                  p.images, p.category, p.status, p.wholesaler_id, p.created_at,
+                 p.promo_price, p.promo_active, p.promotional_offers, p.negotiation_enabled,
+                 p.price_visible, p.minimum_bid_price, p.pack_quantity, p.unit_of_measure,
+                 p.unit_size, p.selling_format, p.delivery_excluded,
                  'Surulere Foods Wholesale' as business_name
           FROM products p
           WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
@@ -4308,7 +4311,7 @@ Write a professional, sales-focused description that highlights the key benefits
           return res.json([]);
         }
         
-        // Minimal transformation for speed
+        // Complete transformation with promotional data
         const formattedProducts = rows.map(row => ({
           id: row.id,
           wholesalerId: row.wholesaler_id,
@@ -4322,12 +4325,22 @@ Write a professional, sales-focused description that highlights the key benefits
           images: Array.isArray(row.images) ? row.images : [],
           category: row.category || '',
           status: 'active',
-          priceVisible: true,
-          negotiationEnabled: false,
+          priceVisible: row.price_visible !== false,
+          negotiationEnabled: row.negotiation_enabled === true,
+          minimumBidPrice: row.minimum_bid_price,
+          packQuantity: row.pack_quantity,
+          unitOfMeasure: row.unit_of_measure,
+          unitSize: row.unit_size,
+          sellingFormat: row.selling_format || 'units',
+          deliveryExcluded: row.delivery_excluded === true,
+          promoPrice: row.promo_price,
+          promoActive: row.promo_active === true,
+          promotionalOffers: Array.isArray(row.promotional_offers) ? row.promotional_offers : [],
           createdAt: row.created_at,
           wholesaler: {
             id: row.wholesaler_id,
             businessName: row.business_name,
+            defaultCurrency: row.currency || 'GBP',
             rating: 4.5
           }
         }));
