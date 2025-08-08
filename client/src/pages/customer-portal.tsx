@@ -1053,6 +1053,7 @@ export default function CustomerPortal() {
     queryFn: async () => {
       console.log(`🛒 Fetching products for wholesaler: ${wholesalerId}`);
       console.log(`🌐 Current domain: ${window.location.origin}`);
+      console.log(`🔍 Fetching products for wholesaler: ${wholesalerId}`);
       const response = await fetch(`/api/customer-products/${wholesalerId}`);
       console.log(`📡 API Response status: ${response.status}`);
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()));
