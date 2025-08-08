@@ -2340,17 +2340,18 @@ export default function CustomerPortal() {
                           {(() => {
                             const hasUnits = !!product.price;
                             const hasPallets = !!(product.palletPrice && product.unitsPerPallet);
+                            const unitsPerPallet = product.unitsPerPallet || 0;
                             
                             if (hasUnits && hasPallets) {
                               return (
                                 <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                  📦 Units & Pallet
+                                  📦 Units & Pallet ({unitsPerPallet}/pallet)
                                 </span>
                               );
                             } else if (hasPallets && !hasUnits) {
                               return (
                                 <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                  📦 Pallet Only
+                                  📦 Pallet Only ({unitsPerPallet}/pallet)
                                 </span>
                               );
                             } else if (hasUnits && !hasPallets) {
@@ -2902,17 +2903,18 @@ export default function CustomerPortal() {
                                     {(() => {
                                       const hasUnits = !!product.price;
                                       const hasPallets = !!(product.palletPrice && product.unitsPerPallet);
+                                      const unitsPerPallet = product.unitsPerPallet || 0;
                                       
                                       if (hasUnits && hasPallets) {
                                         return (
                                           <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
-                                            📦 Units & Pallet
+                                            📦 Units & Pallet ({unitsPerPallet}/pallet)
                                           </span>
                                         );
                                       } else if (hasPallets && !hasUnits) {
                                         return (
                                           <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                                            📦 Pallet Only
+                                            📦 Pallet Only ({unitsPerPallet}/pallet)
                                           </span>
                                         );
                                       } else if (hasUnits && !hasPallets) {

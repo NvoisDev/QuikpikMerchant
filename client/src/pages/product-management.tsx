@@ -1743,7 +1743,10 @@ export default function ProductManagement() {
                             <strong>Example:</strong> 48 cases per pallet at £240 = £5.00 per case (bulk discount)
                           </p>
                           <p className="text-xs text-orange-600 mt-1">
-                            Customers can choose: Individual cases, mixed quantities, or full pallets
+                            Customers will see tags like: <strong>"📦 Units & Pallet (48/pallet)"</strong> to understand bulk options
+                          </p>
+                          <p className="text-xs text-orange-600">
+                            They can choose: Individual cases, mixed quantities, or full pallets with automatic pricing
                           </p>
                         </div>
                       </div>
