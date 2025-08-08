@@ -1954,30 +1954,49 @@ export default function CustomerPortal() {
                               {featuredProduct.category}
                             </span>
                           )}
-                          {/* Promotional Offers Badges for Featured Product */}
+                          {/* Enhanced Promotional Offers Badges for Featured Product */}
                           {(() => {
                             const badges: JSX.Element[] = [];
+                            const pricing = calculatePromotionalPricing(featuredProduct);
+                            const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                             
-                            // Show specific offer badges for promotional offers (only if promo is active)
-                            if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers) && featuredProduct.promoActive) {
+                            // Show promotional badges if product has active offers
+                            if (featuredProduct.promotionalOffers && Array.isArray(featuredProduct.promotionalOffers)) {
                               featuredProduct.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
-                                  badges.push(
-                                    <span key={`featured-offer-${index}`} className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${config.color} animate-pulse`}>
-                                      {config.emoji} {config.label}
-                                    </span>
-                                  );
+                                  
+                                  // Enhanced badge styling for featured product
+                                  if (offer.type === 'percentage_discount' || offer.type === 'fixed_amount_discount') {
+                                    const discountAmount = offer.discountPercentage || offer.discountAmount;
+                                    badges.push(
+                                      <span key={`featured-offer-${index}`} className="inline-block bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                                        💰 SAVE {offer.type === 'percentage_discount' ? `${discountAmount}%` : `£${discountAmount}`}
+                                      </span>
+                                    );
+                                  } else if (offer.type === 'buy_x_get_y_free') {
+                                    badges.push(
+                                      <span key={`featured-offer-${index}`} className="inline-block bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                                        🎁 Buy {offer.buyQuantity} Get {offer.getQuantity} FREE
+                                      </span>
+                                    );
+                                  } else {
+                                    badges.push(
+                                      <span key={`featured-offer-${index}`} className={`inline-block px-4 py-2 rounded-full text-sm font-bold shadow-lg ${config.color}`}>
+                                        {config.emoji} {config.label}
+                                      </span>
+                                    );
+                                  }
                                 }
                               });
                             }
                             
-                            // Show general promotional badge if there are promotional prices but no specific badges
-                            const pricing = calculatePromotionalPricing(featuredProduct);
-                            if (pricing.appliedOffers.length > 0 && badges.length === 0) {
+                            // Show general SALE badge if there are discounts but no specific offers displayed
+                            if (hasDiscounts && badges.length === 0 && !isGuestMode) {
+                              const discountPercent = Math.round(((pricing.originalPrice - pricing.effectivePrice) / pricing.originalPrice) * 100);
                               badges.push(
-                                <span key="featured-general-promo" className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
-                                  🎁 SPECIAL OFFER!
+                                <span key="featured-sale" className="inline-block bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                                  💰 SAVE {discountPercent}%
                                 </span>
                               );
                             }
@@ -2374,22 +2393,51 @@ export default function CustomerPortal() {
                               🚚 Pickup Only
                             </span>
                           )}
-                          {/* Promotional Offers Badges */}
+                          {/* Enhanced Promotional Offers Badges */}
                           {(() => {
                             const badges: JSX.Element[] = [];
+                            const pricing = calculatePromotionalPricing(product);
+                            const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                             
-                            // Only show badges if product has promotional offers AND they're active
-                            if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
+                            // Show promotional badges if product has active offers OR has effective discounts
+                            if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
                               product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                 if (offer.isActive) {
                                   const config = getOfferTypeConfig(offer.type);
-                                  badges.push(
-                                    <span key={`grid-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
-                                      {config.emoji} {config.label}
-                                    </span>
-                                  );
+                                  
+                                  // Enhanced badge styling for more prominence
+                                  if (offer.type === 'percentage_discount' || offer.type === 'fixed_amount_discount') {
+                                    const discountAmount = offer.discountPercentage || offer.discountAmount;
+                                    badges.push(
+                                      <span key={`grid-offer-${index}`} className="inline-block bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md animate-pulse">
+                                        💰 SAVE {offer.type === 'percentage_discount' ? `${discountAmount}%` : `£${discountAmount}`}
+                                      </span>
+                                    );
+                                  } else if (offer.type === 'buy_x_get_y_free') {
+                                    badges.push(
+                                      <span key={`grid-offer-${index}`} className="inline-block bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                                        🎁 Buy {offer.buyQuantity} Get {offer.getQuantity} FREE
+                                      </span>
+                                    );
+                                  } else {
+                                    badges.push(
+                                      <span key={`grid-offer-${index}`} className={`inline-block px-3 py-1 rounded-full text-xs font-bold shadow-md ${config.color}`}>
+                                        {config.emoji} {config.label}
+                                      </span>
+                                    );
+                                  }
                                 }
                               });
+                            }
+                            
+                            // Show general SALE badge if there are discounts but no specific offers displayed
+                            if (hasDiscounts && badges.length === 0 && !isGuestMode) {
+                              const discountPercent = Math.round(((pricing.originalPrice - pricing.effectivePrice) / pricing.originalPrice) * 100);
+                              badges.push(
+                                <span key="general-sale" className="inline-block bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md animate-pulse">
+                                  💰 SAVE {discountPercent}%
+                                </span>
+                              );
                             }
                             
                             return badges;
@@ -2536,22 +2584,51 @@ export default function CustomerPortal() {
                                     💬 Negotiable
                                   </span>
                                 )}
-                                {/* Promotional Offers Badges for List View */}
+                                {/* Enhanced Promotional Offers Badges for List View */}
                                 {(() => {
                                   const badges: JSX.Element[] = [];
+                                  const pricing = calculatePromotionalPricing(product);
+                                  const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                                   
-                                  // Only show badges if product has promotional offers AND they're active
-                                  if (product.promotionalOffers && Array.isArray(product.promotionalOffers) && product.promoActive) {
+                                  // Show promotional badges if product has active offers
+                                  if (product.promotionalOffers && Array.isArray(product.promotionalOffers)) {
                                     product.promotionalOffers.forEach((offer: PromotionalOffer, index: number) => {
                                       if (offer.isActive) {
                                         const config = getOfferTypeConfig(offer.type);
-                                        badges.push(
-                                          <span key={`list-offer-${index}`} className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${config.color}`}>
-                                            {config.emoji} {config.label}
-                                          </span>
-                                        );
+                                        
+                                        // Enhanced badge styling for list view (smaller version)
+                                        if (offer.type === 'percentage_discount' || offer.type === 'fixed_amount_discount') {
+                                          const discountAmount = offer.discountPercentage || offer.discountAmount;
+                                          badges.push(
+                                            <span key={`list-offer-${index}`} className="inline-block bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-sm">
+                                              💰 SAVE {offer.type === 'percentage_discount' ? `${discountAmount}%` : `£${discountAmount}`}
+                                            </span>
+                                          );
+                                        } else if (offer.type === 'buy_x_get_y_free') {
+                                          badges.push(
+                                            <span key={`list-offer-${index}`} className="inline-block bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-sm">
+                                              🎁 Buy {offer.buyQuantity} Get {offer.getQuantity} FREE
+                                            </span>
+                                          );
+                                        } else {
+                                          badges.push(
+                                            <span key={`list-offer-${index}`} className={`inline-block px-2 py-1 rounded-full text-xs font-bold shadow-sm ${config.color}`}>
+                                              {config.emoji} {config.label}
+                                            </span>
+                                          );
+                                        }
                                       }
                                     });
+                                  }
+                                  
+                                  // Show general SALE badge if there are discounts but no specific offers displayed
+                                  if (hasDiscounts && badges.length === 0 && !isGuestMode) {
+                                    const discountPercent = Math.round(((pricing.originalPrice - pricing.effectivePrice) / pricing.originalPrice) * 100);
+                                    badges.push(
+                                      <span key="list-sale" className="inline-block bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-sm">
+                                        💰 SAVE {discountPercent}%
+                                      </span>
+                                    );
                                   }
                                   
                                   return badges;
