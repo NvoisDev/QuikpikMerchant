@@ -230,6 +230,7 @@ export default function ProductManagement() {
         hazardous: false,
       },
       promotionalOffers: [],
+    },
   });
 
   // Auto-calculate total package weight when unit configuration changes
