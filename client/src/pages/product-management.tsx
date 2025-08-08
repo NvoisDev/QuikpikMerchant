@@ -93,11 +93,11 @@ const productFormSchema = z.object({
   totalPackageWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Additional missing fields
-  unitsPerPallet: z.string().optional(),
-  palletPrice: z.string().optional(),
-  palletMoq: z.string().optional(),
-  palletStock: z.string().optional(),
-  palletWeight: z.string().optional(),
+  unitsPerPallet: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   lowStockThreshold: z.string().optional(),
   shelfLife: z.string().optional(),
   unit: z.string().optional(),
@@ -529,13 +529,13 @@ export default function ProductManagement() {
         promoPrice: data.promoPrice ? parseFloat(data.promoPrice) : null,
         moq: parseInt(data.moq),
         stock: parseInt(data.stock),
-        unitsPerPallet: data.unitsPerPallet ? parseInt(data.unitsPerPallet) : null,
-        palletPrice: data.palletPrice ? parseFloat(data.palletPrice) : null,
-        palletMoq: data.palletMoq ? parseInt(data.palletMoq) : 1,
-        palletStock: data.palletStock ? parseInt(data.palletStock) : 0,
+        unitsPerPallet: data.unitsPerPallet && data.unitsPerPallet !== "" ? parseInt(data.unitsPerPallet) : null,
+        palletPrice: data.palletPrice && data.palletPrice !== "" ? parseFloat(data.palletPrice) : null,
+        palletMoq: data.palletMoq && data.palletMoq !== "" ? parseInt(data.palletMoq) : null,
+        palletStock: data.palletStock && data.palletStock !== "" ? parseInt(data.palletStock) : null,
         // Weight and shipping fields
 
-        palletWeight: data.palletWeight || null,
+        palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
       };
@@ -568,13 +568,13 @@ export default function ProductManagement() {
         promoPrice: productData.promoPrice ? parseFloat(productData.promoPrice) : null,
         moq: parseInt(productData.moq),
         stock: parseInt(productData.stock),
-        unitsPerPallet: productData.unitsPerPallet ? parseInt(productData.unitsPerPallet) : null,
-        palletPrice: productData.palletPrice ? parseFloat(productData.palletPrice) : null,
-        palletMoq: productData.palletMoq ? parseInt(productData.palletMoq) : 1,
-        palletStock: productData.palletStock ? parseInt(productData.palletStock) : 0,
+        unitsPerPallet: productData.unitsPerPallet && productData.unitsPerPallet !== "" ? parseInt(productData.unitsPerPallet) : null,
+        palletPrice: productData.palletPrice && productData.palletPrice !== "" ? parseFloat(productData.palletPrice) : null,
+        palletMoq: productData.palletMoq && productData.palletMoq !== "" ? parseInt(productData.palletMoq) : null,
+        palletStock: productData.palletStock && productData.palletStock !== "" ? parseInt(productData.palletStock) : null,
         // Weight and shipping fields
 
-        palletWeight: productData.palletWeight || null,
+        palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
       };
