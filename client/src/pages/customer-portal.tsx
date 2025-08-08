@@ -2335,6 +2335,34 @@ export default function CustomerPortal() {
                               {product.category}
                             </span>
                           )}
+                          
+                          {/* Purchase Options Tags */}
+                          {(() => {
+                            const hasUnits = !!product.price;
+                            const hasPallets = !!(product.palletPrice && product.unitsPerPallet);
+                            
+                            if (hasUnits && hasPallets) {
+                              return (
+                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  📦 Units & Pallet
+                                </span>
+                              );
+                            } else if (hasPallets && !hasUnits) {
+                              return (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  📦 Pallet Only
+                                </span>
+                              );
+                            } else if (hasUnits && !hasPallets) {
+                              return (
+                                <span className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-medium">
+                                  📦 Units Only
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                          
                           {product.negotiationEnabled && (
                             <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
                               💬 Negotiable
@@ -2869,6 +2897,34 @@ export default function CustomerPortal() {
                                         {product.category}
                                       </span>
                                     )}
+                                    
+                                    {/* Purchase Options Tags */}
+                                    {(() => {
+                                      const hasUnits = !!product.price;
+                                      const hasPallets = !!(product.palletPrice && product.unitsPerPallet);
+                                      
+                                      if (hasUnits && hasPallets) {
+                                        return (
+                                          <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                            📦 Units & Pallet
+                                          </span>
+                                        );
+                                      } else if (hasPallets && !hasUnits) {
+                                        return (
+                                          <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                                            📦 Pallet Only
+                                          </span>
+                                        );
+                                      } else if (hasUnits && !hasPallets) {
+                                        return (
+                                          <span className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-medium">
+                                            📦 Units Only
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    
                                     {product.negotiationEnabled && (
                                       <span className="inline-block bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-medium">
                                         💬 Negotiable

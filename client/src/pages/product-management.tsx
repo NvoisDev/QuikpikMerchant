@@ -1608,6 +1608,146 @@ export default function ProductManagement() {
                         </div>
                       </div>
 
+                      {/* Pallet Configuration Section */}
+                      <div className="space-y-4 border rounded-lg p-4 bg-orange-50">
+                        <div className="flex items-center space-x-2">
+                          <Package className="w-4 h-4 text-orange-600" />
+                          <FormLabel className="text-base font-semibold">📦 Pallet Configuration</FormLabel>
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-3">
+                          Configure bulk pallet pricing and quantities for wholesale customers
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="unitsPerPallet"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Units Per Pallet</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="e.g., 48"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  How many cases/packages per pallet
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="palletPrice"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pallet Price ({form.watch("currency")})</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="e.g., 240.00"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Total price for full pallet
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="palletMoq"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pallet MOQ</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="e.g., 1"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Minimum pallet order quantity
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="palletStock"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pallet Stock</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="e.g., 12"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Available pallets in stock
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="palletWeight"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pallet Weight (kg)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.001"
+                                    placeholder="Auto-calculated"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    style={{ 
+                                      backgroundColor: field.value ? '#fff7ed' : 'white',
+                                      border: field.value ? '2px solid #ea580c' : '1px solid #d1d5db'
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                <div className="text-xs text-muted-foreground">
+                                  Total weight of full pallet
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="bg-orange-100 p-3 rounded-lg">
+                          <p className="text-sm text-orange-700">
+                            <strong>Example:</strong> 48 cases per pallet at £240 = £5.00 per case (bulk discount)
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            Customers can choose: Individual cases, mixed quantities, or full pallets
+                          </p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
