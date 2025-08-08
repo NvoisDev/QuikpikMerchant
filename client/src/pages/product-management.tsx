@@ -261,6 +261,36 @@ export default function ProductManagement() {
     return () => subscription.unsubscribe();
   }, [form, calculateTotalPackageWeight, toast]);
 
+  // Auto-calculate pallet weight when package weight or units per pallet changes
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name === 'totalPackageWeight' || name === 'unitsPerPallet') {
+        const { totalPackageWeight = '', unitsPerPallet = '' } = values;
+        
+        if (totalPackageWeight && unitsPerPallet) {
+          const packageWeight = parseFloat(totalPackageWeight);
+          const units = parseInt(unitsPerPallet);
+          
+          if (packageWeight > 0 && units > 0) {
+            const calculatedPalletWeight = Math.round((packageWeight * units) * 1000) / 1000; // Round to 3 decimal places
+            form.setValue('palletWeight', calculatedPalletWeight.toString(), { shouldValidate: false });
+            
+            // Show calculation info in toast for user feedback
+            if (name) { // Only show toast when user is actively editing
+              toast({
+                title: "Pallet Weight Auto-Calculated",
+                description: `Total pallet weight: ${calculatedPalletWeight}kg (${units} × ${packageWeight}kg)`,
+                duration: 2000,
+              });
+            }
+          }
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, toast]);
+
   const generateDescription = async () => {
     try {
       setIsGeneratingDescription(true);
@@ -1724,14 +1754,16 @@ export default function ProductManagement() {
                                     {...field}
                                     onChange={(e) => field.onChange(e.target.value)}
                                     style={{ 
-                                      backgroundColor: field.value ? '#fff7ed' : 'white',
-                                      border: field.value ? '2px solid #ea580c' : '1px solid #d1d5db'
+                                      backgroundColor: field.value ? '#fff7ed' : '#f9fafb',
+                                      border: field.value ? '2px solid #ea580c' : '1px solid #d1d5db',
+                                      color: field.value ? '#ea580c' : '#6b7280',
+                                      fontWeight: field.value ? 'bold' : 'normal'
                                     }}
                                   />
                                 </FormControl>
                                 <FormMessage />
                                 <div className="text-xs text-muted-foreground">
-                                  Total weight of full pallet
+                                  {field.value ? `Auto-calculated: ${field.value}kg (Package Weight × Units Per Pallet)` : 'Complete package weight and units per pallet for auto-calculation'}
                                 </div>
                               </FormItem>
                             )}
