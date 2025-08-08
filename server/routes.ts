@@ -4335,7 +4335,9 @@ Write a professional, sales-focused description that highlights the key benefits
           deliveryExcluded: row.delivery_excluded === true,
           promoPrice: row.promo_price,
           promoActive: row.promo_active === true,
-          promotionalOffers: Array.isArray(row.promotional_offers) ? row.promotional_offers : [],
+          promotionalOffers: row.promotional_offers ? 
+            (typeof row.promotional_offers === 'string' ? 
+              JSON.parse(row.promotional_offers) : row.promotional_offers) : [],
           createdAt: row.created_at,
           wholesaler: {
             id: row.wholesaler_id,
