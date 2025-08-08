@@ -827,6 +827,14 @@ export const insertProductSchema = createInsertSchema(products).omit({
   minimumBidPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   totalPackageWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  
+  // Pallet-related fields
+  palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
+  palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  unitsPerPallet: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
+  
   // Fix integer fields to accept string inputs from frontend
   packQuantity: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
   moq: z.union([z.string(), z.number()]).transform((val) => parseInt(val.toString())),
