@@ -4283,69 +4283,74 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
       
-      // Direct SQL query approach - production safe
-      const productsQuery = `
-        SELECT p.*, u.business_name, u.first_name, u.last_name, u.profile_image_url, u.logo_type, u.logo_url
-        FROM products p
-        LEFT JOIN users u ON p.wholesaler_id = u.id
-        WHERE p.wholesaler_id = $1 AND p.status = 'active'
-        ORDER BY p.created_at DESC
-      `;
+      // Use direct SQL query with better error handling
+      console.log('🔍 Executing production-safe SQL query...');
       
-      console.log('🔍 Executing direct SQL query...');
-      const result = await db.execute(sql`
-        SELECT p.*, u.business_name, u.first_name, u.last_name, u.profile_image_url, u.logo_type, u.logo_url
-        FROM products p
-        LEFT JOIN users u ON p.wholesaler_id = u.id
-        WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
-        ORDER BY p.created_at DESC
-      `);
-      const rows = result.rows as any[];
-      console.log(`📊 Raw query returned ${rows.length} rows`);
-      
-      // Transform results to expected format
-      const products = rows.map(row => ({
-        id: row.id,
-        wholesalerId: row.wholesaler_id,
-        name: row.name,
-        description: row.description,
-        price: row.price,
-        currency: row.currency || 'GBP',
-        moq: row.moq,
-        stock: row.stock,
-        imageUrl: row.images?.[0] || row.image_url,
-        images: row.images || [],
-        category: row.category,
-        status: row.status,
-        priceVisible: row.price_visible,
-        negotiationEnabled: row.negotiation_enabled,
-        minimumBidPrice: row.minimum_bid_price,
-        packQuantity: row.pack_quantity,
-        unitOfMeasure: row.unit_of_measure,
-        unitSize: row.unit_size,
-        sellingFormat: row.selling_format || 'units',
-        unitsPerPallet: row.units_per_pallet,
-        palletPrice: row.pallet_price,
-        palletMoq: row.pallet_moq,
-        palletStock: row.pallet_stock,
-        unitWeight: row.unit_weight,
-        palletWeight: row.pallet_weight,
-        promoPrice: row.promo_price,
-        promoActive: row.promo_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        wholesaler: {
-          id: row.wholesaler_id,
-          businessName: row.business_name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Business',
-          profileImageUrl: row.profile_image_url,
-          logoType: row.logo_type || 'initials',
-          logoUrl: row.logo_url,
-          rating: 4.5
+      try {
+        const result = await db.execute(sql`
+          SELECT p.*, u.business_name, u.first_name, u.last_name, u.profile_image_url, u.logo_type, u.logo_url
+          FROM products p
+          LEFT JOIN users u ON p.wholesaler_id = u.id
+          WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
+          ORDER BY p.created_at DESC
+        `);
+        
+        const rows = result.rows as any[];
+        console.log(`📊 SQL query returned ${rows.length} rows`);
+        
+        if (rows.length === 0) {
+          console.log(`⚠️ No active products found for wholesaler: ${wholesalerId}`);
+          return res.json([]);
         }
-      }));
-      
-      console.log(`✅ Successfully formatted ${products.length} products for response`);
-      res.json(products);
+        
+        // Transform results to expected format with safe property access
+        const formattedProducts = rows.map(row => ({
+          id: row.id,
+          wholesalerId: row.wholesaler_id,
+          name: row.name || '',
+          description: row.description || '',
+          price: row.price || '0.00',
+          currency: row.currency || 'GBP',
+          moq: row.moq || 1,
+          stock: row.stock || 0,
+          imageUrl: (row.images && Array.isArray(row.images) && row.images[0]) || row.image_url || '',
+          images: (Array.isArray(row.images) ? row.images : []),
+          category: row.category || '',
+          status: row.status || 'active',
+          priceVisible: row.price_visible !== false,
+          negotiationEnabled: row.negotiation_enabled === true,
+          minimumBidPrice: row.minimum_bid_price || null,
+          packQuantity: row.pack_quantity || null,
+          unitOfMeasure: row.unit_of_measure || '',
+          unitSize: row.unit_size || '',
+          sellingFormat: row.selling_format || 'units',
+          unitsPerPallet: row.units_per_pallet || null,
+          palletPrice: row.pallet_price || null,
+          palletMoq: row.pallet_moq || null,
+          palletStock: row.pallet_stock || null,
+          unitWeight: row.unit_weight || null,
+          palletWeight: row.pallet_weight || null,
+          promoPrice: row.promo_price || null,
+          promoActive: row.promo_active === true,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          wholesaler: {
+            id: row.wholesaler_id,
+            businessName: row.business_name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Business',
+            profileImageUrl: row.profile_image_url || null,
+            logoType: row.logo_type || 'initials',
+            logoUrl: row.logo_url || null,
+            rating: 4.5
+          }
+        }));
+        
+        console.log(`✅ Successfully formatted ${formattedProducts.length} products for customer response`);
+        res.json(formattedProducts);
+        
+      } catch (sqlError) {
+        console.error('💥 SQL execution failed:', sqlError);
+        throw sqlError; // Re-throw to be caught by outer try-catch
+      }
       
     } catch (error: unknown) {
       const err = error as Error;
