@@ -4276,6 +4276,9 @@ Write a professional, sales-focused description that highlights the key benefits
       console.log(`🛍️ Customer requesting products for wholesaler: ${wholesalerId}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
       
+      // Add immediate response for testing
+      console.log(`⚡ TESTING: Endpoint reached successfully`);
+      
       if (!wholesalerId) {
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
