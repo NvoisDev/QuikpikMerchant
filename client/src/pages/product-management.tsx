@@ -70,8 +70,6 @@ const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
   price: z.string().min(1, "Price is required"),
-  promoPrice: z.string().optional(),
-  promoActive: z.boolean(),
   currency: z.string().min(1, "Currency is required"),
   moq: z.string().min(1, "MOQ is required"),
   stock: z.string().min(1, "Stock is required"),
@@ -194,8 +192,6 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
-      promoPrice: "",
-      promoActive: false,
       currency: user?.preferredCurrency || "GBP",
       moq: "1",
       stock: "0",
@@ -526,18 +522,17 @@ export default function ProductManagement() {
       const productData = {
         ...data,
         price: parseFloat(data.price),
-        promoPrice: data.promoPrice ? parseFloat(data.promoPrice) : null,
         moq: parseInt(data.moq),
         stock: parseInt(data.stock),
         unitsPerPallet: data.unitsPerPallet && data.unitsPerPallet !== "" ? parseInt(data.unitsPerPallet) : null,
         palletPrice: data.palletPrice && data.palletPrice !== "" ? parseFloat(data.palletPrice) : null,
         palletMoq: data.palletMoq && data.palletMoq !== "" ? parseInt(data.palletMoq) : null,
         palletStock: data.palletStock && data.palletStock !== "" ? parseInt(data.palletStock) : null,
-        // Weight and shipping fields
-
         palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : 50,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
+        // Include promotional offers
+        promotionalOffers: data.promotionalOffers || [],
       };
       return await apiRequest("POST", "/api/products", productData);
     },
@@ -565,18 +560,17 @@ export default function ProductManagement() {
       const updatedData = {
         ...productData,
         price: parseFloat(productData.price),
-        promoPrice: productData.promoPrice ? parseFloat(productData.promoPrice) : null,
         moq: parseInt(productData.moq),
         stock: parseInt(productData.stock),
         unitsPerPallet: productData.unitsPerPallet && productData.unitsPerPallet !== "" ? parseInt(productData.unitsPerPallet) : null,
         palletPrice: productData.palletPrice && productData.palletPrice !== "" ? parseFloat(productData.palletPrice) : null,
         palletMoq: productData.palletMoq && productData.palletMoq !== "" ? parseInt(productData.palletMoq) : null,
         palletStock: productData.palletStock && productData.palletStock !== "" ? parseInt(productData.palletStock) : null,
-        // Weight and shipping fields
-
         palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
+        // Include promotional offers
+        promotionalOffers: productData.promotionalOffers || [],
       };
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
@@ -669,8 +663,6 @@ export default function ProductManagement() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
-      promoPrice: product.promoPrice?.toString() || "",
-      promoActive: product.promoActive || false,
       currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
@@ -693,6 +685,8 @@ export default function ProductManagement() {
       specialHandling: product.specialHandling || {},
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
+      // Promotional offers
+      promotionalOffers: product.promotionalOffers || [],
     });
     setIsDialogOpen(true);
   };
@@ -710,8 +704,6 @@ export default function ProductManagement() {
       name: `${product.name} (Copy)`,
       description: product.description || "",
       price: product.price.toString(),
-      promoPrice: product.promoPrice?.toString() || "",
-      promoActive: product.promoActive || false,
       currency: product.currency || user?.preferredCurrency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
@@ -734,6 +726,8 @@ export default function ProductManagement() {
       specialHandling: product.specialHandling || {},
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
+      // Promotional offers  
+      promotionalOffers: product.promotionalOffers || [],
     });
     setIsDialogOpen(true);
   };
@@ -1228,8 +1222,6 @@ export default function ProductManagement() {
                       name: "",
                       description: "",
                       price: "",
-                      promoPrice: "",
-                      promoActive: false,
                       currency: user?.preferredCurrency || "GBP",
                       moq: "1",
                       stock: "0",
@@ -1241,6 +1233,7 @@ export default function ProductManagement() {
                       status: "active",
                       unit: "units",
                       unitsPerPallet: "",
+                      promotionalOffers: [],
                     });
                   }}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -1332,23 +1325,6 @@ export default function ProductManagement() {
                                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
                               </FormControl>
                               <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="promoPrice"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Promo Price</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                              <div className="text-xs text-muted-foreground">
-                                Optional promotional price
-                              </div>
                             </FormItem>
                           )}
                         />
@@ -1991,26 +1967,6 @@ export default function ProductManagement() {
                             )}
                           />
                           
-                          <FormField
-                            control={form.control}
-                            name="promoActive"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel className="text-base">Promotional Pricing Active</FormLabel>
-                                  <div className="text-sm text-muted-foreground">
-                                    Use promotional price instead of regular price
-                                  </div>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
                           {form.watch("negotiationEnabled") && (
                             <FormField
                               control={form.control}
@@ -2282,8 +2238,6 @@ export default function ProductManagement() {
                       name: "",
                       description: "",
                       price: "",
-                      promoPrice: "",
-                      promoActive: false,
                       currency: user?.preferredCurrency || "GBP",
                       moq: "1",
                       stock: "0",
@@ -2295,6 +2249,7 @@ export default function ProductManagement() {
                       status: "active",
                       unit: "units",
                       unitsPerPallet: "",
+                      promotionalOffers: [],
                     });
                     setIsDialogOpen(true);
                   }}>

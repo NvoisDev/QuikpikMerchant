@@ -42,6 +42,12 @@ const offerTypeConfigs = {
     color: "bg-blue-500",
     description: "Percentage off the original price"
   },
+  fixed_discount: {
+    name: "Fixed Amount Off",
+    icon: Tag,
+    color: "bg-green-500",
+    description: "Fixed amount discount (legacy)"
+  },
   fixed_amount_discount: {
     name: "Fixed Amount Off",
     icon: Tag,
@@ -59,6 +65,18 @@ const offerTypeConfigs = {
     icon: ShoppingCart,
     color: "bg-orange-500",
     description: "Buy X items, get Y free"
+  },
+  multi_buy: {
+    name: "Multi-Buy Discount",
+    icon: ShoppingCart,
+    color: "bg-orange-400",
+    description: "Volume discount for multiple purchases"
+  },
+  bulk_tier: {
+    name: "Bulk Tier Pricing",
+    icon: Package,
+    color: "bg-yellow-600",
+    description: "Different pricing levels based on quantity"
   },
   bulk_discount: {
     name: "Bulk Discount",
