@@ -2104,9 +2104,10 @@ export default function CustomerPortal() {
                           <Button
                             onClick={() => openQuantityEditor(featuredProduct)}
                             size="lg"
-                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl w-12 h-12 p-0"
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl px-4 py-3"
                           >
-                            <Plus className="w-6 h-6" />
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add
                           </Button>
                           
                           {featuredProduct.negotiationEnabled && (
@@ -2144,9 +2145,10 @@ export default function CustomerPortal() {
                               });
                             }}
                             size="lg"
-                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl w-12 h-12 p-0"
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl px-4 py-3"
                           >
-                            <Plus className="w-6 h-6" />
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add
                           </Button>
                           
                           {featuredProduct.negotiationEnabled && (
@@ -2593,9 +2595,10 @@ export default function CustomerPortal() {
                                     <Button 
                                       onClick={() => openQuantityEditor(product)}
                                       size="sm"
-                                      className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
+                                      className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-xl"
                                     >
-                                      <Plus className="w-4 h-4" />
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add
                                     </Button>
                                   )}
                                 </div>
@@ -2621,9 +2624,10 @@ export default function CustomerPortal() {
                                     });
                                   }}
                                   size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white w-8 h-8 p-0 rounded-xl"
+                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-xl"
                                 >
-                                  <Plus className="w-4 h-4" />
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add
                                 </Button>
                               )}
                             </div>
@@ -2970,9 +2974,10 @@ export default function CustomerPortal() {
                                       <Button 
                                         onClick={() => openQuantityEditor(product)}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700 w-8 h-8 p-0 rounded-xl"
+                                        className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-xl"
                                       >
-                                        <Plus className="w-4 h-4" />
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Add
                                       </Button>
                                     )}
                                   </div>
