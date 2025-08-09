@@ -380,6 +380,34 @@ The Quikpik Team`,
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
+
+  // Debug auth endpoint for testing
+  app.post("/api/debug/login", async (req, res) => {
+    try {
+      console.log('🔍 Debug login - session check:', {
+        sessionExists: !!req.session,
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie
+      });
+      
+      const user = await storage.getUserByEmail("hello@quikpik.co");
+      if (user && req.session) {
+        (req.session as any).userId = user.id;
+        (req.session as any).user = user;
+        console.log(`🔐 Debug session created for user ${user.email}`, {
+          sessionId: req.sessionID,
+          userId: user.id
+        });
+        res.json({ success: true, user: { id: user.id, email: user.email, role: user.role } });
+      } else {
+        console.log('❌ User not found or session not available', { userFound: !!user, sessionExists: !!req.session });
+        res.status(404).json({ error: "User not found or session unavailable" });
+      }
+    } catch (error) {
+      console.error('Debug login error:', error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
   // Set up trust proxy setting before any middleware  
   app.set("trust proxy", 1);
   

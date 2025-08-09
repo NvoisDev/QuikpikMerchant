@@ -707,8 +707,17 @@ export default function ProductManagement() {
   };
 
   const handleEdit = (product: any) => {
+    console.log('🔍 EDIT HANDLER DEBUG:', {
+      productId: product.id,
+      productName: product.name,
+      userSubscription: user?.subscriptionTier,
+      editCount: product.editCount,
+      canEdit: canEditProduct(product.editCount || 0)
+    });
+    
     // Check if user can edit this product based on edit count and subscription
     if (!canEditProduct(product.editCount || 0)) {
+      console.log('❌ Edit blocked due to subscription limits');
       setUpgradeReason("edit_limit");
       setUpgradeModalOpen(true);
       return;
@@ -761,6 +770,12 @@ export default function ProductManagement() {
   };
 
   const handleDuplicate = (product: any) => {
+    console.log('🔍 DUPLICATE HANDLER DEBUG:', {
+      productId: product.id,
+      productName: product.name,
+      userSubscription: user?.subscriptionTier
+    });
+    
     // Reset the form with the product data but clear the ID to create a new product
     setEditingProduct(null); // Set to null so it creates instead of edits
     form.reset({
