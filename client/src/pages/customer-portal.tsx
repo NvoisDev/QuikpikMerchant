@@ -34,6 +34,7 @@ import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
+import { cleanAIDescription } from "@shared/utils";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -2030,7 +2031,7 @@ export default function CustomerPortal() {
                         </div>
                         {featuredProduct.description && (
                           <p className="text-gray-600 text-lg leading-relaxed">
-                            {featuredProduct.description}
+                            {cleanAIDescription(featuredProduct.description)}
                           </p>
                         )}
                       </div>
@@ -2659,7 +2660,7 @@ export default function CustomerPortal() {
                                 )}
                               </div>
                               {product.description && (
-                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
+                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{cleanAIDescription(product.description)}</p>
                               )}
                             </div>
                             
@@ -3055,7 +3056,7 @@ export default function CustomerPortal() {
                                     })()}
                                   </div>
                                   {product.description && (
-                                    <p className="text-sm text-gray-600 mt-1 line-clamp-1">{product.description}</p>
+                                    <p className="text-sm text-gray-600 mt-1 line-clamp-1">{cleanAIDescription(product.description)}</p>
                                   )}
                                 </div>
                                 

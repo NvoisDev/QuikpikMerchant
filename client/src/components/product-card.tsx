@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currencies";
+import { cleanAIDescription } from "@shared/utils";
 
 // Utility function to format numbers with commas
 const formatNumber = (num: number | string): string => {
@@ -386,7 +387,7 @@ export default function ProductCard({
         {/* Description */}
         {product.description && (
           <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-            {product.description}
+            {cleanAIDescription(product.description)}
           </p>
         )}
 

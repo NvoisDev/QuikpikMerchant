@@ -5,18 +5,36 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Utility function to clean AI-generated descriptions
+function cleanAIDescription(description: string): string {
+  if (!description) return description;
+  
+  // Remove common AI formatting markers that shouldn't appear to customers
+  return description
+    .replace(/\*\*Product Name:\*\*[^\n]*/gi, '') // Remove **Product Name:** lines
+    .replace(/\*\*Category:\*\*[^\n]*/gi, '') // Remove **Category:** lines
+    .replace(/\*\*Description:\*\*[^\n]*/gi, '') // Remove **Description:** lines
+    .replace(/\*\*Price:\*\*[^\n]*/gi, '') // Remove **Price:** lines
+    .replace(/\*\*Features:\*\*[^\n]*/gi, '') // Remove **Features:** lines
+    .replace(/\*\*Benefits:\*\*[^\n]*/gi, '') // Remove **Benefits:** lines
+    .replace(/^\s*\*\*[^:]+:\*\*\s*/gm, '') // Remove any other **Label:** patterns at start of lines
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Convert **bold text** to regular text
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Remove excessive line breaks
+    .trim();
+}
+
 export async function generateProductDescription(productName: string, category?: string): Promise<string> {
   try {
     const prompt = `Write a compelling product description for a wholesale product called "${productName}"${
       category ? ` in the ${category} category` : ""
-    }. Focus on key features, benefits, and selling points that would appeal to retailers. Keep it professional and concise, around 2-3 sentences.`;
+    }. Focus on key features, benefits, and selling points that would appeal to retailers. Keep it professional and concise, around 2-3 sentences. Do NOT include formatting markers like **Product Name:** or **Category:** - just write a clean description.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers.",
+          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers. Never include formatting markers like **Product Name:** or **Category:** - only write clean, professional description text.",
         },
         {
           role: "user",
@@ -27,7 +45,10 @@ export async function generateProductDescription(productName: string, category?:
       temperature: 0.7,
     });
 
-    return response.choices[0].message.content || "";
+    const rawDescription = response.choices[0].message.content || "";
+    
+    // Clean the description to ensure no formatting markers appear
+    return cleanAIDescription(rawDescription);
   } catch (error) {
     console.error("Error generating product description:", error);
     throw new Error("Failed to generate product description");

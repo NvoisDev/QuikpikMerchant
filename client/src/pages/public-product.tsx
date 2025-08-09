@@ -21,6 +21,7 @@ import {
   MessageCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { cleanAIDescription } from "@shared/utils";
 
 interface PublicProduct {
   id: string;
@@ -221,7 +222,7 @@ export default function PublicProductPage() {
                 <span className="text-sm font-normal text-gray-500 ml-2">per unit</span>
               </div>
               
-              <p className="text-gray-700 text-lg leading-relaxed">{product.description}</p>
+              <p className="text-gray-700 text-lg leading-relaxed">{cleanAIDescription(product.description)}</p>
             </div>
 
             {/* Availability & MOQ */}
