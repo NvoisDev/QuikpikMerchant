@@ -802,8 +802,17 @@ export default function ProductManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock") => {
+  const handleStatusChange = (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => {
     console.log("Status change handler called:", id, status);
+    // Only allow valid status updates that the mutation accepts
+    if (status === "locked") {
+      toast({
+        title: "Cannot update status",
+        description: "Product is locked and cannot be modified",
+        variant: "destructive",
+      });
+      return;
+    }
     updateProductStatusMutation.mutate({ id, status });
   };
 
@@ -2238,6 +2247,9 @@ export default function ProductManagement() {
                               </Badge>
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
                                 Edit
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDuplicate(product)}>
+                                Duplicate
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700">
                                 Delete
