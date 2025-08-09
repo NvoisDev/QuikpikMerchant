@@ -4301,6 +4301,7 @@ Write a professional, sales-focused description that highlights the key benefits
                  p.promo_price, p.promo_active, p.promotional_offers, p.negotiation_enabled,
                  p.price_visible, p.minimum_bid_price, p.pack_quantity, p.unit_of_measure,
                  p.unit_size, p.selling_format, p.delivery_excluded,
+                 p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock, p.pallet_weight,
                  'Surulere Foods Wholesale' as business_name
           FROM products p
           WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
@@ -4339,6 +4340,12 @@ Write a professional, sales-focused description that highlights the key benefits
           unitSize: row.unit_size,
           sellingFormat: row.selling_format || 'units',
           deliveryExcluded: row.delivery_excluded === true,
+          // Pallet configuration fields
+          unitsPerPallet: row.units_per_pallet,
+          palletPrice: row.pallet_price,
+          palletMoq: row.pallet_moq,
+          palletStock: row.pallet_stock,
+          palletWeight: row.pallet_weight,
           promoPrice: row.promo_price,
           promoActive: row.promo_active === true,
           promotionalOffers: row.promotional_offers ? 

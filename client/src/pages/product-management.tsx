@@ -91,6 +91,7 @@ const productFormSchema = z.object({
   totalPackageWeight: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   
   // Additional missing fields
+  sellingFormat: z.enum(["units", "pallets", "both"]).optional(),
   unitsPerPallet: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
@@ -217,6 +218,7 @@ export default function ProductManagement() {
       lowStockThreshold: "",
       shelfLife: "",
       unit: "units",
+      sellingFormat: "units" as "units" | "pallets" | "both",
       deliveryExcluded: false,
       temperatureRequirement: "ambient",
       contentCategory: "general",
@@ -286,6 +288,26 @@ export default function ProductManagement() {
 
     return () => subscription.unsubscribe();
   }, [form, toast]);
+
+  // Auto-determine selling format based on pallet configuration
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      const { unitsPerPallet, palletPrice, palletMoq, palletStock } = values;
+      
+      // Check if any pallet configuration is provided
+      const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
+      
+      if (hasPalletConfig) {
+        // If pallet configuration is provided, enable both units and pallets
+        form.setValue('sellingFormat', 'both', { shouldValidate: false });
+      } else {
+        // If no pallet configuration, default to units only
+        form.setValue('sellingFormat', 'units', { shouldValidate: false });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const generateDescription = async () => {
     try {
@@ -579,12 +601,14 @@ export default function ProductManagement() {
         palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : 50,
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
+        sellingFormat: productData.sellingFormat || "units",
         // Include promotional offers
         promotionalOffers: productData.promotionalOffers || [],
       };
       
       // Debug: Log the processed data being sent to server for update
       console.log('🔍 PALLET CONFIG DEBUG: Update data being sent to server for product', id, ':', {
+        sellingFormat: updatedData.sellingFormat,
         unitsPerPallet: updatedData.unitsPerPallet,
         palletPrice: updatedData.palletPrice,
         palletMoq: updatedData.palletMoq,
@@ -665,6 +689,7 @@ export default function ProductManagement() {
   const onSubmit = (data: ProductFormData) => {
     // Debug: Log all pallet configuration data before submission
     console.log('🔍 PALLET CONFIG DEBUG: Form submission data:', {
+      sellingFormat: data.sellingFormat,
       unitsPerPallet: data.unitsPerPallet,
       palletPrice: data.palletPrice,
       palletMoq: data.palletMoq,
@@ -717,6 +742,7 @@ export default function ProductManagement() {
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
       // Pallet configuration fields
+      sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
       palletMoq: product.palletMoq?.toString() || "",
@@ -764,6 +790,7 @@ export default function ProductManagement() {
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
       // Pallet configuration fields
+      sellingFormat: product.sellingFormat || "units",
       unitsPerPallet: product.unitsPerPallet?.toString() || "",
       palletPrice: product.palletPrice?.toString() || "",
       palletMoq: product.palletMoq?.toString() || "",

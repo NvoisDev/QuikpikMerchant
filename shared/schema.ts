@@ -829,6 +829,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   totalPackageWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   
   // Pallet-related fields
+  sellingFormat: z.enum(["units", "pallets", "both"]).optional(),
   palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : null),
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? parseInt(val.toString()) : null),
