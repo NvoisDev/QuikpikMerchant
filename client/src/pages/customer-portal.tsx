@@ -32,6 +32,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
+import { OrderSuccessModal } from "@/components/OrderSuccessModal";
+import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -831,6 +833,17 @@ export default function CustomerPortal() {
   });
   const [showCheckout, setShowCheckout] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const [orderSuccessData, setOrderSuccessData] = useState<{
+    orderNumber: string;
+    total: string;
+    items: Array<{ name: string; quantity: number }>;
+    milestone?: {
+      type: 'first_order' | 'tenth_order' | 'big_order' | 'repeat_customer';
+      message: string;
+      description?: string;
+    };
+  } | null>(null);
   const [completedOrder, setCompletedOrder] = useState<{
     orderNumber: string;
     cart: CartItem[];
