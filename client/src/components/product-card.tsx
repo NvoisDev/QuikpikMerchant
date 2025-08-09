@@ -361,11 +361,29 @@ export default function ProductCard({
                     editInfoDisabled: editInfo.disabled,
                     editInfo,
                     productId: product.id,
-                    onEditExists: !!onEdit
+                    onEditExists: !!onEdit,
+                    subscriptionTier: subscription?.subscriptionTier,
+                    editCount: product.editCount
                   });
-                  if (!isLocked && onEdit) {
-                    onEdit(product);
+                  
+                  if (isLocked) {
+                    console.log('❌ EDIT BLOCKED: Product is locked');
+                    return;
                   }
+                  
+                  if (editInfo.disabled) {
+                    console.log('❌ EDIT BLOCKED: Edit limit reached');
+                    return;
+                  }
+                  
+                  if (!onEdit) {
+                    console.log('❌ EDIT BLOCKED: onEdit function not provided');
+                    return;
+                  }
+                  
+                  console.log('✅ EDIT ALLOWED: Calling onEdit function');
+                  onEdit(product);
+                  console.log('📞 EDIT CALLED: onEdit function executed');
                 }}
                 disabled={editInfo.disabled || isLocked}
                 className={(editInfo.disabled || isLocked) ? "opacity-50 cursor-not-allowed" : ""}
