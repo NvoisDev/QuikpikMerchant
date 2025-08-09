@@ -360,7 +360,18 @@ export default function ProductCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem 
-                onClick={() => !isLocked && onEdit(product)}
+                onClick={() => {
+                  console.log('🔍 EDIT BUTTON DEBUG:', {
+                    isLocked,
+                    editInfoDisabled: editInfo.disabled,
+                    editInfo,
+                    productId: product.id,
+                    onEditExists: !!onEdit
+                  });
+                  if (!isLocked && onEdit) {
+                    onEdit(product);
+                  }
+                }}
                 disabled={editInfo.disabled || isLocked}
                 className={(editInfo.disabled || isLocked) ? "opacity-50 cursor-not-allowed" : ""}
               >
@@ -368,7 +379,16 @@ export default function ProductCard({
                 Edit {isLocked ? "(Product Locked)" : editInfo.disabled ? "(Limit reached)" : ""}
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => !isLocked && handleDuplicate()}
+                onClick={() => {
+                  console.log('🔍 DUPLICATE BUTTON DEBUG:', {
+                    isLocked,
+                    productId: product.id,
+                    onDuplicateExists: !!onDuplicate
+                  });
+                  if (!isLocked && handleDuplicate) {
+                    handleDuplicate();
+                  }
+                }}
                 disabled={isLocked}
                 className={isLocked ? "opacity-50 cursor-not-allowed" : ""}
               >
@@ -438,7 +458,7 @@ export default function ProductCard({
               <div className="flex justify-between items-center border-t pt-2 mt-2">
                 <span className="text-sm text-gray-600">Pallet price:</span>
                 <span className="font-semibold text-gray-900">
-                  {product.priceVisible ? `£${parseFloat(product.palletPrice || '0').toFixed(2)}` : "Hidden"}
+                  {product.priceVisible ? `£${parseFloat((product.palletPrice || 0).toString()).toFixed(2)}` : "Hidden"}
                 </span>
               </div>
               <div className="flex justify-between items-center">
