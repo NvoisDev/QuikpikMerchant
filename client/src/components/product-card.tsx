@@ -55,6 +55,13 @@ interface Product {
   packQuantity?: number;
   unitSize?: string;
   unitOfMeasure?: string;
+  // Pallet configuration fields
+  sellingFormat?: "units" | "pallets" | "both";
+  unitsPerPallet?: number;
+  palletPrice?: number;
+  palletMoq?: number;
+  palletStock?: number;
+  palletWeight?: number;
 }
 
 interface ProductCardProps {

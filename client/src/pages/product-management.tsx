@@ -534,6 +534,16 @@ export default function ProductManagement() {
         // Include promotional offers
         promotionalOffers: data.promotionalOffers || [],
       };
+      
+      // Debug: Log the processed data being sent to server
+      console.log('🔍 PALLET CONFIG DEBUG: Processed product data being sent to server:', {
+        unitsPerPallet: productData.unitsPerPallet,
+        palletPrice: productData.palletPrice,
+        palletMoq: productData.palletMoq,
+        palletStock: productData.palletStock,
+        palletWeight: productData.palletWeight
+      });
+      
       return await apiRequest("POST", "/api/products", productData);
     },
     onSuccess: () => {
@@ -572,6 +582,16 @@ export default function ProductManagement() {
         // Include promotional offers
         promotionalOffers: productData.promotionalOffers || [],
       };
+      
+      // Debug: Log the processed data being sent to server for update
+      console.log('🔍 PALLET CONFIG DEBUG: Update data being sent to server for product', id, ':', {
+        unitsPerPallet: updatedData.unitsPerPallet,
+        palletPrice: updatedData.palletPrice,
+        palletMoq: updatedData.palletMoq,
+        palletStock: updatedData.palletStock,
+        palletWeight: updatedData.palletWeight
+      });
+      
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
     onSuccess: () => {
@@ -643,6 +663,17 @@ export default function ProductManagement() {
   });
 
   const onSubmit = (data: ProductFormData) => {
+    // Debug: Log all pallet configuration data before submission
+    console.log('🔍 PALLET CONFIG DEBUG: Form submission data:', {
+      unitsPerPallet: data.unitsPerPallet,
+      palletPrice: data.palletPrice,
+      palletMoq: data.palletMoq,
+      palletStock: data.palletStock,
+      palletWeight: data.palletWeight,
+      isEditing: !!editingProduct,
+      editingProductId: editingProduct?.id
+    });
+    
     if (editingProduct) {
       updateProductMutation.mutate({ ...data, id: editingProduct.id });
     } else {
@@ -685,6 +716,12 @@ export default function ProductManagement() {
       specialHandling: product.specialHandling || {},
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
+      // Pallet configuration fields
+      unitsPerPallet: product.unitsPerPallet?.toString() || "",
+      palletPrice: product.palletPrice?.toString() || "",
+      palletMoq: product.palletMoq?.toString() || "",
+      palletStock: product.palletStock?.toString() || "",
+      palletWeight: product.palletWeight?.toString() || "",
       // Promotional offers
       promotionalOffers: product.promotionalOffers || [],
     });
@@ -726,6 +763,12 @@ export default function ProductManagement() {
       specialHandling: product.specialHandling || {},
       shelfLife: product.shelfLife?.toString() || "",
       lowStockThreshold: product.lowStockThreshold?.toString() || "50",
+      // Pallet configuration fields
+      unitsPerPallet: product.unitsPerPallet?.toString() || "",
+      palletPrice: product.palletPrice?.toString() || "",
+      palletMoq: product.palletMoq?.toString() || "",
+      palletStock: product.palletStock?.toString() || "",
+      palletWeight: product.palletWeight?.toString() || "",
       // Promotional offers  
       promotionalOffers: product.promotionalOffers || [],
     });
