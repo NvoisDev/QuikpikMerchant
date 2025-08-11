@@ -853,11 +853,22 @@ export default function ProductManagement() {
     }
     console.log('🚀 Opening dialog - isDialogOpen state change to true');
     console.log('✅ CRITICAL: Setting isDialogOpen to TRUE and editingProduct to product data');
-    setIsDialogOpen(true);
-    console.log('📊 Final state check:', {
-      isDialogOpen: true,
-      editingProduct: !!product,
-      dialogShouldOpen: true,
+    
+    // Force dialog open with a delay to ensure state updates
+    setTimeout(() => {
+      setIsDialogOpen(true);
+      console.log('📊 Dialog state after timeout:', {
+        isDialogOpen: true,
+        editingProduct: !!product,
+        dialogShouldOpen: true,
+        productName: product.name
+      });
+    }, 100);
+    
+    console.log('📊 Immediate state check:', {
+      isDialogOpen: isDialogOpen,
+      editingProduct: !!editingProduct,
+      productBeingSet: !!product,
       productName: product.name
     });
   };
@@ -1452,7 +1463,7 @@ export default function ProductManagement() {
                   setIsDialogOpen(open);
                 }}
               >
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2 border-red-500">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
                   <DialogHeader>
                     <DialogTitle>
                       {editingProduct ? "Edit Product" : "Add New Product"}
@@ -2378,8 +2389,16 @@ export default function ProductManagement() {
                               <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")}>
                                 {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
                               </Badge>
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                console.log('🔴 DIRECT EDIT TEST - Bypassing handleEdit');
+                                setEditingProduct(product);
+                                setIsDialogOpen(true);
+                                console.log('🔴 DIRECT: Dialog should be open now');
+                              }}>
+                                Edit (Direct Test)
+                              </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
-                                Edit
+                                Edit (Handler)
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDuplicate(product)}>
                                 Duplicate
