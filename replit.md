@@ -26,6 +26,7 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: CSS variables with custom green brand colors.
 - **UI/UX Decisions**: Default table layout for orders with smart search and filtering, dynamic delivery method display, simplified interfaces, and consistent brand-integrated clean design with green theme colors.
 - **Recent Enhancement**: Comprehensive Order Management System with professional table layout, advanced search/filtering, order detail modals, and full customer information display. Resolved critical 39MB response size issue through data optimization. Fixed production deployment issue where customer products API returned HTTP 500 due to missing SQL import - development environment now returns 11 products successfully.
+- **Product Edit Function Fixed (Aug 2025)**: Resolved critical stack overflow errors in product edit functionality. Root cause was circular references in form validation watchers calling form.setValue(). Disabled problematic auto-calculation useEffect hooks and implemented safe form population. Edit dialog now opens successfully with product data pre-populated for editing.
 
 ### Backend
 - **Runtime**: Node.js with Express.
