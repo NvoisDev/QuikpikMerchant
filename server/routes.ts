@@ -414,8 +414,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add cookie parser middleware for customer authentication
   app.use(cookieParser());
 
-  // REGISTER DEDICATED WEBHOOK HANDLER FIRST
-  registerWebhookRoutes(app);
+  // WEBHOOK HANDLERS DISABLED - Using standalone webhook server on port 5001 to prevent duplicates
+  // registerWebhookRoutes(app);
 
   // STRIPE WEBHOOKS - MUST BE FIRST TO AVOID VITE CATCH-ALL INTERFERENCE
   // TEST ENDPOINT TO VERIFY LOGGING
@@ -439,111 +439,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
   });
 
-  // STRIPE WEBHOOK - WORKING VERSION
-  app.post('/api/webhooks/stripe', async (req, res) => {
-    console.log(`🚀 WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Raw body:`, req.body);
-    console.log(`📦 Body type:`, typeof req.body);
-    console.log(`📦 Body JSON:`, JSON.stringify(req.body, null, 2));
-    console.log(`🔍 Event check: event type is ${req.body?.type}`);
-    console.log(`🔍 Data object exists: ${!!req.body?.data?.object}`);
-    
-    try {
-      const event = req.body;
-      
-      if (event.type === 'checkout.session.completed') {
-        const session = event.data?.object;
-        console.log(`💳 Checkout completed: ${session?.id}`);
-        console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
-        
-        const userId = session?.metadata?.userId;
-        const tier = session?.metadata?.tier || session?.metadata?.targetTier;
-        
-        if (userId && tier) {
-          console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
-          
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
-          
-          await storage.updateUser(userId, {
-            subscriptionTier: tier,
-            subscriptionStatus: 'active',
-            productLimit: productLimit,
-            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          });
-          
-          console.log(`✅ Upgraded ${userId} to ${tier} successfully`);
-          
-          return res.json({
-            received: true,
-            message: `Subscription upgraded to ${tier}`,
-            userId: userId,
-            tier: tier,
-            productLimit: productLimit
-          });
-        }
-      }
-      
-      return res.json({ received: true });
-      
-    } catch (error) {
-      console.error('❌ Webhook error:', error);
-      return res.status(500).json({ error: 'Webhook processing failed' });
-    }
-  });
+  // STRIPE WEBHOOK DISABLED - Using standalone webhook server on port 5001 to prevent duplicates
+  // app.post('/api/webhooks/stripe', async (req, res) => { ... });
 
-  // WORKING STRIPE WEBHOOK - MOVED TO WORKING SECTION
-  app.post('/api/stripe-webhook', async (req, res) => {
-    console.log(`🚀 STRIPE WEBHOOK EXECUTING at ${new Date().toISOString()}`);
-    console.log(`📦 Event data:`, JSON.stringify(req.body, null, 2));
-    
-    try {
-      const event = req.body;
-      
-      if (event.type === 'checkout.session.completed') {
-        const session = event.data?.object;
-        console.log(`💳 Checkout completed: ${session?.id}`);
-        console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
-        
-        const userId = session?.metadata?.userId;
-        const tier = session?.metadata?.tier || session?.metadata?.targetTier;
-        
-        if (userId && tier) {
-          console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
-          
-          const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
-          
-          await storage.updateUser(userId, {
-            subscriptionTier: tier,
-            subscriptionStatus: 'active',
-            productLimit: productLimit,
-            subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          });
-          
-          console.log(`✅ Upgraded ${userId} to ${tier} successfully`);
-          
-          return res.json({
-            received: true,
-            message: `Subscription upgraded to ${tier}`,
-            userId: userId,
-            tier: tier,
-            productLimit: productLimit
-          });
-        } else {
-          console.log(`❌ Missing metadata: userId=${userId}, tier=${tier}`);
-          return res.status(400).json({ 
-            error: 'Missing user or plan metadata',
-            receivedMetadata: session?.metadata 
-          });
-        }
-      }
-      
-      return res.json({ received: true });
-      
-    } catch (error) {
-      console.error('❌ Webhook error:', error);
-      return res.status(500).json({ error: 'Webhook processing failed' });
-    }
-  });
+  // STRIPE WEBHOOK DISABLED - Using standalone webhook server on port 5001 to prevent duplicates
+  // app.post('/api/stripe-webhook', async (req, res) => { ... });
 
   // Customer authentication endpoints
   app.post('/api/customer-auth/verify', async (req, res) => {

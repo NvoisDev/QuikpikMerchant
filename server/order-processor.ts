@@ -199,6 +199,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
   }));
 
+  // CRITICAL FIX: Check if order already exists for this payment intent to prevent duplicates
+  const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
+  if (existingOrder) {
+    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${existingOrder.id} (${existingOrder.orderNumber})`);
+    return existingOrder; // Return existing order instead of creating duplicate
+  }
+
   const order = await storage.createOrder(orderData, orderItems);
   
   console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
