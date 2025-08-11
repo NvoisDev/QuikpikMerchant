@@ -2423,7 +2423,6 @@ export default function ProductManagement() {
           )}
         </div>
       </div>
-      }
 
       {/* Subscription Upgrade Modal */}
       <SubscriptionUpgradeModal
