@@ -812,6 +812,15 @@ export default function ProductManagement() {
       editingProduct: !!product,
       dialogShouldOpen: true
     });
+    
+    // Force a small delay to ensure state updates are processed
+    setTimeout(() => {
+      console.log('🔍 Dialog state after timeout:', {
+        isDialogOpenState: isDialogOpen,
+        dialogElement: document.querySelector('[role="dialog"]'),
+        dialogExists: !!document.querySelector('[role="dialog"]')
+      });
+    }, 100);
   };
 
   const handleDelete = (id: number) => {
@@ -1361,7 +1370,13 @@ export default function ProductManagement() {
                 </Dialog>
               </div>
               
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <Dialog 
+                open={isDialogOpen} 
+                onOpenChange={(open) => {
+                  console.log('🔄 Dialog onOpenChange called:', { open, currentState: isDialogOpen });
+                  setIsDialogOpen(open);
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button onClick={() => {
                     setEditingProduct(null);
