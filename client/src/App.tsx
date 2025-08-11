@@ -51,9 +51,7 @@ import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
 import UpgradeSuccess from "@/pages/upgrade-success";
 import AuthSuccess from "@/pages/auth-success";
-import AnalyticsDashboard from "@/pages/analytics-dashboard";
-import CustomerInsights from "@/pages/customer-insights";
-import InventoryInsights from "@/pages/inventory-insights";
+
 import AppLayout from "@/components/layout/app-layout";
 
 // Component for public routes that don't need authentication
@@ -126,10 +124,7 @@ function AuthenticatedRoutes() {
             <Route path="/orders" component={OrdersFinal} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />
-            <Route path="/analytics" component={AnalyticsDashboard} />
-            <Route path="/analytics-legacy" component={Analytics} />
-            <Route path="/customer-insights" component={CustomerInsights} />
-            <Route path="/inventory-insights" component={InventoryInsights} />
+            <Route path="/analytics" component={Analytics} />
             <Route path="/business-performance" component={BusinessPerformance} />
             <Route path="/business-performance/financials" component={Financials} />
             <Route path="/financials" component={Financials} />

@@ -1,34 +1,48 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 import { 
   BarChart3, 
-  FileText, 
   TrendingUp, 
   DollarSign,
-  Receipt,
-  CreditCard,
   ArrowRight,
   PieChart,
-  LineChart,
-  Calendar,
-  Lock
+  Lock,
+  Users,
+  Package2,
+  ShoppingCart,
+  Star,
+  AlertTriangle,
+  Activity
 } from "lucide-react";
 
 export default function BusinessPerformance() {
   const { isPremium, currentTier, subscription, refetch } = useSubscription();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
-  // Add debug logging
-  console.log('🔍 Business Performance subscription check:', {
-    subscription,
-    currentTier,
-    isPremium
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Fetch analytics data
+  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+    queryKey: ["/api/analytics/dashboard"],
+    enabled: isPremium
+  });
+
+  const { data: customerData, isLoading: customerLoading } = useQuery({
+    queryKey: ["/api/analytics/customers"],
+    enabled: isPremium && activeTab === "customers"
+  });
+
+  const { data: inventoryData, isLoading: inventoryLoading } = useQuery({
+    queryKey: ["/api/analytics/inventory"],
+    enabled: isPremium && activeTab === "inventory"
   });
 
   // Authentication recovery mutation
@@ -39,7 +53,6 @@ export default function BusinessPerformance() {
         title: "Authentication Recovered",
         description: "Your session has been restored. Refreshing your subscription status...",
       });
-      // Invalidate all auth and subscription queries
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
       refetch();
@@ -81,12 +94,12 @@ export default function BusinessPerformance() {
                 Revenue Trend Analysis
               </li>
               <li className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Detailed Reporting
+                <Users className="h-4 w-4 text-primary" />
+                Customer Insights & Segmentation
               </li>
             </ul>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 justify-center">
             <Link href="/subscription">
               <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
                 Upgrade to Premium
@@ -118,141 +131,510 @@ export default function BusinessPerformance() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Business Performance</h1>
-          <p className="text-gray-600">Monitor your business metrics and financial data</p>
+          <p className="text-gray-600">Comprehensive analytics and insights for your wholesale business</p>
         </div>
       </div>
 
-      {/* Performance Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Analytics Tile */}
-        <Link href="/analytics">
-          <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 h-full">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900">Analytics</h2>
-                  <p className="text-sm text-gray-600 mt-1">View performance metrics and insights</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span>Sales trends</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <PieChart className="h-4 w-4 text-purple-600" />
-                  <span>Product insights</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <LineChart className="h-4 w-4 text-orange-600" />
-                  <span>Revenue charts</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="h-4 w-4 text-indigo-600" />
-                  <span>Time analysis</span>
-                </div>
-              </div>
-              
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-700 font-medium">View detailed analytics</p>
-                <p className="text-xs text-blue-600 mt-1">Charts, reports, and business insights</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics Overview
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Customer Insights
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package2 className="h-4 w-4" />
+            Inventory Insights
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Financials Tile */}
-        <Link href="/financials">
-          <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 h-full">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3">
-                <div className="bg-green-100 p-3 rounded-full">
-                  <FileText className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900">Financials</h2>
-                  <p className="text-sm text-gray-600 mt-1">Invoices, payments, and financial records</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Receipt className="h-4 w-4 text-green-600" />
-                  <span>Invoice history</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CreditCard className="h-4 w-4 text-blue-600" />
-                  <span>Payment records</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <DollarSign className="h-4 w-4 text-yellow-600" />
-                  <span>Revenue tracking</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                  <span>Financial reports</span>
-                </div>
-              </div>
-              
-              <div className="bg-green-50 p-3 rounded-lg">
-                <p className="text-sm text-green-700 font-medium">Manage financial data</p>
-                <p className="text-xs text-green-600 mt-1">Stripe invoices, payments, and transactions</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* Analytics Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {dashboardLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : dashboardData ? (
+            <>
+              {/* Key Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          £{dashboardData.overview?.totalRevenue?.toLocaleString() || '0'}
+                        </p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="mt-2 flex items-center text-sm">
+                      <span className={`flex items-center ${(dashboardData.overview?.revenueChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {(dashboardData.overview?.revenueChange || 0) >= 0 ? '↗' : '↘'} {Math.abs(dashboardData.overview?.revenueChange || 0)}%
+                      </span>
+                      <span className="text-gray-500 ml-2">vs yesterday</span>
+                    </div>
+                  </CardContent>
+                </Card>
 
-      </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {dashboardData.overview?.totalOrders?.toLocaleString() || '0'}
+                        </p>
+                      </div>
+                      <ShoppingCart className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      {dashboardData.overview?.todayOrders || 0} today
+                    </div>
+                  </CardContent>
+                </Card>
 
-      {/* Quick Stats Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Overview</CardTitle>
-          <p className="text-sm text-gray-600">Key metrics at a glance - click to explore</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link href="/analytics">
-              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-blue-50 transition-colors border-2 hover:border-blue-200">
-                <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <TrendingUp className="h-6 w-6 text-blue-600" />
-                </div>
-                <p className="text-2xl font-bold text-gray-900">View</p>
-                <p className="text-sm text-gray-600">Analytics</p>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Products</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {dashboardData.overview?.totalProducts || 0}
+                        </p>
+                      </div>
+                      <Package2 className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      {dashboardData.trends?.lowStockProducts?.length || 0} low stock
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Customers</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {dashboardData.overview?.totalCustomers || 0}
+                        </p>
+                      </div>
+                      <Users className="h-8 w-8 text-orange-600" />
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      Active customer base
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </Link>
-            
-            <Link href="/financials">
-              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-green-50 transition-colors border-2 hover:border-green-200">
-                <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Receipt className="h-6 w-6 text-green-600" />
-                </div>
-                <p className="text-2xl font-bold text-gray-900">Manage</p>
-                <p className="text-sm text-gray-600">Invoices</p>
+
+              {/* Revenue Trend Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Weekly Revenue Trend
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(dashboardData.trends?.weeklyRevenue || []).map((day: any, index: number) => (
+                      <div key={day.date} className="flex items-center gap-4">
+                        <div className="w-20 text-sm text-gray-600">
+                          {new Date(day.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">£{day.revenue}</span>
+                          </div>
+                          <Progress 
+                            value={Math.max(1, (day.revenue / Math.max(...(dashboardData.trends?.weeklyRevenue || []).map((d: any) => d.revenue))) * 100)} 
+                            className="h-2"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Products and Low Stock */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Top Performing Products
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {(dashboardData.trends?.topProducts || []).slice(0, 5).map((product: any, index: number) => (
+                        <div key={product.productId} className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500">{product.quantity} units sold</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">£{product.revenue}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Stock Alerts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {(dashboardData.trends?.lowStockProducts || []).slice(0, 5).map((product: any) => (
+                        <div key={product.id} className="flex items-center gap-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
+                            product.stock === 0 ? 'bg-red-500' : product.stock <= 5 ? 'bg-orange-500' : 'bg-yellow-500'
+                          }`}>
+                            {product.stock}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {product.stock === 0 ? 'Out of stock' : `${product.stock} units remaining`}
+                            </p>
+                          </div>
+                          <Link href="/products">
+                            <Button variant="outline" size="sm">
+                              Update Stock
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
+                      {(!dashboardData.trends?.lowStockProducts || dashboardData.trends.lowStockProducts.length === 0) && (
+                        <div className="text-center py-8">
+                          <Activity className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                          <p className="text-gray-500">All products are well stocked!</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </Link>
-            
-            <Link href="/financials">
-              <div className="text-center cursor-pointer p-4 rounded-lg hover:bg-purple-50 transition-colors border-2 hover:border-purple-200">
-                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <CreditCard className="h-6 w-6 text-purple-600" />
-                </div>
-                <p className="text-2xl font-bold text-gray-900">Track</p>
-                <p className="text-sm text-gray-600">Payments</p>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No analytics data available</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Customer Insights Tab */}
+        <TabsContent value="customers" className="space-y-6">
+          {customerLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : customerData ? (
+            <>
+              {/* Customer Segmentation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">New Customers</p>
+                        <p className="text-2xl font-bold text-green-600">{customerData.segmentation?.newCustomers || 0}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-green-600" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">Last 30 days</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Returning</p>
+                        <p className="text-2xl font-bold text-blue-600">{customerData.segmentation?.returningCustomers || 0}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">Active customers</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">At Risk</p>
+                        <p className="text-2xl font-bold text-orange-600">{customerData.segmentation?.atRiskCustomers || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-orange-600" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">Need attention</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
+                        <p className="text-2xl font-bold text-purple-600">£{customerData.metrics?.averageOrderValue || 0}</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">Per customer</p>
+                  </CardContent>
+                </Card>
               </div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+
+              {/* Top Customers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5" />
+                    Top Customers by Value
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(customerData.topCustomers || []).map((customer: any, index: number) => (
+                      <div key={customer.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="text-sm text-gray-500">{customer.phone}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-gray-900">{customer.orderCount} orders</p>
+                          <p className="text-sm text-gray-500">£{customer.avgOrderValue} avg</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">£{customer.totalSpent}</p>
+                          <p className="text-sm text-gray-500">{customer.lastOrderDate}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No customer data available</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Inventory Insights Tab */}
+        <TabsContent value="inventory" className="space-y-6">
+          {inventoryLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : inventoryData ? (
+            <>
+              {/* Inventory Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Products</p>
+                        <p className="text-2xl font-bold text-gray-900">{inventoryData.overview?.totalProducts || 0}</p>
+                      </div>
+                      <Package2 className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Stock Value</p>
+                        <p className="text-2xl font-bold text-green-600">£{inventoryData.overview?.totalStockValue?.toLocaleString() || '0'}</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                        <p className="text-2xl font-bold text-orange-600">{inventoryData.overview?.lowStockCount || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                        <p className="text-2xl font-bold text-red-600">{inventoryData.overview?.outOfStockCount || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-red-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Performance Analysis */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Top Performers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {(inventoryData.performance?.topPerformers || []).map((product: any, index: number) => (
+                        <div key={product.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500">{product.category}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-semibold text-gray-900">{product.quantitySold} sold</p>
+                            <p className="text-sm text-gray-500">{product.stock} in stock</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-green-600">£{product.revenue}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Slow Movers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {(inventoryData.performance?.slowMovers || []).map((product: any) => (
+                        <div key={product.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-semibold text-sm">
+                            !
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500">{product.category}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-semibold text-gray-900">{product.stock} units</p>
+                            <p className="text-sm text-gray-500">£{product.stockValue} value</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-orange-600">
+                              {product.daysSinceLastSale > 999 ? 'Never sold' : `${product.daysSinceLastSale} days`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Category Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="h-5 w-5" />
+                    Category Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(inventoryData.performance?.categories || []).map((category: any) => (
+                      <div key={category.name} className="p-4 border rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2">{category.name}</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Products:</span>
+                            <span className="font-medium">{category.productCount}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Stock:</span>
+                            <span className="font-medium">{category.totalStock}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Value:</span>
+                            <span className="font-medium text-green-600">£{category.totalValue}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No inventory data available</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
