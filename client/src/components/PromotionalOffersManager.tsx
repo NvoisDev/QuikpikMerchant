@@ -181,11 +181,7 @@ export function PromotionalOffersManager({
 
   return (
     <div className={className}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold">Promotional Offers</h3>
-          <p className="text-sm text-gray-600">Add special offers to make your campaign more attractive</p>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button type="button" size="sm">
