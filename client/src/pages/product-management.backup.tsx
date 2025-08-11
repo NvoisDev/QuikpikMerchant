@@ -2368,7 +2368,7 @@ export default function ProductManagement() {
                             </div>
                             <div>
                               <span className="text-gray-500">Stock:</span>
-                              <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              <div className={`font-semibold ${(product.stock > 10 ? 'text-green-600' : (product.stock > 0 ? 'text-yellow-600' : 'text-red-600'))}`}>
                                 {formatNumber(product.stock)} units
                               </div>
                             </div>
@@ -2423,7 +2423,6 @@ export default function ProductManagement() {
           )}
         </div>
       </div>
-      }
 
       {/* Subscription Upgrade Modal */}
       <SubscriptionUpgradeModal
