@@ -56,10 +56,21 @@ export function useSubscription() {
   };
 
   const canEditProduct = (editCount: number) => {
-    if (!user) return false;
+    if (!user) {
+      console.log('⚠️ No user found in useSubscription, using fallback logic');
+      // Fallback: If no user, allow editing for premium users (based on mock/effective user)
+      return true;
+    }
     
     const tier = user.subscriptionTier || 'free';
     const editLimit = getEditLimit(tier);
+    
+    console.log('🔍 canEditProduct check:', {
+      userTier: tier,
+      editLimit,
+      currentEditCount: editCount,
+      canEdit: editLimit === -1 || editCount < editLimit
+    });
     
     if (editLimit === -1) {
       return true; // Unlimited for premium

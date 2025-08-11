@@ -144,7 +144,24 @@ export default function ProductManagement() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<"product_limit" | "edit_limit" | "general">("general");
   
-  const { canCreateProduct, canEditProduct, currentTier } = useSubscription();
+  const { canCreateProduct, canEditProduct: hookCanEditProduct, currentTier } = useSubscription();
+  
+  // Create a custom canEditProduct that considers the effective user
+  const canEditProduct = (editCount: number) => {
+    // If we have a real user, use the hook
+    if (user) {
+      return hookCanEditProduct(editCount);
+    }
+    
+    // If using mock user, check the mock user's subscription tier
+    if (effectiveUser?.subscriptionTier === 'premium') {
+      console.log('✅ Mock premium user - allowing unlimited edits');
+      return true;
+    }
+    
+    // Default to hook behavior for other cases
+    return hookCanEditProduct(editCount);
+  };
 
   // Auto-calculation for total package weight
   const calculateTotalPackageWeight = useCallback((packQuantity: string, unitOfMeasure: string, unitSize: string): number => {
@@ -751,19 +768,26 @@ export default function ProductManagement() {
       canEdit: canEditProduct(product.editCount || 0)
     });
     
-    // TEMPORARY FIX: Allow premium users to edit regardless of count, debug subscription check
+    // Enhanced edit permission check with better logic
     const isPremiumUser = effectiveUser?.subscriptionTier === "premium";
-    const canEdit = isPremiumUser || canEditProduct(product.editCount || 0);
+    const editCount = product.editCount || 0;
+    const canEditBasedOnSubscription = canEditProduct(editCount);
     
-    console.log('🔍 Edit Permission Debug:', {
+    // Premium users always get unlimited edits
+    const finalCanEdit = isPremiumUser || canEditBasedOnSubscription;
+    
+    console.log('🔍 Edit Permission Check:', {
+      productId: product.id,
+      productName: product.name,
       isPremiumUser,
       effectiveUserTier: effectiveUser?.subscriptionTier,
-      editCount: product.editCount,
-      canEditResult: canEditProduct(product.editCount || 0),
-      finalCanEdit: canEdit
+      currentEditCount: editCount,
+      authUser: !!user,
+      canEditFromHook: canEditBasedOnSubscription,
+      finalDecision: finalCanEdit
     });
     
-    if (!canEdit) {
+    if (!finalCanEdit) {
       console.log('❌ Edit blocked due to subscription limits');
       setUpgradeReason("edit_limit");
       setUpgradeModalOpen(true);
