@@ -2015,7 +2015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customer = await storage.updateCustomer(customer.id, {
               firstName,
               lastName,
-              email: emailConflict ? customer.email : (customerEmail || customer.email || '')
+              email: emailConflict ? (customer.email || undefined) : (customerEmail || customer.email || undefined)
             });
             
             // Update phone number separately if needed
@@ -4029,7 +4029,7 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json(personalizedMessage);
     } catch (error) {
       console.error("AI test error:", error);
-      console.error("Error details:", error.message);
+      console.error("Error details:", error instanceof Error ? error.message : 'Unknown error');
       
       const fallbackMessage = {
         greeting: "Hi Test Customer!",
@@ -4536,7 +4536,7 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json({ success: true, id, result: result.rows });
     } catch (error) {
       console.error("=== TEST ERROR ===", error);
-      res.status(500).json({ message: "Test failed", error: error.message });
+      res.status(500).json({ message: "Test failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -4561,9 +4561,9 @@ Write a professional, sales-focused description that highlights the key benefits
     } catch (error) {
       console.error("=== Error in wholesaler profile route ===");
       console.error("Error type:", error.constructor.name);
-      console.error("Error message:", error.message);
+      console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
       console.error("Full error:", error);
-      console.error("Stack trace:", error.stack);
+      console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
       res.status(500).json({ message: "Failed to fetch wholesaler profile" });
     }
   });
@@ -5633,16 +5633,17 @@ Return only the taglines, one per line, without numbers or formatting.`;
             },
             promotionalOffers: (() => {
               try {
-                if (!product.promotionalOffers || product.promotionalOffers === '' || product.promotionalOffers === 'null' || product.promotionalOffers === '[]') {
+                const offers = product.promotionalOffers;
+                if (!offers || offers === '' || offers === 'null' || offers === '[]') {
                   return [];
                 }
                 // Handle array objects directly
-                if (Array.isArray(product.promotionalOffers)) {
-                  return product.promotionalOffers;
+                if (Array.isArray(offers)) {
+                  return offers;
                 }
                 // Parse string JSON - handle double-escaped JSON
-                if (typeof product.promotionalOffers === 'string') {
-                  let dataToparse = product.promotionalOffers;
+                if (typeof offers === 'string') {
+                  let dataToparse = offers;
                   
                   // Handle double-escaped JSON strings
                   if (dataToparse.startsWith('""') && dataToparse.endsWith('""')) {
@@ -5725,15 +5726,16 @@ Return only the taglines, one per line, without numbers or formatting.`;
 
       // Filter campaigns by date and type
       const filteredBroadcasts = broadcasts.filter(broadcast => {
-        const created = new Date(broadcast.createdAt);
+        const created = new Date(broadcast.createdAt || Date.now());
         const isInTimeRange = created >= fromDate;
         
         if (campaignFilter === 'promotional') {
           try {
-            const hasOffers = broadcast.promotionalOffers && 
-              broadcast.promotionalOffers !== '[]' && 
-              broadcast.promotionalOffers !== 'null' &&
-              broadcast.promotionalOffers.length > 0;
+            const offers = broadcast.promotionalOffers;
+            const hasOffers = offers && 
+              offers !== '[]' && 
+              offers !== 'null' &&
+              (Array.isArray(offers) ? offers.length > 0 : (typeof offers === 'string' && offers.length > 0));
             return isInTimeRange && hasOffers;
           } catch (e) {
             return false;
@@ -5744,16 +5746,17 @@ Return only the taglines, one per line, without numbers or formatting.`;
       });
 
       const filteredTemplates = templates.filter(template => {
-        const created = new Date(template.createdAt);
+        const created = new Date(template.createdAt || Date.now());
         const isInTimeRange = created >= fromDate;
         
         if (campaignFilter === 'promotional') {
           const hasOffers = template.products.some(p => {
             try {
-              return p.promotionalOffers && 
-                p.promotionalOffers !== '[]' && 
-                p.promotionalOffers !== 'null' &&
-                p.promotionalOffers.length > 0;
+              const offers = p.promotionalOffers;
+              return offers && 
+                offers !== '[]' && 
+                offers !== 'null' &&
+                (Array.isArray(offers) ? offers.length > 0 : (typeof offers === 'string' && offers.length > 0));
             } catch (e) {
               return false;
             }
@@ -5777,9 +5780,9 @@ Return only the taglines, one per line, without numbers or formatting.`;
           totalRecipients += broadcast.recipientCount || 0;
           
           // Calculate real order metrics for this broadcast
-          const broadcastDate = new Date(broadcast.sentAt);
+          const broadcastDate = new Date(broadcast.sentAt || Date.now());
           const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(order.createdAt);
+            const orderDate = new Date(order.createdAt || Date.now());
             const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
             return orderDate >= broadcastDate && validStatuses.includes(order.status);
           });
@@ -5831,9 +5834,9 @@ Return only the taglines, one per line, without numbers or formatting.`;
       // Check broadcasts
       for (const broadcast of filteredBroadcasts) {
         if (broadcast.sentAt) {
-          const broadcastDate = new Date(broadcast.sentAt);
+          const broadcastDate = new Date(broadcast.sentAt || Date.now());
           const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(order.createdAt);
+            const orderDate = new Date(order.createdAt || Date.now());
             const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
             return orderDate >= broadcastDate && validStatuses.includes(order.status);
           });
@@ -8128,7 +8131,7 @@ https://quikpik.app`;
       });
     } catch (error) {
       console.error("Error sending test email:", error);
-      res.status(500).json({ message: "Failed to send test email", error: error.message });
+      res.status(500).json({ message: "Failed to send test email", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 

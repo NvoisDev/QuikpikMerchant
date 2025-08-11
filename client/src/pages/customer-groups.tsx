@@ -49,7 +49,10 @@ const editMemberFormSchema = z.object({
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   name: z.string().min(1, "Customer name is required"),
-  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  email: z.union([
+    z.string().email("Please enter a valid email address"),
+    z.literal("")
+  ]).optional(),
 });
 
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
@@ -626,9 +629,10 @@ export default function CustomerGroups() {
 
   const onEditMember = (member: any) => {
     setEditingMember(member);
-    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim();
+    // Handle different member data structures - some have firstName/lastName, others have name
+    const fullName = member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim();
     editMemberForm.reset({
-      phoneNumber: member.phoneNumber || "",
+      phoneNumber: member.phoneNumber || member.phone || "",
       name: fullName || "",
       email: member.email || "",
     });
