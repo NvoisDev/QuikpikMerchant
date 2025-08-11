@@ -2423,5 +2423,17 @@ export default function ProductManagement() {
           )}
         </div>
       </div>
+
+      {/* Subscription Upgrade Modal */}
+      <SubscriptionUpgradeModal
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        reason={upgradeReason}
+        currentPlan={currentTier}
+      />
+      
+      {/* Floating Help */}
+      <FloatingHelp context="product-management" />
+    </div>
   );
 }
