@@ -261,7 +261,7 @@ export default function ProductManagement() {
   // Load product data into form when editing (prevents stack overflow)
   useEffect(() => {
     if (isDialogOpen && editingProduct) {
-      console.log('🔄 Loading product data into form safely');
+      console.log('🔄 Loading product data into form safely', editingProduct);
       // Use setTimeout to avoid race conditions
       setTimeout(() => {
         try {
@@ -270,24 +270,47 @@ export default function ProductManagement() {
             description: editingProduct.description || "",
             price: String(editingProduct.price || ""),
             currency: editingProduct.currency || "GBP",
-            moq: String(editingProduct.moq || ""),
-            stock: String(editingProduct.stock || ""),
+            moq: String(editingProduct.moq || "1"),
+            stock: String(editingProduct.stock || "0"),
             category: editingProduct.category || "",
             imageUrl: editingProduct.imageUrl || "",
+            images: Array.isArray(editingProduct.images) ? editingProduct.images : [],
             priceVisible: editingProduct.priceVisible !== false,
             negotiationEnabled: editingProduct.negotiationEnabled === true,
             minimumBidPrice: String(editingProduct.minimumBidPrice || ""),
             status: editingProduct.status || "active",
-            unit: editingProduct.unit || "units",
+            // Extended fields to match schema
+            packQuantity: String(editingProduct.packQuantity || ""),
+            unitOfMeasure: editingProduct.unitOfMeasure || "",
+            unitSize: String(editingProduct.unitSize || ""),
+            totalPackageWeight: String(editingProduct.totalPackageWeight || ""),
             unitsPerPallet: String(editingProduct.unitsPerPallet || ""),
-            promotionalOffers: [],
+            palletPrice: String(editingProduct.palletPrice || ""),
+            palletMoq: String(editingProduct.palletMoq || ""),
+            palletStock: String(editingProduct.palletStock || ""),
+            palletWeight: String(editingProduct.palletWeight || ""),
+            lowStockThreshold: String(editingProduct.lowStockThreshold || ""),
+            shelfLife: String(editingProduct.shelfLife || ""),
+            unit: editingProduct.unit || "units",
+            sellingFormat: editingProduct.sellingFormat || "units",
+            deliveryExcluded: Boolean(editingProduct.deliveryExcluded),
+            temperatureRequirement: editingProduct.temperatureRequirement || "ambient",
+            contentCategory: editingProduct.contentCategory || "general",
+            specialHandling: editingProduct.specialHandling || {
+              fragile: false,
+              perishable: false,
+              hazardous: false,
+            },
+            promotionalOffers: Array.isArray(editingProduct.promotionalOffers) ? editingProduct.promotionalOffers : [],
           };
+          
+          console.log('📝 Safe data being set:', safeData);
           form.reset(safeData);
-          console.log('✅ Form safely populated');
+          console.log('✅ Form safely populated with complete data');
         } catch (error) {
           console.error('❌ Safe form population failed:', error);
         }
-      }, 50);
+      }, 100);
     }
   }, [isDialogOpen, editingProduct, form]);
 
