@@ -804,42 +804,53 @@ export default function ProductManagement() {
     });
     
     setEditingProduct(product);
-    form.reset({
-      name: product.name,
-      description: product.description || "",
-      price: product.price.toString(),
-      currency: product.currency || "GBP",
-      moq: product.moq.toString(),
-      stock: product.stock.toString(),
-      category: product.category || "",
-      imageUrl: product.imageUrl || "",
-      images: product.images || [],
-      priceVisible: product.priceVisible,
-      negotiationEnabled: product.negotiationEnabled,
-      minimumBidPrice: product.minimumBidPrice || "",
-      status: product.status,
-      // Flexible unit system
-      packQuantity: product.packQuantity?.toString() || "",
-      unitOfMeasure: product.unitOfMeasure || "",
-      unitSize: product.unitSize?.toString() || "",
-      // Weight and shipping fields
-      totalPackageWeight: product.totalPackageWeight?.toString() || "",
-      deliveryExcluded: product.deliveryExcluded || false,
-      temperatureRequirement: product.temperatureRequirement || "ambient",
-      contentCategory: product.contentCategory || "general",
-      specialHandling: product.specialHandling || {},
-      shelfLife: product.shelfLife?.toString() || "",
-      lowStockThreshold: product.lowStockThreshold?.toString() || "50",
-      // Pallet configuration fields
-      sellingFormat: product.sellingFormat || "units",
-      unitsPerPallet: product.unitsPerPallet?.toString() || "",
-      palletPrice: product.palletPrice?.toString() || "",
-      palletMoq: product.palletMoq?.toString() || "",
-      palletStock: product.palletStock?.toString() || "",
-      palletWeight: product.palletWeight?.toString() || "",
-      // Promotional offers
-      promotionalOffers: product.promotionalOffers || [],
-    });
+    
+    // Safe form reset with try-catch to prevent stack overflow
+    try {
+      const formData = {
+        name: product.name || "",
+        description: product.description || "",
+        price: String(product.price || ""),
+        currency: product.currency || "GBP",
+        moq: String(product.moq || ""),
+        stock: String(product.stock || ""),
+        category: product.category || "",
+        imageUrl: product.imageUrl || "",
+        images: Array.isArray(product.images) ? product.images : [],
+        priceVisible: Boolean(product.priceVisible),
+        negotiationEnabled: Boolean(product.negotiationEnabled),
+        minimumBidPrice: String(product.minimumBidPrice || ""),
+        status: product.status || "active",
+        // Flexible unit system
+        packQuantity: String(product.packQuantity || ""),
+        unitOfMeasure: product.unitOfMeasure || "",
+        unitSize: String(product.unitSize || ""),
+        // Weight and shipping fields
+        totalPackageWeight: String(product.totalPackageWeight || ""),
+        deliveryExcluded: Boolean(product.deliveryExcluded),
+        temperatureRequirement: product.temperatureRequirement || "ambient",
+        contentCategory: product.contentCategory || "general",
+        specialHandling: typeof product.specialHandling === 'object' ? product.specialHandling : {},
+        shelfLife: String(product.shelfLife || ""),
+        lowStockThreshold: String(product.lowStockThreshold || "50"),
+        // Pallet configuration fields
+        sellingFormat: product.sellingFormat || "units",
+        unitsPerPallet: String(product.unitsPerPallet || ""),
+        palletPrice: String(product.palletPrice || ""),
+        palletMoq: String(product.palletMoq || ""),
+        palletStock: String(product.palletStock || ""),
+        palletWeight: String(product.palletWeight || ""),
+        // Promotional offers - ensure it's an array
+        promotionalOffers: Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [],
+      };
+      
+      console.log('🔧 Safe form reset with sanitized data');
+      form.reset(formData);
+    } catch (resetError) {
+      console.error('❌ Form reset failed:', resetError);
+      // Fallback: reset to empty form
+      form.reset();
+    }
     console.log('🚀 Opening dialog - isDialogOpen state change to true');
     console.log('✅ CRITICAL: Setting isDialogOpen to TRUE and editingProduct to product data');
     setIsDialogOpen(true);
@@ -868,42 +879,48 @@ export default function ProductManagement() {
     
     // Reset the form with the product data but clear the ID to create a new product
     setEditingProduct(null); // Set to null so it creates instead of edits
-    form.reset({
-      name: `${product.name} (Copy)`,
-      description: product.description || "",
-      price: product.price.toString(),
-      currency: product.currency || "GBP",
-      moq: product.moq.toString(),
-      stock: product.stock.toString(),
-      category: product.category || "",
-      imageUrl: product.imageUrl || "",
-      images: product.images || [],
-      priceVisible: product.priceVisible,
-      negotiationEnabled: product.negotiationEnabled,
-      minimumBidPrice: product.minimumBidPrice || "",
-      status: product.status,
-      // Flexible unit system
-      packQuantity: product.packQuantity?.toString() || "",
-      unitOfMeasure: product.unitOfMeasure || "",
-      unitSize: product.unitSize?.toString() || "",
-      // Weight and shipping fields
-      totalPackageWeight: product.totalPackageWeight?.toString() || "",
-      deliveryExcluded: product.deliveryExcluded || false,
-      temperatureRequirement: product.temperatureRequirement || "ambient",
-      contentCategory: product.contentCategory || "general",
-      specialHandling: product.specialHandling || {},
-      shelfLife: product.shelfLife?.toString() || "",
-      lowStockThreshold: product.lowStockThreshold?.toString() || "50",
-      // Pallet configuration fields
-      sellingFormat: product.sellingFormat || "units",
-      unitsPerPallet: product.unitsPerPallet?.toString() || "",
-      palletPrice: product.palletPrice?.toString() || "",
-      palletMoq: product.palletMoq?.toString() || "",
-      palletStock: product.palletStock?.toString() || "",
-      palletWeight: product.palletWeight?.toString() || "",
-      // Promotional offers  
-      promotionalOffers: product.promotionalOffers || [],
-    });
+    
+    try {
+      form.reset({
+        name: `${product.name} (Copy)`,
+        description: product.description || "",
+        price: String(product.price || ""),
+        currency: product.currency || "GBP",
+        moq: String(product.moq || ""),
+        stock: String(product.stock || ""),
+        category: product.category || "",
+        imageUrl: product.imageUrl || "",
+        images: Array.isArray(product.images) ? product.images : [],
+        priceVisible: Boolean(product.priceVisible),
+        negotiationEnabled: Boolean(product.negotiationEnabled),
+        minimumBidPrice: String(product.minimumBidPrice || ""),
+        status: product.status || "active",
+        // Flexible unit system
+        packQuantity: String(product.packQuantity || ""),
+        unitOfMeasure: product.unitOfMeasure || "",
+        unitSize: String(product.unitSize || ""),
+        // Weight and shipping fields
+        totalPackageWeight: String(product.totalPackageWeight || ""),
+        deliveryExcluded: Boolean(product.deliveryExcluded),
+        temperatureRequirement: product.temperatureRequirement || "ambient",
+        contentCategory: product.contentCategory || "general",
+        specialHandling: typeof product.specialHandling === 'object' ? product.specialHandling : {},
+        shelfLife: String(product.shelfLife || ""),
+        lowStockThreshold: String(product.lowStockThreshold || "50"),
+        // Pallet configuration fields
+        sellingFormat: product.sellingFormat || "units",
+        unitsPerPallet: String(product.unitsPerPallet || ""),
+        palletPrice: String(product.palletPrice || ""),
+        palletMoq: String(product.palletMoq || ""),
+        palletStock: String(product.palletStock || ""),
+        palletWeight: String(product.palletWeight || ""),
+        // Promotional offers  
+        promotionalOffers: Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [],
+      });
+    } catch (error) {
+      console.error('❌ Duplicate form reset failed:', error);
+      form.reset();
+    }
     setIsDialogOpen(true);
   };
 
