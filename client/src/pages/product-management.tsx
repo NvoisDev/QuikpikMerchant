@@ -751,8 +751,19 @@ export default function ProductManagement() {
       canEdit: canEditProduct(product.editCount || 0)
     });
     
-    // Check if user can edit this product based on edit count and subscription
-    if (!canEditProduct(product.editCount || 0)) {
+    // TEMPORARY FIX: Allow premium users to edit regardless of count, debug subscription check
+    const isPremiumUser = effectiveUser?.subscriptionTier === "premium";
+    const canEdit = isPremiumUser || canEditProduct(product.editCount || 0);
+    
+    console.log('🔍 Edit Permission Debug:', {
+      isPremiumUser,
+      effectiveUserTier: effectiveUser?.subscriptionTier,
+      editCount: product.editCount,
+      canEditResult: canEditProduct(product.editCount || 0),
+      finalCanEdit: canEdit
+    });
+    
+    if (!canEdit) {
       console.log('❌ Edit blocked due to subscription limits');
       setUpgradeReason("edit_limit");
       setUpgradeModalOpen(true);
