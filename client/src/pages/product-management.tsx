@@ -314,63 +314,78 @@ export default function ProductManagement() {
     }
   }, [isDialogOpen, editingProduct, form]);
 
-  // DISABLED: Auto-calculate total package weight to prevent stack overflow
-  // useEffect(() => {
-  //   const subscription = form.watch((values, { name }) => {
-  //     if (name === 'packQuantity' || name === 'unitOfMeasure' || name === 'unitSize') {
-  //       const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
-  //       
-  //       if (packQuantity && unitOfMeasure && unitSize) {
-  //         const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
-  //         
-  //         if (calculatedWeight > 0) {
-  //           form.setValue('totalPackageWeight', calculatedWeight.toString(), { shouldValidate: false });
-  //           
-  //           // Show calculation info in toast for user feedback
-  //           if (name) { // Only show toast when user is actively editing
-  //             toast({
-  //               title: "Weight Auto-Calculated",
-  //               description: `Total package weight: ${calculatedWeight}kg (${packQuantity} × ${unitSize}${unitOfMeasure})`,
-  //               duration: 2000,
-  //             });
-  //           }
-  //         }
-  //       }
-  //     }
-  //   });
+  // Safe package weight auto-calculation (re-enabled with guards)
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      // Only calculate when user actively changes these specific fields
+      if (name === 'packQuantity' || name === 'unitOfMeasure' || name === 'unitSize') {
+        const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
+        
+        if (packQuantity && unitOfMeasure && unitSize) {
+          const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
+          
+          if (calculatedWeight > 0) {
+            // Get current weight to avoid unnecessary updates
+            const currentWeight = form.getValues('totalPackageWeight');
+            const newWeight = calculatedWeight.toString();
+            
+            // Only update if the value actually changed
+            if (currentWeight !== newWeight) {
+              console.log('⚖️ Auto-calculating package weight:', { packQuantity, unitOfMeasure, unitSize, calculatedWeight });
+              form.setValue('totalPackageWeight', newWeight, { shouldValidate: false });
+              
+              // Show calculation info
+              toast({
+                title: "Weight Auto-Calculated",
+                description: `${calculatedWeight}kg (${packQuantity} × ${unitSize}${unitOfMeasure})`,
+                duration: 2000,
+              });
+            }
+          }
+        }
+      }
+    });
 
-  //   return () => subscription.unsubscribe();
-  // }, [form, calculateTotalPackageWeight, toast]);
+    return () => subscription.unsubscribe();
+  }, [form, calculateTotalPackageWeight, toast]);
 
-  // DISABLED: Auto-calculate pallet weight to prevent stack overflow
-  // useEffect(() => {
-  //   const subscription = form.watch((values, { name }) => {
-  //     if (name === 'totalPackageWeight' || name === 'unitsPerPallet') {
-  //       const { totalPackageWeight = '', unitsPerPallet = '' } = values;
-  //       
-  //       if (totalPackageWeight && unitsPerPallet) {
-  //         const packageWeight = parseFloat(totalPackageWeight);
-  //         const units = parseInt(unitsPerPallet);
-  //         
-  //         if (packageWeight > 0 && units > 0) {
-  //           const calculatedPalletWeight = Math.round((packageWeight * units) * 1000) / 1000; // Round to 3 decimal places
-  //           form.setValue('palletWeight', calculatedPalletWeight.toString(), { shouldValidate: false });
-  //           
-  //           // Show calculation info in toast for user feedback
-  //           if (name) { // Only show toast when user is actively editing
-  //             toast({
-  //               title: "Pallet Weight Auto-Calculated",
-  //               description: `Total pallet weight: ${calculatedPalletWeight}kg (${units} × ${packageWeight}kg)`,
-  //               duration: 2000,
-  //             });
-  //           }
-  //         }
-  //       }
-  //     }
-  //   });
+  // Safe pallet weight auto-calculation (re-enabled with guards)
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      // Only calculate when user actively changes these specific fields
+      if (name === 'totalPackageWeight' || name === 'unitsPerPallet') {
+        const { totalPackageWeight = '', unitsPerPallet = '' } = values;
+        
+        if (totalPackageWeight && unitsPerPallet) {
+          const packageWeight = parseFloat(totalPackageWeight);
+          const units = parseInt(unitsPerPallet);
+          
+          if (packageWeight > 0 && units > 0) {
+            const calculatedPalletWeight = Math.round((packageWeight * units) * 1000) / 1000;
+            
+            // Get current pallet weight to avoid unnecessary updates
+            const currentPalletWeight = form.getValues('palletWeight');
+            const newPalletWeight = calculatedPalletWeight.toString();
+            
+            // Only update if the value actually changed
+            if (currentPalletWeight !== newPalletWeight) {
+              console.log('🔢 Auto-calculating pallet weight:', { packageWeight, units, calculatedPalletWeight });
+              form.setValue('palletWeight', newPalletWeight, { shouldValidate: false });
+              
+              // Show calculation info
+              toast({
+                title: "Pallet Weight Auto-Calculated",
+                description: `${calculatedPalletWeight}kg (${units} units × ${packageWeight}kg each)`,
+                duration: 2000,
+              });
+            }
+          }
+        }
+      }
+    });
 
-  //   return () => subscription.unsubscribe();
-  // }, [form, toast]);
+    return () => subscription.unsubscribe();
+  }, [form, toast]);
 
   // DISABLED: Auto-determine selling format to prevent stack overflow
   // useEffect(() => {
