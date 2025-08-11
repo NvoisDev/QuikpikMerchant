@@ -773,7 +773,7 @@ export default function ProductManagement() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
-      currency: product.currency || user?.preferredCurrency || "GBP",
+      currency: product.currency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
       category: product.category || "",
@@ -806,21 +806,14 @@ export default function ProductManagement() {
       promotionalOffers: product.promotionalOffers || [],
     });
     console.log('🚀 Opening dialog - isDialogOpen state change to true');
+    console.log('✅ CRITICAL: Setting isDialogOpen to TRUE and editingProduct to product data');
     setIsDialogOpen(true);
     console.log('📊 Final state check:', {
       isDialogOpen: true,
       editingProduct: !!product,
-      dialogShouldOpen: true
+      dialogShouldOpen: true,
+      productName: product.name
     });
-    
-    // Force a small delay to ensure state updates are processed
-    setTimeout(() => {
-      console.log('🔍 Dialog state after timeout:', {
-        isDialogOpenState: isDialogOpen,
-        dialogElement: document.querySelector('[role="dialog"]'),
-        dialogExists: !!document.querySelector('[role="dialog"]')
-      });
-    }, 100);
   };
 
   const handleDelete = (id: number) => {
@@ -844,7 +837,7 @@ export default function ProductManagement() {
       name: `${product.name} (Copy)`,
       description: product.description || "",
       price: product.price.toString(),
-      currency: product.currency || user?.preferredCurrency || "GBP",
+      currency: product.currency || "GBP",
       moq: product.moq.toString(),
       stock: product.stock.toString(),
       category: product.category || "",
@@ -1195,6 +1188,44 @@ export default function ProductManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Test Modal - Should appear when isDialogOpen is true */}
+      {isDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+             onClick={() => setIsDialogOpen(false)}>
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4 border-4 border-green-500" 
+               onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-green-600">
+              ✅ EDIT DIALOG IS WORKING!
+            </h2>
+            {editingProduct && (
+              <div className="mb-4">
+                <p className="font-semibold">Editing: {editingProduct.name}</p>
+                <p className="text-sm text-gray-600">Price: £{editingProduct.price}</p>
+                <p className="text-sm text-gray-600">Stock: {editingProduct.stock} units</p>
+              </div>
+            )}
+            <p className="mb-4">The dialog state is working correctly. The shadcn Dialog component should now be implemented here.</p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setIsDialogOpen(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => {
+                  console.log('Would open full edit form here');
+                  alert(`Would edit: ${editingProduct?.name || 'New Product'}`);
+                }}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
+                Continue to Edit Form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex-1">
         {/* Top Bar */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
@@ -1402,7 +1433,7 @@ export default function ProductManagement() {
                     Add Product
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2 border-red-500">
                   <DialogHeader>
                     <DialogTitle>
                       {editingProduct ? "Edit Product" : "Add New Product"}
