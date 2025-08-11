@@ -258,83 +258,116 @@ export default function ProductManagement() {
     },
   });
 
-  // Auto-calculate total package weight when unit configuration changes
+  // Load product data into form when editing (prevents stack overflow)
   useEffect(() => {
-    const subscription = form.watch((values, { name }) => {
-      if (name === 'packQuantity' || name === 'unitOfMeasure' || name === 'unitSize') {
-        const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
-        
-        if (packQuantity && unitOfMeasure && unitSize) {
-          const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
-          
-          if (calculatedWeight > 0) {
-            form.setValue('totalPackageWeight', calculatedWeight.toString(), { shouldValidate: false });
-            
-            // Show calculation info in toast for user feedback
-            if (name) { // Only show toast when user is actively editing
-              toast({
-                title: "Weight Auto-Calculated",
-                description: `Total package weight: ${calculatedWeight}kg (${packQuantity} × ${unitSize}${unitOfMeasure})`,
-                duration: 2000,
-              });
-            }
-          }
+    if (isDialogOpen && editingProduct) {
+      console.log('🔄 Loading product data into form safely');
+      // Use setTimeout to avoid race conditions
+      setTimeout(() => {
+        try {
+          const safeData = {
+            name: editingProduct.name || "",
+            description: editingProduct.description || "",
+            price: String(editingProduct.price || ""),
+            currency: editingProduct.currency || "GBP",
+            moq: String(editingProduct.moq || ""),
+            stock: String(editingProduct.stock || ""),
+            category: editingProduct.category || "",
+            imageUrl: editingProduct.imageUrl || "",
+            priceVisible: editingProduct.priceVisible !== false,
+            negotiationEnabled: editingProduct.negotiationEnabled === true,
+            minimumBidPrice: String(editingProduct.minimumBidPrice || ""),
+            status: editingProduct.status || "active",
+            unit: editingProduct.unit || "units",
+            unitsPerPallet: String(editingProduct.unitsPerPallet || ""),
+            promotionalOffers: [],
+          };
+          form.reset(safeData);
+          console.log('✅ Form safely populated');
+        } catch (error) {
+          console.error('❌ Safe form population failed:', error);
         }
-      }
-    });
+      }, 50);
+    }
+  }, [isDialogOpen, editingProduct, form]);
 
-    return () => subscription.unsubscribe();
-  }, [form, calculateTotalPackageWeight, toast]);
+  // DISABLED: Auto-calculate total package weight to prevent stack overflow
+  // useEffect(() => {
+  //   const subscription = form.watch((values, { name }) => {
+  //     if (name === 'packQuantity' || name === 'unitOfMeasure' || name === 'unitSize') {
+  //       const { packQuantity = '', unitOfMeasure = '', unitSize = '' } = values;
+  //       
+  //       if (packQuantity && unitOfMeasure && unitSize) {
+  //         const calculatedWeight = calculateTotalPackageWeight(packQuantity, unitOfMeasure, unitSize);
+  //         
+  //         if (calculatedWeight > 0) {
+  //           form.setValue('totalPackageWeight', calculatedWeight.toString(), { shouldValidate: false });
+  //           
+  //           // Show calculation info in toast for user feedback
+  //           if (name) { // Only show toast when user is actively editing
+  //             toast({
+  //               title: "Weight Auto-Calculated",
+  //               description: `Total package weight: ${calculatedWeight}kg (${packQuantity} × ${unitSize}${unitOfMeasure})`,
+  //               duration: 2000,
+  //             });
+  //           }
+  //         }
+  //       }
+  //     }
+  //   });
 
-  // Auto-calculate pallet weight when package weight or units per pallet changes
-  useEffect(() => {
-    const subscription = form.watch((values, { name }) => {
-      if (name === 'totalPackageWeight' || name === 'unitsPerPallet') {
-        const { totalPackageWeight = '', unitsPerPallet = '' } = values;
-        
-        if (totalPackageWeight && unitsPerPallet) {
-          const packageWeight = parseFloat(totalPackageWeight);
-          const units = parseInt(unitsPerPallet);
-          
-          if (packageWeight > 0 && units > 0) {
-            const calculatedPalletWeight = Math.round((packageWeight * units) * 1000) / 1000; // Round to 3 decimal places
-            form.setValue('palletWeight', calculatedPalletWeight.toString(), { shouldValidate: false });
-            
-            // Show calculation info in toast for user feedback
-            if (name) { // Only show toast when user is actively editing
-              toast({
-                title: "Pallet Weight Auto-Calculated",
-                description: `Total pallet weight: ${calculatedPalletWeight}kg (${units} × ${packageWeight}kg)`,
-                duration: 2000,
-              });
-            }
-          }
-        }
-      }
-    });
+  //   return () => subscription.unsubscribe();
+  // }, [form, calculateTotalPackageWeight, toast]);
 
-    return () => subscription.unsubscribe();
-  }, [form, toast]);
+  // DISABLED: Auto-calculate pallet weight to prevent stack overflow
+  // useEffect(() => {
+  //   const subscription = form.watch((values, { name }) => {
+  //     if (name === 'totalPackageWeight' || name === 'unitsPerPallet') {
+  //       const { totalPackageWeight = '', unitsPerPallet = '' } = values;
+  //       
+  //       if (totalPackageWeight && unitsPerPallet) {
+  //         const packageWeight = parseFloat(totalPackageWeight);
+  //         const units = parseInt(unitsPerPallet);
+  //         
+  //         if (packageWeight > 0 && units > 0) {
+  //           const calculatedPalletWeight = Math.round((packageWeight * units) * 1000) / 1000; // Round to 3 decimal places
+  //           form.setValue('palletWeight', calculatedPalletWeight.toString(), { shouldValidate: false });
+  //           
+  //           // Show calculation info in toast for user feedback
+  //           if (name) { // Only show toast when user is actively editing
+  //             toast({
+  //               title: "Pallet Weight Auto-Calculated",
+  //               description: `Total pallet weight: ${calculatedPalletWeight}kg (${units} × ${packageWeight}kg)`,
+  //               duration: 2000,
+  //             });
+  //           }
+  //         }
+  //       }
+  //     }
+  //   });
 
-  // Auto-determine selling format based on pallet configuration
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      const { unitsPerPallet, palletPrice, palletMoq, palletStock } = values;
-      
-      // Check if any pallet configuration is provided
-      const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
-      
-      if (hasPalletConfig) {
-        // If pallet configuration is provided, enable both units and pallets
-        form.setValue('sellingFormat', 'both', { shouldValidate: false });
-      } else {
-        // If no pallet configuration, default to units only
-        form.setValue('sellingFormat', 'units', { shouldValidate: false });
-      }
-    });
+  //   return () => subscription.unsubscribe();
+  // }, [form, toast]);
 
-    return () => subscription.unsubscribe();
-  }, [form]);
+  // DISABLED: Auto-determine selling format to prevent stack overflow
+  // useEffect(() => {
+  //   const subscription = form.watch((values) => {
+  //     const { unitsPerPallet, palletPrice, palletMoq, palletStock } = values;
+  //     
+  //     // Check if any pallet configuration is provided
+  //     const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
+  //     
+  //     if (hasPalletConfig) {
+  //       // If pallet configuration is provided, enable both units and pallets
+  //       form.setValue('sellingFormat', 'both', { shouldValidate: false });
+  //     } else {
+  //       // If no pallet configuration, default to units only
+  //       form.setValue('sellingFormat', 'units', { shouldValidate: false });
+  //     }
+  //   });
+
+  //   return () => subscription.unsubscribe();
+  // }, [form]);
 
   const generateDescription = async () => {
     try {
@@ -2342,16 +2375,8 @@ export default function ProductManagement() {
                               <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")}>
                                 {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
                               </Badge>
-                              <Button variant="ghost" size="sm" onClick={() => {
-                                console.log('🔴 DIRECT EDIT TEST - Bypassing handleEdit');
-                                setEditingProduct(product);
-                                setIsDialogOpen(true);
-                                console.log('🔴 DIRECT: Dialog should be open now');
-                              }}>
-                                Edit (Direct Test)
-                              </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
-                                Edit (Handler)
+                                Edit
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDuplicate(product)}>
                                 Duplicate
