@@ -203,7 +203,7 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
-      currency: effectiveUser?.preferredCurrency || "GBP",
+      currency: "GBP",
       moq: "1",
       stock: "0",
       category: "",
@@ -1410,12 +1410,14 @@ export default function ProductManagement() {
               >
                 <DialogTrigger asChild>
                   <Button onClick={() => {
+                    console.log('🔥 ADD PRODUCT BUTTON CLICKED!');
+                    alert('Add Product button works!');
                     setEditingProduct(null);
                     form.reset({
                       name: "",
                       description: "",
                       price: "",
-                      currency: user?.preferredCurrency || "GBP",
+                      currency: "GBP",
                       moq: "1",
                       stock: "0",
                       category: "",
@@ -2434,7 +2436,7 @@ export default function ProductManagement() {
                       name: "",
                       description: "",
                       price: "",
-                      currency: user?.preferredCurrency || "GBP",
+                      currency: "GBP",
                       moq: "1",
                       stock: "0",
                       category: "",
