@@ -387,25 +387,31 @@ export default function ProductManagement() {
     return () => subscription.unsubscribe();
   }, [form, toast]);
 
-  // DISABLED: Auto-determine selling format to prevent stack overflow
-  // useEffect(() => {
-  //   const subscription = form.watch((values) => {
-  //     const { unitsPerPallet, palletPrice, palletMoq, palletStock } = values;
-  //     
-  //     // Check if any pallet configuration is provided
-  //     const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
-  //     
-  //     if (hasPalletConfig) {
-  //       // If pallet configuration is provided, enable both units and pallets
-  //       form.setValue('sellingFormat', 'both', { shouldValidate: false });
-  //     } else {
-  //       // If no pallet configuration, default to units only
-  //       form.setValue('sellingFormat', 'units', { shouldValidate: false });
-  //     }
-  //   });
+  // Auto-determine selling format based on pallet configuration (re-enabled with guards)
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      // Only check when pallet-related fields change
+      if (name && ['unitsPerPallet', 'palletPrice', 'palletMoq', 'palletStock'].includes(name)) {
+        const { unitsPerPallet, palletPrice, palletMoq, palletStock, sellingFormat } = values;
+        
+        // Check if all pallet configuration fields are provided
+        const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
+        
+        let newSellingFormat = 'units'; // default
+        if (hasPalletConfig) {
+          newSellingFormat = 'both'; // units and pallets
+        }
+        
+        // Only update if the value actually changed
+        if (sellingFormat !== newSellingFormat) {
+          console.log('🏷️ Auto-updating selling format:', { from: sellingFormat, to: newSellingFormat, hasPalletConfig });
+          form.setValue('sellingFormat', newSellingFormat, { shouldValidate: false });
+        }
+      }
+    });
 
-  //   return () => subscription.unsubscribe();
-  // }, [form]);
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const generateDescription = async () => {
     try {
