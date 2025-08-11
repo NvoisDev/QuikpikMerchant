@@ -1365,6 +1365,34 @@ export default function ProductManagement() {
                 </Dialog>
               </div>
               
+              <Button onClick={() => {
+                console.log('🔥 ADD PRODUCT BUTTON CLICKED!');
+                setEditingProduct(null);
+                form.reset({
+                  name: "",
+                  description: "",
+                  price: "",
+                  currency: "GBP",
+                  moq: "1",
+                  stock: "0",
+                  category: "",
+                  imageUrl: "",
+                  priceVisible: true,
+                  negotiationEnabled: false,
+                  minimumBidPrice: "",
+                  status: "active",
+                  unit: "units",
+                  unitsPerPallet: "",
+                  promotionalOffers: [],
+                });
+                setIsDialogOpen(true);
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
+
+              {/* Standalone Dialog without DialogTrigger */}
               <Dialog 
                 open={isDialogOpen} 
                 onOpenChange={(open) => {
@@ -1372,32 +1400,6 @@ export default function ProductManagement() {
                   setIsDialogOpen(open);
                 }}
               >
-                <DialogTrigger asChild>
-                  <Button onClick={() => {
-                    console.log('🔥 ADD PRODUCT BUTTON CLICKED!');
-                    setEditingProduct(null);
-                    form.reset({
-                      name: "",
-                      description: "",
-                      price: "",
-                      currency: "GBP",
-                      moq: "1",
-                      stock: "0",
-                      category: "",
-                      imageUrl: "",
-                      priceVisible: true,
-                      negotiationEnabled: false,
-                      minimumBidPrice: "",
-                      status: "active",
-                      unit: "units",
-                      unitsPerPallet: "",
-                      promotionalOffers: [],
-                    });
-                  }}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2 border-red-500">
                   <DialogHeader>
                     <DialogTitle>
