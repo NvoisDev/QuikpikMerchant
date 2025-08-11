@@ -387,31 +387,31 @@ export default function ProductManagement() {
     return () => subscription.unsubscribe();
   }, [form, toast]);
 
-  // Auto-determine selling format based on pallet configuration (re-enabled with guards)
-  useEffect(() => {
-    const subscription = form.watch((values, { name }) => {
-      // Only check when pallet-related fields change
-      if (name && ['unitsPerPallet', 'palletPrice', 'palletMoq', 'palletStock'].includes(name)) {
-        const { unitsPerPallet, palletPrice, palletMoq, palletStock, sellingFormat } = values;
-        
-        // Check if all pallet configuration fields are provided
-        const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
-        
-        let newSellingFormat = 'units'; // default
-        if (hasPalletConfig) {
-          newSellingFormat = 'both'; // units and pallets
-        }
-        
-        // Only update if the value actually changed
-        if (sellingFormat !== newSellingFormat) {
-          console.log('🏷️ Auto-updating selling format:', { from: sellingFormat, to: newSellingFormat, hasPalletConfig });
-          form.setValue('sellingFormat', newSellingFormat, { shouldValidate: false });
-        }
-      }
-    });
+  // DISABLED: Auto-determine selling format - now controlled manually by dropdown
+  // useEffect(() => {
+  //   const subscription = form.watch((values, { name }) => {
+  //     // Only check when pallet-related fields change
+  //     if (name && ['unitsPerPallet', 'palletPrice', 'palletMoq', 'palletStock'].includes(name)) {
+  //       const { unitsPerPallet, palletPrice, palletMoq, palletStock, sellingFormat } = values;
+  //       
+  //       // Check if all pallet configuration fields are provided
+  //       const hasPalletConfig = !!(unitsPerPallet && palletPrice && palletMoq && palletStock);
+  //       
+  //       let newSellingFormat: "units" | "pallets" | "both" = 'units'; // default
+  //       if (hasPalletConfig) {
+  //         newSellingFormat = 'both'; // units and pallets
+  //       }
+  //       
+  //       // Only update if the value actually changed
+  //       if (sellingFormat !== newSellingFormat) {
+  //         console.log('🏷️ Auto-updating selling format:', { from: sellingFormat, to: newSellingFormat, hasPalletConfig });
+  //         form.setValue('sellingFormat', newSellingFormat, { shouldValidate: false });
+  //       }
+  //     }
+  //   });
 
-    return () => subscription.unsubscribe();
-  }, [form]);
+  //   return () => subscription.unsubscribe();
+  // }, [form]);
 
   const generateDescription = async () => {
     try {
@@ -2036,6 +2036,34 @@ export default function ProductManagement() {
                           )}
                         />
                         
+                        <FormField
+                          control={form.control}
+                          name="sellingFormat"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Selling Format</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select selling format" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="units">Units Only</SelectItem>
+                                  <SelectItem value="pallets">Pallets Only</SelectItem>
+                                  <SelectItem value="both">Units & Pallets</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                              <div className="text-sm text-muted-foreground">
+                                Controls what customers see: "Units Only", "Pallets Only", or "Units & Pallets" tag
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="deliveryExcluded"
