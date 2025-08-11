@@ -970,4 +970,184 @@ export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type TeamMember = typeof teamMembers.$inferSelect;
 
+// ============================================================================
+// ENHANCED ANALYTICS TABLES (Non-breaking improvements)
+// ============================================================================
+
+// Customer insights and analytics table
+export const customerInsights = pgTable("customer_insights", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  customerId: varchar("customer_id").notNull(), // Customer ID or email
+  customerName: varchar("customer_name"),
+  customerEmail: varchar("customer_email"),
+  
+  // Purchase behavior analytics
+  totalOrders: integer("total_orders").default(0),
+  totalSpent: decimal("total_spent", { precision: 12, scale: 2 }).default("0.00"),
+  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }).default("0.00"),
+  lastOrderDate: timestamp("last_order_date"),
+  firstOrderDate: timestamp("first_order_date"),
+  daysSinceLastOrder: integer("days_since_last_order").default(0),
+  
+  // Engagement metrics
+  campaignsReceived: integer("campaigns_received").default(0),
+  campaignsOpened: integer("campaigns_opened").default(0),
+  purchasesFromCampaigns: integer("purchases_from_campaigns").default(0),
+  
+  // Product preferences
+  favoriteCategory: varchar("favorite_category"),
+  mostOrderedProductId: integer("most_ordered_product_id").references(() => products.id),
+  totalUniqueProducts: integer("total_unique_products").default(0),
+  
+  // Customer scoring
+  loyaltyScore: integer("loyalty_score").default(0), // 0-100 score
+  riskLevel: varchar("risk_level").default("low"), // low, medium, high
+  customerTier: varchar("customer_tier").default("standard"), // bronze, silver, gold, platinum
+  
+  // Predictive analytics
+  predictedNextOrderDate: timestamp("predicted_next_order_date"),
+  churnRisk: decimal("churn_risk", { precision: 5, scale: 2 }).default("0.00"), // 0-100%
+  recommendedProducts: jsonb("recommended_products").default([]), // Array of product IDs
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Business intelligence aggregations table
+export const businessIntelligence = pgTable("business_intelligence", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reportDate: timestamp("report_date").notNull(), // Date this report covers
+  reportType: varchar("report_type").notNull(), // daily, weekly, monthly, quarterly
+  
+  // Revenue metrics
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  totalOrders: integer("total_orders").default(0),
+  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Product metrics
+  topSellingProductId: integer("top_selling_product_id").references(() => products.id),
+  topSellingProductRevenue: decimal("top_selling_product_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  totalProductsSold: integer("total_products_sold").default(0),
+  
+  // Customer metrics
+  newCustomers: integer("new_customers").default(0),
+  returningCustomers: integer("returning_customers").default(0),
+  customerRetentionRate: decimal("customer_retention_rate", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Campaign performance
+  campaignsSent: integer("campaigns_sent").default(0),
+  campaignRevenue: decimal("campaign_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  campaignConversionRate: decimal("campaign_conversion_rate", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Growth metrics
+  revenueGrowthRate: decimal("revenue_growth_rate", { precision: 5, scale: 2 }).default("0.00"),
+  orderGrowthRate: decimal("order_growth_rate", { precision: 5, scale: 2 }).default("0.00"),
+  customerGrowthRate: decimal("customer_growth_rate", { precision: 5, scale: 2 }).default("0.00"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Inventory optimization insights table
+export const inventoryInsights = pgTable("inventory_insights", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  
+  // Sales velocity metrics
+  dailyAverageSales: decimal("daily_average_sales", { precision: 8, scale: 2 }).default("0.00"),
+  weeklyAverageSales: decimal("weekly_average_sales", { precision: 8, scale: 2 }).default("0.00"),
+  monthlyAverageSales: decimal("monthly_average_sales", { precision: 8, scale: 2 }).default("0.00"),
+  
+  // Stock projections
+  daysOfStockRemaining: integer("days_of_stock_remaining").default(0),
+  suggestedReorderQuantity: integer("suggested_reorder_quantity").default(0),
+  suggestedReorderDate: timestamp("suggested_reorder_date"),
+  
+  // Performance metrics
+  turnoverRate: decimal("turnover_rate", { precision: 5, scale: 2 }).default("0.00"), // inventory turns per year
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }).default("0.00"), // percentage
+  seasonalityIndex: decimal("seasonality_index", { precision: 5, scale: 2 }).default("1.00"), // 1.0 = normal
+  
+  // Optimization flags
+  isSlowMoving: boolean("is_slow_moving").default(false),
+  isFastMoving: boolean("is_fast_moving").default(false),
+  isOverstocked: boolean("is_overstocked").default(false),
+  isUnderstocked: boolean("is_understocked").default(false),
+  
+  // Cost analysis
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }), // COGS
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }),
+  grossProfitPerUnit: decimal("gross_profit_per_unit", { precision: 10, scale: 2 }),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Financial performance tracking table
+export const financialPerformance = pgTable("financial_performance", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  periodType: varchar("period_type").notNull(), // daily, weekly, monthly, quarterly, yearly
+  
+  // Revenue breakdown
+  grossRevenue: decimal("gross_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  discountedRevenue: decimal("discounted_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  netRevenue: decimal("net_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  
+  // Cost breakdown (when available)
+  costOfGoodsSold: decimal("cost_of_goods_sold", { precision: 12, scale: 2 }).default("0.00"),
+  grossProfit: decimal("gross_profit", { precision: 12, scale: 2 }).default("0.00"),
+  grossProfitMargin: decimal("gross_profit_margin", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Transaction metrics
+  totalTransactions: integer("total_transactions").default(0),
+  averageTransactionValue: decimal("average_transaction_value", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Payment and fees
+  stripeFees: decimal("stripe_fees", { precision: 10, scale: 2 }).default("0.00"),
+  platformFees: decimal("platform_fees", { precision: 10, scale: 2 }).default("0.00"),
+  netAfterFees: decimal("net_after_fees", { precision: 12, scale: 2 }).default("0.00"),
+  
+  // Comparative metrics
+  previousPeriodRevenue: decimal("previous_period_revenue", { precision: 12, scale: 2 }),
+  revenueGrowth: decimal("revenue_growth", { precision: 5, scale: 2 }).default("0.00"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Schema types for new analytics tables
+export const insertCustomerInsightsSchema = createInsertSchema(customerInsights).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+});
+export type InsertCustomerInsights = z.infer<typeof insertCustomerInsightsSchema>;
+export type CustomerInsights = typeof customerInsights.$inferSelect;
+
+export const insertBusinessIntelligenceSchema = createInsertSchema(businessIntelligence).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBusinessIntelligence = z.infer<typeof insertBusinessIntelligenceSchema>;
+export type BusinessIntelligence = typeof businessIntelligence.$inferSelect;
+
+export const insertInventoryInsightsSchema = createInsertSchema(inventoryInsights).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+});
+export type InsertInventoryInsights = z.infer<typeof insertInventoryInsightsSchema>;
+export type InventoryInsights = typeof inventoryInsights.$inferSelect;
+
+export const insertFinancialPerformanceSchema = createInsertSchema(financialPerformance).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertFinancialPerformance = z.infer<typeof insertFinancialPerformanceSchema>;
+export type FinancialPerformance = typeof financialPerformance.$inferSelect;
+
 

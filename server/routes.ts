@@ -11629,5 +11629,358 @@ The Quikpik Team
     }
   });
 
+  // Analytics API Endpoints
+  
+  // Dashboard Analytics
+  app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      
+      // Get core data
+      const [orders, products, customers] = await Promise.all([
+        storage.getOrders(targetUserId),
+        storage.getProducts(targetUserId),
+        storage.getCustomers(targetUserId)
+      ]);
+
+      // Calculate date ranges
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Filter orders by status and date
+      const validOrders = orders.filter(order => 
+        ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
+      );
+
+      const todayOrders = validOrders.filter(order => 
+        new Date(order.createdAt) >= today
+      );
+      const yesterdayOrders = validOrders.filter(order => 
+        new Date(order.createdAt) >= yesterday && new Date(order.createdAt) < today
+      );
+      const lastWeekOrders = validOrders.filter(order => 
+        new Date(order.createdAt) >= lastWeek
+      );
+      const lastMonthOrders = validOrders.filter(order => 
+        new Date(order.createdAt) >= lastMonth
+      );
+
+      // Calculate metrics
+      const totalRevenue = validOrders.reduce((sum, order) => 
+        sum + parseFloat(order.total || '0'), 0
+      );
+      const todayRevenue = todayOrders.reduce((sum, order) => 
+        sum + parseFloat(order.total || '0'), 0
+      );
+      const yesterdayRevenue = yesterdayOrders.reduce((sum, order) => 
+        sum + parseFloat(order.total || '0'), 0
+      );
+
+      // Weekly revenue trend
+      const weeklyRevenue = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        
+        const dayOrders = validOrders.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate >= startOfDay && orderDate < endOfDay;
+        });
+        
+        const dayRevenue = dayOrders.reduce((sum, order) => 
+          sum + parseFloat(order.total || '0'), 0
+        );
+        
+        weeklyRevenue.push({
+          date: date.toISOString().split('T')[0],
+          revenue: Math.round(dayRevenue * 100) / 100
+        });
+      }
+
+      // Product performance
+      const productSales = new Map();
+      for (const order of validOrders) {
+        const orderItems = await storage.getOrderItems(order.id);
+        for (const item of orderItems) {
+          const current = productSales.get(item.productId) || { 
+            quantity: 0, 
+            revenue: 0, 
+            productName: '' 
+          };
+          
+          const product = products.find(p => p.id === item.productId);
+          current.quantity += item.quantity;
+          current.revenue += parseFloat(item.unitPrice || '0') * item.quantity;
+          current.productName = product?.name || 'Unknown Product';
+          productSales.set(item.productId, current);
+        }
+      }
+
+      const topProducts = Array.from(productSales.entries())
+        .map(([productId, data]) => ({
+          productId,
+          name: data.productName,
+          quantity: data.quantity,
+          revenue: Math.round(data.revenue * 100) / 100
+        }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+
+      // Low stock alerts
+      const lowStockProducts = products
+        .filter(product => product.stock <= (product.lowStockThreshold || 10))
+        .map(product => ({
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+          threshold: product.lowStockThreshold || 10
+        }))
+        .sort((a, b) => a.stock - b.stock);
+
+      const analytics = {
+        overview: {
+          totalRevenue: Math.round(totalRevenue * 100) / 100,
+          todayRevenue: Math.round(todayRevenue * 100) / 100,
+          yesterdayRevenue: Math.round(yesterdayRevenue * 100) / 100,
+          revenueChange: yesterdayRevenue > 0 ? 
+            Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100) : 0,
+          totalOrders: validOrders.length,
+          todayOrders: todayOrders.length,
+          totalProducts: products.length,
+          totalCustomers: customers.length,
+          lastWeekOrders: lastWeekOrders.length,
+          lastMonthOrders: lastMonthOrders.length
+        },
+        trends: {
+          weeklyRevenue,
+          topProducts,
+          lowStockProducts: lowStockProducts.slice(0, 10)
+        }
+      };
+
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching dashboard analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Customer Insights
+  app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      
+      const [orders, customers] = await Promise.all([
+        storage.getOrders(targetUserId),
+        storage.getCustomers(targetUserId)
+      ]);
+
+      const validOrders = orders.filter(order => 
+        ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
+      );
+
+      // Customer segmentation
+      const customerOrderMap = new Map();
+      for (const order of validOrders) {
+        const customerId = order.retailerId;
+        const current = customerOrderMap.get(customerId) || {
+          orderCount: 0,
+          totalSpent: 0,
+          lastOrderDate: null,
+          firstOrderDate: null
+        };
+
+        current.orderCount++;
+        current.totalSpent += parseFloat(order.total || '0');
+        
+        const orderDate = new Date(order.createdAt);
+        if (!current.firstOrderDate || orderDate < current.firstOrderDate) {
+          current.firstOrderDate = orderDate;
+        }
+        if (!current.lastOrderDate || orderDate > current.lastOrderDate) {
+          current.lastOrderDate = orderDate;
+        }
+
+        customerOrderMap.set(customerId, current);
+      }
+
+      // Classify customers
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      let newCustomers = 0;
+      let returningCustomers = 0;
+      let atRiskCustomers = 0;
+      
+      for (const [customerId, data] of customerOrderMap) {
+        if (data.firstOrderDate && data.firstOrderDate >= thirtyDaysAgo) {
+          newCustomers++;
+        } else if (data.lastOrderDate && data.lastOrderDate >= thirtyDaysAgo) {
+          returningCustomers++;
+        } else {
+          atRiskCustomers++;
+        }
+      }
+
+      // Top customers by value
+      const topCustomers = Array.from(customerOrderMap.entries())
+        .map(([customerId, data]) => {
+          const customer = customers.find(c => c.id === customerId);
+          return {
+            id: customerId,
+            name: customer?.name || 'Unknown Customer',
+            phone: customer?.phone || '',
+            orderCount: data.orderCount,
+            totalSpent: Math.round(data.totalSpent * 100) / 100,
+            lastOrderDate: data.lastOrderDate?.toISOString().split('T')[0] || '',
+            avgOrderValue: Math.round((data.totalSpent / data.orderCount) * 100) / 100
+          };
+        })
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 10);
+
+      const insights = {
+        segmentation: {
+          newCustomers,
+          returningCustomers,
+          atRiskCustomers,
+          totalActiveCustomers: customerOrderMap.size
+        },
+        topCustomers,
+        metrics: {
+          averageOrderValue: validOrders.length > 0 ? 
+            Math.round((validOrders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0) / validOrders.length) * 100) / 100 : 0,
+          repeatCustomerRate: customers.length > 0 ? 
+            Math.round((returningCustomers / customers.length) * 100) : 0
+        }
+      };
+
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching customer insights:", error);
+      res.status(500).json({ message: "Failed to fetch customer insights" });
+    }
+  });
+
+  // Inventory Insights
+  app.get('/api/analytics/inventory', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
+      
+      const [products, orders] = await Promise.all([
+        storage.getProducts(targetUserId),
+        storage.getOrders(targetUserId)
+      ]);
+
+      const validOrders = orders.filter(order => 
+        ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'].includes(order.status)
+      );
+
+      // Product performance analysis
+      const productSales = new Map();
+      for (const order of validOrders) {
+        const orderItems = await storage.getOrderItems(order.id);
+        for (const item of orderItems) {
+          const current = productSales.get(item.productId) || { 
+            quantity: 0, 
+            revenue: 0 
+          };
+          current.quantity += item.quantity;
+          current.revenue += parseFloat(item.unitPrice || '0') * item.quantity;
+          productSales.set(item.productId, current);
+        }
+      }
+
+      // Categorize products
+      const categories = new Map();
+      for (const product of products) {
+        const category = product.category || 'Uncategorized';
+        const current = categories.get(category) || {
+          productCount: 0,
+          totalStock: 0,
+          totalValue: 0
+        };
+        
+        current.productCount++;
+        current.totalStock += product.stock || 0;
+        current.totalValue += (product.stock || 0) * parseFloat(product.price || '0');
+        categories.set(category, current);
+      }
+
+      // Performance metrics
+      const topPerformers = products
+        .map(product => {
+          const sales = productSales.get(product.id) || { quantity: 0, revenue: 0 };
+          return {
+            id: product.id,
+            name: product.name,
+            category: product.category || 'Uncategorized',
+            stock: product.stock || 0,
+            price: parseFloat(product.price || '0'),
+            quantitySold: sales.quantity,
+            revenue: Math.round(sales.revenue * 100) / 100,
+            stockValue: Math.round((product.stock || 0) * parseFloat(product.price || '0') * 100) / 100
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+
+      const slowMovers = products
+        .map(product => {
+          const sales = productSales.get(product.id) || { quantity: 0, revenue: 0 };
+          return {
+            id: product.id,
+            name: product.name,
+            category: product.category || 'Uncategorized',
+            stock: product.stock || 0,
+            price: parseFloat(product.price || '0'),
+            quantitySold: sales.quantity,
+            daysSinceLastSale: sales.quantity > 0 ? 
+              Math.floor((Date.now() - new Date(product.updatedAt || product.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 
+              999,
+            stockValue: Math.round((product.stock || 0) * parseFloat(product.price || '0') * 100) / 100
+          };
+        })
+        .filter(product => product.quantitySold === 0 || product.daysSinceLastSale > 30)
+        .sort((a, b) => b.stockValue - a.stockValue)
+        .slice(0, 10);
+
+      const categoryData = Array.from(categories.entries()).map(([name, data]) => ({
+        name,
+        productCount: data.productCount,
+        totalStock: data.totalStock,
+        totalValue: Math.round(data.totalValue * 100) / 100
+      }));
+
+      const insights = {
+        overview: {
+          totalProducts: products.length,
+          totalStockValue: Math.round(products.reduce((sum, product) => 
+            sum + (product.stock || 0) * parseFloat(product.price || '0'), 0
+          ) * 100) / 100,
+          lowStockCount: products.filter(p => (p.stock || 0) <= (p.lowStockThreshold || 10)).length,
+          outOfStockCount: products.filter(p => (p.stock || 0) === 0).length
+        },
+        performance: {
+          topPerformers,
+          slowMovers,
+          categories: categoryData
+        }
+      };
+
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching inventory insights:", error);
+      res.status(500).json({ message: "Failed to fetch inventory insights" });
+    }
+  });
+
   return httpServer;
 }
