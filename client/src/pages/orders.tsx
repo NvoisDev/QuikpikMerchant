@@ -1005,50 +1005,263 @@ export default function Orders() {
                   <DialogTitle>{selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Details</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">Customer Information</h3>
-                      <div className="space-y-1 text-sm">
-                        <div><strong>Name:</strong> {selectedOrder.retailer ? `${selectedOrder.retailer.firstName} ${selectedOrder.retailer.lastName}` : 'Unknown'}</div>
-                        <div><strong>Email:</strong> {selectedOrder.retailer?.email || 'N/A'}</div>
-                        <div><strong>Phone:</strong> {selectedOrder.retailer?.phoneNumber || 'N/A'}</div>
-                        <div><strong>Order Total:</strong> {formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</div>
+                  {/* Enhanced Header Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Customer Information */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                          <User className="h-4 w-4 mr-2 text-blue-600" />
+                          Customer Information
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-gray-600 w-16">Email:</span>
+                            <span className="font-medium text-gray-900">
+                              {(selectedOrder.customerEmail || selectedOrder.retailer?.email) || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-600 w-16">Phone:</span>
+                            <span className="font-medium text-gray-900">
+                              {(selectedOrder.customerPhone || selectedOrder.retailer?.phoneNumber) || 'N/A'}
+                            </span>
+                          </div>
+                          {(selectedOrder.deliveryAddress || selectedOrder.customerAddress) && (
+                            <div className="flex items-start pt-1">
+                              <span className="text-gray-600 w-16 mt-0.5">Address:</span>
+                              <span className="font-medium text-gray-900 flex-1">
+                                {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Order Information</h3>
-                      <div className="space-y-1 text-sm">
-                        <div><strong>Status:</strong> {getStatusBadge(selectedOrder.status)}</div>
-                        <div><strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
-                        <div><strong>Items:</strong> {selectedOrder.items.length}</div>
+
+                      {/* Order Information */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                          <Package className="h-4 w-4 mr-2 text-blue-600" />
+                          Order Information
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            {getStatusBadge(selectedOrder.status)}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-medium text-gray-900">
+                              {new Date(selectedOrder.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Items:</span>
+                            <span className="font-medium text-gray-900">{selectedOrder.items.length}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Fulfillment:</span>
+                            <div className="flex items-center gap-1">
+                              {selectedOrder.fulfillmentType === 'pickup' ? (
+                                <Hand className="h-3 w-3 text-blue-600" />
+                              ) : (
+                                <Truck className="h-3 w-3 text-green-600" />
+                              )}
+                              <span className="font-medium text-gray-900 capitalize">
+                                {selectedOrder.fulfillmentType || 'Pickup'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <Separator />
                   
-                  {/* Order Items */}
+                  {/* Enhanced Order Items Section */}
                   <div>
-                    <h3 className="font-semibold mb-2">Order Items</h3>
-                    <div className="space-y-3">
-                      {selectedOrder.items.map((item: any) => (
-                        <div key={item.id} className="border rounded-lg p-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{item.product.name}</h4>
-                              <div className="text-sm text-muted-foreground">
-                                Quantity: {item.quantity} | Unit Price: {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                    <h3 className="font-semibold mb-4 text-lg">Items ({selectedOrder.items.length})</h3>
+                    <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                      {selectedOrder.items.map((item: any, index: number) => (
+                        <div key={item.id || index} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-base mb-2">{item.product?.name || 'Unknown Product'}</h4>
+                              <div className="flex items-center gap-6 text-sm text-gray-600">
+                                <span>Quantity: <strong>{item.quantity}</strong> × {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold">
+                              <div className="font-bold text-lg text-gray-900">
                                 {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
                               </div>
                             </div>
                           </div>
                         </div>
                       ))}
+
+                      {/* More items indicator if needed */}
+                      {selectedOrder.items.length > 3 && (
+                        <div className="text-center py-2">
+                          <span className="text-sm text-gray-500">and {selectedOrder.items.length - 3} more items</span>
+                        </div>
+                      )}
+
+                      {/* Order Summary */}
+                      <div className="border-t border-gray-200 pt-4 mt-6">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-base">
+                            <span className="text-gray-600">Subtotal:</span>
+                            <span className="font-semibold text-gray-900">
+                              {formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                            </span>
+                          </div>
+                          
+                          {/* Customer Transaction Fee (if applicable) */}
+                          {selectedOrder.customerTransactionFee && parseFloat(selectedOrder.customerTransactionFee) > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600">Transaction Fee:</span>
+                              <span className="text-gray-900">
+                                {formatCurrency(parseFloat(selectedOrder.customerTransactionFee), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Shipping/Delivery Cost */}
+                          {selectedOrder.shippingTotal && parseFloat(selectedOrder.shippingTotal) > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600">
+                                {selectedOrder.fulfillmentType === 'delivery' ? 'Delivery:' : 'Shipping:'}
+                              </span>
+                              <span className="text-gray-900">
+                                {formatCurrency(parseFloat(selectedOrder.shippingTotal), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="border-t border-gray-200 pt-3">
+                            <div className="flex justify-between items-center text-lg font-bold">
+                              <span className="text-gray-900">Total:</span>
+                              <span className="text-gray-900">
+                                {formatCurrency(
+                                  parseFloat(selectedOrder.total), 
+                                  selectedOrder.wholesaler?.preferredCurrency || 'GBP'
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                  <Separator />
+
+                  {/* Order Timeline Section */}
+                  <div>
+                    <h3 className="font-semibold mb-4 text-lg">Order Timeline</h3>
+                    <div className="bg-gray-50 rounded-xl p-6">
+                      <div className="space-y-4">
+                        
+                        {/* Order Placed */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">Order Placed</span>
+                              <span className="text-sm text-gray-500">
+                                {new Date(selectedOrder.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Order was successfully placed by {(selectedOrder.customerName || 
+                                (selectedOrder.retailer ? `${selectedOrder.retailer.firstName} ${selectedOrder.retailer.lastName}` : 'customer'))}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Payment Processing */}
+                        {(selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled') && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-900">Payment Received</span>
+                                <span className="text-sm text-gray-500">
+                                  {new Date(selectedOrder.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Payment of {formatCurrency(parseFloat(selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')} was processed successfully
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Order Fulfilled */}
+                        {selectedOrder.status === 'fulfilled' && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-900">Order Fulfilled</span>
+                                <span className="text-sm text-gray-500">
+                                  {new Date(selectedOrder.updatedAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Order has been completed and fulfilled by the wholesaler
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pending Status with Fulfill Button */}
+                        {selectedOrder.status === 'paid' && (
+                          <div className="flex items-start gap-3">
+                            <div className="w-2 h-2 bg-orange-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-gray-900">Ready for Fulfillment</span>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    Order is ready to be fulfilled by the wholesaler
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-gray-500">Pending</span>
+                                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
+                                    <Button
+                                      onClick={() => {
+                                        updateOrderStatusMutation.mutate({
+                                          orderId: selectedOrder.id,
+                                          status: 'fulfilled'
+                                        });
+                                      }}
+                                      disabled={fulfillingOrders.has(selectedOrder.id)}
+                                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
+                                    >
+                                      {fulfillingOrders.has(selectedOrder.id) ? (
+                                        <>
+                                          <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                          Fulfilling...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="h-3 w-3 mr-1" />
+                                          Fulfill Item
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                     
                     {/* Fulfillment Information moved under Order Items */}
                     {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
@@ -1070,291 +1283,6 @@ export default function Orders() {
                       </div>
                     )}
                   </div>
-
-                  <Separator />
-                  
-                  {/* Enhanced Order Timeline */}
-                  <div>
-                    <h3 className="font-semibold mb-6 flex items-center gap-2 text-lg">
-                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                      </div>
-                      Order Progress
-                    </h3>
-                    
-                    {/* Progress Bar */}
-                    <div className="mb-8">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-medium text-gray-700">Order Status</span>
-                        <span className="text-sm text-gray-500">
-                          {selectedOrder.status === 'fulfilled' ? '4/4 Complete' : 
-                           selectedOrder.status === 'paid' ? '3/4 Complete' :
-                           selectedOrder.status === 'confirmed' ? '2/4 Complete' : '1/4 Complete'}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out"
-                          style={{ 
-                            width: selectedOrder.status === 'fulfilled' ? '100%' : 
-                                   selectedOrder.status === 'paid' ? '75%' :
-                                   selectedOrder.status === 'confirmed' ? '50%' : '25%'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Timeline Steps */}
-                    <div className="relative">
-                      {/* Vertical Line */}
-                      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
-                      
-                      <div className="space-y-8">
-                        {/* Step 1: Order Placed */}
-                        <div className="relative flex items-start">
-                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <CheckCircle className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="ml-6 flex-1">
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-green-700 text-base">Order Placed</h4>
-                                  <p className="text-sm text-gray-600 mt-1">Customer successfully placed order</p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5" />
-                                    Automatic
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(selectedOrder.createdAt).toLocaleString()}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Step 2: Order Confirmed */}
-                        <div className="relative flex items-start">
-                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <CheckCircle className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="ml-6 flex-1">
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-green-700 text-base">Order Confirmed</h4>
-                                  <p className="text-sm text-gray-600 mt-1">Order validated and confirmed in system</p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5" />
-                                    Automatic
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(selectedOrder.createdAt).toLocaleString()}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Step 3: Payment Received */}
-                        <div className="relative flex items-start">
-                          <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${
-                            selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                              ? 'bg-gradient-to-br from-green-400 to-green-600'
-                              : 'bg-gradient-to-br from-gray-300 to-gray-400'
-                          }`}>
-                            {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' ? (
-                              <CheckCircle className="h-6 w-6 text-white" />
-                            ) : (
-                              <Clock className="h-6 w-6 text-white" />
-                            )}
-                          </div>
-                          <div className="ml-6 flex-1">
-                            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
-                              selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                ? 'border-green-100'
-                                : 'border-gray-200'
-                            }`}>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className={`font-semibold text-base ${
-                                    selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                      ? 'text-green-700'
-                                      : 'text-gray-600'
-                                  }`}>
-                                    Payment Received
-                                  </h4>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled' 
-                                      ? 'Payment processed successfully via Stripe' 
-                                      : 'Waiting for payment processing'
-                                    }
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <div className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
-                                    selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                      selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled'
-                                        ? 'bg-green-500'
-                                        : 'bg-gray-400'
-                                    }`} />
-                                    Automatic
-                                  </div>
-                                  {(selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled') && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      {new Date(selectedOrder.updatedAt).toLocaleString()}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Step 4: Order Fulfilled */}
-                        <div className="relative flex items-start">
-                          <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${
-                            selectedOrder.status === 'fulfilled'
-                              ? 'bg-gradient-to-br from-green-400 to-green-600'
-                              : selectedOrder.status === 'paid'
-                                ? 'bg-gradient-to-br from-orange-400 to-orange-600'
-                                : 'bg-gradient-to-br from-gray-300 to-gray-400'
-                          }`}>
-                            {selectedOrder.status === 'fulfilled' ? (
-                              <CheckCircle className="h-6 w-6 text-white" />
-                            ) : selectedOrder.status === 'paid' ? (
-                              <Clock className="h-6 w-6 text-white" />
-                            ) : (
-                              <Clock className="h-6 w-6 text-white opacity-50" />
-                            )}
-                          </div>
-                          <div className="ml-6 flex-1">
-                            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
-                              selectedOrder.status === 'fulfilled'
-                                ? 'border-green-100'
-                                : selectedOrder.status === 'paid'
-                                  ? 'border-orange-100'
-                                  : 'border-gray-200'
-                            }`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <h4 className={`font-semibold text-base ${
-                                    selectedOrder.status === 'fulfilled'
-                                      ? 'text-green-700'
-                                      : selectedOrder.status === 'paid'
-                                        ? 'text-orange-700'
-                                        : 'text-gray-600'
-                                  }`}>
-                                    Order Fulfilled
-                                  </h4>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {selectedOrder.status === 'fulfilled' 
-                                      ? 'Order completed and fulfilled by wholesaler' 
-                                      : selectedOrder.status === 'paid'
-                                        ? 'Ready for fulfillment - action required'
-                                        : 'Pending payment completion'
-                                    }
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="text-right">
-                                    <div className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
-                                      selectedOrder.status === 'fulfilled'
-                                        ? 'bg-green-100 text-green-800'
-                                        : selectedOrder.status === 'paid'
-                                          ? 'bg-orange-100 text-orange-800'
-                                          : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                      <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                        selectedOrder.status === 'fulfilled'
-                                          ? 'bg-green-500'
-                                          : selectedOrder.status === 'paid'
-                                            ? 'bg-orange-500'
-                                            : 'bg-gray-400'
-                                      }`} />
-                                      Manual
-                                    </div>
-                                    {selectedOrder.status === 'fulfilled' && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {new Date(selectedOrder.updatedAt).toLocaleString()}
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Enhanced Fulfill Button */}
-                                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && selectedOrder.status === 'paid' && (
-                                    <Button
-                                      onClick={() => {
-                                        updateOrderStatusMutation.mutate({
-                                          orderId: selectedOrder.id,
-                                          status: 'fulfilled'
-                                        });
-                                      }}
-                                      disabled={fulfillingOrders.has(selectedOrder.id)}
-                                      className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-2"
-                                    >
-                                      {fulfillingOrders.has(selectedOrder.id) ? (
-                                        <>
-                                          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                          Processing...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Mark as Fulfilled
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {selectedOrder.deliveryAddress && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2 flex items-center">
-                          <Hand className="h-4 w-4 mr-2" />
-                          Collection Information
-                        </h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                            {selectedOrder.fulfillmentType === 'pickup' || selectedOrder.shippingOption === 'pickup' ? (
-                              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-sm font-medium">
-                                <Hand className="h-4 w-4" />
-                                Pickup
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                                <Truck className="h-4 w-4" />
-                                Collection
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-3 bg-gray-50 rounded-lg">
-                            <h4 className="font-medium text-sm text-gray-700 mb-1">Collection Address:</h4>
-                            <p className="text-sm">{formatAddress(selectedOrder.deliveryAddress)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </DialogContent>
             </Dialog>
