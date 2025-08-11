@@ -805,65 +805,18 @@ export default function ProductManagement() {
     
     setEditingProduct(product);
     
-    // Safe form reset with try-catch to prevent stack overflow
-    try {
-      const formData = {
-        name: product.name || "",
-        description: product.description || "",
-        price: String(product.price || ""),
-        currency: product.currency || "GBP",
-        moq: String(product.moq || ""),
-        stock: String(product.stock || ""),
-        category: product.category || "",
-        imageUrl: product.imageUrl || "",
-        images: Array.isArray(product.images) ? product.images : [],
-        priceVisible: Boolean(product.priceVisible),
-        negotiationEnabled: Boolean(product.negotiationEnabled),
-        minimumBidPrice: String(product.minimumBidPrice || ""),
-        status: product.status || "active",
-        // Flexible unit system
-        packQuantity: String(product.packQuantity || ""),
-        unitOfMeasure: product.unitOfMeasure || "",
-        unitSize: String(product.unitSize || ""),
-        // Weight and shipping fields
-        totalPackageWeight: String(product.totalPackageWeight || ""),
-        deliveryExcluded: Boolean(product.deliveryExcluded),
-        temperatureRequirement: product.temperatureRequirement || "ambient",
-        contentCategory: product.contentCategory || "general",
-        specialHandling: typeof product.specialHandling === 'object' ? product.specialHandling : {},
-        shelfLife: String(product.shelfLife || ""),
-        lowStockThreshold: String(product.lowStockThreshold || "50"),
-        // Pallet configuration fields
-        sellingFormat: product.sellingFormat || "units",
-        unitsPerPallet: String(product.unitsPerPallet || ""),
-        palletPrice: String(product.palletPrice || ""),
-        palletMoq: String(product.palletMoq || ""),
-        palletStock: String(product.palletStock || ""),
-        palletWeight: String(product.palletWeight || ""),
-        // Promotional offers - ensure it's an array
-        promotionalOffers: Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [],
-      };
-      
-      console.log('🔧 Safe form reset with sanitized data');
-      form.reset(formData);
-    } catch (resetError) {
-      console.error('❌ Form reset failed:', resetError);
-      // Fallback: reset to empty form
-      form.reset();
-    }
+    // COMPLETELY SKIP form reset to avoid stack overflow - let the dialog handle this
+    console.log('⚠️ SKIPPING form.reset() to avoid stack overflow');
+    console.log('🔧 Product data will be loaded when dialog opens:', {
+      productId: product.id,
+      productName: product.name,
+      hasData: !!product
+    });
     console.log('🚀 Opening dialog - isDialogOpen state change to true');
     console.log('✅ CRITICAL: Setting isDialogOpen to TRUE and editingProduct to product data');
     
-    // Force dialog open with a delay to ensure state updates
-    setTimeout(() => {
-      setIsDialogOpen(true);
-      console.log('📊 Dialog state after timeout:', {
-        isDialogOpen: true,
-        editingProduct: !!product,
-        dialogShouldOpen: true,
-        productName: product.name
-      });
-    }, 100);
+    // Immediately set dialog open
+    setIsDialogOpen(true);
     
     console.log('📊 Immediate state check:', {
       isDialogOpen: isDialogOpen,
