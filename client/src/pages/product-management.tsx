@@ -1188,43 +1188,7 @@ export default function ProductManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Test Modal - Should appear when isDialogOpen is true */}
-      {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
-             onClick={() => setIsDialogOpen(false)}>
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4 border-4 border-green-500" 
-               onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold mb-4 text-green-600">
-              ✅ EDIT DIALOG IS WORKING!
-            </h2>
-            {editingProduct && (
-              <div className="mb-4">
-                <p className="font-semibold">Editing: {editingProduct.name}</p>
-                <p className="text-sm text-gray-600">Price: £{editingProduct.price}</p>
-                <p className="text-sm text-gray-600">Stock: {editingProduct.stock} units</p>
-              </div>
-            )}
-            <p className="mb-4">The dialog state is working correctly. The shadcn Dialog component should now be implemented here.</p>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setIsDialogOpen(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-              >
-                Close
-              </button>
-              <button 
-                onClick={() => {
-                  console.log('Would open full edit form here');
-                  alert(`Would edit: ${editingProduct?.name || 'New Product'}`);
-                }}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                Continue to Edit Form
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
       
       <div className="flex-1">
         {/* Top Bar */}
@@ -1411,7 +1375,6 @@ export default function ProductManagement() {
                 <DialogTrigger asChild>
                   <Button onClick={() => {
                     console.log('🔥 ADD PRODUCT BUTTON CLICKED!');
-                    alert('Add Product button works!');
                     setEditingProduct(null);
                     form.reset({
                       name: "",

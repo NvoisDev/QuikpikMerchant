@@ -357,39 +357,24 @@ export default function ProductCard({
               <DropdownMenuItem 
                 onClick={() => {
                   console.log('🔥 EDIT BUTTON CLICKED ON:', product.name);
-                  alert(`Edit button clicked for: ${product.name}`);
-                  
-                  console.log('🔍 EDIT BUTTON DEBUG:', {
-                    isLocked,
-                    editInfoDisabled: editInfo.disabled,
-                    editInfo,
-                    productId: product.id,
-                    onEditExists: !!onEdit,
-                    subscriptionTier: subscription?.subscriptionTier,
-                    editCount: product.editCount
-                  });
                   
                   if (isLocked) {
                     console.log('❌ EDIT BLOCKED: Product is locked');
-                    alert('Cannot edit: Product is locked');
                     return;
                   }
                   
                   if (editInfo.disabled) {
                     console.log('❌ EDIT BLOCKED: Edit limit reached');
-                    alert('Cannot edit: Edit limit reached');
                     return;
                   }
                   
                   if (!onEdit) {
                     console.log('❌ EDIT BLOCKED: onEdit function not provided');
-                    alert('Cannot edit: onEdit function not provided');
                     return;
                   }
                   
                   console.log('✅ EDIT ALLOWED: Calling onEdit function');
                   onEdit(product);
-                  console.log('📞 EDIT CALLED: onEdit function executed');
                 }}
                 disabled={editInfo.disabled || isLocked}
                 className={(editInfo.disabled || isLocked) ? "opacity-50 cursor-not-allowed" : ""}
@@ -400,28 +385,16 @@ export default function ProductCard({
               <DropdownMenuItem 
                 onClick={() => {
                   console.log('🔥 DUPLICATE BUTTON CLICKED ON:', product.name);
-                  alert(`Duplicate button clicked for: ${product.name}`);
-                  
-                  console.log('🔍 DUPLICATE BUTTON DEBUG:', {
-                    isLocked,
-                    productId: product.id,
-                    onDuplicateExists: !!onDuplicate,
-                    handleDuplicateExists: !!handleDuplicate
-                  });
                   
                   if (isLocked) {
-                    alert('Cannot duplicate: Product is locked');
                     return;
                   }
                   
                   if (!handleDuplicate) {
-                    alert('Cannot duplicate: handleDuplicate function not available');
                     return;
                   }
                   
-                  console.log('✅ DUPLICATE ALLOWED: Calling handleDuplicate');
                   handleDuplicate();
-                  console.log('📞 DUPLICATE CALLED: handleDuplicate function executed');
                 }}
                 disabled={isLocked}
                 className={isLocked ? "opacity-50 cursor-not-allowed" : ""}
