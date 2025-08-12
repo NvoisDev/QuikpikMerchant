@@ -4820,16 +4820,13 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if basic Stripe is configured (for payment processing)
-      // Note: VITE_STRIPE_PUBLIC_KEY is a frontend env var, we check STRIPE_SECRET_KEY for backend
-      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
-      
       // Check if Stripe Connect is properly configured
       const hasStripeConnect = !!(user.stripeAccountId);
       
-      // For basic payment processing, we only need the Stripe keys
-      const isConnected = hasStripeKeys;
-      const hasPayoutsEnabled = hasStripeConnect; // Only true if Connect is set up
+      // For a marketplace, we need BOTH platform keys AND Connect account
+      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
+      const isConnected = hasStripeConnect; // Connect account is required
+      const hasPayoutsEnabled = hasStripeConnect;
       
       res.json({
         isConnected,

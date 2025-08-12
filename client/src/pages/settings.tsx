@@ -966,9 +966,13 @@ function IntegrationsSection() {
                     </div>
                   </div>
                   <div className="flex items-center">
-                    {(stripeStatus as any)?.hasStripeKeys ? (
+                    {(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? (
                       <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                         Connected
+                      </div>
+                    ) : (stripeStatus as any)?.hasStripeKeys ? (
+                      <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                        Setup Required
                       </div>
                     ) : (
                       <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
@@ -979,10 +983,12 @@ function IntegrationsSection() {
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  {(stripeStatus as any)?.hasStripeKeys ? (
-                    "Payment processing is active and receiving customer payments"
+                  {(stripeStatus as any)?.isConnected && (stripeStatus as any)?.hasPayoutsEnabled ? (
+                    "Accept payments and receive funds directly to your bank account"
+                  ) : (stripeStatus as any)?.hasStripeKeys ? (
+                    "Complete Stripe Connect setup to start receiving payments from customers"
                   ) : (
-                    "Set up payment processing to receive customer payments"
+                    "Set up Stripe Connect to receive customer payments"
                   )}
                 </div>
                 
