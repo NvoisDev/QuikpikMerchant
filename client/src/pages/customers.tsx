@@ -520,8 +520,8 @@ export default function Customers() {
   };
 
   const displayedCustomers = searchQuery.length > 2 ? (searchResults || []) : (customers || []);
-  console.log('Customer display data:', { searchQuery, customersCount: customers.length, displayedCount: displayedCustomers.length });
-  const sortedCustomers = displayedCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
+  console.log('Customer display data:', { searchQuery, customersCount: customers?.length || 0, displayedCount: displayedCustomers?.length || 0 });
+  const sortedCustomers = (displayedCustomers || []).sort((a, b) => (b?.totalSpent || 0) - (a?.totalSpent || 0));
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {
@@ -562,9 +562,9 @@ export default function Customers() {
   // Find potential duplicate customers by phone number
   const findDuplicateCustomers = (phoneNumber: string) => {
     const lastFourDigits = phoneNumber.slice(-4);
-    return customers.filter(customer => 
-      customer.phoneNumber.slice(-4) === lastFourDigits && 
-      customer.phoneNumber !== phoneNumber
+    return (customers || []).filter(customer => 
+      customer?.phoneNumber?.slice(-4) === lastFourDigits && 
+      customer?.phoneNumber !== phoneNumber
     );
   };
 
@@ -597,18 +597,19 @@ export default function Customers() {
   // Filter customers for merge search
   const getMergeSearchResults = () => {
     if (mergeSearchQuery.length < 2) return [];
-    return customers.filter(customer => {
-      const fullName = `${customer.firstName} ${customer.lastName || ''}`.toLowerCase();
+    return (customers || []).filter(customer => {
+      if (!customer) return false;
+      const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
       const query = mergeSearchQuery.toLowerCase();
       return fullName.includes(query) || 
-             customer.phoneNumber.includes(query) ||
+             (customer.phoneNumber || '').includes(query) ||
              (customer.email && customer.email.toLowerCase().includes(query));
     });
   };
 
   // Handle customer merge
   const handleMergeCustomers = (primaryCustomer: Customer, duplicates: Customer[]) => {
-    const duplicateIds = duplicates.map(d => d.id);
+    const duplicateIds = (duplicates || []).map(d => d?.id).filter(Boolean);
     mergeCustomersMutation.mutate({
       primaryCustomerId: primaryCustomer.id,
       duplicateCustomerIds: duplicateIds,
@@ -738,11 +739,12 @@ export default function Customers() {
   // Filter customers for search and add (exclude already added customers)
   const getAvailableCustomers = () => {
     if (!selectedGroup || !customers) return [];
-    const existingMemberIds = groupMembers.map((member: any) => member.id || member.customerId) || [];
-    return customers.filter(customer => {
+    const existingMemberIds = (groupMembers || []).map((member: any) => member?.id || member?.customerId).filter(Boolean);
+    return (customers || []).filter(customer => {
+      if (!customer) return false;
       const matchesSearch = customerSearchQuery.length === 0 || 
-        `${customer.firstName} ${customer.lastName || ''}`.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
-        customer.phoneNumber.includes(customerSearchQuery) ||
+        `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+        (customer.phoneNumber || '').includes(customerSearchQuery) ||
         (customer.email && customer.email.toLowerCase().includes(customerSearchQuery.toLowerCase()));
       const notAlreadyMember = !existingMemberIds.includes(customer.id);
       return matchesSearch && notAlreadyMember;
@@ -2094,7 +2096,7 @@ export default function Customers() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-600">
-                        {customer.firstName[0]?.toUpperCase()}
+                        {customer?.firstName?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div>
                         <p className="font-medium">{customer.firstName} {customer.lastName || ''}</p>
