@@ -198,9 +198,9 @@ export default function OrdersFinal() {
     );
   };
 
-  // Calculate analytics
+  // Calculate analytics - using wholesaler earnings (subtotal minus 3.3% platform fee)
   const analytics = useMemo(() => {
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (parseFloat(order.subtotal) * 0.967), 0);
     const averageOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
     const deliveryOrders = filteredOrders.filter(o => o.fulfillmentType === 'delivery').length;
     const pickupOrders = filteredOrders.filter(o => o.fulfillmentType === 'pickup' || o.fulfillmentType === 'collection').length;
@@ -620,7 +620,7 @@ export default function OrdersFinal() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{formatCurrency(order.total)}</div>
+                        <div className="font-medium">{formatCurrency(parseFloat(order.subtotal) * 0.967)}</div>
                         <div className="text-sm text-gray-500">
                           Subtotal: {formatCurrency(order.subtotal)}
                         </div>
