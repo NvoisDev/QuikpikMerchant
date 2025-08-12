@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -125,33 +125,140 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   const subtotal = parseFloat(order.subtotal);
   const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
   const shippingCost = parseFloat(order.shippingCost || '0');
+  const totalPaid = parseFloat(order.total);
   
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="sr-only">Order Summary</DialogTitle>
+        <div className="flex justify-between items-start">
+          <div>
+            <DialogTitle>Order {order.orderNumber}</DialogTitle>
+            <DialogDescription>Order ID: {order.id}</DialogDescription>
+          </div>
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">
+                Close
+              </Button>
+            </DialogClose>
+          </div>
+        </div>
       </DialogHeader>
       
-      <div className="p-4">
-        <h3 className="font-semibold mb-4 text-base">Order Summary</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span>Subtotal:</span>
-            <span>{formatCurrency(subtotal)}</span>
+      <div className="space-y-6 p-6">
+        {/* Order Status */}
+        <div>
+          <h3 className="font-semibold mb-2">Status & Fulfillment</h3>
+          <div className="flex gap-2">
+            <Badge className={`${getStatusColor(order.status)} text-xs`}>
+              {getStatusIcon(order.status)}
+              <span className="ml-1 capitalize">{order.status}</span>
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
+            </Badge>
           </div>
-          <div className="flex justify-between">
-            <span>Transaction Fee (5.5% + £0.50):</span>
-            <span>{formatCurrency(transactionFee)}</span>
+        </div>
+
+        {/* Your Information */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm">Your Information</h3>
+          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+            <div className="text-xs"><strong>Name:</strong> {order.customerName || 'Not available'}</div>
+            <div className="text-xs"><strong>Email:</strong> {order.customerEmail || 'Not available'}</div>
+            <div className="text-xs"><strong>Phone:</strong> {order.customerPhone || 'Not available'}</div>
+            {order.customerAddress && (
+              <div className="text-xs"><strong>Address:</strong> {formatAddress(order.customerAddress)}</div>
+            )}
           </div>
-          {shippingCost > 0 && (
-            <div className="flex justify-between">
-              <span>Delivery Cost:</span>
-              <span>{formatCurrency(shippingCost)}</span>
+        </div>
+
+        {/* Order Items */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm">Items ({order.items.length})</h3>
+          <div className="space-y-2">
+            {order.items.map((item, index) => (
+              <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-xs">{item.productName}</div>
+                  <div className="text-xs text-gray-600">
+                    Quantity: {item.quantity} units × {formatCurrency(item.unitPrice)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-xs">{formatCurrency(parseFloat(item.unitPrice) * item.quantity)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Payment Summary */}
+        <div>
+          <h3 className="font-medium mb-1 text-sm">Payment Summary</h3>
+          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+            <div className="flex justify-between text-xs">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
-          )}
-          <div className="flex justify-between font-bold border-t pt-3">
-            <span>Total Paid:</span>
-            <span>{formatCurrency(parseFloat(order.total))}</span>
+            <div className="flex justify-between text-xs">
+              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span>{formatCurrency(transactionFee)}</span>
+            </div>
+            {parseFloat(order.shippingTotal || '0') > 0 && (
+              <div className="flex justify-between text-xs">
+                <span>Delivery Cost:</span>
+                <span>{formatCurrency(order.shippingTotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold border-t pt-1 text-sm">
+              <span>Total Paid:</span>
+              <span>{formatCurrency(totalPaid)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Timeline */}
+        <div>
+          <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
+          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+              <span className="font-medium">Payment processed successfully</span>
+            </div>
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+              <span className="font-medium">Order confirmation sent to you</span>
+            </div>
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+              <span className="font-medium">Wholesaler notified of your order</span>
+            </div>
+            {order.status === 'fulfilled' ? (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600">{format(new Date(order.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium">Order fulfilled - ready for {order.fulfillmentType}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <span className="text-gray-400">Awaiting wholesaler confirmation</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <span className="text-gray-400">Order preparation pending</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <span className="text-gray-400">Fulfillment pending</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
