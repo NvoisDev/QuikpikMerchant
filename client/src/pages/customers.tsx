@@ -516,12 +516,12 @@ export default function Customers() {
   };
 
   const getInitials = (firstName: string, lastName?: string) => {
+    if (!firstName) return 'U';
     return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
   };
 
-  const displayedCustomers = searchQuery.length > 2 ? (searchResults || []) : (customers || []);
-  console.log('Customer display data:', { searchQuery, customersCount: customers?.length || 0, displayedCount: displayedCustomers?.length || 0 });
-  const sortedCustomers = (displayedCustomers || []).sort((a, b) => (b?.totalSpent || 0) - (a?.totalSpent || 0));
+  const displayedCustomers = searchQuery.length > 2 ? searchResults : customers;
+  const sortedCustomers = displayedCustomers?.sort((a, b) => b.totalSpent - a.totalSpent) || [];
 
   // Event handlers
   const handleCreateGroup = (data: CustomerGroupFormData) => {
@@ -536,9 +536,9 @@ export default function Customers() {
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     editCustomerForm.reset({
-      firstName: customer?.firstName || '',
-      lastName: customer?.lastName || '',
-      email: customer?.email || '',
+      firstName: customer.firstName,
+      lastName: customer.lastName || '',
+      email: customer.email || '',
     });
     setIsEditCustomerDialogOpen(true);
   };
