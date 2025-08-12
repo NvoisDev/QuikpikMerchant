@@ -133,7 +133,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     : totalAmount;
 
   // Use the correct total from metadata instead of recalculating
-  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
+  // CRITICAL FIX: Include shipping cost in total calculation
+  const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
 
   // Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
