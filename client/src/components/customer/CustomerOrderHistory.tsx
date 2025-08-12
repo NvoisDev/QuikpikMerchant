@@ -117,7 +117,7 @@ const formatCurrency = (amount: string | number) => {
     return "£0.00";
   }
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return `£${numAmount.toFixed(2)}`;
+  return `£${numAmount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
