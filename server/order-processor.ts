@@ -213,6 +213,37 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
+  // CRITICAL: Reduce stock quantities for each item ordered
+  console.log('📦 Reducing stock quantities for ordered items...');
+  for (const item of items) {
+    try {
+      const product = await storage.getProduct(item.productId);
+      if (!product) {
+        console.warn(`⚠️ Product ${item.productId} not found during stock reduction`);
+        continue;
+      }
+
+      // Determine which stock field to update based on selling type
+      const sellingType = item.sellingType || 'units'; // Default to units if not specified
+      const currentStock = sellingType === 'pallets' ? (product.palletStock || 0) : (product.stock || 0);
+      const newStock = Math.max(0, currentStock - item.quantity);
+      
+      if (sellingType === 'pallets') {
+        // Update pallet stock
+        await storage.updateProduct(item.productId, { palletStock: newStock });
+        console.log(`📦 Updated pallet stock for product ${product.name} (ID: ${item.productId}): ${currentStock} → ${newStock} pallets`);
+      } else {
+        // Update regular stock
+        await storage.updateProductStock(item.productId, newStock);
+        console.log(`📦 Updated stock for product ${product.name} (ID: ${item.productId}): ${currentStock} → ${newStock} units`);
+      }
+    } catch (stockError) {
+      console.error(`❌ Failed to reduce stock for product ${item.productId}:`, stockError);
+      // Continue with other items - don't fail the entire order due to stock update errors
+    }
+  }
+  console.log('✅ Stock quantities updated successfully');
+
   // Send order confirmation email to customer
   try {
     const { sendOrderConfirmationEmail } = await import('./sendgrid-service');
