@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
 - **Recent Enhancement**: Comprehensive Order Management System with professional table layout, advanced search/filtering, order detail modals, and full customer information display. Resolved critical 39MB response size issue through data optimization. Fixed production deployment issue where customer products API returned HTTP 500 due to missing SQL import - development environment now returns 11 products successfully.
 - **Product Edit Function Fixed (Aug 2025)**: Resolved critical stack overflow errors in product edit functionality. Root cause was circular references in form validation watchers calling form.setValue(). Disabled problematic auto-calculation useEffect hooks and implemented safe form population. Edit dialog now opens successfully with product data pre-populated for editing.
 - **Business Performance Analytics Consolidation (Aug 2025)**: Successfully consolidated three separate analytics sections (Analytics Dashboard, Customer Insights, Inventory Insights) into a unified Business Performance tab system. Implemented comprehensive tabbed interface integrating all analytics functionality including real-time revenue tracking, customer segmentation analysis, inventory optimization insights, and performance metrics. Removed redundant navigation items for cleaner user experience while maintaining full analytics capabilities through complete backend API endpoints.
+- **Stripe Connect Integration Status Fixed (Aug 2025)**: Clarified and corrected payment processing architecture. Platform uses proper Stripe Connect marketplace integration with Express accounts for wholesalers, application fees (3.3% platform fee), and transfer_data for marketplace payments. Fixed integration status page to correctly show "Setup Required" when wholesaler hasn't completed Connect onboarding, rather than showing false "Connected" status. Current user (Michael) needs to complete Stripe Connect onboarding to enable proper B2B marketplace payment flow with direct bank transfers.
 
 ### Backend
 - **Runtime**: Node.js with Express.
@@ -52,7 +53,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Storage**: PostgreSQL-based.
 
 ## External Dependencies
-- **Payment Processing**: Stripe (for payments, subscriptions, invoicing, and webhooks).
+- **Payment Processing**: Stripe Connect (marketplace payments with Express accounts for wholesalers, application fees, and direct transfers).
 - **Communication Services**:
     - WhatsApp Business API (direct messaging).
     - Twilio (alternative WhatsApp provider).
