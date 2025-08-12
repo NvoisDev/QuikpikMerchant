@@ -6861,9 +6861,16 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
 
       // validatedTotalAmount is the product subtotal (without transaction fee)
-      // Customer pays 5.5% + £0.50 transaction fee on TOP of subtotal
+      // Add shipping cost if delivery option is selected
+      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.price) 
+        ? parseFloat(shippingInfo.service.price) 
+        : 0;
+      
+      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
+      
+      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
       const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + customerTransactionFee;
+      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
       
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
@@ -6902,9 +6909,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                 country: customerData.country
               }),
               totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
               customerTransactionFee: customerTransactionFee.toFixed(2),
               totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'true',
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
@@ -6942,9 +6954,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                 country: customerData.country
               }),
               totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
               customerTransactionFee: customerTransactionFee.toFixed(2),
               totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'false',
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
@@ -6980,9 +6997,14 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               country: customerData.country
             }),
             totalAmount: validatedTotalAmount.toString(),
+            shippingCost: shippingCost.toFixed(2),
             platformFee: platformFee.toFixed(2),
             customerTransactionFee: customerTransactionFee.toFixed(2),
             totalAmountWithFee: totalAmountWithFee.toFixed(2),
+            productSubtotal: validatedTotalAmount.toFixed(2),
+            totalCustomerPays: totalAmountWithFee.toFixed(2),
+            wholesalerPlatformFee: platformFee.toFixed(2),
+            wholesalerReceives: wholesalerAmount,
             connectAccountUsed: 'false',
             shippingInfo: JSON.stringify(shippingInfo ? {
               option: shippingInfo.option,
@@ -7002,10 +7024,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        totalAmount: validatedTotalAmount.toFixed(2), // Product subtotal
+        productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
+        shippingCost: shippingCost.toFixed(2), // Delivery cost
         customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50
-        platformFee: platformFee.toFixed(2), // Platform collects 3.3%
-        totalAmountWithFee: totalAmountWithFee.toFixed(2), // Total customer payment
+        totalCustomerPays: totalAmountWithFee.toFixed(2), // Total customer payment including shipping
+        wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
         wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2) // Wholesaler receives product total minus 3.3%
       });
     } catch (error: any) {
