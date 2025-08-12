@@ -1,6 +1,7 @@
 import { storage } from './storage';
 import { generateWholesalerOrderNotificationEmail } from './email-templates';
 import { sendEmail } from './sendgrid-service';
+import { ShippingAutomationService } from './shipping-automation';
 
 export interface OrderEmailData {
   orderNumber: string;
@@ -320,6 +321,70 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     } catch (emailError) {
       console.error(`❌ Failed to send wholesaler notification for order #${order.id}:`, emailError);
     }
+  }
+
+  // AUTOMATIC DELIVERY PAYMENT PROCESSING
+  // Check if this order requires automatic delivery payment
+  const autoPayDelivery = paymentIntent.metadata.autoPayDelivery === 'true';
+  
+  if (autoPayDelivery && shippingInfo.option === 'delivery' && shippingInfo.service) {
+    console.log(`🚚 Processing automatic delivery payment for order ${order.orderNumber}`);
+    
+    try {
+      const { ShippingAutomationService } = await import('./shipping-automation');
+      const shippingAutomation = new ShippingAutomationService();
+      
+      // Parse customer address for shipping
+      const parsedAddress = typeof customerAddress === 'string' 
+        ? { address: customerAddress, city: '', state: '', postalCode: '', country: 'GBR' }
+        : JSON.parse(customerAddress);
+      
+      const shippingOrderData = {
+        orderId: order.id,
+        orderNumber: order.orderNumber || `ORD-${order.id}`,
+        wholesalerId,
+        customerData: {
+          name: customerName,
+          email: customerEmail || '',
+          phone: customerPhone,
+          address: parsedAddress.street || parsedAddress.address || '',
+          city: parsedAddress.city || '',
+          state: parsedAddress.state || '',
+          postalCode: parsedAddress.postalCode || '',
+          country: parsedAddress.country || 'GBR'
+        },
+        shippingInfo: {
+          serviceId: shippingInfo.service.serviceId,
+          serviceName: shippingInfo.service.serviceName,
+          price: shippingInfo.service.price
+        },
+        items: items.map((item: any) => ({
+          productName: item.productName || 'Product',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          weight: 1.0, // Default weight if not specified
+          value: parseFloat(item.unitPrice) * item.quantity
+        }))
+      };
+      
+      const shippingResult = await shippingAutomation.processShippingOrder(shippingOrderData);
+      
+      if (shippingResult.success) {
+        console.log(`✅ Automatic delivery payment successful for order ${order.orderNumber}:`, {
+          shippingOrderId: shippingResult.orderId,
+          cost: shippingResult.cost
+        });
+      } else {
+        console.error(`❌ Automatic delivery payment failed for order ${order.orderNumber}:`, shippingResult.error);
+        // Order still succeeds, but shipping payment failed - wholesaler will need to pay manually
+      }
+      
+    } catch (shippingError: any) {
+      console.error(`❌ Shipping automation error for order ${order.orderNumber}:`, shippingError);
+      // Continue processing - don't fail the order due to shipping automation issues
+    }
+  } else {
+    console.log(`ℹ️ No automatic delivery payment required for order ${order.orderNumber} (pickup or manual delivery)`);
   }
 
   return order;

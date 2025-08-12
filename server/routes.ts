@@ -6876,7 +6876,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
-      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
+      
+      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
+      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
+      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
+      const wholesalerAmount = autoPayDelivery 
+        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
+        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
@@ -6920,6 +6926,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               wholesalerPlatformFee: platformFee.toFixed(2),
               wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'true',
+              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
                 service: shippingInfo.service ? {
