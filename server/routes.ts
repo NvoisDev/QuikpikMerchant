@@ -1761,10 +1761,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Include delivery cost in fee calculation
+      const deliveryCost = shippingInfo?.service?.price || 0;
+      const amountBeforeFees = productSubtotal + deliveryCost;
+      
       // NEW FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of product total + £0.50 fixed fee
-      const customerTransactionFee = (productSubtotal * 0.055) + 0.50;
-      const totalCustomerPays = productSubtotal + customerTransactionFee;
+      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
+      const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
+      const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
       // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
       const wholesalerPlatformFee = productSubtotal * 0.033;
@@ -1793,6 +1797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
           productSubtotal: productSubtotal.toFixed(2),
+          shippingCost: deliveryCost.toString(),
           customerTransactionFee: customerTransactionFee.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
           wholesalerReceives: wholesalerReceives.toFixed(2),
@@ -1812,13 +1817,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               serviceName: shippingInfo.service.serviceName,
               price: shippingInfo.service.price
             } : null
-          } : { option: 'pickup' })
+          } : { option: 'pickup' }),
+          autoPayDelivery: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 'true' : 'false'
         }
       });
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         productSubtotal: productSubtotal.toFixed(2),
+        shippingCost: deliveryCost.toString(),
         customerTransactionFee: customerTransactionFee.toFixed(2),
         totalCustomerPays: totalCustomerPays.toFixed(2),
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
