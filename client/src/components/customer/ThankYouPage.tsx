@@ -135,27 +135,20 @@ export const ThankYouPage = ({
                   ))}
                 </div>
 
-                {/* Order Summary */}
+                {/* Order Summary - Only 3 essential lines */}
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>Subtotal:</span>
                     <span>£{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Transaction Fee</span>
-                    <span>£{transactionFee.toFixed(2)}</span>
+                    <span>Platform Fee (3.3%):</span>
+                    <span>-£{(subtotal * 0.033).toFixed(2)}</span>
                   </div>
-                  {customerData.shippingOption === "delivery" && shippingCost > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Delivery ({customerData.selectedShippingService?.serviceName})</span>
-                      <span>£{shippingCost.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span>Total Paid</span>
-                    <span>£{totalAmount.toFixed(2)}</span>
+                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                    <span>Total (Your Earnings):</span>
+                    <span>£{(subtotal * 0.967).toFixed(2)}</span>
                   </div>
                 </div>
 

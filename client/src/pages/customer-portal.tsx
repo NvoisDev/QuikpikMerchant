@@ -3884,21 +3884,9 @@ export default function CustomerPortal() {
                     return null;
                   })()}
                   
-                  {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
-                    <div className="flex justify-between">
-                      <span>Shipping ({customerData.selectedShippingService.serviceName}):</span>
-                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {customerData.shippingOption === 'pickup' && (
-                    <div className="flex justify-between">
-                      <span>Shipping (Pickup):</span>
-                      <span className="text-green-600">FREE</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Transaction Fee (5.5% + £0.50):</span>
-                    <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
+                  <div className="flex justify-between text-sm">
+                    <span>Platform Fee (3.3%):</span>
+                    <span>-{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
                       const subtotal = cart.reduce((total, item) => {
                         if (item.sellingType === "pallets") {
                           return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
@@ -3914,12 +3902,12 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
-                      return (subtotal * 0.055 + 0.50).toFixed(2);
+                      return (subtotal * 0.033).toFixed(2);
                     })()}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
-                    <span>Total Amount:</span>
+                    <span>Total (Your Earnings):</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
                       const subtotal = cart.reduce((total, item) => {
                         if (item.sellingType === "pallets") {
@@ -3936,9 +3924,8 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
-                      const transactionFee = subtotal * 0.055 + 0.50;
-                      const shippingCost = cartStats.shippingCost || 0;
-                      return (subtotal + shippingCost + transactionFee).toFixed(2);
+                      // Calculate earnings (96.7% of subtotal after 3.3% platform fee)
+                      return (subtotal * 0.967).toFixed(2);
                     })()}</span>
                   </div>
                 </div>
