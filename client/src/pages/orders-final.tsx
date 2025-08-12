@@ -62,7 +62,7 @@ export default function OrdersFinal() {
   const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(25);
   const queryClient = useQueryClient();
@@ -232,7 +232,7 @@ export default function OrdersFinal() {
   };
 
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
-    setIsUpdatingStatus(true);
+    setUpdatingOrderId(orderId);
     try {
       const response = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { 
         status: newStatus
@@ -258,7 +258,7 @@ export default function OrdersFinal() {
       console.error("Failed to update order status:", error);
       alert("Failed to update order status. Please try again.");
     } finally {
-      setIsUpdatingStatus(false);
+      setUpdatingOrderId(null);
     }
   };
 
@@ -620,7 +620,7 @@ export default function OrdersFinal() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{formatCurrency(parseFloat(order.subtotal) * 0.967)}</div>
+                        <div className="font-medium">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</div>
                         <div className="text-sm text-gray-500">
                           Subtotal: {formatCurrency(order.subtotal)}
                         </div>
@@ -647,7 +647,7 @@ export default function OrdersFinal() {
                             <Button 
                               size="sm"
                               onClick={() => updateOrderStatus(order.id, 'fulfilled')}
-                              disabled={isUpdatingStatus}
+                              disabled={updatingOrderId === order.id}
                               className="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1 text-xs"
                             >
                               <CheckCircle2 className="w-3 h-3" />
@@ -761,7 +761,7 @@ export default function OrdersFinal() {
                     <Button 
                       size="sm"
                       onClick={() => updateOrderStatus(selectedOrder.id, 'fulfilled')}
-                      disabled={isUpdatingStatus}
+                      disabled={updatingOrderId === selectedOrder.id}
                       className="bg-teal-600 hover:bg-teal-700 text-white"
                     >
                       <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -773,7 +773,7 @@ export default function OrdersFinal() {
                       variant="outline"
                       size="sm"
                       onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
-                      disabled={isUpdatingStatus}
+                      disabled={updatingOrderId === selectedOrder.id}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Mark Unfulfilled
