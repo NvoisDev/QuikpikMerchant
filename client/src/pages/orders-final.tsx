@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, Clock, MapPin, CheckCircle2, XCircle, Receipt, Handshake, Box, Car, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, Filter, Eye, Package, Phone, Mail, Truck, Store, TrendingUp, Users, DollarSign, MapPin, CheckCircle2, XCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderItem {
@@ -237,7 +237,7 @@ export default function OrdersFinal() {
       const response = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { 
         status: newStatus
       });
-      console.log("Order status updated:", response);
+
       
       // Refresh orders data with multiple query invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
@@ -251,60 +251,14 @@ export default function OrdersFinal() {
           updatedAt: new Date().toISOString()
         });
       }
-      
-      // Show success message
-      console.log(`✅ Order ${orderId} status updated to ${newStatus}`);
     } catch (error) {
-      console.error("Failed to update order status:", error);
       alert("Failed to update order status. Please try again.");
     } finally {
       setUpdatingOrderId(null);
     }
   };
 
-  const getOrderTimeline = (status: string, fulfillmentType: string) => {
-    const steps = [
-      { 
-        key: 'paid', 
-        label: 'Order Placed', 
-        description: 'We have received your order.', 
-        icon: <Receipt className="w-5 h-5" />,
-        completed: true 
-      },
-      { 
-        key: 'processing', 
-        label: 'Order Confirmed', 
-        description: 'Your order has been confirmed.', 
-        icon: <Handshake className="w-5 h-5" />,
-        completed: ['processing', 'shipped', 'delivered', 'fulfilled'].includes(status)
-      },
-      { 
-        key: 'shipped', 
-        label: 'Order Processed', 
-        description: 'We are preparing your order.', 
-        icon: <Box className="w-5 h-5" />,
-        completed: ['shipped', 'delivered', 'fulfilled'].includes(status)
-      },
-      { 
-        key: 'delivered', 
-        label: fulfillmentType === 'delivery' ? 'Out for Delivery' : 'Ready to Pickup', 
-        description: fulfillmentType === 'delivery' 
-          ? 'Your order is on its way.' 
-          : 'Your order is ready for pickup.', 
-        icon: fulfillmentType === 'delivery' ? <Car className="w-5 h-5" /> : <Store className="w-5 h-5" />,
-        completed: ['delivered', 'fulfilled'].includes(status)
-      },
-      { 
-        key: 'fulfilled', 
-        label: 'Order Fulfilled', 
-        description: 'Order completed successfully.', 
-        icon: <CheckCircle2 className="w-5 h-5" />,
-        completed: status === 'fulfilled'
-      }
-    ];
 
-    return steps;
-  };
 
   if (isLoading) {
     return (
