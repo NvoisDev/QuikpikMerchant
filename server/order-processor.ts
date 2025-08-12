@@ -210,8 +210,46 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
-  // TODO: Re-implement customer confirmation email
-  console.log(`📧 Customer email confirmation temporarily disabled for order #${order.id}`);
+  // Send order confirmation email to customer
+  try {
+    const { sendOrderConfirmationEmail } = await import('./sendgrid-service');
+    
+    // Get order items for the email
+    const orderItemsFromDB = await storage.getOrderItems(order.id);
+    const orderItemsForEmail = await Promise.all(orderItemsFromDB.map(async (orderItem: any) => {
+      const product = await storage.getProduct(orderItem.productId);
+      return {
+        productName: product?.name || `Product #${orderItem.productId}`,
+        quantity: orderItem.quantity,
+        unitPrice: parseFloat(orderItem.unitPrice),
+        total: parseFloat(orderItem.total)
+      };
+    }));
+
+    const orderConfirmationData = {
+      customerEmail: customerEmail || '',
+      customerName: customerName,
+      orderNumber: order.orderNumber || `ORD-${order.id}`,
+      orderItems: orderItemsForEmail,
+      subtotal: parseFloat(order.subtotal),
+      transactionFee: parseFloat(customerTransactionFee || '0'),
+      totalPaid: parseFloat(totalCustomerPays || '0'),
+      wholesalerName: wholesaler?.businessName || wholesaler?.firstName || 'Your Wholesaler',
+      shippingAddress: typeof customerAddress === 'string' ? customerAddress : 
+        (customerAddress ? Object.values(customerAddress).join(', ') : undefined),
+      estimatedDelivery: undefined // Can be enhanced with shipping data later
+    };
+
+    const emailSent = await sendOrderConfirmationEmail(orderConfirmationData);
+    
+    if (emailSent) {
+      console.log(`✅ Order confirmation email sent to ${customerEmail} for order #${order.id}`);
+    } else {
+      console.log(`⚠️ Failed to send order confirmation email to ${customerEmail} for order #${order.id}`);
+    }
+  } catch (emailError) {
+    console.error(`❌ Error sending order confirmation email for order #${order.id}:`, emailError);
+  }
 
   // Send WhatsApp notification to wholesaler with wholesale reference
   if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
