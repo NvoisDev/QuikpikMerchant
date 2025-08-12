@@ -4820,18 +4820,25 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if Stripe Connect is properly configured
-      const isConnected = !!(user.stripeAccountId);
+      // Check if basic Stripe is configured (for payment processing)
+      // Note: VITE_STRIPE_PUBLIC_KEY is a frontend env var, we check STRIPE_SECRET_KEY for backend
+      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
       
-      // For now, we'll assume payouts are enabled if account is connected
-      // Later we can add a proper payouts check via Stripe API
-      const hasPayoutsEnabled = isConnected;
+      // Check if Stripe Connect is properly configured
+      const hasStripeConnect = !!(user.stripeAccountId);
+      
+      // For basic payment processing, we only need the Stripe keys
+      const isConnected = hasStripeKeys;
+      const hasPayoutsEnabled = hasStripeConnect; // Only true if Connect is set up
       
       res.json({
         isConnected,
+        hasStripeKeys,
+        hasStripeConnect,
         accountId: user.stripeAccountId,
         hasPayoutsEnabled,
-        requiresInfo: false // For now, no additional info required
+        requiresInfo: false,
+        paymentProcessingType: hasStripeConnect ? 'connect' : 'direct'
       });
     } catch (error) {
       console.error("Error fetching Stripe Connect status:", error);
