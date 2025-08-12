@@ -43,7 +43,7 @@ const navigation = [
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
-  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, tabName: "analytics" },
+  { name: "Business Performance", href: "/business-performance", icon: TrendingUp, premiumOnly: true, tabName: "analytics" },
   { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: true, tabName: "advertising" },
   { name: "Marketplace", href: "/marketplace", icon: Store, premiumOnly: true, tabName: "marketplace" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
