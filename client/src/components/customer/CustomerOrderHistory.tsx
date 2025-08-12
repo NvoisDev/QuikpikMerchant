@@ -124,8 +124,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   // Calculate customer payment details
   const subtotal = parseFloat(order.subtotal);
   const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
-  const shippingCost = parseFloat(order.shippingCost || '0');
+  const deliveryCost = parseFloat(order.shippingTotal || '0');
   const totalPaid = parseFloat(order.total);
+  
+  // Calculate what the total should be for verification
+  const calculatedTotal = subtotal + transactionFee + deliveryCost;
   
   return (
     <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -205,15 +208,15 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Transaction Fee (5.5% + £0.50):</span>
               <span>{formatCurrency(transactionFee)}</span>
             </div>
-            {parseFloat(order.shippingTotal || '0') > 0 && (
+            {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span>Delivery Cost:</span>
-                <span>{formatCurrency(order.shippingTotal)}</span>
+                <span>{formatCurrency(deliveryCost)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
               <span>Total Paid:</span>
-              <span>{formatCurrency(totalPaid)}</span>
+              <span>{formatCurrency(calculatedTotal)}</span>
             </div>
           </div>
         </div>
