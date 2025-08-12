@@ -8,13 +8,17 @@ Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Primary Business Account
-**Consolidated Account**: Michael Ogunjemilua (hello@quikpik.co)
+**Wholesaler Account**: Michael Ogunjemilua (hello@quikpik.co)
 - **Google ID**: 104871691614680693123
 - **Business**: Surulere Foods Wholesale
 - **Products**: 14 items
-- **Orders**: 136+ orders (SF-001 through SF-131, with SF-132 next in sequence)
 - **Subscription**: Premium tier, active
-- **Customer Portal**: /customer/104871691614680693123
+
+**Primary Customer Account**: Michael Ogunjemilua (mogunjemilua@gmail.com)
+- **Customer ID**: customer_michael_ogunjemilua_main
+- **Orders**: 133+ orders properly attributed to customer account
+- **Customer Portal**: /customer/customer_michael_ogunjemilua_main
+- **Total Spending**: £42,714.96 (corrected attribution)
 
 ## System Architecture
 ### Frontend
