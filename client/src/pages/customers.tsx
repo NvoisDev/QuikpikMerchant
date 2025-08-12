@@ -519,7 +519,7 @@ export default function Customers() {
     return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
   };
 
-  const displayedCustomers = searchQuery.length > 2 ? searchResults : customers;
+  const displayedCustomers = searchQuery.length > 2 ? (searchResults || []) : (customers || []);
   console.log('Customer display data:', { searchQuery, customersCount: customers.length, displayedCount: displayedCustomers.length });
   const sortedCustomers = displayedCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
 
@@ -1062,11 +1062,22 @@ export default function Customers() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => {
+                    // CRITICAL FIX: Check if customers array exists and has data
+                    if (!customers || customers.length === 0) {
+                      toast({
+                        title: "No customers found",
+                        description: "Please wait for customer data to load",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
                     // Find potential duplicates by phone number last 4 digits
-                    const phoneNumbers = customers.map(c => c.phoneNumber);
+                    const phoneNumbers = customers.map(c => c?.phoneNumber || '');
                     const duplicatePhoneGroups = new Map<string, Customer[]>();
                     
                     customers.forEach(customer => {
+                      if (!customer?.phoneNumber) return;
                       const lastFour = customer.phoneNumber.slice(-4);
                       if (!duplicatePhoneGroups.has(lastFour)) {
                         duplicatePhoneGroups.set(lastFour, []);
@@ -1081,15 +1092,15 @@ export default function Customers() {
                     if (duplicateGroups.length > 0) {
                       // Show the first duplicate group found
                       const firstDuplicateGroup = duplicateGroups[0];
-                      setSelectedDuplicates(firstDuplicateGroup.sort((a, b) => b.totalOrders - a.totalOrders));
+                      setSelectedDuplicates(firstDuplicateGroup.sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)));
                       setMergeMode('automatic');
                       setIsMergeDialogOpen(true);
                     } else {
                       // Check for Michael test accounts
                       const michaelAccounts = customers.filter(customer => 
-                        customer.firstName.toLowerCase().includes('michael') || 
-                        customer.firstName.toLowerCase().includes('john')
-                      ).sort((a, b) => b.totalOrders - a.totalOrders); // Sort by orders descending
+                        customer?.firstName?.toLowerCase().includes('michael') || 
+                        customer?.firstName?.toLowerCase().includes('john')
+                      ).sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)); // Sort by orders descending
                       
                       if (michaelAccounts.length > 1) {
                         setSelectedDuplicates(michaelAccounts);
@@ -1369,9 +1380,9 @@ export default function Customers() {
             </div>
           ) : (
             <div className="space-y-4">
-              {customers.filter(customer => customer.totalOrders > 0).map((customer) => {
+              {(customers || []).filter(customer => customer?.totalOrders > 0).map((customer) => {
                 const customerOrdersList = Array.isArray(customerOrders) 
-                  ? customerOrders.filter((order: any) => order.retailerId === customer.id)
+                  ? customerOrders.filter((order: any) => order?.retailerId === customer?.id)
                   : [];
                 
                 return (
@@ -1382,17 +1393,17 @@ export default function Customers() {
                           <div className="flex items-center space-x-4">
                             <Avatar className="h-12 w-12">
                               <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                                {customer.firstName.charAt(0)}{customer.lastName?.charAt(0) || ''}
+                                {customer?.firstName?.charAt(0) || '?'}{customer?.lastName?.charAt(0) || ''}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <h4 className="text-lg font-semibold">
-                                {customer.firstName} {customer.lastName}
+                                {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                               </h4>
                               <div className="flex items-center space-x-4 text-sm text-gray-600">
                                 <div className="flex items-center space-x-1">
                                   <Phone className="h-4 w-4" />
-                                  <span>{customer.phoneNumber}</span>
+                                  <span>{customer?.phoneNumber || 'No phone'}</span>
                                 </div>
                                 {customer.email && (
                                   <div className="flex items-center space-x-1">
@@ -1407,7 +1418,7 @@ export default function Customers() {
                             <div className="flex items-center space-x-4">
                               <div className="flex items-center space-x-2">
                                 <ShoppingBag className="h-4 w-4 text-blue-500" />
-                                <span className="font-medium">{customer.totalOrders} orders</span>
+                                <span className="font-medium">{customer?.totalOrders || 0} orders</span>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <DollarSign className="h-4 w-4 text-green-500" />
