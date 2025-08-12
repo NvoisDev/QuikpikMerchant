@@ -650,7 +650,7 @@ export default function Customers() {
 
   const handleUpdateMember = (data: EditMemberFormData) => {
     if (!selectedMember || !selectedGroup) return;
-    const memberId = selectedMember.id || selectedMember.customerId;
+    const memberId = selectedMember?.id || selectedMember?.customerId;
     updateMemberMutation.mutate({ 
       groupId: selectedGroup.id, 
       memberId, 
@@ -2335,7 +2335,7 @@ export default function Customers() {
       <SubscriptionUpgradeModal 
         open={showUpgradeModal} 
         onOpenChange={() => setShowUpgradeModal(false)}
-        reason="customer_groups"
+        reason="customer_group_limit"
         currentPlan="free"
       />
     </div>
