@@ -216,7 +216,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
               <span>Total Paid:</span>
-              <span>{formatCurrency(calculatedTotal)}</span>
+              <span>{formatCurrency(totalPaid)}</span>
             </div>
           </div>
         </div>
@@ -585,14 +585,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       )}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total Paid:</span>
-                        <span className="text-green-700">{formatCurrency((parseFloat(order.subtotal) + (parseFloat(order.subtotal) * 0.055 + 0.50) + parseFloat(order.shippingTotal || '0')).toFixed(2))}</span>
+                        <span className="text-green-700">{formatCurrency(order.total)}</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Right side - Total Paid and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg text-green-700">{formatCurrency((parseFloat(order.subtotal) + (parseFloat(order.subtotal) * 0.055 + 0.50) + parseFloat(order.shippingTotal || '0')).toFixed(2))}</div>
+                    <div className="font-semibold text-lg text-green-700">{formatCurrency(order.total)}</div>
                     <div className="text-xs text-gray-500">Total Paid</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end mt-1">
                       <Calendar className="h-3 w-3 mr-1" />
