@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, Truck, Hand } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -547,6 +547,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         {getStatusIcon(order.status)}
                         <span className="ml-1 capitalize">{order.status}</span>
                       </Badge>
+                      {/* Delivery/Pickup Tag */}
+                      {order.fulfillmentType === 'delivery' ? (
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Delivery
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
+                          <Hand className="h-3 w-3 mr-1" />
+                          Pickup
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-xs text-gray-600 mb-2 flex items-center space-x-2">
                       <span>From</span>
