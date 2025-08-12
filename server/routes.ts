@@ -11734,7 +11734,8 @@ The Quikpik Team
         };
 
         current.orderCount++;
-        current.totalSpent += parseFloat(order.total || '0');
+        // Use wholesaler earnings (subtotal * 96.7%) instead of customer payment amount
+        current.totalSpent += parseFloat(order.subtotal || '0') * 0.967;
         
         const orderDate = new Date(order.createdAt);
         if (!current.firstOrderDate || orderDate < current.firstOrderDate) {
@@ -11792,7 +11793,7 @@ The Quikpik Team
         topCustomers,
         metrics: {
           averageOrderValue: validOrders.length > 0 ? 
-            Math.round((validOrders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0) / validOrders.length) * 100) / 100 : 0,
+            Math.round((validOrders.reduce((sum, order) => sum + (parseFloat(order.subtotal || '0') * 0.967), 0) / validOrders.length) * 100) / 100 : 0,
           repeatCustomerRate: customers.length > 0 ? 
             Math.round((returningCustomers / customers.length) * 100) : 0
         }

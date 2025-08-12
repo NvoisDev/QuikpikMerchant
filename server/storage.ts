@@ -3607,7 +3607,7 @@ export class DatabaseStorage implements IStorage {
         COALESCE(STRING_AGG(DISTINCT cg.name, ', '), '') as group_names,
         COALESCE(STRING_AGG(DISTINCT cg.id::text, ','), '') as group_ids,
         COUNT(DISTINCT o.id) as total_orders,
-        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent,
+        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.subtotal::numeric * 0.967 ELSE 0 END), 0) as total_spent,
         MAX(o.created_at) as last_order_date
       FROM users u
       LEFT JOIN customer_group_members cgm ON u.id = cgm.customer_id
