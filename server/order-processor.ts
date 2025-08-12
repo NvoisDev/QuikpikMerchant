@@ -129,9 +129,26 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   // Calculate actual platform fee based on Connect usage
   const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
+  
+  // CRITICAL FIX: Wholesaler should get subtotal minus platform fee, NOT total minus platform fee
+  // Platform keeps: platform fee + transaction fee + delivery cost
+  // Wholesaler gets: subtotal - platform fee (3.3% of subtotal)
+  const calculatedSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
+    ? parseFloat(productSubtotal) 
+    : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+    
   const wholesalerAmount = connectAccountUsed === 'true' 
-    ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
-    : totalAmount;
+    ? (calculatedSubtotal - parseFloat(platformFee)).toFixed(2)
+    : calculatedSubtotal.toFixed(2);
+    
+  console.log('💰 Wholesaler transfer calculation:', {
+    customerPaysTotal: totalAmount,
+    productSubtotal: calculatedSubtotal.toFixed(2),
+    platformFee: platformFee,
+    wholesalerReceives: wholesalerAmount,
+    deliveryCost: paymentIntent.metadata.shippingCost || '0.00',
+    transactionFee: customerTransactionFee || '0.00'
+  });
 
   // Use the correct total from metadata instead of recalculating
   // CRITICAL FIX: Include shipping cost in total calculation
