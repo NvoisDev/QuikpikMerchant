@@ -391,7 +391,7 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
       toast({ 
         title: "Success", 
-        description: data?.message || "Successfully merged customer records" 
+        description: (data as any)?.message || "Successfully merged customer records" 
       });
       setIsMergeDialogOpen(false);
       setSelectedDuplicates([]);
@@ -1274,9 +1274,9 @@ export default function Customers() {
                             )}
                           </div>
                           
-                          {customer.groupNames.length > 0 && (
+                          {customer.groupNames && customer.groupNames.length > 0 && (
                             <div className="flex items-center space-x-2">
-                              {[...new Set(customer.groupNames)].map((groupName, index) => (
+                              {Array.from(new Set(customer.groupNames)).map((groupName, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {groupName}
                                 </Badge>
@@ -1370,9 +1370,9 @@ export default function Customers() {
           ) : (
             <div className="space-y-4">
               {customers.filter(customer => customer.totalOrders > 0).map((customer) => {
-                const customerOrdersList = customerOrders.filter(order => 
-                  order.retailerId === customer.id
-                );
+                const customerOrdersList = Array.isArray(customerOrders) 
+                  ? customerOrders.filter((order: any) => order.retailerId === customer.id)
+                  : [];
                 
                 return (
                   <Card key={customer.id} className="overflow-hidden">
@@ -1422,7 +1422,7 @@ export default function Customers() {
                         <div className="p-6">
                           <h5 className="font-medium mb-4">Recent Orders</h5>
                           <div className="space-y-3">
-                            {customerOrdersList.slice(0, 5).map((order) => (
+                            {customerOrdersList.slice(0, 5).map((order: any) => (
                               <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center space-x-3">
                                   <Badge variant={order.status === 'fulfilled' ? 'default' : 'secondary'}>
@@ -1634,13 +1634,13 @@ export default function Customers() {
                   </FormItem>
                 )}
               />
-              {selectedCustomer?.groupNames.length > 0 && (
+              {selectedCustomer && selectedCustomer.groupNames && selectedCustomer.groupNames.length > 0 && (
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700 font-medium mb-2">
                     Currently in groups:
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {[...new Set(selectedCustomer.groupNames)].map((groupName, index) => {
+                    {Array.from(new Set(selectedCustomer.groupNames)).map((groupName, index) => {
                       const groupId = customerGroups.find(g => g.name === groupName)?.id;
                       return (
                         <div key={index} className="flex items-center space-x-1 bg-white rounded-full px-3 py-1 border">
@@ -1652,7 +1652,7 @@ export default function Customers() {
                               variant="ghost"
                               size="sm"
                               className="h-4 w-4 p-0 hover:bg-red-100"
-                              onClick={() => handleRemoveFromGroup(selectedCustomer.id, groupId)}
+                              onClick={() => selectedCustomer && handleRemoveFromGroup(selectedCustomer.id, groupId)}
                               title="Remove from group"
                             >
                               <X className="h-3 w-3 text-red-500" />
@@ -2334,7 +2334,9 @@ export default function Customers() {
       {/* Upgrade Modal */}
       <SubscriptionUpgradeModal 
         open={showUpgradeModal} 
-        onOpenChange={() => setShowUpgradeModal(false)} 
+        onOpenChange={() => setShowUpgradeModal(false)}
+        reason="customer_groups"
+        currentPlan="free"
       />
     </div>
   );
