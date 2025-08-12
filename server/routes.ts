@@ -3480,6 +3480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Advanced analytics routes
   app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
     try {
+      // Check premium subscription for Business Performance access
+      if (req.user.subscriptionTier !== 'premium') {
+        return res.status(403).json({ 
+          error: 'Premium subscription required for Business Performance analytics',
+          required: 'premium'
+        });
+      }
+
       // Use parent company ID for team members
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
@@ -3568,6 +3576,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
     try {
+      // Check premium subscription for Business Performance access
+      if (req.user.subscriptionTier !== 'premium') {
+        return res.status(403).json({ 
+          error: 'Premium subscription required for Business Performance analytics',
+          required: 'premium'
+        });
+      }
+
       // Use parent company ID for team members
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
@@ -6596,6 +6612,14 @@ Return only the taglines, one per line, without numbers or formatting.`;
   // Financial Health Analysis API endpoints
   app.get('/api/financial-health', requireAuth, async (req: any, res) => {
     try {
+      // Check premium subscription for Business Performance access
+      if (req.user.subscriptionTier !== 'premium') {
+        return res.status(403).json({ 
+          error: 'Premium subscription required for Business Performance analytics',
+          required: 'premium'
+        });
+      }
+
       const userId = req.user.id;
       const period = req.query.period || '3months';
       
@@ -11784,6 +11808,14 @@ The Quikpik Team
   // Inventory Insights
   app.get('/api/analytics/inventory', requireAuth, async (req: any, res) => {
     try {
+      // Check premium subscription for Business Performance access
+      if (req.user.subscriptionTier !== 'premium') {
+        return res.status(403).json({ 
+          error: 'Premium subscription required for Business Performance analytics',
+          required: 'premium'
+        });
+      }
+
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
       

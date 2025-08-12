@@ -84,6 +84,11 @@ export function useSubscription() {
     return user.subscriptionTier === 'premium';
   };
 
+  const canAccessBusinessPerformance = () => {
+    if (!user) return false;
+    return user.subscriptionTier === 'premium';
+  };
+
   const getProductLimit = (tier: string) => {
     switch (tier) {
       case 'free':
@@ -116,6 +121,7 @@ export function useSubscription() {
     canCreateProduct,
     canEditProduct,
     canAccessAdvertising,
+    canAccessBusinessPerformance,
     getProductLimit,
     getEditLimit,
     currentTier: subscription?.subscriptionTier || user?.subscriptionTier || 'free',
