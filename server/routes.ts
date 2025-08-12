@@ -1823,7 +1823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               productId: item.product.id,
               productName: item.product.name,
               quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice)
+              unitPrice: parseFloat(item.unitPrice),
+              sellingType: item.sellingType || 'units'
             }))),
             shippingInfo: JSON.stringify(shippingInfo ? {
               option: shippingInfo.option,
@@ -1861,7 +1862,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               productId: item.product.id,
               productName: item.product.name,
               quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice)
+              unitPrice: parseFloat(item.unitPrice),
+              sellingType: item.sellingType || 'units'
             }))),
             shippingInfo: JSON.stringify(shippingInfo ? {
               option: shippingInfo.option,
