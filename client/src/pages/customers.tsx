@@ -508,6 +508,22 @@ export default function Customers() {
     },
   });
 
+  const deleteGroupMutation = useMutation({
+    mutationFn: (groupId: number) => apiRequest('DELETE', `/api/customer-groups/${groupId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({ title: "Success", description: "Customer group deleted successfully!" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer group",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -666,6 +682,10 @@ export default function Customers() {
       memberId, 
       data 
     });
+  };
+
+  const handleDeleteGroup = (groupId: number) => {
+    deleteGroupMutation.mutate(groupId);
   };
 
   // Contact import functionality
@@ -969,6 +989,19 @@ export default function Customers() {
                           title="Edit Group"
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete the "${group.name}" group? This will remove all members from the group and cannot be undone.`)) {
+                              handleDeleteGroup(group.id);
+                            }
+                          }}
+                          title="Delete Group"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
