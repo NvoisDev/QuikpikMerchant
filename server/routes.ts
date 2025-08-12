@@ -1803,7 +1803,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformFeesTotal: totalPlatformFees,
           applicationFeePence: applicationFeeAmount,
           wholesalerShouldReceive: totalCustomerPays - totalPlatformFees,
-          calculation: `${totalCustomerPays} - ${totalPlatformFees} = ${totalCustomerPays - totalPlatformFees}`
+          calculation: `${totalCustomerPays} - ${totalPlatformFees} = ${totalCustomerPays - totalPlatformFees}`,
+          breakdown: {
+            wholesalerPlatformFee,
+            customerTransactionFee,
+            deliveryCost,
+            sum: wholesalerPlatformFee + customerTransactionFee + deliveryCost
+          }
+        });
+        
+        // CRITICAL FIX: Ensure we're using the correct total platform fees
+        const finalApplicationFeeAmount = Math.round((wholesalerPlatformFee + customerTransactionFee + deliveryCost) * 100);
+        console.log('🚨 FINAL APPLICATION FEE VERIFICATION:', {
+          originalApplicationFeeAmount: applicationFeeAmount,
+          recalculatedApplicationFeeAmount: finalApplicationFeeAmount,
+          shouldMatch: applicationFeeAmount === finalApplicationFeeAmount
         });
         
         paymentIntent = await stripe.paymentIntents.create({
@@ -1811,7 +1825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
-          application_fee_amount: applicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
+          application_fee_amount: finalApplicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
           transfer_data: {
             destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
           },
