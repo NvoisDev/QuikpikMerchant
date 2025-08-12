@@ -465,10 +465,19 @@ export default function Customers() {
 
   const deleteCustomerMutation = useMutation({
     mutationFn: (customerId: string) => apiRequest('DELETE', `/api/customers/${customerId}`),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers/stats'] });
-      toast({ title: "Success", description: "Customer deleted successfully!" });
+      
+      if (data.archived) {
+        toast({ 
+          title: "Customer Archived", 
+          description: "Customer has existing orders and has been archived instead of deleted. Archived customers won't appear in your customer list but their order history is preserved.",
+          duration: 8000
+        });
+      } else {
+        toast({ title: "Success", description: "Customer deleted successfully!" });
+      }
     },
     onError: (error: any) => {
       toast({

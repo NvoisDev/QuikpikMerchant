@@ -163,6 +163,10 @@ export const users = pgTable("users", {
   postalCode: varchar("postal_code"),
   country: varchar("country").default("United Kingdom"),
   
+  // Archive functionality
+  archived: boolean("archived").default(false), // For soft delete when customer has orders
+  archivedAt: timestamp("archived_at"),
+  
   notificationPreferences: jsonb("notification_preferences").default({
     email: true,
     sms: true,

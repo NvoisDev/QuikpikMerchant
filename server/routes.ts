@@ -11276,9 +11276,18 @@ The Quikpik Team
         return res.status(404).json({ error: 'Customer not found' });
       }
       
-      // Delete the customer (this will cascade to remove from groups and orders)
-      await storage.deleteCustomer(customerId);
-      res.json({ success: true, message: 'Customer deleted successfully' });
+      // Attempt to delete or archive the customer
+      const result = await storage.deleteCustomer(customerId);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: result.message,
+          archived: result.archived || false
+        });
+      } else {
+        res.status(500).json({ error: result.message });
+      }
     } catch (error) {
       console.error('Error deleting customer:', error);
       res.status(500).json({ error: 'Failed to delete customer' });

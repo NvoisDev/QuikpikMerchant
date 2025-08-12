@@ -117,7 +117,7 @@ export interface IStorage {
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomerInfo(customerId: string, phoneNumber: string, name: string, email?: string): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
-  deleteCustomer(customerId: string): Promise<void>;
+  deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
   
@@ -1434,19 +1434,54 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async deleteCustomer(customerId: string): Promise<void> {
-    // First remove customer from all groups
-    await db
-      .delete(customerGroupMembers)
-      .where(eq(customerGroupMembers.customerId, customerId));
-    
-    // Note: We don't delete orders as they are important business records
-    // We just remove the customer record which will leave orders with null retailerId
-    
-    // Finally delete the customer
-    await db
-      .delete(users)
-      .where(eq(users.id, customerId));
+  async deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }> {
+    try {
+      // Check if customer has any orders
+      const customerOrders = await db
+        .select({ count: count() })
+        .from(orders)
+        .where(eq(orders.retailerId, customerId));
+      
+      const hasOrders = customerOrders[0]?.count > 0;
+      
+      if (hasOrders) {
+        // Archive the customer instead of deleting
+        await db
+          .update(users)
+          .set({ 
+            archived: true, 
+            archivedAt: new Date() 
+          })
+          .where(eq(users.id, customerId));
+        
+        return {
+          success: true,
+          archived: true,
+          message: 'Customer has existing orders and has been archived instead of deleted'
+        };
+      } else {
+        // Safe to delete - no orders exist
+        await db
+          .delete(customerGroupMembers)
+          .where(eq(customerGroupMembers.customerId, customerId));
+        
+        await db
+          .delete(users)
+          .where(eq(users.id, customerId));
+        
+        return {
+          success: true,
+          archived: false,
+          message: 'Customer deleted successfully'
+        };
+      }
+    } catch (error) {
+      console.error('Error in deleteCustomer:', error);
+      return {
+        success: false,
+        message: 'Failed to delete customer'
+      };
+    }
   }
 
   async addCustomerToGroup(groupId: number, customerId: string): Promise<void> {
@@ -3582,7 +3617,7 @@ export class DatabaseStorage implements IStorage {
         (u.id = o.wholesaler_id AND o.retailer_id = ${wholesalerId}) OR
         (u.id = ${wholesalerId} AND (o.wholesaler_id = ${wholesalerId} OR o.retailer_id = ${wholesalerId}))
       )
-      WHERE u.role IN ('retailer', 'customer') AND u.id != ${wholesalerId}
+      WHERE u.role IN ('retailer', 'customer') AND u.id != ${wholesalerId} AND u.archived = false
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
