@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
-import MultiWholesalerDashboard from "@/components/MultiWholesalerDashboard";
+
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
 import { 
   DollarSign, 
@@ -221,7 +221,7 @@ export default function WholesalerDashboard() {
   // Share store functionality
   const handleShareStore = async () => {
     // Use team member's parent wholesaler ID if user is team member
-    const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
+    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
     const customerPortalUrl = `https://quikpik.app/customer/${effectiveUserId}`;
     const businessName = user?.businessName || "My Store";
     
@@ -245,7 +245,7 @@ export default function WholesalerDashboard() {
         // User cancelled sharing or sharing failed
         console.log("Native sharing cancelled or failed:", error);
         // Don't show error toast if user just cancelled
-        if (error.name !== 'AbortError') {
+        if ((error as any)?.name !== 'AbortError') {
           console.warn("Share API error:", error);
         }
       }
@@ -292,9 +292,9 @@ export default function WholesalerDashboard() {
                 <Link href="/stock-alerts">
                   <Button variant="ghost" size="icon" className="relative hover:bg-gray-100">
                     <Bell className="h-5 w-5" />
-                    {alertsData?.count > 0 && (
+                    {(alertsData as any)?.count > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {alertsData.count}
+                        {(alertsData as any).count}
                       </span>
                     )}
                   </Button>
@@ -363,7 +363,7 @@ export default function WholesalerDashboard() {
         {/* Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {/* Priority Stripe Setup Notification */}
-          {user?.role === 'wholesaler' && stripeStatus && !stripeStatus.paymentsEnabled && (
+          {user?.role === 'wholesaler' && stripeStatus && !(stripeStatus as any).paymentsEnabled && (
             <div className="mb-6 sm:mb-8">
               <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-400 rounded-lg p-4 sm:p-6 shadow-lg">
                 <div className="flex items-start">
@@ -410,10 +410,10 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/80 text-sm font-medium">Total Revenue</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
+                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">
-                      {stats?.revenueChange !== undefined 
-                        ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
+                      {(stats as any)?.revenueChange !== undefined 
+                        ? `${(stats as any).revenueChange >= 0 ? '+' : ''}${(stats as any).revenueChange.toFixed(1)}% from last month`
                         : 'No change data'}
                     </p>
                   </div>
@@ -429,10 +429,10 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/80 text-sm font-medium">Total Orders</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
+                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">
-                      {stats?.ordersChange !== undefined 
-                        ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
+                      {(stats as any)?.ordersChange !== undefined 
+                        ? `${(stats as any).ordersChange >= 0 ? '+' : ''}${(stats as any).ordersChange.toFixed(1)}% from last month`
                         : 'No change data'}
                     </p>
                   </div>
@@ -448,9 +448,9 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/80 text-sm font-medium">Active Products</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
+                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">
-                      {alertsData?.count > 0 ? `${alertsData.count} low stock alerts` : 'Stock levels healthy'}
+                      {(alertsData as any)?.count > 0 ? `${(alertsData as any).count} low stock alerts` : 'Stock levels healthy'}
                     </p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
@@ -465,7 +465,7 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/80 text-sm font-medium">WhatsApp Reach</p>
-                    <p className="text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</p>
+                    <p className="text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber((broadcastStats as any)?.recipientsReached || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">Customers reached</p>
                   </div>
                   <div className="bg-white/20 p-3 rounded-full">
@@ -483,7 +483,7 @@ export default function WholesalerDashboard() {
               icon={Package}
               title="Manage Products"
               description="Add, edit and organize your inventory"
-              metric={`${formatNumber(stats?.activeProducts || 0)} Active`}
+              metric={`${formatNumber((stats as any)?.activeProducts || 0)} Active`}
               colorClass="from-blue-500 to-blue-600"
               gradientFrom="from-blue-50"
               gradientTo="to-blue-100"
@@ -494,7 +494,7 @@ export default function WholesalerDashboard() {
               icon={MessageSquare}
               title="Send Campaigns"
               description="Broadcast to your customers"
-              metric={`${formatNumber(broadcastStats?.recipientsReached || 0)} Reached`}
+              metric={`${formatNumber((broadcastStats as any)?.recipientsReached || 0)} Reached`}
               colorClass="from-emerald-500 to-emerald-600"
               gradientFrom="from-emerald-50"
               gradientTo="to-emerald-100"
@@ -505,7 +505,7 @@ export default function WholesalerDashboard() {
               icon={ShoppingCart}
               title="View Orders"
               description="Track customer purchases"
-              metric={`${formatNumber(stats?.ordersCount || 0)} Orders`}
+              metric={`${formatNumber((stats as any)?.ordersCount || 0)} Orders`}
               colorClass="from-purple-500 to-purple-600"
               gradientFrom="from-purple-50"
               gradientTo="to-purple-100"
@@ -523,15 +523,6 @@ export default function WholesalerDashboard() {
             />
           </div>
 
-          {/* Multi-Wholesaler Dashboard Widgets */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Trophy className="h-6 w-6 text-yellow-500" />
-              <h2 className="text-2xl font-bold">Platform Insights</h2>
-            </div>
-            <MultiWholesalerDashboard />
-          </div>
-
           {/* Top Selling Product Section */}
           <div className="mb-8">
             <Card className="bg-white border-gray-200 shadow-lg">
@@ -547,15 +538,15 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
-                ) : topProducts && topProducts.length > 0 ? (
+                ) : topProducts && (topProducts as any).length > 0 ? (
                   <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
                     {/* Product Image */}
                     <div className="flex-shrink-0">
                       <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                        {topProducts[0].images && topProducts[0].images.length > 0 ? (
+                        {(topProducts as any)[0].images && (topProducts as any)[0].images.length > 0 ? (
                           <img 
-                            src={topProducts[0].images[0]} 
-                            alt={topProducts[0].name}
+                            src={(topProducts as any)[0].images[0]} 
+                            alt={(topProducts as any)[0].name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -568,32 +559,32 @@ export default function WholesalerDashboard() {
 
                     {/* Product Details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{topProducts[0].name}</h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{topProducts[0].description}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{(topProducts as any)[0].name}</h3>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{(topProducts as any)[0].description}</p>
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            £{topProducts[0].revenue?.toLocaleString() || '0'}
+                            £{(topProducts as any)[0].revenue?.toLocaleString() || '0'}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-xs text-blue-600 font-medium">Units Sold</p>
                           <p className="text-lg font-bold text-blue-700">
-                            {topProducts[0].totalQuantitySold?.toLocaleString() || '0'}
+                            {(topProducts as any)[0].totalQuantitySold?.toLocaleString() || '0'}
                           </p>
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-xs text-purple-600 font-medium">Orders</p>
                           <p className="text-lg font-bold text-purple-700">
-                            {topProducts[0].orderCount?.toLocaleString() || '0'}
+                            {(topProducts as any)[0].orderCount?.toLocaleString() || '0'}
                           </p>
                         </div>
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            £{topProducts[0].price ? parseFloat(topProducts[0].price.toString()).toFixed(2) : '0.00'}
+                            £{(topProducts as any)[0].price ? parseFloat((topProducts as any)[0].price.toString()).toFixed(2) : '0.00'}
                           </p>
                         </div>
                       </div>
@@ -749,7 +740,7 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {(orders || []).slice(0, 5).map((order: any) => (
+                    {((orders as any) || []).slice(0, 5).map((order: any) => (
                       <Link key={order.id} href={`/orders?id=${order.id}`}>
                         <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                           <div>
@@ -762,7 +753,7 @@ export default function WholesalerDashboard() {
                         </div>
                       </Link>
                     ))}
-                    {(orders || []).length === 0 && (
+                    {((orders as any) || []).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p>No orders yet</p>
@@ -795,14 +786,14 @@ export default function WholesalerDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {(topProducts || []).length === 0 ? (
+                    {((topProducts as any) || []).length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p>No sales data yet</p>
                         <p className="text-sm">Add products and start selling to see your top performers here</p>
                       </div>
                     ) : (
-                      (topProducts || []).slice(0, 5).map((product: any) => (
+                      ((topProducts as any) || []).slice(0, 5).map((product: any) => (
                         <div key={product.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
