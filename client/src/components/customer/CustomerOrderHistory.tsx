@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -455,88 +455,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       ))}
                     </div>
                     
-                    {/* Summary in compact format */}
+                    {/* Summary - Only 3 essential lines as requested */}
                     <div className="mt-2 space-y-0.5">
                       <div className="flex justify-between text-xs">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(order.subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span>Transaction Fee:</span>
-                        <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
+                        <span>Platform Fee (3.3%):</span>
+                        <span>-{formatCurrency((parseFloat(order.subtotal) * 0.033).toFixed(2))}</span>
                       </div>
-                      {/* Show delivery/shipping cost - always show for delivery orders */}
-                      {(order.fulfillmentType === 'delivery' || ((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0))) && (
-                        <div className="flex justify-between text-xs">
-                          <span className="flex items-center">
-                            {order.fulfillmentType === 'delivery' ? (
-                              <>
-                                <Truck className="h-3 w-3 mr-1 text-blue-600" />
-                                Delivery Cost:
-                              </>
-                            ) : (
-                              <>
-                                <Hand className="h-3 w-3 mr-1 text-green-600" />
-                                Shipping:
-                              </>
-                            )}
-                          </span>
-                          <span className="font-medium">
-                            {order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? 
-                              formatCurrency(order.deliveryCost) : 
-                              order.shippingTotal && parseFloat(order.shippingTotal) > 0 ? 
-                                formatCurrency(order.shippingTotal) : 
-                                order.fulfillmentType === 'delivery' ? 
-                                  <span className="text-gray-500">No cost recorded</span> : 
-                                  formatCurrency('0')
-                            }
-                          </span>
-                        </div>
-                      )}
-
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
-                        <span>Your Earnings:</span>
+                        <span>Total (Your Earnings):</span>
                         <span className="text-green-700">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</span>
                       </div>
-
                     </div>
                   </div>
                   
-                  {/* Right side - Price and actions */}
+                  {/* Right side - Your Earnings and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg">{formatCurrency((
-                      parseFloat(order.subtotal) + 
-                      parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                      parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
-                    ).toFixed(2))}</div>
-                    <div className="text-xs text-gray-500 flex items-center justify-end">
+                    <div className="font-semibold text-lg text-green-700">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</div>
+                    <div className="text-xs text-gray-500">Your Earnings</div>
+                    <div className="text-xs text-gray-500 flex items-center justify-end mt-1">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(order.date), 'MMM d, yyyy')}
                     </div>
-                    
-                    {/* Collection/Delivery tag with enhanced styling */}
-                    <div className="flex items-center justify-end space-x-1 mt-1">
-                      {order.fulfillmentType === 'delivery' ? (
-                        <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
-                          <Truck className="h-3 w-3 mr-1" />
-                          Delivery
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs px-2 py-1 bg-green-50 text-green-700 border-green-200">
-                          <Hand className="h-3 w-3 mr-1" />
-                          Collection
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {/* Show delivery cost prominently if applicable */}
-                    {((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0)) && (
-                      <div className="text-xs text-gray-600 mt-1 flex items-center justify-end">
-                        <span className="font-medium">
-                          {order.fulfillmentType === 'delivery' ? 'Delivery:' : 'Shipping:'} {formatCurrency(order.deliveryCost || order.shippingTotal || '0')}
-                        </span>
-                      </div>
-                    )}
                     
                     {/* View Details Button */}
                     <Dialog>

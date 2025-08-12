@@ -58,6 +58,7 @@ function PublicRoutes() {
       <Route path="/marketplace/product/:id" component={ProductOrderPage} />
       <Route path="/product/:slug" component={PublicProductPage} />
       <Route path="/customer/:id" component={CustomerLogin} />
+      <Route path="/customer/:wholesalerId/:customerPhone" component={CustomerPortal} />
       <Route path="/store/:id" component={CustomerPortal} />
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       <Route path="/team-invitation" component={TeamInvitation} />
