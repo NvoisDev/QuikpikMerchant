@@ -1772,7 +1772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Wholesaler Platform Fee: 3.3% of product total only (not delivery cost)
       const wholesalerPlatformFee = productSubtotal * 0.033;
-      const wholesalerReceives = productSubtotal + deliveryCost - wholesalerPlatformFee;
+      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
