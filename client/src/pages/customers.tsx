@@ -536,9 +536,9 @@ export default function Customers() {
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     editCustomerForm.reset({
-      firstName: customer.firstName,
-      lastName: customer.lastName || '',
-      email: customer.email || '',
+      firstName: customer?.firstName || '',
+      lastName: customer?.lastName || '',
+      email: customer?.email || '',
     });
     setIsEditCustomerDialogOpen(true);
   };
@@ -1080,7 +1080,7 @@ export default function Customers() {
                     
                     customers.forEach(customer => {
                       if (!customer?.phoneNumber) return;
-                      const lastFour = customer.phoneNumber.slice(-4);
+                      const lastFour = customer?.phoneNumber?.slice(-4) || '';
                       if (!duplicatePhoneGroups.has(lastFour)) {
                         duplicatePhoneGroups.set(lastFour, []);
                       }
@@ -1258,28 +1258,28 @@ export default function Customers() {
           ) : (
             <div className="space-y-4">
               {sortedCustomers.map((customer) => (
-                <Card key={customer.id} className="hover:shadow-md transition-shadow">
+                <Card key={customer?.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
                           <AvatarFallback className="bg-blue-100 text-blue-600">
-                            {getInitials(customer.firstName, customer.lastName)}
+                            {getInitials(customer?.firstName || '', customer?.lastName)}
                           </AvatarFallback>
                         </Avatar>
                         
                         <div className="space-y-1">
                           <h3 className="text-lg font-semibold">
-                            {customer.firstName} {customer.lastName}
+                            {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                           </h3>
                           
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
                               <Phone className="h-4 w-4" />
-                              <span>{customer.phoneNumber}</span>
+                              <span>{customer?.phoneNumber || 'No phone'}</span>
                             </div>
                             
-                            {customer.email && (
+                            {customer?.email && (
                               <div className="flex items-center space-x-1">
                                 <Mail className="h-4 w-4" />
                                 <span>{customer.email}</span>
@@ -1287,9 +1287,9 @@ export default function Customers() {
                             )}
                           </div>
                           
-                          {customer.groupNames && customer.groupNames.length > 0 && (
+                          {customer?.groupNames && customer.groupNames.length > 0 && (
                             <div className="flex items-center space-x-2">
-                              {Array.from(new Set(customer.groupNames)).map((groupName, index) => (
+                              {Array.from(new Set(customer?.groupNames || [])).map((groupName, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {groupName}
                                 </Badge>
@@ -1303,18 +1303,18 @@ export default function Customers() {
                         <div className="text-right space-y-1">
                           <div className="flex items-center space-x-2">
                             <ShoppingBag className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{customer.totalOrders} orders</span>
+                            <span className="font-medium">{customer?.totalOrders || 0} orders</span>
                           </div>
                           
                           <div className="flex items-center space-x-2">
                             <DollarSign className="h-4 w-4 text-green-500" />
-                            <span className="font-medium">{formatCurrency(customer.totalSpent)}</span>
+                            <span className="font-medium">{formatCurrency(customer?.totalSpent || 0)}</span>
                           </div>
                           
-                          {customer.lastOrderDate && (
+                          {customer?.lastOrderDate && (
                             <div className="flex items-center space-x-2 text-sm text-gray-500">
                               <Calendar className="h-4 w-4" />
-                              <span>Last: {formatDate(customer.lastOrderDate)}</span>
+                              <span>Last: {formatDate(customer?.lastOrderDate || new Date())}</span>
                             </div>
                           )}
                         </div>
@@ -1348,8 +1348,8 @@ export default function Customers() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (confirm(`Are you sure you want to delete ${customer.firstName} ${customer.lastName}? This action cannot be undone.`)) {
-                                deleteCustomerMutation.mutate(customer.id);
+                              if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
+                                deleteCustomerMutation.mutate(customer?.id);
                               }
                             }}
                             title="Delete Customer"
@@ -1469,7 +1469,7 @@ export default function Customers() {
                 );
               })}
               
-              {customers.filter(customer => customer.totalOrders > 0).length === 0 && (
+              {(customers || []).filter(customer => (customer?.totalOrders || 0) > 0).length === 0 && (
                 <div className="text-center py-12">
                   <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Customer Orders</h3>
@@ -2099,9 +2099,9 @@ export default function Customers() {
                         {customer?.firstName?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div>
-                        <p className="font-medium">{customer.firstName} {customer.lastName || ''}</p>
-                        <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
-                        {customer.email && (
+                        <p className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</p>
+                        <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
+                        {customer?.email && (
                           <p className="text-xs text-gray-500">{customer.email}</p>
                         )}
                       </div>
@@ -2167,10 +2167,10 @@ export default function Customers() {
                     </h4>
                     <div className="space-y-2">
                       {selectedCustomersForMerge.map(customer => (
-                        <div key={customer.id} className="flex items-center justify-between bg-white rounded p-2">
+                        <div key={customer?.id} className="flex items-center justify-between bg-white rounded p-2">
                           <div>
-                            <span className="font-medium">{customer.firstName} {customer.lastName}</span>
-                            <span className="text-sm text-gray-500 ml-2">({customer.totalOrders} orders)</span>
+                            <span className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</span>
+                            <span className="text-sm text-gray-500 ml-2">({customer?.totalOrders || 0} orders)</span>
                           </div>
                           <Button
                             variant="ghost"
@@ -2207,10 +2207,10 @@ export default function Customers() {
                       <h4 className="text-sm font-medium">Search Results</h4>
                     </div>
                     {getMergeSearchResults().map(customer => {
-                      const isSelected = selectedCustomersForMerge.find(c => c.id === customer.id);
+                      const isSelected = selectedCustomersForMerge.find(c => c?.id === customer?.id);
                       return (
                         <div 
-                          key={customer.id} 
+                          key={customer?.id} 
                           className={`p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
                           onClick={() => handleCustomerMergeSelection(customer)}
                         >
@@ -2224,18 +2224,18 @@ export default function Customers() {
                               />
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                                  {getInitials(customer.firstName, customer.lastName)}
+                                  {getInitials(customer?.firstName || '', customer?.lastName)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <h5 className="font-medium">{customer.firstName} {customer.lastName}</h5>
-                                <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
-                                {customer.email && <p className="text-xs text-gray-500">{customer.email}</p>}
+                                <h5 className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</h5>
+                                <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
+                                {customer?.email && <p className="text-xs text-gray-500">{customer.email}</p>}
                               </div>
                             </div>
                             <div className="text-right text-sm">
-                              <p className="font-medium">{customer.totalOrders} orders</p>
-                              <p className="text-gray-500">£{customer.totalSpent.toFixed(2)}</p>
+                              <p className="font-medium">{customer?.totalOrders || 0} orders</p>
+                              <p className="text-gray-500">£{(customer?.totalSpent || 0).toFixed(2)}</p>
                             </div>
                           </div>
                         </div>
@@ -2290,18 +2290,18 @@ export default function Customers() {
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {selectedDuplicates.map((customer, index) => (
                   <div 
-                    key={customer.id} 
+                    key={customer?.id} 
                     className={`p-4 border rounded-lg ${index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <h5 className="font-medium">
-                          {customer.firstName} {customer.lastName || ''}
+                          {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                           {index === 0 && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">PRIMARY</span>}
                         </h5>
-                        <p className="text-sm text-gray-600">{customer.phoneNumber}</p>
-                        {customer.email && <p className="text-sm text-gray-600">{customer.email}</p>}
-                        <p className="text-sm text-gray-500">{customer.totalOrders} orders • £{customer.totalSpent.toFixed(2)} spent</p>
+                        <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
+                        {customer?.email && <p className="text-sm text-gray-600">{customer.email}</p>}
+                        <p className="text-sm text-gray-500">{customer?.totalOrders || 0} orders • £{(customer?.totalSpent || 0).toFixed(2)} spent</p>
                       </div>
                     </div>
                   </div>
