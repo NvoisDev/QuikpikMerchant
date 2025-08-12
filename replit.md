@@ -16,9 +16,11 @@ Preferred communication style: Simple, everyday language.
 
 **Primary Customer Account**: Michael Ogunjemilua (mogunjemilua@gmail.com)
 - **Customer ID**: customer_michael_ogunjemilua_main
-- **Orders**: 133+ orders properly attributed to customer account
-- **Customer Portal**: /customer/customer_michael_ogunjemilua_main
-- **Total Spending**: £42,714.96 (corrected attribution)
+- **Phone**: +447507659550 (authentication verified)
+- **Orders**: 134 orders properly attributed to customer account
+- **Customer Portal**: /customer/104871691614680693123/+447507659550
+- **Total Spending**: £33,281.69 (corrected attribution)
+- **Group Assignment**: London Retail Group (required for portal access)
 
 ## System Architecture
 ### Frontend
@@ -35,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Platform Analytics Separation (Aug 2025)**: Removed Platform Insights section from individual wholesaler dashboards as it contained platform-wide data (total revenue £387,741.30, 15 active wholesalers, 166 total orders) that should only be visible to the business owner. Individual wholesalers now see only their own business metrics. Super admin functionality needed for business owner access to platform-wide analytics.
 - **Business Performance Analytics Consolidation (Aug 2025)**: Successfully consolidated three separate analytics sections (Analytics Dashboard, Customer Insights, Inventory Insights) into a unified Business Performance tab system. Implemented comprehensive tabbed interface integrating all analytics functionality including real-time revenue tracking, customer segmentation analysis, inventory optimization insights, and performance metrics. Removed redundant navigation items for cleaner user experience while maintaining full analytics capabilities through complete backend API endpoints.
 - **Premium Subscription Enforcement for Business Performance (Aug 2025)**: Enhanced Business Performance analytics with robust premium subscription restrictions. Added server-side validation to all analytics endpoints (/api/analytics/dashboard, /api/analytics/customers, /api/analytics/inventory, /api/financial-health) requiring premium tier access. Implemented canAccessBusinessPerformance function in subscription hooks with proper error handling. All Business Performance features now properly restricted to premium subscription users with clear upgrade prompts for non-premium users.
+- **Customer Portal Authentication Fix (Aug 2025)**: Resolved critical customer portal authentication issue where customers showed "0 orders" due to missing customer group assignments. Fixed authentication system requiring customers to be in customer groups for portal access. Added Michael Ogunjemilua to London Retail Group, enabling proper authentication and order history display (134 orders). Updated customer portal URL from incorrect phone number to verified +447507659550.
 - **Stripe Connect Integration Status Fixed (Aug 2025)**: Clarified and corrected payment processing architecture. Platform uses proper Stripe Connect marketplace integration with Express accounts for wholesalers, application fees (3.3% platform fee), and transfer_data for marketplace payments. Fixed integration status page to correctly show "Setup Required" when wholesaler hasn't completed Connect onboarding, rather than showing false "Connected" status. Current user (Michael) needs to complete Stripe Connect onboarding to enable proper B2B marketplace payment flow with direct bank transfers.
 
 ### Backend
