@@ -1216,7 +1216,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...responseUser,
             subscriptionTier: wholesalerInfo.subscriptionTier,
             businessName: wholesalerInfo.businessName,
-            isTeamMember: true as any,
             role: 'team_member'
           };
         }
@@ -11608,7 +11607,7 @@ The Quikpik Team
       const [orders, products, customers] = await Promise.all([
         storage.getOrders(targetUserId),
         storage.getProducts(targetUserId),
-        storage.getCustomers(targetUserId)
+        storage.getAllCustomers(targetUserId)
       ]);
 
       // Calculate date ranges
@@ -11745,7 +11744,7 @@ The Quikpik Team
       
       const [orders, customers] = await Promise.all([
         storage.getOrders(targetUserId),
-        storage.getCustomers(targetUserId)
+        storage.getAllCustomers(targetUserId)
       ]);
 
       const validOrders = orders.filter(order => 
