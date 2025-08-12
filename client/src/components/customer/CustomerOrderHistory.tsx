@@ -577,22 +577,22 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
                       </div>
-                      {parseFloat(order.shippingCost || '0') > 0 && (
+                      {parseFloat(order.shippingTotal || '0') > 0 && (
                         <div className="flex justify-between text-xs">
                           <span>Delivery Cost:</span>
-                          <span>{formatCurrency(order.shippingCost)}</span>
+                          <span>{formatCurrency(order.shippingTotal)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total Paid:</span>
-                        <span className="text-green-700">{formatCurrency(order.total)}</span>
+                        <span className="text-green-700">{formatCurrency((parseFloat(order.subtotal) + (parseFloat(order.subtotal) * 0.055 + 0.50) + parseFloat(order.shippingTotal || '0')).toFixed(2))}</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Right side - Your Earnings and actions */}
+                  {/* Right side - Total Paid and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg text-green-700">{formatCurrency(order.total)}</div>
+                    <div className="font-semibold text-lg text-green-700">{formatCurrency((parseFloat(order.subtotal) + (parseFloat(order.subtotal) * 0.055 + 0.50) + parseFloat(order.shippingTotal || '0')).toFixed(2))}</div>
                     <div className="text-xs text-gray-500">Total Paid</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end mt-1">
                       <Calendar className="h-3 w-3 mr-1" />
