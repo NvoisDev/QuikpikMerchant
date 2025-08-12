@@ -1770,9 +1770,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
-      // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
+      // Wholesaler Platform Fee: 3.3% of product total only (not delivery cost)
       const wholesalerPlatformFee = productSubtotal * 0.033;
-      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
+      const wholesalerReceives = productSubtotal + deliveryCost - wholesalerPlatformFee;
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
@@ -1818,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               price: shippingInfo.service.price
             } : null
           } : { option: 'pickup' }),
-          autoPayDelivery: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 'true' : 'false'
+          autoPayDelivery: 'false' // Manual delivery payments - wholesaler handles Parcel2Go payments
         }
       });
 
