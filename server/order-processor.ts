@@ -179,9 +179,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-    // Shipping information processing - use metadata values as fallback
-    fulfillmentType: shippingInfo.option || 'pickup',
-    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+    // CRITICAL FIX: Detect delivery orders more robustly
+    fulfillmentType: (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0) ? 'delivery' : (shippingInfo.option || 'pickup'),
+    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : 
+                     (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0 ? 'Delivery Service' : null),
     deliveryCost: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
     shippingTotal: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
   };
