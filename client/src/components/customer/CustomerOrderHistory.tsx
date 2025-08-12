@@ -123,12 +123,12 @@ const formatCurrency = (amount: string | number) => {
 const OrderDetailsModal = ({ order }: { order: Order }) => {
   // Calculate proper totals following user requirements
   const subtotal = parseFloat(order.subtotal);
-  const platformFee = parseFloat(order.customerTransactionFee || ((subtotal * 0.055) + 0.50).toFixed(2));
-  const deliveryCost = parseFloat(order.deliveryCost || order.shippingTotal || '0');
-  const calculatedTotal = subtotal + deliveryCost + platformFee;
+  
+  // Calculate platform fee deducted from wholesaler (3.3% of subtotal)
+  const platformFeeDeducted = subtotal * 0.033; // 3.3% of subtotal deducted from wholesaler
   
   // Calculate wholesaler earnings (what wholesaler actually receives after 3.3% platform fee)
-  const wholesalerEarnings = subtotal * 0.967; // 96.7% of subtotal
+  const wholesalerEarnings = subtotal - platformFeeDeducted; // Subtotal minus 3.3% platform fee
 
   return (
     <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
@@ -265,41 +265,23 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Payment Information with Correct Calculation */}
+        {/* Order Summary - Simplified */}
         <div>
           <h3 className="font-semibold mb-2 flex items-center text-sm">
             <CreditCard className="h-3 w-3 mr-2" />
-            Payment Breakdown
+            Order Summary
           </h3>
           <div className="bg-gray-50 p-3 rounded-lg space-y-1">
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
-            {/* Show shipping/delivery cost - always show for delivery orders */}
-            {(order.fulfillmentType === 'delivery' || deliveryCost > 0) && (
-              <div className="flex justify-between text-xs">
-                <span>{order.fulfillmentType === 'delivery' ? 'Delivery Cost:' : 'Shipping:'}</span>
-                <span>
-                  {deliveryCost > 0 ? 
-                    formatCurrency(deliveryCost) : 
-                    order.fulfillmentType === 'delivery' ? 
-                      <span className="text-gray-500">No cost recorded</span> : 
-                      formatCurrency('0')
-                  }
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between text-xs">
-              <span>Platform Fee (Customer):</span>
-              <span>{formatCurrency(platformFee)}</span>
+            <div className="flex justify-between text-sm">
+              <span>Platform Fee (3.3%):</span>
+              <span>-{formatCurrency(platformFeeDeducted)}</span>
             </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span>Customer Total Paid:</span>
-              <span>{formatCurrency(calculatedTotal.toFixed(2))}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-sm border-t pt-1 text-green-700">
-              <span>Your Earnings:</span>
+            <div className="flex justify-between font-semibold text-sm border-t pt-1">
+              <span>Total (Your Earnings):</span>
               <span>{formatCurrency(wholesalerEarnings)}</span>
             </div>
           </div>
