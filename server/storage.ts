@@ -3582,7 +3582,7 @@ export class DatabaseStorage implements IStorage {
         (u.id = o.wholesaler_id AND o.retailer_id = ${wholesalerId}) OR
         (u.id = ${wholesalerId} AND (o.wholesaler_id = ${wholesalerId} OR o.retailer_id = ${wholesalerId}))
       )
-      WHERE u.role IN ('retailer', 'customer', 'wholesaler')
+      WHERE u.role IN ('retailer', 'customer') AND u.id != ${wholesalerId}
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
