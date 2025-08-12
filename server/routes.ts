@@ -6795,6 +6795,36 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
       
+      // DEDUPLICATION: Check for recent incomplete payment intents with same customer email and amount
+      const fiveMinutesAgo = Math.floor((Date.now() - 5 * 60 * 1000) / 1000);
+      try {
+        const recentIntents = await stripe.paymentIntents.list({
+          limit: 10,
+          created: { gte: fiveMinutesAgo },
+        });
+        
+        const duplicateIntent = recentIntents.data.find(intent => 
+          intent.status === 'requires_payment_method' &&
+          intent.metadata.customerEmail === customerData.email &&
+          intent.metadata.wholesalerId === wholesalerId &&
+          Math.abs(intent.amount - Math.round((parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)) * 100)) < 100 // Within £1
+        );
+        
+        if (duplicateIntent) {
+          console.log(`♻️ DEDUPLICATION: Found recent incomplete payment intent ${duplicateIntent.id}, returning existing client_secret`);
+          return res.json({ 
+            clientSecret: duplicateIntent.client_secret,
+            productSubtotal: (parseFloat(totalAmount)).toFixed(2),
+            customerTransactionFee: ((parseFloat(totalAmount) * 0.055) + 0.50).toFixed(2),
+            totalCustomerPays: (parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)).toFixed(2),
+            wholesalerPlatformFee: (parseFloat(totalAmount) * 0.033).toFixed(2),
+            wholesalerReceives: (parseFloat(totalAmount) - (parseFloat(totalAmount) * 0.033)).toFixed(2)
+          });
+        }
+      } catch (error) {
+        console.log('⚠️ Error checking for duplicate payment intents, proceeding with new intent creation:', error.message);
+      }
+      
       // Validate and recalculate totalAmount to prevent NaN errors
       let validatedTotalAmount = 0;
       
