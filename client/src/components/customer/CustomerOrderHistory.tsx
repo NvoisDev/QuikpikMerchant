@@ -126,6 +126,9 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   const platformFee = parseFloat(order.customerTransactionFee || ((subtotal * 0.055) + 0.50).toFixed(2));
   const deliveryCost = parseFloat(order.deliveryCost || order.shippingTotal || '0');
   const calculatedTotal = subtotal + deliveryCost + platformFee;
+  
+  // Calculate wholesaler earnings (what wholesaler actually receives after 3.3% platform fee)
+  const wholesalerEarnings = subtotal * 0.967; // 96.7% of subtotal
 
   return (
     <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
@@ -288,12 +291,16 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             )}
             <div className="flex justify-between text-xs">
-              <span>Platform Fee:</span>
+              <span>Platform Fee (Customer):</span>
               <span>{formatCurrency(platformFee)}</span>
             </div>
-            <div className="flex justify-between font-semibold text-sm border-t pt-1">
-              <span>Total Paid:</span>
+            <div className="flex justify-between text-xs text-gray-600">
+              <span>Customer Total Paid:</span>
               <span>{formatCurrency(calculatedTotal.toFixed(2))}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-sm border-t pt-1 text-green-700">
+              <span>Your Earnings:</span>
+              <span>{formatCurrency(wholesalerEarnings)}</span>
             </div>
           </div>
         </div>
@@ -709,12 +716,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       )}
 
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
-                        <span>Total:</span>
-                        <span>{formatCurrency((
-                          parseFloat(order.subtotal) + 
-                          parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                          parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
-                        ).toFixed(2))}</span>
+                        <span>Your Earnings:</span>
+                        <span className="text-green-700">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</span>
                       </div>
 
                     </div>
