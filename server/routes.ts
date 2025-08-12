@@ -1782,32 +1782,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Wholesaler not found" });
       }
 
-      // Check if wholesaler has Stripe Connect account
-      if (!wholesaler.stripeAccountId) {
-        return res.status(400).json({ 
-          message: "Wholesaler must complete Stripe Connect onboarding to receive payments",
-          requiresOnboarding: true 
-        });
-      }
-
-      // Create Stripe payment intent with proper Connect transfer
+      // Create Stripe payment intent
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Calculate total platform fees (platform fee + transaction fee + delivery cost)
-      const totalPlatformFees = wholesalerPlatformFee + customerTransactionFee + deliveryCost;
-      const applicationFeeAmount = Math.round(totalPlatformFees * 100); // Platform keeps this amount
+      // Check if wholesaler has Stripe Connect account for proper payment splitting
+      const hasStripeConnect = wholesaler.stripeAccountId;
       
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + delivery + transaction fee)
-        currency: 'gbp',
-        receipt_email: customerEmail,
-        automatic_payment_methods: { enabled: true },
-        application_fee_amount: applicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
-        transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
-        },
+      let paymentIntent;
+      
+      if (hasStripeConnect) {
+        // OPTION 1: Wholesaler has Stripe Connect - use proper payment splitting
+        const totalPlatformFees = wholesalerPlatformFee + customerTransactionFee + deliveryCost;
+        const applicationFeeAmount = Math.round(totalPlatformFees * 100);
+        
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalCustomerPays * 100),
+          currency: 'gbp',
+          receipt_email: customerEmail,
+          automatic_payment_methods: { enabled: true },
+          application_fee_amount: applicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
+          transfer_data: {
+            destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
+          },
         metadata: {
           customerName,
           customerEmail,
