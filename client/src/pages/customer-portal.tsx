@@ -3884,28 +3884,7 @@ export default function CustomerPortal() {
                     return null;
                   })()}
                   
-                  <div className="flex justify-between text-sm">
-                    <span>Platform Fee (3.3%):</span>
-                    <span>-{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                      const subtotal = cart.reduce((total, item) => {
-                        if (item.sellingType === "pallets") {
-                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                        } else {
-                          const basePrice = parseFloat(item.product.price) || 0;
-                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                            basePrice,
-                            item.quantity,
-                            item.product.promotionalOffers || [],
-                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                            item.product.promoActive
-                          );
-                          return total + pricing.totalCost;
-                        }
-                      }, 0);
-                      return (subtotal * 0.033).toFixed(2);
-                    })()}</span>
-                  </div>
-                  <Separator className="my-2" />
+
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Transaction Fee (5.5% + £0.50):</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
