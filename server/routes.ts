@@ -6862,8 +6862,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       // validatedTotalAmount is the product subtotal (without transaction fee)
       // Add shipping cost if delivery option is selected
-      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.price) 
-        ? parseFloat(shippingInfo.service.price) 
+      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
+        ? (shippingInfo.service && shippingInfo.service.price 
+           ? parseFloat(shippingInfo.service.price) 
+           : 90.00) // Default delivery cost for "Custom Quote Required" orders
         : 0;
       
       console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);

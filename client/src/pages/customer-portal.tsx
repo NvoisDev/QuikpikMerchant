@@ -1215,14 +1215,17 @@ export default function CustomerPortal() {
     
     // Calculate shipping cost (consider free shipping promotions)
     let shippingCost = 0;
-    if (customerData.shippingOption === 'delivery' && customerData.selectedShippingService) {
+    if (customerData.shippingOption === 'delivery') {
       if (freeShippingApplied) {
         shippingCost = 0;
         if (!appliedPromotions.includes('Free Shipping')) {
           appliedPromotions.push('Free Shipping');
         }
+      } else if (customerData.selectedShippingService) {
+        shippingCost = customerData.selectedShippingService.price || 90.00; // Default £90 for custom quotes
       } else {
-        shippingCost = customerData.selectedShippingService.price || 0;
+        // For "Custom Quote Required" delivery without selected service
+        shippingCost = 90.00; // Default delivery cost
       }
     }
       
