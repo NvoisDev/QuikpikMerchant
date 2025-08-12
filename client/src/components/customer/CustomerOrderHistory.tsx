@@ -121,11 +121,15 @@ const formatCurrency = (amount: string | number) => {
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
-  // Calculate customer payment details
+  // Calculate proper totals following user requirements
   const subtotal = parseFloat(order.subtotal);
-  const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
-  const shippingCost = parseFloat(order.shippingCost || '0');
   
+  // Calculate platform fee deducted from wholesaler (3.3% of subtotal)
+  const platformFeeDeducted = subtotal * 0.033; // 3.3% of subtotal deducted from wholesaler
+  
+  // Calculate wholesaler earnings (what wholesaler actually receives after 3.3% platform fee)
+  const wholesalerEarnings = subtotal - platformFeeDeducted; // Subtotal minus 3.3% platform fee
+
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -140,18 +144,12 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             <span>{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Transaction Fee (5.5% + £0.50):</span>
-            <span>{formatCurrency(transactionFee)}</span>
+            <span>Platform Fee (3.3%):</span>
+            <span>-{formatCurrency(platformFeeDeducted)}</span>
           </div>
-          {shippingCost > 0 && (
-            <div className="flex justify-between">
-              <span>Delivery Cost:</span>
-              <span>{formatCurrency(shippingCost)}</span>
-            </div>
-          )}
           <div className="flex justify-between font-bold border-t pt-3">
-            <span>Total Paid:</span>
-            <span>{formatCurrency(parseFloat(order.total))}</span>
+            <span>Total (Your Earnings):</span>
+            <span>{formatCurrency(wholesalerEarnings)}</span>
           </div>
         </div>
       </div>
@@ -457,33 +455,27 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       ))}
                     </div>
                     
-                    {/* Summary - Customer Payment Details */}
+                    {/* Summary - Only 3 essential lines as requested */}
                     <div className="mt-2 space-y-0.5">
                       <div className="flex justify-between text-xs">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(order.subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span>Transaction Fee:</span>
-                        <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
+                        <span>Platform Fee (3.3%):</span>
+                        <span>-{formatCurrency((parseFloat(order.subtotal) * 0.033).toFixed(2))}</span>
                       </div>
-                      {parseFloat(order.shippingCost || '0') > 0 && (
-                        <div className="flex justify-between text-xs">
-                          <span>Delivery Cost:</span>
-                          <span>{formatCurrency(order.shippingCost)}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
-                        <span>Total Paid:</span>
-                        <span className="text-green-700">{formatCurrency(order.total)}</span>
+                        <span>Total (Your Earnings):</span>
+                        <span className="text-green-700">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Right side - Your Earnings and actions */}
                   <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg text-green-700">{formatCurrency(order.total)}</div>
-                    <div className="text-xs text-gray-500">Total Paid</div>
+                    <div className="font-semibold text-lg text-green-700">{formatCurrency((parseFloat(order.subtotal) * 0.967).toFixed(2))}</div>
+                    <div className="text-xs text-gray-500">Your Earnings</div>
                     <div className="text-xs text-gray-500 flex items-center justify-end mt-1">
                       <Calendar className="h-3 w-3 mr-1" />
                       {format(new Date(order.date), 'MMM d, yyyy')}

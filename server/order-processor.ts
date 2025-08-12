@@ -254,7 +254,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // Send WhatsApp notification to wholesaler with wholesale reference
   if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
     const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
-    const message = `🎉 New Order Received!\n\nOrder: ${order.orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
+    const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
     
     try {
       const { whatsappService } = await import('./whatsapp');
@@ -313,7 +313,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         html: emailTemplate.html
       });
       
-      console.log(`📧 Wholesaler notification sent to ${wholesaler.email} for order ${order.orderNumber}`);
+      console.log(`📧 Wholesaler notification sent to ${wholesaler.email} for order ${wholesaleRef}`);
       
     } catch (emailError) {
       console.error(`❌ Failed to send wholesaler notification for order #${order.id}:`, emailError);

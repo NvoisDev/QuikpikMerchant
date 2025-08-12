@@ -21,7 +21,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send({
       to: params.to,
-      from: params.from || 'noreply@quikpik.co',
+      from: params.from,
       subject: params.subject,
       text: params.text,
       html: params.html,
