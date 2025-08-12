@@ -140,29 +140,17 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
       </DialogHeader>
       
       <div className="space-y-4 text-sm">
-        {/* Order Summary */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-semibold text-base">Order Summary</h3>
-              <p className="text-xs text-gray-600">From {order.wholesaler.businessName}</p>
-            </div>
-            <Badge className={getStatusColor(order.status)}>
-              {getStatusIcon(order.status)}
-              <span className="ml-1 capitalize text-xs">{order.status}</span>
-            </Badge>
+        {/* Order Header */}
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h3 className="font-semibold text-base">Order {order.orderNumber}</h3>
+            <p className="text-xs text-gray-600">From {order.wholesaler.businessName}</p>
+            <p className="text-xs text-gray-600">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</p>
           </div>
-          
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="text-gray-600">Order Date:</span>
-              <p className="font-medium">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Payment Status:</span>
-              <p className="font-medium capitalize">{order.paymentStatus || 'Paid'}</p>
-            </div>
-          </div>
+          <Badge className={getStatusColor(order.status)}>
+            {getStatusIcon(order.status)}
+            <span className="ml-1 capitalize text-xs">{order.status}</span>
+          </Badge>
         </div>
 
         {/* Order Items - Show ALL items without truncation */}
@@ -265,13 +253,10 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Order Summary - Simplified */}
-        <div>
-          <h3 className="font-semibold mb-2 flex items-center text-sm">
-            <CreditCard className="h-3 w-3 mr-2" />
-            Order Summary
-          </h3>
-          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+        {/* Order Summary */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-semibold mb-3 text-sm">Order Summary</h3>
+          <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
               <span>{formatCurrency(subtotal)}</span>
@@ -280,7 +265,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Platform Fee (3.3%):</span>
               <span>-{formatCurrency(platformFeeDeducted)}</span>
             </div>
-            <div className="flex justify-between font-semibold text-sm border-t pt-1">
+            <div className="flex justify-between font-semibold text-sm border-t pt-2">
               <span>Total (Your Earnings):</span>
               <span>{formatCurrency(wholesalerEarnings)}</span>
             </div>
