@@ -3747,7 +3747,7 @@ export class DatabaseStorage implements IStorage {
       INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       WHERE cg.wholesaler_id = ${wholesalerId}
-        AND u.role = 'retailer'
+        AND u.role IN ('customer', 'retailer')
     `);
 
     // Get active customers (those who have placed orders in last 3 months)
@@ -3761,7 +3761,7 @@ export class DatabaseStorage implements IStorage {
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       INNER JOIN orders o ON u.id = o.retailer_id
       WHERE cg.wholesaler_id = ${wholesalerId}
-        AND u.role = 'retailer'
+        AND u.role IN ('customer', 'retailer')
         AND o.created_at >= ${threeMonthsAgo}
     `);
 
@@ -3776,11 +3776,11 @@ export class DatabaseStorage implements IStorage {
       INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       WHERE cg.wholesaler_id = ${wholesalerId}
-        AND u.role = 'retailer'
+        AND u.role IN ('customer', 'retailer')
         AND u.created_at >= ${thisMonth}
     `);
 
-    // Get top customers by spending
+    // Get top customers by spending (using wholesaler earnings: subtotal * 96.7%)
     const topCustomersResult = await db.execute(sql`
       SELECT 
         u.id as customer_id,
@@ -3789,15 +3789,15 @@ export class DatabaseStorage implements IStorage {
           u.first_name, 
           'Customer'
         ) as name,
-        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END), 0) as total_spent
+        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (o.subtotal::numeric * 0.967) ELSE 0 END), 0) as total_spent
       FROM users u
       INNER JOIN customer_group_members cgm ON u.id = cgm.customer_id
       INNER JOIN customer_groups cg ON cgm.group_id = cg.id
       LEFT JOIN orders o ON u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}
       WHERE cg.wholesaler_id = ${wholesalerId}
-        AND u.role = 'retailer'
+        AND u.role IN ('customer', 'retailer')
       GROUP BY u.id, u.first_name, u.last_name
-      HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.total::numeric ELSE 0 END) > 0
+      HAVING SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN (o.subtotal::numeric * 0.967) ELSE 0 END) > 0
       ORDER BY total_spent DESC
       LIMIT 5
     `);
