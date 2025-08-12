@@ -633,15 +633,28 @@ export default function OrdersFinal() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedOrder(order)}
-                          className="flex items-center gap-1"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </Button>
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedOrder(order)}
+                            className="flex items-center gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </Button>
+                          {order.status !== 'fulfilled' && (
+                            <Button 
+                              size="sm"
+                              onClick={() => updateOrderStatus(order.id, 'fulfilled')}
+                              disabled={isUpdatingStatus}
+                              className="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1 text-xs"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              Mark Fulfilled
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -826,12 +839,12 @@ export default function OrdersFinal() {
                     <span>{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span>Platform Fee:</span>
-                    <span>-{formatCurrency(selectedOrder.platformFee)}</span>
+                    <span>Platform Fee (3.3%):</span>
+                    <span>-{formatCurrency((parseFloat(selectedOrder.subtotal) * 0.033).toFixed(2))}</span>
                   </div>
                   <div className="flex justify-between font-semibold border-t pt-1 text-sm">
                     <span>Total (Your Earnings):</span>
-                    <span>{formatCurrency((parseFloat(selectedOrder.subtotal) - parseFloat(selectedOrder.platformFee)).toFixed(2))}</span>
+                    <span>{formatCurrency((parseFloat(selectedOrder.subtotal) * 0.967).toFixed(2))}</span>
                   </div>
                 </div>
               </div>
