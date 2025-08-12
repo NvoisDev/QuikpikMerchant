@@ -1797,6 +1797,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalPlatformFees = wholesalerPlatformFee + customerTransactionFee + deliveryCost;
         const applicationFeeAmount = Math.round(totalPlatformFees * 100);
         
+        console.log('🔍 STRIPE CONNECT PAYMENT DEBUG:', {
+          wholesalerStripeAccountId: wholesaler.stripeAccountId,
+          customerPaysTotal: totalCustomerPays,
+          platformFeesTotal: totalPlatformFees,
+          applicationFeePence: applicationFeeAmount,
+          wholesalerShouldReceive: totalCustomerPays - totalPlatformFees,
+          calculation: `${totalCustomerPays} - ${totalPlatformFees} = ${totalCustomerPays - totalPlatformFees}`
+        });
+        
         paymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(totalCustomerPays * 100),
           currency: 'gbp',
