@@ -101,6 +101,13 @@ interface Order {
   shippingHash?: string;
   shippingTotal?: string;
   shippingStatus?: string;
+  // Customer fields for order detail modal
+  customerEmail?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  // Platform fee fields
+  platformFee?: string;
+  customerTransactionFee?: string;
   retailer: {
     id: string;
     firstName: string;
@@ -1081,19 +1088,19 @@ export default function Orders() {
                   
                   {/* Enhanced Order Items Section */}
                   <div>
-                    <h3 className="font-semibold mb-4 text-lg">Items ({selectedOrder.items.length})</h3>
-                    <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items.length})</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       {selectedOrder.items.map((item: any, index: number) => (
-                        <div key={item.id || index} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                        <div key={item.id || index} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900 text-base mb-2">{item.product?.name || 'Unknown Product'}</h4>
-                              <div className="flex items-center gap-6 text-sm text-gray-600">
+                              <h4 className="font-medium text-gray-900 text-sm mb-1">{item.product?.name || 'Unknown Product'}</h4>
+                              <div className="flex items-center gap-4 text-xs text-gray-600">
                                 <span>Quantity: <strong>{item.quantity}</strong> × {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-lg text-gray-900">
+                              <div className="font-semibold text-sm text-gray-900">
                                 {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
                               </div>
                             </div>
@@ -1101,23 +1108,26 @@ export default function Orders() {
                         </div>
                       ))}
 
-                      {/* More items indicator if needed */}
-                      {selectedOrder.items.length > 3 && (
-                        <div className="text-center py-2">
-                          <span className="text-sm text-gray-500">and {selectedOrder.items.length - 3} more items</span>
-                        </div>
-                      )}
-
                       {/* Order Summary */}
-                      <div className="border-t border-gray-200 pt-4 mt-6">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center text-base">
+                      <div className="border-t border-gray-200 pt-3 mt-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-600">Subtotal:</span>
-                            <span className="font-semibold text-gray-900">
+                            <span className="font-medium text-gray-900">
                               {formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
                             </span>
                           </div>
                           
+                          {/* Platform Fee */}
+                          {selectedOrder.platformFee && parseFloat(selectedOrder.platformFee) > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600">Platform Fee:</span>
+                              <span className="text-gray-900">
+                                -{formatCurrency(parseFloat(selectedOrder.platformFee), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </span>
+                            </div>
+                          )}
+
                           {/* Customer Transaction Fee (if applicable) */}
                           {selectedOrder.customerTransactionFee && parseFloat(selectedOrder.customerTransactionFee) > 0 && (
                             <div className="flex justify-between items-center text-sm">
@@ -1140,8 +1150,8 @@ export default function Orders() {
                             </div>
                           )}
 
-                          <div className="border-t border-gray-200 pt-3">
-                            <div className="flex justify-between items-center text-lg font-bold">
+                          <div className="border-t border-gray-200 pt-2">
+                            <div className="flex justify-between items-center text-base font-semibold">
                               <span className="text-gray-900">Total:</span>
                               <span className="text-gray-900">
                                 {formatCurrency(
@@ -1159,23 +1169,38 @@ export default function Orders() {
 
                   {/* Order Timeline Section */}
                   <div>
-                    <h3 className="font-semibold mb-4 text-lg">Order Timeline</h3>
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <div className="space-y-4">
+                    <h3 className="font-medium mb-3 text-base">Order Timeline</h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="space-y-3">
                         
                         {/* Order Placed */}
                         <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">Order Placed</span>
-                              <span className="text-sm text-gray-500">
+                              <span className="font-medium text-gray-900 text-sm">Order Placed</span>
+                              <span className="text-xs text-gray-500">
                                 {new Date(selectedOrder.createdAt).toLocaleString()}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Order was successfully placed by {(selectedOrder.customerName || 
-                                (selectedOrder.retailer ? `${selectedOrder.retailer.firstName} ${selectedOrder.retailer.lastName}` : 'customer'))}
+                            <p className="text-xs text-gray-600 mt-1">
+                              Customer placed order via the platform
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Email Confirmation */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900 text-sm">Email Confirmation Sent</span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(selectedOrder.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Order confirmation sent to {(selectedOrder.customerEmail || selectedOrder.retailer?.email) || 'customer'}
                             </p>
                           </div>
                         </div>
@@ -1183,78 +1208,72 @@ export default function Orders() {
                         {/* Payment Processing */}
                         {(selectedOrder.status === 'paid' || selectedOrder.status === 'fulfilled') && (
                           <div className="flex items-start gap-3">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-900">Payment Received</span>
-                                <span className="text-sm text-gray-500">
+                                <span className="font-medium text-gray-900 text-sm">Payment Received</span>
+                                <span className="text-xs text-gray-500">
                                   {new Date(selectedOrder.createdAt).toLocaleString()}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Payment of {formatCurrency(parseFloat(selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')} was processed successfully
+                              <p className="text-xs text-gray-600 mt-1">
+                                Payment of {formatCurrency(parseFloat(selectedOrder.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')} processed via Stripe
                               </p>
                             </div>
                           </div>
                         )}
 
                         {/* Order Fulfilled */}
-                        {selectedOrder.status === 'fulfilled' && (
+                        {selectedOrder.status === 'fulfilled' ? (
                           <div className="flex items-start gap-3">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-900">Order Fulfilled</span>
-                                <span className="text-sm text-gray-500">
+                                <span className="font-medium text-gray-900 text-sm">Order Fulfilled</span>
+                                <span className="text-xs text-gray-500">
                                   {new Date(selectedOrder.updatedAt).toLocaleString()}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Order has been completed and fulfilled by the wholesaler
+                              <p className="text-xs text-gray-600 mt-1">
+                                Order completed and fulfilled by wholesaler
                               </p>
                             </div>
                           </div>
-                        )}
-
-                        {/* Pending Status with Fulfill Button */}
-                        {selectedOrder.status === 'paid' && (
+                        ) : selectedOrder.status === 'paid' && (
                           <div className="flex items-start gap-3">
-                            <div className="w-2 h-2 bg-orange-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="w-2 h-2 bg-orange-400 rounded-full mt-1.5 flex-shrink-0"></div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <span className="font-medium text-gray-900">Ready for Fulfillment</span>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    Order is ready to be fulfilled by the wholesaler
+                                  <span className="font-medium text-gray-900 text-sm">Ready for Fulfillment</span>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    Order ready to be fulfilled by wholesaler
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm text-gray-500">Pending</span>
-                                  {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
-                                    <Button
-                                      onClick={() => {
-                                        updateOrderStatusMutation.mutate({
-                                          orderId: selectedOrder.id,
-                                          status: 'fulfilled'
-                                        });
-                                      }}
-                                      disabled={fulfillingOrders.has(selectedOrder.id)}
-                                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
-                                    >
-                                      {fulfillingOrders.has(selectedOrder.id) ? (
-                                        <>
-                                          <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                                          Fulfilling...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          Fulfill Item
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
-                                </div>
+                                {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
+                                  <Button
+                                    onClick={() => {
+                                      updateOrderStatusMutation.mutate({
+                                        orderId: selectedOrder.id,
+                                        status: 'fulfilled'
+                                      });
+                                    }}
+                                    disabled={fulfillingOrders.has(selectedOrder.id)}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-xs"
+                                  >
+                                    {fulfillingOrders.has(selectedOrder.id) ? (
+                                      <>
+                                        <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                        Fulfilling...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Mark Fulfilled
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
