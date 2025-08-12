@@ -234,16 +234,26 @@ export default function OrdersFinal() {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     setIsUpdatingStatus(true);
     try {
-      const response = await apiRequest("PATCH", `/api/orders/${orderId}`, { status: newStatus });
+      const response = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { 
+        status: newStatus
+      });
       console.log("Order status updated:", response);
       
-      // Refresh orders data
+      // Refresh orders data with multiple query invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
       // Update selected order if it's the one being modified
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
+        setSelectedOrder({ 
+          ...selectedOrder, 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
       }
+      
+      // Show success message
+      console.log(`✅ Order ${orderId} status updated to ${newStatus}`);
     } catch (error) {
       console.error("Failed to update order status:", error);
       alert("Failed to update order status. Please try again.");
@@ -778,94 +788,116 @@ export default function OrdersFinal() {
 
               {/* Customer Info */}
               <div>
-                <h3 className="font-semibold mb-2">Customer Information</h3>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div><strong>Name:</strong> {selectedOrder.customerName}</div>
-                  <div><strong>Email:</strong> {selectedOrder.customerEmail}</div>
-                  <div><strong>Phone:</strong> {selectedOrder.customerPhone}</div>
-                  <div><strong>Address:</strong> {parseAddress(selectedOrder.deliveryAddress)}</div>
+                <h3 className="font-medium mb-1 text-sm">Customer Information</h3>
+                <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+                  <div className="text-xs"><strong>Name:</strong> {selectedOrder.customerName}</div>
+                  <div className="text-xs"><strong>Email:</strong> {selectedOrder.customerEmail}</div>
+                  <div className="text-xs"><strong>Phone:</strong> {selectedOrder.customerPhone}</div>
+                  <div className="text-xs"><strong>Address:</strong> {parseAddress(selectedOrder.deliveryAddress)}</div>
                 </div>
               </div>
 
-              {/* Order Items */}
+              {/* Order Items - Show ALL items without truncation */}
               <div>
-                <h3 className="font-semibold mb-2">Items ({selectedOrder.itemCount})</h3>
-                <div className="space-y-3">
+                <h3 className="font-medium mb-1 text-sm">Items ({selectedOrder.items.length})</h3>
+                <div className="space-y-2">
                   {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div key={item.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                       <div className="flex-1">
-                        <div className="font-medium">{item.product.name}</div>
-                        <div className="text-sm text-gray-600">
+                        <div className="font-medium text-xs">{item.product.name}</div>
+                        <div className="text-xs text-gray-600">
                           Quantity: {item.quantity} × {formatCurrency(item.unitPrice)}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{formatCurrency(item.total)}</div>
+                        <div className="font-medium text-xs">{formatCurrency(item.total)}</div>
                       </div>
                     </div>
                   ))}
-                  {selectedOrder.itemCount > selectedOrder.items.length && (
-                    <div className="text-center text-gray-500 text-sm">
-                      ... and {selectedOrder.itemCount - selectedOrder.items.length} more items
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Order Summary */}
+              {/* Order Summary - Correct calculation: subtotal - platform fee = total */}
               <div>
-                <h3 className="font-semibold mb-2">Order Summary</h3>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between">
+                <h3 className="font-medium mb-1 text-sm">Order Summary</h3>
+                <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+                  <div className="flex justify-between text-xs">
                     <span>Subtotal:</span>
                     <span>{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-xs">
                     <span>Platform Fee:</span>
-                    <span>{formatCurrency(selectedOrder.platformFee)}</span>
+                    <span>-{formatCurrency(selectedOrder.platformFee)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold border-t pt-2">
-                    <span>Total:</span>
-                    <span>{formatCurrency(selectedOrder.total)}</span>
+                  <div className="flex justify-between font-semibold border-t pt-1 text-sm">
+                    <span>Total (Your Earnings):</span>
+                    <span>{formatCurrency((parseFloat(selectedOrder.subtotal) - parseFloat(selectedOrder.platformFee)).toFixed(2))}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Order Timeline - Visual Progress Tracker */}
+              {/* Order Timeline - Platform-specific events */}
               <div>
-                <h3 className="font-semibold mb-4">Order Timeline</h3>
-                <div className="space-y-4">
-                  {getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).map((step, index) => (
-                    <div key={step.key} className="flex items-start gap-3 relative">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                        step.completed 
-                          ? 'bg-green-100 text-green-600 border-green-300' 
-                          : 'bg-gray-100 text-gray-400 border-gray-300'
-                      }`}>
-                        {step.icon}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className={`font-medium ${step.completed ? 'text-green-700' : 'text-gray-500'}`}>
-                          {step.label}
-                        </div>
-                        <div className={`text-sm ${step.completed ? 'text-green-600' : 'text-gray-400'}`}>
-                          {step.description}
-                        </div>
-                      </div>
-                      {index < getOrderTimeline(selectedOrder.status, selectedOrder.fulfillmentType).length - 1 && (
-                        <div className={`absolute left-4 top-8 w-0.5 h-6 ${
-                          step.completed ? 'bg-green-200' : 'bg-gray-200'
-                        }`} />
-                      )}
+                <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
+                <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                  <div className="flex items-center space-x-2 text-xs">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-gray-600">{format(new Date(selectedOrder.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                    <span className="font-medium">Payment received from customer</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-gray-600">{format(new Date(selectedOrder.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                    <span className="font-medium">Order notification sent to you</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-gray-600">{format(new Date(selectedOrder.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                    <span className="font-medium">Customer confirmation email sent</span>
+                  </div>
+                  {selectedOrder.status === 'confirmed' || selectedOrder.status === 'processing' || selectedOrder.status === 'fulfilled' ? (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-600">{format(new Date(selectedOrder.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                      <span className="font-medium">Order confirmed by you</span>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                      <span className="text-gray-400">Awaiting your confirmation</span>
+                    </div>
+                  )}
+                  {selectedOrder.status === 'processing' || selectedOrder.status === 'fulfilled' ? (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-600">{format(new Date(selectedOrder.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                      <span className="font-medium">Order being prepared</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                      <span className="text-gray-400">Order preparation pending</span>
+                    </div>
+                  )}
+                  {selectedOrder.status === 'fulfilled' ? (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-600">{format(new Date(selectedOrder.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                      <span className="font-medium">Order marked as fulfilled</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                      <span className="text-gray-400">Fulfillment pending</span>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Order Metadata */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div><strong>Created:</strong> {format(new Date(selectedOrder.createdAt), "PPp")}</div>
-                    <div><strong>Updated:</strong> {format(new Date(selectedOrder.updatedAt), "PPp")}</div>
+                <div className="mt-2 pt-2 border-t">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                    <div><strong>Created:</strong> {format(new Date(selectedOrder.createdAt), "MMM d, h:mm a")}</div>
+                    <div><strong>Updated:</strong> {format(new Date(selectedOrder.updatedAt), "MMM d, h:mm a")}</div>
                   </div>
                 </div>
               </div>
