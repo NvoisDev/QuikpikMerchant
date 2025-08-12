@@ -248,12 +248,12 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 </span>
               </div>
             )}
-            {(order.customerAddress || order.deliveryAddress) && (
+            {order.customerAddress && (
               <div>
                 <span className="text-gray-600 text-xs">
                   {order.fulfillmentType === 'delivery' ? 'Delivery Address:' : 'Collection Address:'}
                 </span>
-                <p className="font-medium text-xs mt-1">{formatAddress(order.customerAddress || order.deliveryAddress)}</p>
+                <p className="font-medium text-xs mt-1">{formatAddress(order.customerAddress)}</p>
               </div>
             )}
             {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
