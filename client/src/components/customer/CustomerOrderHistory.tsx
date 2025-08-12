@@ -121,30 +121,36 @@ const formatCurrency = (amount: string | number) => {
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
+  // Calculate proper totals following user requirements
+  const subtotal = parseFloat(order.subtotal);
+  const platformFee = parseFloat(order.customerTransactionFee || ((subtotal * 0.055) + 0.50).toFixed(2));
+  const deliveryCost = parseFloat(order.deliveryCost || order.shippingTotal || '0');
+  const calculatedTotal = subtotal + deliveryCost + platformFee;
+
   return (
-    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="flex items-center space-x-2">
-          <Package className="h-5 w-5" />
+        <DialogTitle className="flex items-center space-x-2 text-base">
+          <Package className="h-4 w-4" />
           <span>Order Details - {order.orderNumber}</span>
         </DialogTitle>
       </DialogHeader>
       
-      <div className="space-y-6">
+      <div className="space-y-4 text-sm">
         {/* Order Summary */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
-          <div className="flex justify-between items-start mb-3">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg">
+          <div className="flex justify-between items-start mb-2">
             <div>
-              <h3 className="font-semibold text-lg">Order Summary</h3>
-              <p className="text-sm text-gray-600">From {order.wholesaler.businessName}</p>
+              <h3 className="font-semibold text-base">Order Summary</h3>
+              <p className="text-xs text-gray-600">From {order.wholesaler.businessName}</p>
             </div>
             <Badge className={getStatusColor(order.status)}>
               {getStatusIcon(order.status)}
-              <span className="ml-1 capitalize">{order.status}</span>
+              <span className="ml-1 capitalize text-xs">{order.status}</span>
             </Badge>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
               <span className="text-gray-600">Order Date:</span>
               <p className="font-medium">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</p>
@@ -156,23 +162,23 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Order Items */}
+        {/* Order Items - Show ALL items without truncation */}
         <div>
-          <h3 className="font-semibold mb-3 flex items-center">
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Items Ordered
+          <h3 className="font-semibold mb-2 flex items-center text-sm">
+            <ShoppingBag className="h-3 w-3 mr-2" />
+            Items Ordered ({order.items.length})
           </h3>
           <div className="space-y-2">
             {order.items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                 <div className="flex-1">
-                  <h4 className="font-medium">{item.productName}</h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="font-medium text-sm">{item.productName}</h4>
+                  <p className="text-xs text-gray-600">
                     {item.quantity} units × {formatCurrency(item.unitPrice)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">{formatCurrency(item.total)}</p>
+                  <p className="font-semibold text-sm">{formatCurrency(item.total)}</p>
                 </div>
               </div>
             ))}
@@ -182,27 +188,27 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
         {/* Customer Information */}
         {(order.customerName || order.customerEmail || order.customerPhone) && (
           <div>
-            <h3 className="font-semibold mb-3 flex items-center">
-              <User className="h-4 w-4 mr-2" />
+            <h3 className="font-semibold mb-2 flex items-center text-sm">
+              <User className="h-3 w-3 mr-2" />
               Customer Information
             </h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="bg-gray-50 p-3 rounded-lg space-y-1">
               {order.customerName && (
                 <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">{order.customerName}</span>
+                  <User className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs font-medium">{order.customerName}</span>
                 </div>
               )}
               {order.customerEmail && (
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{order.customerEmail}</span>
+                  <Mail className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs">{order.customerEmail}</span>
                 </div>
               )}
               {order.customerPhone && (
                 <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{order.customerPhone}</span>
+                  <Phone className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs">{order.customerPhone}</span>
                 </div>
               )}
             </div>
@@ -211,26 +217,26 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
         {/* Collection/Delivery Information */}
         <div>
-          <h3 className="font-semibold mb-3 flex items-center">
+          <h3 className="font-semibold mb-2 flex items-center text-sm">
             {order.fulfillmentType === 'delivery' ? (
               <>
-                <Truck className="h-4 w-4 mr-2" />
+                <Truck className="h-3 w-3 mr-2" />
                 Delivery Information
               </>
             ) : (
               <>
-                <Hand className="h-4 w-4 mr-2" />
+                <Hand className="h-3 w-3 mr-2" />
                 Collection Information
               </>
             )}
           </h3>
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
+          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+            <div className="flex justify-between text-xs">
               <span className="text-gray-600">Fulfillment Type:</span>
               <span className="font-medium capitalize">{order.fulfillmentType}</span>
             </div>
             {(order.deliveryCarrier || order.fulfillmentType === 'delivery') && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className="text-gray-600">
                   {order.fulfillmentType === 'delivery' ? 'Delivery Company:' : 'Collection Carrier:'}
                 </span>
@@ -241,14 +247,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             )}
             {(order.customerAddress || order.deliveryAddress) && (
               <div>
-                <span className="text-gray-600 text-sm">
+                <span className="text-gray-600 text-xs">
                   {order.fulfillmentType === 'delivery' ? 'Delivery Address:' : 'Collection Address:'}
                 </span>
-                <p className="font-medium text-sm mt-1">{formatAddress(order.customerAddress || order.deliveryAddress)}</p>
+                <p className="font-medium text-xs mt-1">{formatAddress(order.customerAddress || order.deliveryAddress)}</p>
               </div>
             )}
             {order.shippingTotal && parseFloat(order.shippingTotal) > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Shipping Status:</span>
                 <span className="font-medium capitalize">{order.shippingStatus}</span>
               </div>
@@ -256,57 +262,107 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Payment Information */}
+        {/* Payment Information with Correct Calculation */}
         <div>
-          <h3 className="font-semibold mb-3 flex items-center">
-            <CreditCard className="h-4 w-4 mr-2" />
+          <h3 className="font-semibold mb-2 flex items-center text-sm">
+            <CreditCard className="h-3 w-3 mr-2" />
             Payment Breakdown
           </h3>
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
+          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+            <div className="flex justify-between text-xs">
               <span>Subtotal:</span>
-              <span>{formatCurrency(order.subtotal)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             {/* Show shipping/delivery cost - always show for delivery orders */}
-            {(order.fulfillmentType === 'delivery' || ((order.deliveryCost && parseFloat(order.deliveryCost) > 0) || (order.shippingTotal && parseFloat(order.shippingTotal) > 0))) && (
-              <div className="flex justify-between text-sm">
+            {(order.fulfillmentType === 'delivery' || deliveryCost > 0) && (
+              <div className="flex justify-between text-xs">
                 <span>{order.fulfillmentType === 'delivery' ? 'Delivery Cost:' : 'Shipping:'}</span>
                 <span>
-                  {order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? 
-                    formatCurrency(order.deliveryCost) : 
-                    order.shippingTotal && parseFloat(order.shippingTotal) > 0 ? 
-                      formatCurrency(order.shippingTotal) : 
-                      order.fulfillmentType === 'delivery' ? 
-                        <span className="text-gray-500">No cost recorded</span> : 
-                        formatCurrency('0')
+                  {deliveryCost > 0 ? 
+                    formatCurrency(deliveryCost) : 
+                    order.fulfillmentType === 'delivery' ? 
+                      <span className="text-gray-500">No cost recorded</span> : 
+                      formatCurrency('0')
                   }
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
-              <span>Transaction Fee (5.5% + £0.50):</span>
-              <span>{formatCurrency(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))}</span>
+            <div className="flex justify-between text-xs">
+              <span>Platform Fee:</span>
+              <span>{formatCurrency(platformFee)}</span>
             </div>
-            <div className="flex justify-between font-semibold text-base border-t pt-2">
+            <div className="flex justify-between font-semibold text-sm border-t pt-1">
               <span>Total Paid:</span>
-              <span>{formatCurrency((
-                parseFloat(order.subtotal) + 
-                parseFloat(order.deliveryCost || order.shippingTotal || '0') +
-                parseFloat(order.customerTransactionFee || ((parseFloat(order.subtotal) * 0.055) + 0.50).toFixed(2))
-              ).toFixed(2))}</span>
+              <span>{formatCurrency(calculatedTotal.toFixed(2))}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Order Timeline - Platform-specific events */}
+        <div>
+          <h3 className="font-semibold mb-2 flex items-center text-sm">
+            <Clock className="h-3 w-3 mr-2" />
+            Order Timeline
+          </h3>
+          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</span>
+              <span className="font-medium">Payment received</span>
+            </div>
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-gray-600">{format(new Date(order.date), 'MMM d, yyyy \'at\' h:mm a')}</span>
+              <span className="font-medium">Order confirmation sent</span>
+            </div>
+            {order.status === 'confirmed' || order.status === 'processing' || order.status === 'fulfilled' ? (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600">{format(new Date(order.updatedAt || order.date), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium">Order confirmed by supplier</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                <span className="text-gray-400">Awaiting supplier confirmation</span>
+              </div>
+            )}
+            {order.status === 'processing' || order.status === 'fulfilled' ? (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600">{format(new Date(order.updatedAt || order.date), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium">Order being prepared</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                <span className="text-gray-400">Order preparation pending</span>
+              </div>
+            )}
+            {order.status === 'fulfilled' ? (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600">{format(new Date(order.updatedAt || order.date), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium">Order ready for {order.fulfillmentType}</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-xs">
+                <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                <span className="text-gray-400">Fulfillment pending</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Order Notes */}
         {order.orderNotes && (
           <div>
-            <h3 className="font-semibold mb-3 flex items-center">
-              <FileText className="h-4 w-4 mr-2" />
+            <h3 className="font-semibold mb-2 flex items-center text-sm">
+              <FileText className="h-3 w-3 mr-2" />
               Order Notes
             </h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm">{order.orderNotes}</p>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs">{order.orderNotes}</p>
             </div>
           </div>
         )}
