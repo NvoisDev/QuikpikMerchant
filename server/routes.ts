@@ -6932,6 +6932,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
             transfer_data: {
               destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
+              amount: Math.round((validatedTotalAmount - platformFee) * 100) // FIXED: Exact transfer amount
             },
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
@@ -6973,93 +6974,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             }
           });
         } catch (connectError: any) {
-          console.log('Connect payment failed, falling back to regular payment:', connectError.message);
-          
-          // Fallback to regular payment intent for demo/test purposes
-          paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
-            currency: 'gbp', // Always use GBP for platform
-            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
-            metadata: {
-              orderType: 'customer_portal',
-              wholesalerId: wholesalerId,
-              customerName: customerData.name,
-              customerEmail: customerData.email,
-              customerPhone: customerData.phone,
-              customerAddress: JSON.stringify({
-                street: customerData.address,
-                city: customerData.city,
-                state: customerData.state,
-                postalCode: customerData.postalCode,
-                country: customerData.country
-              }),
-              totalAmount: validatedTotalAmount.toString(),
-              shippingCost: shippingCost.toFixed(2),
-              platformFee: platformFee.toFixed(2),
-              customerTransactionFee: customerTransactionFee.toFixed(2),
-              totalAmountWithFee: totalAmountWithFee.toFixed(2),
-              productSubtotal: validatedTotalAmount.toFixed(2),
-              totalCustomerPays: totalAmountWithFee.toFixed(2),
-              wholesalerPlatformFee: platformFee.toFixed(2),
-              wholesalerReceives: wholesalerAmount,
-              connectAccountUsed: 'false',
-              shippingInfo: JSON.stringify(shippingInfo ? {
-                option: shippingInfo.option,
-                service: shippingInfo.service ? {
-                  serviceId: shippingInfo.service.serviceId,
-                  serviceName: shippingInfo.service.serviceName,
-                  price: shippingInfo.service.price
-                } : null
-              } : { option: 'pickup' }),
-              items: JSON.stringify(items.map(item => ({
-                ...item,
-                productName: item.productName || 'Product'
-              })))
-            }
-          });
+          console.error('❌ Stripe Connect payment creation failed:', connectError.message);
+          throw new Error(`Stripe Connect required. Wholesaler must complete onboarding: ${connectError.message}`);
         }
       } else {
-        // Create regular payment intent when no Connect account
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
-          currency: 'gbp', // Always use GBP for platform
-          metadata: {
-            orderType: 'customer_portal',
-            wholesalerId: wholesalerId,
-            customerName: customerData.name,
-            customerEmail: customerData.email,
-            customerPhone: customerData.phone,
-            customerAddress: JSON.stringify({
-              street: customerData.address,
-              city: customerData.city,
-              state: customerData.state,
-              postalCode: customerData.postalCode,
-              country: customerData.country
-            }),
-            totalAmount: validatedTotalAmount.toString(),
-            shippingCost: shippingCost.toFixed(2),
-            platformFee: platformFee.toFixed(2),
-            customerTransactionFee: customerTransactionFee.toFixed(2),
-            totalAmountWithFee: totalAmountWithFee.toFixed(2),
-            productSubtotal: validatedTotalAmount.toFixed(2),
-            totalCustomerPays: totalAmountWithFee.toFixed(2),
-            wholesalerPlatformFee: platformFee.toFixed(2),
-            wholesalerReceives: wholesalerAmount,
-            connectAccountUsed: 'false',
-            shippingInfo: JSON.stringify(shippingInfo ? {
-              option: shippingInfo.option,
-              service: shippingInfo.service ? {
-                serviceId: shippingInfo.service.serviceId,
-                serviceName: shippingInfo.service.serviceName,
-                price: shippingInfo.service.price
-              } : null
-            } : { option: 'pickup' }),
-            items: JSON.stringify(items.map(item => ({
-              ...item,
-              productName: item.productName || 'Product'
-            })))
-          }
-        });
+        // STRIPE CONNECT REQUIRED - No fallback allowed
+        throw new Error('Wholesaler must complete Stripe Connect onboarding before accepting orders');
       }
 
       res.json({ 
