@@ -311,6 +311,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       const isShippingDataComplete = customerData.shippingOption === 'pickup' || 
         (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
+      console.log('🚚 VALIDATION: Shipping data completeness check:', {
+        shippingOption: customerData.shippingOption,
+        selectedShippingService: !!customerData.selectedShippingService,
+        isShippingDataComplete,
+        wouldCreatePaymentIntent: cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && isShippingDataComplete && !clientSecret && !isCreatingIntent
+      });
+      
       if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && isShippingDataComplete && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
         
@@ -322,6 +329,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         setCapturedShippingData(shippingDataAtCreation);
         
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
+        console.log('🚚 PAYLOAD: Full payload being sent to backend:', {
+          shippingInfo: shippingDataAtCreation,
+          customerData: {
+            ...customerData,
+            shippingOption: customerData.shippingOption,
+            selectedShippingService: customerData.selectedShippingService
+          }
+        });
         
         try {
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
