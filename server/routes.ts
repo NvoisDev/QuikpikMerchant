@@ -1807,9 +1807,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
         application_fee_amount: Math.round((platformProductFee + customerTransactionFee + deliveryCost) * 100), // Platform keeps: 3.3% + transaction fee + delivery
-        transfer_data: {
-          destination: wholesaler.stripeAccountId // Wholesaler gets remaining balance (product earnings only)
-        },
         metadata: {
           customerName,
           customerEmail,
@@ -1843,6 +1840,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } : null
           } : { option: 'pickup' })
         }
+      }, {
+        stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
       });
 
       res.json({ 
@@ -6930,9 +6929,6 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: 'gbp', // Always use GBP for platform
             application_fee_amount: Math.round((platformFee + customerTransactionFee + shippingCost) * 100), // Platform keeps all fees + delivery
-            transfer_data: {
-              destination: wholesaler.stripeAccountId // Wholesaler gets remaining balance (product earnings only)
-            },
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
               orderType: 'customer_portal',
@@ -6971,6 +6967,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                 productName: item.productName || 'Product'
               })))
             }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
           });
         } catch (connectError: any) {
           console.error('❌ Stripe Connect payment creation failed:', connectError.message);
