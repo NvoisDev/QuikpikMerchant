@@ -1806,80 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transfer_data: {
             destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
           },
-          metadata: {
-            customerName,
-            customerEmail,
-            customerPhone,
-            customerAddress: JSON.stringify(customerAddress),
-            productSubtotal: productSubtotal.toFixed(2),
-            shippingCost: deliveryCost.toString(),
-            customerTransactionFee: customerTransactionFee.toFixed(2),
-            wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-            wholesalerReceives: wholesalerReceives.toFixed(2),
-            totalCustomerPays: totalCustomerPays.toFixed(2),
-            wholesalerId: firstProduct.wholesalerId,
-            orderType: 'customer_portal',
-            items: JSON.stringify(validatedItems.map(item => ({
-              productId: item.product.id,
-              productName: item.product.name,
-              quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice),
-              sellingType: item.sellingType || 'units'
-            }))),
-            shippingInfo: JSON.stringify(shippingInfo ? {
-              option: shippingInfo.option,
-              service: shippingInfo.service ? {
-                serviceId: shippingInfo.service.serviceId,
-                serviceName: shippingInfo.service.serviceName,
-                price: shippingInfo.service.price
-              } : null
-            } : { option: 'pickup' }),
-            autoPayDelivery: 'false',
-            hasStripeConnect: 'true'
-          }
-        });
-      } else {
-        // OPTION 2: No Stripe Connect - collect payment normally, handle transfers manually
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalCustomerPays * 100),
-          currency: 'gbp',
-          receipt_email: customerEmail,
-          automatic_payment_methods: { enabled: true },
-          metadata: {
-            customerName,
-            customerEmail,
-            customerPhone,
-            customerAddress: JSON.stringify(customerAddress),
-            productSubtotal: productSubtotal.toFixed(2),
-            shippingCost: deliveryCost.toString(),
-            customerTransactionFee: customerTransactionFee.toFixed(2),
-            wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-            wholesalerReceives: wholesalerReceives.toFixed(2),
-            totalCustomerPays: totalCustomerPays.toFixed(2),
-            wholesalerId: firstProduct.wholesalerId,
-            orderType: 'customer_portal',
-            items: JSON.stringify(validatedItems.map(item => ({
-              productId: item.product.id,
-              productName: item.product.name,
-              quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice),
-              sellingType: item.sellingType || 'units'
-            }))),
-            shippingInfo: JSON.stringify(shippingInfo ? {
-              option: shippingInfo.option,
-              service: shippingInfo.service ? {
-                serviceId: shippingInfo.service.serviceId,
-                serviceName: shippingInfo.service.serviceName,
-                price: shippingInfo.service.price
-              } : null
-            } : { option: 'pickup' }),
-            autoPayDelivery: 'false',
-            hasStripeConnect: 'false'
-          }
-        });
-      }
-
-      console.log('💳 Customer Portal Payment Intent Created:', {
+        metadata: {
           customerName,
           customerEmail,
           customerPhone,
@@ -1906,10 +1833,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               price: shippingInfo.service.price
             } : null
           } : { option: 'pickup' }),
-        paymentIntentId: paymentIntent.id,
-        amount: totalCustomerPays,
-        hasStripeConnect: !!wholesaler.stripeAccountId,
-        wholesalerReceives: wholesalerReceives
+          autoPayDelivery: 'false' // Manual delivery payments - wholesaler handles Parcel2Go payments
+        }
       });
 
       res.json({ 

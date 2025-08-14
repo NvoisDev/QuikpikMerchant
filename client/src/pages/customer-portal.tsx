@@ -301,24 +301,12 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       console.log('🚚 PAYMENT INTENT CHECK: About to create payment intent with shipping data:', {
         shippingOption: customerData.shippingOption,
         selectedShippingService: customerData.selectedShippingService,
-        isShippingDataComplete: customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService),
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
         isCreatingIntent
       });
       
-      // Enhanced validation to ensure shipping data is complete before creating payment intent
-      const isShippingDataComplete = customerData.shippingOption === 'pickup' || 
-        (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
-      
-      console.log('🚚 VALIDATION: Shipping data completeness check:', {
-        shippingOption: customerData.shippingOption,
-        selectedShippingService: !!customerData.selectedShippingService,
-        isShippingDataComplete,
-        wouldCreatePaymentIntent: cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && isShippingDataComplete && !clientSecret && !isCreatingIntent
-      });
-      
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && isShippingDataComplete && !clientSecret && !isCreatingIntent) {
+      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
@@ -329,14 +317,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         setCapturedShippingData(shippingDataAtCreation);
         
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
-        console.log('🚚 PAYLOAD: Full payload being sent to backend:', {
-          shippingInfo: shippingDataAtCreation,
-          customerData: {
-            ...customerData,
-            shippingOption: customerData.shippingOption,
-            selectedShippingService: customerData.selectedShippingService
-          }
-        });
         
         try {
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
@@ -454,7 +434,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, !!customerData.selectedShippingService, totalAmount, clientSecret, isCreatingIntent]); // Include selectedShippingService to ensure complete shipping data
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Removed selectedShippingService dependency to prevent multiple payment intent creations
 
   if (!clientSecret) {
     return (

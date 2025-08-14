@@ -129,47 +129,14 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   // Calculate actual platform fee based on Connect usage
   const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
-  
-  // CRITICAL FIX: Wholesaler should get subtotal minus platform fee, NOT total minus platform fee
-  // Platform keeps: platform fee + transaction fee + delivery cost
-  // Wholesaler gets: subtotal - platform fee (3.3% of subtotal)
-  const calculatedSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
-    ? parseFloat(productSubtotal) 
-    : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-    
   const wholesalerAmount = connectAccountUsed === 'true' 
-    ? (calculatedSubtotal - parseFloat(platformFee)).toFixed(2)
-    : calculatedSubtotal.toFixed(2);
-    
-  console.log('💰 Wholesaler transfer calculation:', {
-    customerPaysTotal: totalAmount,
-    productSubtotal: calculatedSubtotal.toFixed(2),
-    platformFee: platformFee,
-    wholesalerReceives: wholesalerAmount,
-    deliveryCost: paymentIntent.metadata.shippingCost || '0.00',
-    transactionFee: customerTransactionFee || '0.00'
-  });
+    ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
+    : totalAmount;
 
   // Use the correct total from metadata instead of recalculating
   // CRITICAL FIX: Include shipping cost in total calculation
-  const shippingCostFromMetadata = parseFloat(paymentIntent.metadata.shippingCost || '0');
-  const shippingCostFromInfo = (shippingInfo.option === 'delivery' && shippingInfo.service) 
-    ? parseFloat(shippingInfo.service.price || '0') 
-    : (shippingInfo.option === 'delivery' ? 90.00 : 0);
-  const finalShippingCost = shippingCostFromMetadata > 0 ? shippingCostFromMetadata : shippingCostFromInfo;
-  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + finalShippingCost).toFixed(2);
-  
-  console.log('🔍 Payment metadata analysis:', {
-    paymentIntentId: paymentIntent.id,
-    allMetadata: paymentIntent.metadata,
-    shippingCostRaw: paymentIntent.metadata.shippingCost,
-    shippingCostFromMetadata: shippingCostFromMetadata,
-    shippingCostFromInfo: shippingCostFromInfo,
-    finalShippingCost: finalShippingCost,
-    productSubtotal: productSubtotal,
-    totalCustomerPays: totalCustomerPays,
-    calculatedCorrectTotal: correctTotal
-  });
+  const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
 
   // Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -212,23 +179,18 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-    // CRITICAL FIX: Detect delivery orders more robustly
-    fulfillmentType: (finalShippingCost > 0) ? 'delivery' : 'pickup',
-    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : 
-                     (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0 ? 'Delivery Service' : null),
-    deliveryCost: finalShippingCost.toFixed(2),
-    shippingTotal: finalShippingCost.toFixed(2)
+    // Shipping information processing - use metadata values as fallback
+    fulfillmentType: shippingInfo.option || 'pickup',
+    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+    deliveryCost: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
+    shippingTotal: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
   };
   
   console.log('🚚 Order data with shipping fields:', {
     fulfillmentType: orderData.fulfillmentType,
     deliveryCarrier: orderData.deliveryCarrier,
     deliveryCost: orderData.deliveryCost,
-    shippingTotal: orderData.shippingTotal,
-    willSaveAsDelivery: orderData.fulfillmentType === 'delivery',
-    rawShippingCost: paymentIntent.metadata.shippingCost,
-    totalBeforeCorrection: totalAmount,
-    correctTotal: orderData.total
+    willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
   });
 
   // Create order items with orderId for storage
