@@ -1765,8 +1765,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deliveryCost = shippingInfo?.service?.price || 0;
       const amountBeforeFees = productSubtotal + deliveryCost;
       
-      // NEW FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
+      // CORRECTED FEE STRUCTURE:
+      // Customer Transaction Fee: 5.5% of (product total + delivery fee) + £0.50 fixed fee
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
@@ -1793,49 +1793,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let paymentIntent;
       
       if (hasStripeConnect) {
-        // OPTION 1: Wholesaler has Stripe Connect - use proper payment splitting
-        const totalPlatformFees = wholesalerPlatformFee + customerTransactionFee + deliveryCost;
-        const applicationFeeAmount = Math.round(totalPlatformFees * 100);
+        // ENHANCED OPTION A: Wholesaler has Stripe Connect - use destination charges with separate delivery routing
+        // Platform keeps: Platform fee (3.3% of products) + Transaction fee + Delivery fee
+        const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal only
+        const platformTransactionFee = customerTransactionFee; // 5.5% of (products + delivery) + £0.50
+        const platformDeliveryFee = deliveryCost; // Direct to platform for Parcel2Go funding
         
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalCustomerPays * 100),
+          amount: Math.round(totalCustomerPays * 100), // Total customer payment
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
-          application_fee_amount: applicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
+          application_fee_amount: Math.round(platformProductFee * 100), // Platform keeps 3.3% of products only
           transfer_data: {
-            destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
+            destination: wholesaler.stripeAccountId, // Wholesaler gets product earnings
+            amount: Math.round(wholesalerReceives * 100) // Exact amount: products - platform fee
           },
-        metadata: {
-          customerName,
-          customerEmail,
-          customerPhone,
-          customerAddress: JSON.stringify(customerAddress),
-          productSubtotal: productSubtotal.toFixed(2),
-          shippingCost: deliveryCost.toString(),
-          customerTransactionFee: customerTransactionFee.toFixed(2),
-          wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-          wholesalerReceives: wholesalerReceives.toFixed(2),
-          totalCustomerPays: totalCustomerPays.toFixed(2),
-          wholesalerId: firstProduct.wholesalerId,
-          orderType: 'customer_portal',
-          items: JSON.stringify(validatedItems.map(item => ({
-            productId: item.product.id,
-            productName: item.product.name,
-            quantity: item.quantity,
-            unitPrice: parseFloat(item.unitPrice)
-          }))),
-          shippingInfo: JSON.stringify(shippingInfo ? {
-            option: shippingInfo.option,
-            service: shippingInfo.service ? {
-              serviceId: shippingInfo.service.serviceId,
-              serviceName: shippingInfo.service.serviceName,
-              price: shippingInfo.service.price
-            } : null
-          } : { option: 'pickup' }),
-          autoPayDelivery: 'false' // Manual delivery payments - wholesaler handles Parcel2Go payments
-        }
-      });
+          metadata: {
+            customerName,
+            customerEmail,
+            customerPhone,
+            customerAddress: JSON.stringify(customerAddress),
+            productSubtotal: productSubtotal.toFixed(2),
+            shippingCost: deliveryCost.toString(),
+            customerTransactionFee: customerTransactionFee.toFixed(2),
+            wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+            wholesalerReceives: wholesalerReceives.toFixed(2),
+            totalCustomerPays: totalCustomerPays.toFixed(2),
+            platformProductFee: platformProductFee.toFixed(2),
+            platformTransactionFee: platformTransactionFee.toFixed(2),
+            platformDeliveryFee: platformDeliveryFee.toFixed(2),
+            wholesalerId: firstProduct.wholesalerId,
+            orderType: 'customer_portal',
+            hasStripeConnect: 'true',
+            deliveryRouting: 'separate_to_platform',
+            items: JSON.stringify(validatedItems.map(item => ({
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice)
+            }))),
+            shippingInfo: JSON.stringify(shippingInfo ? {
+              option: shippingInfo.option,
+              service: shippingInfo.service ? {
+                serviceId: shippingInfo.service.serviceId,
+                serviceName: shippingInfo.service.serviceName,
+                price: shippingInfo.service.price
+              } : null
+            } : { option: 'pickup' })
+          }
+        });
+      } else {
+        // OPTION B: Wholesaler lacks Stripe Connect - standard payment (manual payout required)
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalCustomerPays * 100), // Platform receives all funds
+          currency: 'gbp',
+          receipt_email: customerEmail,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            customerName,
+            customerEmail,
+            customerPhone,
+            customerAddress: JSON.stringify(customerAddress),
+            productSubtotal: productSubtotal.toFixed(2),
+            shippingCost: deliveryCost.toString(),
+            customerTransactionFee: customerTransactionFee.toFixed(2),
+            wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+            wholesalerReceives: wholesalerReceives.toFixed(2),
+            totalCustomerPays: totalCustomerPays.toFixed(2),
+            wholesalerId: firstProduct.wholesalerId,
+            orderType: 'customer_portal',
+            hasStripeConnect: 'false',
+            requiresManualPayout: 'true',
+            items: JSON.stringify(validatedItems.map(item => ({
+              productId: item.product.id,
+              productName: item.product.name,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice)
+            }))),
+            shippingInfo: JSON.stringify(shippingInfo ? {
+              option: shippingInfo.option,
+              service: shippingInfo.service ? {
+                serviceId: shippingInfo.service.serviceId,
+                serviceName: shippingInfo.service.serviceName,
+                price: shippingInfo.service.price
+              } : null
+            } : { option: 'pickup' })
+          }
+        });
+      }
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
