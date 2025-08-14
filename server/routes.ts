@@ -6901,7 +6901,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
       
       // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
-      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
+      // CORRECTED: Transaction fee should be 5.5% of (products + delivery) + £0.50
+      const customerTransactionFee = ((validatedTotalAmount + shippingCost) * 0.055) + 0.50;
       const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
       
       // Platform collects 3.3% from subtotal 
