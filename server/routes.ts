@@ -1803,21 +1803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformFeesTotal: totalPlatformFees,
           applicationFeePence: applicationFeeAmount,
           wholesalerShouldReceive: totalCustomerPays - totalPlatformFees,
-          calculation: `${totalCustomerPays} - ${totalPlatformFees} = ${totalCustomerPays - totalPlatformFees}`,
-          breakdown: {
-            wholesalerPlatformFee,
-            customerTransactionFee,
-            deliveryCost,
-            sum: wholesalerPlatformFee + customerTransactionFee + deliveryCost
-          }
-        });
-        
-        // CRITICAL FIX: Ensure we're using the correct total platform fees
-        const finalApplicationFeeAmount = Math.round((wholesalerPlatformFee + customerTransactionFee + deliveryCost) * 100);
-        console.log('🚨 FINAL APPLICATION FEE VERIFICATION:', {
-          originalApplicationFeeAmount: applicationFeeAmount,
-          recalculatedApplicationFeeAmount: finalApplicationFeeAmount,
-          shouldMatch: applicationFeeAmount === finalApplicationFeeAmount
+          calculation: `${totalCustomerPays} - ${totalPlatformFees} = ${totalCustomerPays - totalPlatformFees}`
         });
         
         paymentIntent = await stripe.paymentIntents.create({
@@ -1825,7 +1811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
-          application_fee_amount: finalApplicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
+          application_fee_amount: applicationFeeAmount, // Platform keeps platform fee + transaction fee + delivery cost
           transfer_data: {
             destination: wholesaler.stripeAccountId, // Wholesaler receives only their net product earnings
           },
@@ -7014,27 +7000,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Try creating payment intent with Stripe Connect if available
       if (wholesaler.stripeAccountId) {
         try {
-          // CRITICAL FIX: Include ALL platform fees (platform fee + transaction fee + delivery cost)
-          const totalPlatformFees = platformFee + customerTransactionFee + shippingCost;
-          const finalApplicationFeeAmount = Math.round(totalPlatformFees * 100);
-          
-          console.log('🔍 MARKETPLACE STRIPE CONNECT DEBUG:', {
-            wholesalerStripeAccountId: wholesaler.stripeAccountId,
-            customerPaysTotal: totalAmountWithFee,
-            platformFee: platformFee,
-            customerTransactionFee: customerTransactionFee,
-            shippingCost: shippingCost,
-            totalPlatformFees: totalPlatformFees,
-            finalApplicationFeePence: finalApplicationFeeAmount,
-            wholesalerShouldReceive: totalAmountWithFee - totalPlatformFees,
-            calculation: `${totalAmountWithFee} - ${totalPlatformFees} = ${totalAmountWithFee - totalPlatformFees}`
-          });
-          
-          // Create payment intent with Stripe Connect and FULL platform fees
+          // Create payment intent with Stripe Connect and 3.3% platform fee
           paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: 'gbp', // Always use GBP for platform
-            application_fee_amount: finalApplicationFeeAmount, // Platform fee + transaction fee + delivery cost
+            application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
             transfer_data: {
               destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
             },
@@ -7060,8 +7030,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               productSubtotal: validatedTotalAmount.toFixed(2),
               totalCustomerPays: totalAmountWithFee.toFixed(2),
               wholesalerPlatformFee: platformFee.toFixed(2),
-              wholesalerReceives: (totalAmountWithFee - totalPlatformFees).toFixed(2),
-              totalPlatformFees: totalPlatformFees.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'true',
               autoPayDelivery: autoPayDelivery ? 'true' : 'false',
               shippingInfo: JSON.stringify(shippingInfo ? {
