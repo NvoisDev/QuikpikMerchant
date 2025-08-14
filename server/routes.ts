@@ -6954,7 +6954,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               productSubtotal: validatedTotalAmount.toFixed(2),
               totalCustomerPays: totalAmountWithFee.toFixed(2),
               wholesalerPlatformFee: platformFee.toFixed(2),
-              wholesalerReceives: wholesalerAmount,
+              wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Product earnings only
               connectAccountUsed: 'true',
               autoPayDelivery: autoPayDelivery ? 'true' : 'false',
               shippingInfo: JSON.stringify(shippingInfo ? {
