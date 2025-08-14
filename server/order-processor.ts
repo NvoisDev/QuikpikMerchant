@@ -154,6 +154,16 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // CRITICAL FIX: Include shipping cost in total calculation
   const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
   const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
+  
+  console.log('🔍 Payment metadata analysis:', {
+    paymentIntentId: paymentIntent.id,
+    allMetadata: paymentIntent.metadata,
+    shippingCostRaw: paymentIntent.metadata.shippingCost,
+    shippingCostParsed: shippingCost,
+    productSubtotal: productSubtotal,
+    totalCustomerPays: totalCustomerPays,
+    calculatedCorrectTotal: correctTotal
+  });
 
   // Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -208,7 +218,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     fulfillmentType: orderData.fulfillmentType,
     deliveryCarrier: orderData.deliveryCarrier,
     deliveryCost: orderData.deliveryCost,
-    willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+    shippingTotal: orderData.shippingTotal,
+    willSaveAsDelivery: orderData.fulfillmentType === 'delivery',
+    rawShippingCost: paymentIntent.metadata.shippingCost,
+    totalBeforeCorrection: totalAmount,
+    correctTotal: orderData.total
   });
 
   // Create order items with orderId for storage
