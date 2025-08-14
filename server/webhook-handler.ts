@@ -96,13 +96,12 @@ export function registerWebhookRoutes(app: Express) {
           console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
           
           try {
-            // ENHANCED: Handle separate delivery fee transfer for Stripe Connect accounts
-            const hasStripeConnect = paymentIntent?.metadata?.hasStripeConnect === 'true';
+            // STRIPE CONNECT REQUIRED: Handle separate delivery fee transfer
             const deliveryRouting = paymentIntent?.metadata?.deliveryRouting;
             const platformDeliveryFee = parseFloat(paymentIntent?.metadata?.platformDeliveryFee || '0');
             const platformTransactionFee = parseFloat(paymentIntent?.metadata?.platformTransactionFee || '0');
             
-            console.log(`💰 Payment breakdown - Connect: ${hasStripeConnect}, Delivery Fee: £${platformDeliveryFee}, Transaction Fee: £${platformTransactionFee}`);
+            console.log(`💰 Payment breakdown - Delivery Fee: £${platformDeliveryFee}, Transaction Fee: £${platformTransactionFee}`);
             
             // Step 1: Create the order first
             const { processCustomerPortalOrder, parseCustomerName } = await import('./order-processor');
@@ -110,8 +109,8 @@ export function registerWebhookRoutes(app: Express) {
             const orderResult = await processCustomerPortalOrder(paymentIntent);
             console.log(`✅ Order created successfully: ${orderResult.orderNumber || orderResult.id}`);
             
-            // Step 2: Handle separate delivery fee transfer if using Stripe Connect
-            if (hasStripeConnect && deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0) {
+            // Step 2: Handle separate delivery fee transfer (Stripe Connect required)
+            if (deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0) {
               console.log(`🚛 Processing separate delivery fee transfer: £${platformDeliveryFee} to platform`);
               
               try {
@@ -157,7 +156,7 @@ export function registerWebhookRoutes(app: Express) {
               message: `Customer order created successfully`,
               orderId: orderResult.id,
               orderNumber: orderResult.orderNumber,
-              deliveryFeeTransferred: hasStripeConnect && deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0
+              deliveryFeeTransferred: deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0
             });
             
           } catch (orderError) {
