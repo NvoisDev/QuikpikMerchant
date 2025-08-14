@@ -301,12 +301,17 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       console.log('🚚 PAYMENT INTENT CHECK: About to create payment intent with shipping data:', {
         shippingOption: customerData.shippingOption,
         selectedShippingService: customerData.selectedShippingService,
+        isShippingDataComplete: customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService),
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
         isCreatingIntent
       });
       
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
+      // Enhanced validation to ensure shipping data is complete before creating payment intent
+      const isShippingDataComplete = customerData.shippingOption === 'pickup' || 
+        (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
+      
+      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && isShippingDataComplete && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
@@ -434,7 +439,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Removed selectedShippingService dependency to prevent multiple payment intent creations
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, !!customerData.selectedShippingService, totalAmount, clientSecret, isCreatingIntent]); // Include selectedShippingService to ensure complete shipping data
 
   if (!clientSecret) {
     return (
