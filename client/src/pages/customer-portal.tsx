@@ -35,6 +35,7 @@ import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
+import DeliveryPaymentComponent from "@/components/delivery-payment";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -4281,6 +4282,7 @@ export default function CustomerPortal() {
                     wholesaler={wholesaler}
                     totalAmount={(() => {
                       // Calculate the total amount that customer will pay (including transaction fees)
+                      // NEW PAYMENT STRUCTURE: Products-only Stripe payment
                       const subtotal = cart.reduce((total, item) => {
                         if (item.sellingType === "pallets") {
                           return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
@@ -4296,9 +4298,11 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
+                      // Transaction fee based on PRODUCT TOTAL ONLY (no delivery cost)
                       const transactionFee = subtotal * 0.055 + 0.50;
                       const shippingCost = cartStats.shippingCost || 0;
-                      return subtotal + transactionFee + shippingCost;
+                      // Customer pays: Products + Transaction Fee + Delivery (but Stripe only charges products + fee)
+                      return subtotal + transactionFee + shippingCost; // Total cost to customer
                     })()}
                     onSuccess={() => {
                       // Calculate order totals
@@ -4317,9 +4321,10 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
+                      // NEW PAYMENT STRUCTURE: Transaction fee on products only
                       const transactionFee = subtotal * 0.055 + 0.50;
                       const shippingCost = cartStats.shippingCost || 0;
-                      const totalAmount = subtotal + transactionFee + shippingCost;
+                      const totalAmount = subtotal + transactionFee + shippingCost; // Total customer pays
                       
                       // Generate order number (will be replaced by actual order number from backend)
                       // Get actual order number from backend response (will be updated after order creation)

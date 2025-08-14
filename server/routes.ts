@@ -1761,16 +1761,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Include delivery cost in fee calculation
+      // NEW APPROACH: PRODUCTS-ONLY STRIPE PAYMENT
+      // Delivery costs are excluded from Stripe and collected separately by platform
       const deliveryCost = shippingInfo?.service?.price || 0;
-      const amountBeforeFees = productSubtotal + deliveryCost;
       
-      // CORRECTED FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of (product total + delivery fee) + £0.50 fixed fee
-      const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
-      const totalCustomerPays = amountBeforeFees + customerTransactionFee;
+      // Transaction Fee: 5.5% of PRODUCT TOTAL ONLY + £0.50 fixed fee
+      const customerTransactionFee = (productSubtotal * 0.055) + 0.50;
+      const totalCustomerPaysStripe = productSubtotal + customerTransactionFee; // NO DELIVERY COST
       
-      // Wholesaler Platform Fee: 3.3% of product total only (not delivery cost)
+      // Wholesaler Platform Fee: 3.3% of product total only
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
@@ -1795,18 +1794,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // STRIPE CONNECT: Destination charges with separate delivery routing
-      // Platform keeps: Platform fee (3.3% of products) + Transaction fee + Delivery fee
-      const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal only
-      const platformTransactionFee = customerTransactionFee; // 5.5% of (products + delivery) + £0.50
-      const platformDeliveryFee = deliveryCost; // Direct to platform for Parcel2Go funding
+      // STRIPE CONNECT: PRODUCTS-ONLY PAYMENT (NO DELIVERY COST)
+      // Platform keeps: Platform fee (3.3% of products) + Transaction fee
+      // Delivery cost will be collected separately by platform
+      const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal
+      const platformTransactionFee = customerTransactionFee; // 5.5% of PRODUCTS ONLY + £0.50
       
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPays * 100), // Total customer payment
+        amount: Math.round(totalCustomerPaysStripe * 100), // PRODUCTS + TRANSACTION FEE ONLY
         currency: 'gbp',
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: Math.round((platformProductFee + customerTransactionFee + deliveryCost) * 100), // Platform keeps: 3.3% + transaction fee + delivery
+        application_fee_amount: Math.round((platformProductFee + customerTransactionFee) * 100), // Platform fee + transaction fee ONLY
         metadata: {
           customerName,
           customerEmail,
@@ -1817,14 +1816,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerTransactionFee: customerTransactionFee.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
           wholesalerReceives: wholesalerReceives.toFixed(2),
-          totalCustomerPays: totalCustomerPays.toFixed(2),
+          totalCustomerPaysStripe: totalCustomerPaysStripe.toFixed(2),
+          totalCustomerPaysWithDelivery: (totalCustomerPaysStripe + deliveryCost).toFixed(2),
           platformProductFee: platformProductFee.toFixed(2),
           platformTransactionFee: platformTransactionFee.toFixed(2),
-          platformDeliveryFee: platformDeliveryFee.toFixed(2),
+          deliveryCostSeparate: deliveryCost.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
           hasStripeConnect: 'true',
-          deliveryRouting: 'separate_to_platform',
+          paymentMethod: 'products_only_stripe',
+          deliveryPaymentMethod: 'separate_platform_collection',
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
@@ -1847,16 +1848,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         productSubtotal: productSubtotal.toFixed(2),
-        shippingCost: deliveryCost.toString(),
+        shippingCost: deliveryCost.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        totalCustomerPays: totalCustomerPays.toFixed(2),
+        stripePaymentAmount: totalCustomerPaysStripe.toFixed(2), // What customer pays Stripe
+        totalCustomerPays: (totalCustomerPaysStripe + deliveryCost).toFixed(2), // Total including delivery
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-        wholesalerReceives: wholesalerReceives.toFixed(2)
+        wholesalerReceives: wholesalerReceives.toFixed(2),
+        deliveryCollectionMethod: deliveryCost > 0 ? 'separate_platform_charge' : 'none'
       });
 
     } catch (error) {
       console.error("Error creating payment intent:", error);
       res.status(500).json({ message: "Failed to create payment intent" });
+    }
+  });
+
+  // NEW: Platform Delivery Fee Collection Endpoint
+  app.post('/api/platform/collect-delivery-fee', async (req, res) => {
+    try {
+      const { orderId, deliveryCost, customerEmail, orderNumber } = req.body;
+      
+      if (!orderId || !deliveryCost || deliveryCost <= 0) {
+        return res.status(400).json({ message: 'Order ID and delivery cost required' });
+      }
+
+      // Create separate Stripe payment intent for delivery fee (directly to platform account)
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const deliveryPaymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(deliveryCost * 100), // Delivery cost only
+        currency: 'gbp',
+        receipt_email: customerEmail,
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          orderType: 'delivery_fee_collection',
+          originalOrderId: orderId.toString(),
+          orderNumber: orderNumber,
+          deliveryCost: deliveryCost.toString(),
+          collectionMethod: 'platform_direct',
+          purpose: 'parcel2go_prepaid_funding'
+        }
+        // NOTE: No stripeAccount parameter - this goes directly to platform account
+      });
+
+      console.log(`💳 DELIVERY FEE: Created separate payment intent for £${deliveryCost} delivery (Order ${orderNumber})`);
+      
+      res.json({
+        deliveryPaymentClientSecret: deliveryPaymentIntent.client_secret,
+        deliveryCost: deliveryCost.toString(),
+        orderNumber,
+        message: 'Delivery fee collection initiated'
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error creating delivery payment intent:', error);
+      res.status(500).json({ message: 'Failed to create delivery payment intent: ' + error.message });
     }
   });
 
@@ -6899,20 +6947,16 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
       
-      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
-      // CORRECTED: Transaction fee should be 5.5% of (products + delivery) + £0.50
-      const customerTransactionFee = ((validatedTotalAmount + shippingCost) * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
+      // NEW APPROACH: PRODUCTS-ONLY STRIPE PAYMENT
+      // Transaction fee based on PRODUCT TOTAL ONLY + £0.50 fixed fee
+      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
+      const totalAmountWithFee = validatedTotalAmount + customerTransactionFee; // NO SHIPPING COST
       
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
       
-      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
-      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
-      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
-      const wholesalerAmount = autoPayDelivery 
-        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
-        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
+      // Wholesaler receives 96.7% of product total only (no delivery cost in Stripe)
+      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
@@ -6924,11 +6968,11 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Try creating payment intent with Stripe Connect if available
       if (wholesaler.stripeAccountId) {
         try {
-          // Create payment intent with Stripe Connect destination charges
+          // Create payment intent with Stripe Connect - PRODUCTS ONLY
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays PRODUCTS + transaction fee ONLY
             currency: 'gbp', // Always use GBP for platform
-            application_fee_amount: Math.round((platformFee + customerTransactionFee + shippingCost) * 100), // Platform keeps all fees + delivery
+            application_fee_amount: Math.round((platformFee + customerTransactionFee) * 100), // Platform keeps fees ONLY (no delivery)
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
               orderType: 'customer_portal',
@@ -6953,7 +6997,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               wholesalerPlatformFee: platformFee.toFixed(2),
               wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Product earnings only
               connectAccountUsed: 'true',
-              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
+              paymentMethod: 'products_only_stripe',
+              deliveryPaymentMethod: 'separate_platform_collection',
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
                 service: shippingInfo.service ? {
@@ -6982,11 +7027,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
-        shippingCost: shippingCost.toFixed(2), // Delivery cost
-        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50
-        totalCustomerPays: totalAmountWithFee.toFixed(2), // Total customer payment including shipping
+        shippingCost: shippingCost.toFixed(2), // Delivery cost (SEPARATE)
+        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50 on products only
+        stripePaymentAmount: totalAmountWithFee.toFixed(2), // What customer pays Stripe (products + fee)
+        totalCustomerPays: (totalAmountWithFee + shippingCost).toFixed(2), // Total including delivery
         wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
-        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2) // Wholesaler receives product total minus 3.3%
+        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Wholesaler receives product total minus 3.3%
+        deliveryCollectionMethod: shippingCost > 0 ? 'separate_platform_charge' : 'none'
       });
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
