@@ -1806,10 +1806,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency: 'gbp',
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: Math.round(platformProductFee * 100), // Platform keeps 3.3% of products only
+        application_fee_amount: Math.round((platformProductFee + customerTransactionFee + deliveryCost) * 100), // Platform keeps: 3.3% + transaction fee + delivery
         transfer_data: {
-          destination: wholesaler.stripeAccountId, // Wholesaler gets product earnings
-          amount: Math.round(wholesalerReceives * 100) // Exact amount: products - platform fee
+          destination: wholesaler.stripeAccountId // Wholesaler gets remaining balance (product earnings only)
         },
         metadata: {
           customerName,
@@ -6925,14 +6924,13 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Try creating payment intent with Stripe Connect if available
       if (wholesaler.stripeAccountId) {
         try {
-          // Create payment intent with Stripe Connect and 3.3% platform fee
+          // Create payment intent with Stripe Connect destination charges
           paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
             currency: 'gbp', // Always use GBP for platform
-            application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
+            application_fee_amount: Math.round((platformFee + customerTransactionFee + shippingCost) * 100), // Platform keeps all fees + delivery
             transfer_data: {
-              destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
-              amount: Math.round((validatedTotalAmount - platformFee) * 100) // FIXED: Exact transfer amount
+              destination: wholesaler.stripeAccountId // Wholesaler gets remaining balance (product earnings only)
             },
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
