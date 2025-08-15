@@ -670,6 +670,17 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             </div>
           )}
         </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="flex items-center space-x-2 mb-2">
+            <ShieldCheck className="w-4 h-4" />
+            <span className="font-semibold">Secure Payment Processing</span>
+            <InfoTooltip content="All payments are processed securely through Stripe, a trusted payment platform used by millions of businesses worldwide. Your card details are never stored on our servers.">
+              <HelpCircle className="w-3 h-3 text-blue-600 cursor-help" />
+            </InfoTooltip>
+          </div>
+          <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
+        </div>
 
         <ButtonLoader
           isLoading={isProcessing}
@@ -1236,10 +1247,10 @@ export default function CustomerPortal() {
           appliedPromotions.push('Free Shipping');
         }
       } else if (customerData.selectedShippingService) {
-        shippingCost = customerData.selectedShippingService.price || 90.00; // Default £90 for custom quotes
+        shippingCost = customerData.selectedShippingService.price || 0;
       } else {
-        // For "Custom Quote Required" delivery without selected service
-        shippingCost = 90.00; // Default delivery cost
+        // No shipping service selected yet
+        shippingCost = 0;
       }
     }
       
