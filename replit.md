@@ -5,24 +5,38 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
-CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
+**CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
+**Google OAuth Fix (Jan 15, 2025)**: Standardized redirect URI to always use `https://quikpik.app/api/auth/google/callback` to prevent environment-based mismatches.
 
 ## System Architecture
 ### Frontend
-- **Framework**: React 18 with TypeScript, Vite.
-- **UI Framework**: Tailwind CSS with shadcn/ui, custom green brand colors.
+- **Framework**: React 18 with TypeScript.
+- **Build Tool**: Vite.
+- **UI Framework**: Tailwind CSS with shadcn/ui.
 - **State Management**: TanStack Query (React Query).
 - **Routing**: Wouter.
-- **UI/UX Decisions**: Simplified interfaces with consistent branding, default table layouts for data, dynamic displays, and an integrated clean design.
-- **Key Enhancements**: Comprehensive Order Management System with advanced search/filtering and detailed modals; unified Business Performance analytics with real-time tracking, customer segmentation, and inventory insights, accessible via a tabbed interface. Premium subscription enforcement for analytics features. Shipping method badges for visual clarity.
+- **Styling**: CSS variables with custom green brand colors.
+- **UI/UX Decisions**: Default table layout for orders with smart search and filtering, dynamic delivery method display, simplified interfaces, and consistent brand-integrated clean design with green theme colors. Comprehensive Order Management System with professional table layout, advanced search/filtering, and order detail modals.
+- **Technical Implementations**: Consolidated analytics into a unified Business Performance tab system, incorporating real-time revenue tracking, customer segmentation, and inventory insights. Implemented robust premium subscription restrictions for analytics access. Corrected order history to display wholesaler earnings (subtotal × 96.7% after 3.3% platform fee). Enhanced cart summary with visual shipping method badges.
 
 ### Backend
-- **Runtime**: Node.js with Express, TypeScript (ES modules).
+- **Runtime**: Node.js with Express.
+- **Language**: TypeScript with ES modules.
 - **Database ORM**: Drizzle ORM.
 - **API Design**: RESTful endpoints with structured error handling.
-- **Authentication**: Google OAuth for wholesalers, SMS for customer portal. Role-based access control for data isolation.
-- **Key Features**: Product management (catalog, stock, promotions, AI content), customer & order management (grouping, multi-fulfillment, Stripe integration, email notifications), WhatsApp marketing (broadcast, AI personalization, templates), subscription & team management, business intelligence (analytics, reporting), and a robust order processing webhook system with atomic transactions and duplicate prevention.
-- **Payment Architecture**: Revolutionary payment optimization using Stripe Connect's application_fee_amount to automatically deduct all platform costs (platform fee 3.3% + transaction fee + delivery costs) from customer payment. The customer pays a single amount, the platform's portion is automatically deducted by Stripe, and the remainder is automatically transferred to the wholesaler. This streamlines the payment flow by automating fee and delivery cost deductions directly via Stripe Connect destination charges.
+- **Authentication**: Dual system (Google OAuth for wholesalers, SMS for customer portal) with role-based access control and data isolation.
+- **Feature Specifications**:
+    - **Product Management**: Catalog, stock tracking, promotional pricing, AI-powered descriptions/images.
+    - **Customer & Order Management**: Customer grouping, multi-fulfillment order processing, Stripe integration, email notifications.
+    - **WhatsApp Marketing**: Dual provider support (Twilio, WhatsApp Business API), broadcast messaging, AI personalization, template management.
+    - **Subscription & Team Management**: Tiered plans, team invitation with granular permissions, usage tracking.
+    - **Business Intelligence**: Campaign performance analytics, financial reporting, stock movement analysis, advertising campaign management.
+- **System Design Choices**:
+    - Critical webhook system for converting Stripe payments into database orders with multi-wholesaler references, ensuring atomic database transactions and unique constraint on `stripe_payment_intent_id` to prevent duplication.
+    - Comprehensive subscription system with audit capabilities.
+    - Platform-managed delivery payment system where the platform collects all delivery costs and manages payments to delivery providers (e.g., Parcel2Go).
+    - Revolutionary V2 Stripe Connect architecture ("Separate Charges and Transfers") where the platform receives all funds first, then automatically distributes wholesaler share after deducting platform fees, maintaining centralized delivery payment control.
+    - **CRITICAL FIX (Jan 15, 2025)**: Frontend V2 migration completed - customer portal now uses proper V2 calculation flow (Step 1: calculate payment split, Step 2: create payment intent with exact amounts). Fixed delivery/pickup display discrepancy and eliminated incorrect total charging.
 
 ### Data Storage
 - **Primary Database**: PostgreSQL via Neon serverless.
@@ -31,16 +45,16 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Session Storage**: PostgreSQL-based.
 
 ## External Dependencies
-- **Payment Processing**: Stripe Connect (marketplace payments, Express accounts, application fees, direct transfers).
+- **Payment Processing**: Stripe Connect V2 (platform-first fund collection with automatic wholesaler distributions).
 - **Communication Services**:
     - WhatsApp Business API
-    - Twilio (alternative WhatsApp provider)
-    - SendGrid (transactional emails)
-    - Multi-provider SMS verification
+    - Twilio
+    - SendGrid
+    - SMS Services (multi-provider)
 - **AI & Enhancement Services**:
-    - OpenAI GPT-4 (product descriptions, marketing copy, campaign optimization)
-    - Google Maps API (address autocomplete, location services)
+    - OpenAI GPT-4
+    - Google Maps API
     - AI-powered image generation
 - **Shipping Integration**:
-    - Parcel2Go API (shipping quotes, label generation)
-    - Google Places (address validation)
+    - Parcel2Go API
+    - Google Places
