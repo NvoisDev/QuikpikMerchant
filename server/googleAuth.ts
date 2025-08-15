@@ -88,19 +88,39 @@ export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
 
 export async function createOrUpdateUser(googleUser: GoogleUser) {
   try {
+    console.log('🔍 Looking for existing user with email:', googleUser.email);
+    
     // Check if user exists
     let user = await storage.getUserByEmail(googleUser.email);
     
     if (user) {
+      console.log('✅ Found existing user, updating Google info for:', user.email);
+      
       // Update existing user with Google info and mark as not first login
-      user = await storage.updateUser(user.id, {
-        firstName: googleUser.given_name || googleUser.name.split(' ')[0],
-        lastName: googleUser.family_name || googleUser.name.split(' ').slice(1).join(' '),
-        profileImageUrl: googleUser.picture,
+      // Only update fields that are safe to update
+      const updateData: any = {
         googleId: googleUser.id,
         isFirstLogin: false
-      });
+      };
+      
+      // Only update profile image if it's not already set
+      if (googleUser.picture && !user.profileImageUrl) {
+        updateData.profileImageUrl = googleUser.picture;
+      }
+      
+      // Only update names if they're not already set
+      if (googleUser.given_name && !user.firstName) {
+        updateData.firstName = googleUser.given_name;
+      }
+      if (googleUser.family_name && !user.lastName) {
+        updateData.lastName = googleUser.family_name;
+      }
+      
+      user = await storage.updateUser(user.id, updateData);
+      console.log('✅ Updated existing user successfully');
     } else {
+      console.log('🆕 Creating new user for:', googleUser.email);
+      
       // Create new user with first login flag
       // SECURITY: All Google OAuth users are wholesalers by default
       // Customers use separate SMS-based authentication system
@@ -116,12 +136,14 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         defaultCurrency: 'GBP',
         isFirstLogin: true
       });
+      console.log('✅ Created new user successfully');
     }
 
     return user;
   } catch (error) {
-    console.error('Error creating/updating user:', error);
-    throw new Error('Failed to create or update user');
+    console.error('❌ Error creating/updating user:', error);
+    console.error('❌ Error details:', error instanceof Error ? error.stack : error);
+    throw new Error(`Failed to create or update user: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
