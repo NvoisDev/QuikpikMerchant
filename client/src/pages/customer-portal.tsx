@@ -320,6 +320,23 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
         
         try {
+          // Calculate product subtotal
+          const productSubtotal = cart.reduce((total, item) => {
+            if (item.sellingType === "pallets") {
+              return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+            } else {
+              const basePrice = parseFloat(item.product.price) || 0;
+              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                basePrice,
+                item.quantity,
+                item.product.promotionalOffers || [],
+                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                item.product.promoActive
+              );
+              return total + pricing.totalCost;
+            }
+          }, 0);
+
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
             items: cart.map(item => ({
               productId: item.product.id,
@@ -340,23 +357,15 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                 }
               })()
             })),
-            customerData,
+            customerData: {
+              name: customerData.name,
+              email: customerData.email,
+              phone: customerData.phone,
+              address: customerData.address,
+              shippingOption: customerData.shippingOption
+            },
             wholesalerId: wholesaler.id,
-            totalAmount: cart.reduce((total, item) => {
-              if (item.sellingType === "pallets") {
-                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-              } else {
-                const basePrice = parseFloat(item.product.price) || 0;
-                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                  basePrice,
-                  item.quantity,
-                  item.product.promotionalOffers || [],
-                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                  item.product.promoActive
-                );
-                return total + pricing.totalCost;
-              }
-            }, 0), // Send ONLY product subtotal - backend will add transaction fees
+            totalAmount: productSubtotal, // Send product subtotal - backend will add fees
             shippingInfo: shippingDataAtCreation
           });
           
