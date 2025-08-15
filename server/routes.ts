@@ -1761,17 +1761,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // NEW APPROACH: PRODUCTS-ONLY STRIPE PAYMENT
-      // Delivery costs are excluded from Stripe and collected separately by platform
+      // OPTIMIZED APPROACH: SINGLE STRIPE CONNECT PAYMENT WITH AUTOMATIC PLATFORM DEDUCTION
+      // All costs (products + delivery) collected in one payment, platform portion automatically deducted
       const deliveryCost = shippingInfo?.service?.price || 0;
       
-      // Transaction Fee: 5.5% of PRODUCT TOTAL ONLY + £0.50 fixed fee
-      const customerTransactionFee = (productSubtotal * 0.055) + 0.50;
-      const totalCustomerPaysStripe = productSubtotal + customerTransactionFee; // NO DELIVERY COST
+      // Transaction Fee: 5.5% of (products + delivery) + £0.50 fixed fee
+      const customerTransactionFee = ((productSubtotal + deliveryCost) * 0.055) + 0.50;
+      const totalCustomerPayment = productSubtotal + deliveryCost + customerTransactionFee;
       
-      // Wholesaler Platform Fee: 3.3% of product total only
+      // Platform costs: Platform fee (3.3% of products) + Transaction fee + Full delivery cost
       const wholesalerPlatformFee = productSubtotal * 0.033;
-      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
+      const totalPlatformCosts = wholesalerPlatformFee + customerTransactionFee + deliveryCost;
+      const wholesalerReceives = totalCustomerPayment - totalPlatformCosts;
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
@@ -1794,18 +1795,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // STRIPE CONNECT: PRODUCTS-ONLY PAYMENT (NO DELIVERY COST)
-      // Platform keeps: Platform fee (3.3% of products) + Transaction fee
-      // Delivery cost will be collected separately by platform
-      const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal
-      const platformTransactionFee = customerTransactionFee; // 5.5% of PRODUCTS ONLY + £0.50
+      // STRIPE CONNECT: SINGLE PAYMENT WITH AUTOMATIC PLATFORM DEDUCTION
+      // Platform automatically keeps: Platform fee + Transaction fee + Delivery costs
+      // Remainder automatically goes to wholesaler - no complex transfers needed
       
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPaysStripe * 100), // PRODUCTS + TRANSACTION FEE ONLY
+        amount: Math.round(totalCustomerPayment * 100), // FULL CUSTOMER PAYMENT INCLUDING DELIVERY
         currency: 'gbp',
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: Math.round((platformProductFee + customerTransactionFee) * 100), // Platform fee + transaction fee ONLY
+        application_fee_amount: Math.round(totalPlatformCosts * 100), // ALL PLATFORM COSTS AUTOMATICALLY DEDUCTED
         metadata: {
           customerName,
           customerEmail,
@@ -1816,16 +1815,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerTransactionFee: customerTransactionFee.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
           wholesalerReceives: wholesalerReceives.toFixed(2),
-          totalCustomerPaysStripe: totalCustomerPaysStripe.toFixed(2),
-          totalCustomerPaysWithDelivery: (totalCustomerPaysStripe + deliveryCost).toFixed(2),
-          platformProductFee: platformProductFee.toFixed(2),
-          platformTransactionFee: platformTransactionFee.toFixed(2),
-          deliveryCostSeparate: deliveryCost.toFixed(2),
+          totalCustomerPayment: totalCustomerPayment.toFixed(2),
+          totalPlatformCosts: totalPlatformCosts.toFixed(2),
+          deliveryCost: deliveryCost.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
           hasStripeConnect: 'true',
-          paymentMethod: 'products_only_stripe',
-          deliveryPaymentMethod: 'separate_platform_collection',
+          paymentMethod: 'optimized_single_payment',
+          deliveryPaymentMethod: 'included_in_stripe_connect',
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
@@ -1842,7 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } : { option: 'pickup' })
         }
       }, {
-        stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
+        stripeAccount: wholesaler.stripeAccountId // DESTINATION CHARGE: Create on wholesaler's account
       });
 
       res.json({ 
@@ -1850,11 +1847,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toFixed(2),
         customerTransactionFee: customerTransactionFee.toFixed(2),
-        stripePaymentAmount: totalCustomerPaysStripe.toFixed(2), // What customer pays Stripe
-        totalCustomerPays: (totalCustomerPaysStripe + deliveryCost).toFixed(2), // Total including delivery
+        totalCustomerPayment: totalCustomerPayment.toFixed(2), // Total customer pays (including everything)
+        totalPlatformCosts: totalPlatformCosts.toFixed(2), // What platform automatically keeps
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-        wholesalerReceives: wholesalerReceives.toFixed(2),
-        deliveryCollectionMethod: deliveryCost > 0 ? 'separate_platform_charge' : 'none'
+        wholesalerReceives: wholesalerReceives.toFixed(2), // What wholesaler automatically gets
+        paymentMethod: 'optimized_stripe_connect',
+        deliveryIncluded: deliveryCost > 0
       });
 
     } catch (error) {
@@ -1863,16 +1861,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // NEW: Platform Delivery Fee Collection Endpoint
+  // DEPRECATED: Platform Delivery Fee Collection Endpoint - No longer needed with optimized Stripe Connect
+  // All delivery costs are now automatically included in the main payment with application_fee_amount
   app.post('/api/platform/collect-delivery-fee', async (req, res) => {
     try {
-      const { orderId, deliveryCost, customerEmail, orderNumber } = req.body;
-      
-      if (!orderId || !deliveryCost || deliveryCost <= 0) {
-        return res.status(400).json({ message: 'Order ID and delivery cost required' });
-      }
-
-      // Create separate Stripe payment intent for delivery fee (directly to platform account)
+      return res.status(410).json({ 
+        message: 'Delivery fees are now automatically included in Stripe Connect payments',
+        deprecated: true
+      });
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
