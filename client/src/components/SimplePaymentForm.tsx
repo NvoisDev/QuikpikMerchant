@@ -13,14 +13,21 @@ import { useToast } from '@/hooks/use-toast';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY!);
 
 interface SimplePaymentFormProps {
-  cart: any[];
+  items: Array<{
+    productId: number;
+    quantity: number;
+    unitPrice: number;
+  }>;
   customerData: any;
-  wholesaler: any;
-  totalAmount: number;
-  onSuccess: () => void;
+  wholesalerId: string;
+  customerEmail: string;
+  customerName: string;
+  shippingData: any;
+  onSuccess: (result: any) => void;
+  onError: (error: any) => void;
 }
 
-function CheckoutForm({ onSuccess, totalAmount }: { onSuccess: () => void; totalAmount: number }) {
+function CheckoutForm({ onSuccess, onError, clientSecret }: { onSuccess: (result: any) => void; onError: (error: any) => void; clientSecret: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +42,7 @@ function CheckoutForm({ onSuccess, totalAmount }: { onSuccess: () => void; total
 
     setIsLoading(true);
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/payment-success`,
@@ -49,8 +56,9 @@ function CheckoutForm({ onSuccess, totalAmount }: { onSuccess: () => void; total
         description: error.message,
         variant: "destructive",
       });
+      onError(error);
     } else {
-      onSuccess();
+      onSuccess(paymentIntent);
     }
 
     setIsLoading(false);
@@ -64,89 +72,76 @@ function CheckoutForm({ onSuccess, totalAmount }: { onSuccess: () => void; total
         className="w-full"
         type="submit"
       >
-        {isLoading ? "Processing..." : `Pay £${totalAmount.toFixed(2)}`}
+        {isLoading ? "Processing..." : "Complete Payment"}
       </Button>
     </form>
   );
 }
 
 export default function SimplePaymentForm({ 
-  cart, 
+  items,
   customerData, 
-  wholesaler, 
-  totalAmount, 
-  onSuccess 
+  wholesalerId,
+  customerEmail,
+  customerName,
+  shippingData,
+  onSuccess,
+  onError
 }: SimplePaymentFormProps) {
-  const [clientSecret, setClientSecret] = useState("");
-  const { toast } = useToast();
+  const [clientSecret, setClientSecret] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Create PaymentIntent as soon as the component mounts
+    // Create payment intent when component mounts
     fetch("/api/marketplace/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: parseFloat(item.product.price || "0")
-        })),
+        items,
         customerData,
-        wholesalerId: wholesaler.id,
-        customerEmail: customerData.email,
-        customerName: customerData.name,
-        shippingData: {
-          option: customerData.shippingOption,
-          service: customerData.selectedShippingService,
-          address: {
-            name: customerData.name,
-            email: customerData.email,
-            phone: customerData.phone,
-            address: customerData.address,
-            city: customerData.city,
-            state: customerData.state,
-            postalCode: customerData.postalCode,
-            country: customerData.country
-          }
-        }
+        wholesalerId,
+        customerEmail,
+        customerName,
+        shippingData
       }),
     })
-    .then((res) => res.json())
-    .then((data) => {
-      console.log('Payment intent created:', data);
-      setClientSecret(data.clientSecret);
-    })
-    .catch((error) => {
-      console.error('Error creating payment intent:', error);
-      toast({
-        title: "Setup Error",
-        description: "Unable to initialize payment. Please try again.",
-        variant: "destructive",
+      .then(res => res.json())
+      .then(data => {
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          console.error('No clientSecret in response:', data);
+          onError(new Error(data.message || 'Failed to create payment intent'));
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error creating payment intent:', error);
+        onError(error);
+        setLoading(false);
       });
-    });
-  }, []);
+  }, [items, customerData, wholesalerId, customerEmail, customerName, shippingData]);
 
   const appearance = {
     theme: 'stripe' as const,
   };
-  
+
   const options = {
     clientSecret,
     appearance,
   };
 
+  if (loading) {
+    return <div className="p-4 text-center">Loading payment form...</div>;
+  }
+
+  if (!clientSecret) {
+    return <div className="p-4 text-center text-red-600">Error loading payment form</div>;
+  }
+
   return (
-    <div className="max-w-md mx-auto">
-      {clientSecret ? (
-        <Elements options={options} stripe={stripePromise}>
-          <CheckoutForm onSuccess={onSuccess} totalAmount={totalAmount} />
-        </Elements>
-      ) : (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Setting up payment...</p>
-        </div>
-      )}
-    </div>
+    <Elements options={options} stripe={stripePromise}>
+      <CheckoutForm onSuccess={onSuccess} onError={onError} clientSecret={clientSecret} />
+    </Elements>
   );
 }

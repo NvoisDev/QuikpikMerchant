@@ -4382,61 +4382,41 @@ export default function CustomerPortal() {
                       <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
                     </div>
                     
-                    <div className="text-center py-8 text-red-600">
-                      <p className="font-semibold">Payment System Testing</p>
-                      <p className="text-sm mt-2">Click the button below to test payment intent creation:</p>
-                      <button 
-                        onClick={async () => {
-                          console.log('🧪 Testing payment intent creation...');
-                          try {
-                            const response = await fetch('/api/marketplace/create-payment-intent', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                items: cart.map(item => ({
-                                  productId: parseInt(item.product.id), // Convert to integer
-                                  quantity: item.quantity,
-                                  unitPrice: parseFloat(item.product.price || "0")
-                                })),
-                                customerData,
-                                wholesalerId: wholesaler.id, // Keep as string
-                                customerEmail: customerData.email,
-                                customerName: customerData.name,
-                                shippingData: {
-                                  option: customerData.shippingOption,
-                                  service: customerData.selectedShippingService,
-                                  address: {
-                                    name: customerData.name,
-                                    email: customerData.email,
-                                    phone: customerData.phone,
-                                    address: customerData.address,
-                                    city: customerData.city,
-                                    state: customerData.state,
-                                    postalCode: customerData.postalCode,
-                                    country: customerData.country
-                                  }
-                                }
-                              })
-                            });
-                            
-                            const data = await response.json();
-                            console.log('🧪 Payment intent response:', data);
-                            
-                            if (data.clientSecret) {
-                              alert('✅ Payment intent created successfully! ClientSecret: ' + data.clientSecret.substring(0, 20) + '...');
-                            } else {
-                              alert('❌ No clientSecret in response: ' + JSON.stringify(data));
-                            }
-                          } catch (error) {
-                            console.error('🧪 Payment intent test failed:', error);
-                            alert('❌ Error: ' + error.message);
-                          }
-                        }}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        Test Payment Intent Creation
-                      </button>
-                    </div>
+                    <SimplePaymentForm
+                      items={cart.map(item => ({
+                        productId: parseInt(item.product.id),
+                        quantity: item.quantity,
+                        unitPrice: parseFloat(item.product.price || "0")
+                      }))}
+                      customerData={customerData}
+                      wholesalerId={wholesaler.id}
+                      customerEmail={customerData.email}
+                      customerName={customerData.name}
+                      shippingData={{
+                        option: customerData.shippingOption,
+                        service: customerData.selectedShippingService,
+                        address: {
+                          name: customerData.name,
+                          email: customerData.email,
+                          phone: customerData.phone,
+                          address: customerData.address,
+                          city: customerData.city,
+                          state: customerData.state,
+                          postalCode: customerData.postalCode,
+                          country: customerData.country
+                        }
+                      }}
+                      onSuccess={(result) => {
+                        console.log('Payment successful:', result);
+                        // Clear cart and redirect to success page
+                        setCart([]);
+                        alert('Payment successful! Your order has been placed.');
+                      }}
+                      onError={(error) => {
+                        console.error('Payment failed:', error);
+                        alert('Payment failed: ' + error.message);
+                      }}
+                    />
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
