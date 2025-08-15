@@ -301,28 +301,27 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
     const createPaymentIntent = async () => {
-      console.log('🚚 PAYMENT INTENT CHECK: About to create payment intent with shipping data:', {
-        shippingOption: customerData.shippingOption,
-        selectedShippingService: customerData.selectedShippingService,
-        hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
+      console.log('💳 PAYMENT INTENT: Checking conditions for creation');
+      
+      const hasRequiredData = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption;
+      const canCreateIntent = hasRequiredData && !clientSecret && !isCreatingIntent;
+      
+      console.log('💳 Payment Intent Conditions:', {
+        hasCart: cart.length > 0,
+        hasWholesaler: !!wholesaler,
+        hasCustomerInfo: !!(customerData.name && customerData.email && customerData.phone),
+        hasShippingOption: !!customerData.shippingOption,
         clientSecretExists: !!clientSecret,
-        isCreatingIntent
+        isCreating: isCreatingIntent,
+        canCreate: canCreateIntent
       });
       
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
+      if (canCreateIntent) {
+        console.log('💳 CREATING PAYMENT INTENT...');
         setIsCreatingIntent(true);
         
-        // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
-        const shippingDataAtCreation = {
-          option: customerData.shippingOption,
-          service: customerData.selectedShippingService
-        };
-        setCapturedShippingData(shippingDataAtCreation);
-        
-        console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
-        
         try {
-          const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
+          const paymentData = {
             items: cart.map(item => ({
               productId: item.product.id,
               quantity: item.quantity || 0,
@@ -358,22 +357,34 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                 );
                 return total + pricing.totalCost;
               }
-            }, 0), // Send ONLY product subtotal - backend will add transaction fees
-            shippingInfo: shippingDataAtCreation
+            }, 0),
+            wholesalerId: wholesaler.id,
+            customerEmail: customerData.email,
+            customerName: customerData.name,
+            shippingData: {
+              option: customerData.shippingOption,
+              service: customerData.selectedShippingService,
+              address: {
+                name: customerData.name,
+                email: customerData.email,
+                phone: customerData.phone,
+                address: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }
+            }
+          };
+
+          console.log('💳 Sending payment intent request with data:', {
+            items: paymentData.items.length,
+            wholesaler: wholesaler.businessName,
+            shippingOption: customerData.shippingOption,
+            hasShippingService: !!customerData.selectedShippingService
           });
-          
-          console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
-          console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: Current customerData.shippingOption (might be different):', customerData.shippingOption);
-          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
-            shippingInfo: shippingDataAtCreation,
-            isDeliveryOrder: shippingDataAtCreation.option === 'delivery',
-            hasShippingService: !!shippingDataAtCreation.service,
-            willCreateDeliveryOrder: shippingDataAtCreation.option === 'delivery' && !!shippingDataAtCreation.service
-          });
-          console.log('🚚 FRONTEND: === END DEBUG ===');
-          
+
+          const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", paymentData);
           const data = await response.json();
           setClientSecret(data.clientSecret);
         } catch (error: any) {
