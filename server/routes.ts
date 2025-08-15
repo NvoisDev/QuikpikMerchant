@@ -42,7 +42,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-06-30.basil",
+  apiVersion: "2025-07-30.basil",
 }) : null;
 
 // Subscription price IDs for monthly plans in GBP
@@ -1761,17 +1761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // NEW APPROACH: PRODUCTS-ONLY STRIPE PAYMENT
-      // Delivery costs are excluded from Stripe and collected separately by platform
+      // NEW MARKETPLACE ARCHITECTURE: Platform collects all funds first
+      // Delivery costs are included in total customer payment
       const deliveryCost = shippingInfo?.service?.price || 0;
-      
-      // Transaction Fee: 5.5% of PRODUCT TOTAL ONLY + £0.50 fixed fee
-      const customerTransactionFee = (productSubtotal * 0.055) + 0.50;
-      const totalCustomerPaysStripe = productSubtotal + customerTransactionFee; // NO DELIVERY COST
-      
-      // Wholesaler Platform Fee: 3.3% of product total only
-      const wholesalerPlatformFee = productSubtotal * 0.033;
-      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
@@ -1794,38 +1786,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // STRIPE CONNECT: PRODUCTS-ONLY PAYMENT (NO DELIVERY COST)
-      // Platform keeps: Platform fee (3.3% of products) + Transaction fee
-      // Delivery cost will be collected separately by platform
-      const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal
-      const platformTransactionFee = customerTransactionFee; // 5.5% of PRODUCTS ONLY + £0.50
+      // NEW STRIPE CONNECT MARKETPLACE ARCHITECTURE
+      // Platform collects ALL funds first (products + delivery fees)
+      // Then automatically transfers wholesaler portion after deducting platform fees
       
+      // Calculate total amount customer pays (products + delivery + transaction fee)
+      const customerTransactionFeeTotal = ((productSubtotal + deliveryCost) * 0.055) + 0.50;
+      const totalCustomerPaysAll = productSubtotal + deliveryCost + customerTransactionFeeTotal;
+      
+      // Calculate platform fees
+      const customerPlatformFee = customerTransactionFeeTotal; // 5.5% + £0.50 on total
+      const wholesalerPlatformFee = productSubtotal * 0.033; // 3.3% on products only
+      const totalPlatformFees = customerPlatformFee + wholesalerPlatformFee + deliveryCost; // Platform keeps delivery fees
+      
+      // Calculate wholesaler receives (product total minus platform fee)
+      const wholesalerReceivesNew = productSubtotal - wholesalerPlatformFee;
+      
+      console.log('🔄 MARKETPLACE PAYMENT BREAKDOWN:', {
+        productSubtotal: productSubtotal.toFixed(2),
+        deliveryCost: deliveryCost.toFixed(2),
+        customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
+        totalCustomerPays: totalCustomerPaysAll.toFixed(2),
+        platformKeeps: totalPlatformFees.toFixed(2),
+        wholesalerReceives: wholesalerReceivesNew.toFixed(2)
+      });
+
+      // Create marketplace payment intent - platform collects everything
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPaysStripe * 100), // PRODUCTS + TRANSACTION FEE ONLY
+        amount: Math.round(totalCustomerPaysAll * 100), // Platform collects ALL FUNDS
         currency: 'gbp',
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: Math.round((platformProductFee + customerTransactionFee) * 100), // Platform fee + transaction fee ONLY
         metadata: {
           customerName,
           customerEmail,
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
           productSubtotal: productSubtotal.toFixed(2),
-          shippingCost: deliveryCost.toString(),
-          customerTransactionFee: customerTransactionFee.toFixed(2),
+          deliveryCost: deliveryCost.toFixed(2),
+          customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-          wholesalerReceives: wholesalerReceives.toFixed(2),
-          totalCustomerPaysStripe: totalCustomerPaysStripe.toFixed(2),
-          totalCustomerPaysWithDelivery: (totalCustomerPaysStripe + deliveryCost).toFixed(2),
-          platformProductFee: platformProductFee.toFixed(2),
-          platformTransactionFee: platformTransactionFee.toFixed(2),
-          deliveryCostSeparate: deliveryCost.toFixed(2),
+          wholesalerReceives: wholesalerReceivesNew.toFixed(2),
+          totalCustomerPays: totalCustomerPaysAll.toFixed(2),
+          totalPlatformKeeps: totalPlatformFees.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
+          wholesalerStripeAccountId: wholesaler.stripeAccountId,
           orderType: 'customer_portal',
-          hasStripeConnect: 'true',
-          paymentMethod: 'products_only_stripe',
-          deliveryPaymentMethod: 'separate_platform_collection',
+          marketplaceArchitecture: 'platform_collects_all',
+          paymentMethod: 'stripe_connect_marketplace',
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,

@@ -55,8 +55,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     productSubtotal,
     customerTransactionFee,
     totalCustomerPays,
+    totalPlatformKeeps,
     wholesalerPlatformFee,
-    wholesalerReceives
+    wholesalerReceives,
+    deliveryCost,
+    marketplaceArchitecture
   } = paymentIntent.metadata;
 
   if (orderType !== 'customer_portal') {
@@ -133,10 +136,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
     : totalAmount;
 
-  // Use the correct total from metadata instead of recalculating
-  // CRITICAL FIX: Include shipping cost in total calculation
-  const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
-  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
+  // Use the correct total from metadata - for marketplace architecture this includes everything
+  // MARKETPLACE FIX: Use totalCustomerPays which includes products + delivery + transaction fee
+  const shippingCost = parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
+  const correctTotal = totalCustomerPays || paymentIntent.amount / 100; // Total customer paid (all inclusive)
 
   // Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -182,8 +185,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     // FIXED: Shipping information processing - use shippingInfo.option instead of shipping cost
     fulfillmentType: shippingInfo.option || 'pickup',
     deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-    deliveryCost: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
-    shippingTotal: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
+    deliveryCost: paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
+    shippingTotal: paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
   };
   
   console.log('🚚 Order data with shipping fields:', {
