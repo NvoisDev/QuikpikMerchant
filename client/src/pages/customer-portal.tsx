@@ -292,11 +292,15 @@ interface StripeCheckoutFormProps {
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
-  const [capturedShippingData, setCapturedShippingData] = useState<{
-    option: string;
-    service?: any;
-  } | null>(null);
   const { toast } = useToast();
+
+  console.log('🔄 StripeCheckoutForm rendered with:', {
+    hasCart: cart.length > 0,
+    hasCustomerData: !!(customerData.name && customerData.email),
+    hasWholesaler: !!wholesaler,
+    totalAmount,
+    clientSecret: clientSecret ? 'EXISTS' : 'MISSING'
+  });
 
   // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
@@ -358,7 +362,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                 return total + pricing.totalCost;
               }
             }, 0),
-            wholesalerId: wholesaler.id,
             customerEmail: customerData.email,
             customerName: customerData.name,
             shippingData: {
