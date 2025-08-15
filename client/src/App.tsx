@@ -47,7 +47,6 @@ import Customers from "@/pages/customers";
 import UpgradeSuccess from "@/pages/upgrade-success";
 import AuthSuccess from "@/pages/auth-success";
 import SuperAdmin from "@/pages/super-admin";
-import StripeConnectV2Test from "@/pages/stripe-connect-v2-test";
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -137,7 +136,6 @@ function AuthenticatedRoutes() {
             <Route path="/help" component={Help} />
             <Route path="/preview-store" component={CustomerPortal} />
             <Route path="/super-admin" component={SuperAdmin} />
-            <Route path="/stripe-v2-test" component={StripeConnectV2Test} />
           </>
         ) : (
           <>

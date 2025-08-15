@@ -129,12 +129,6 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   
-  // Stripe Connect V2 fields
-  stripeAccountIdV2: varchar("stripe_account_id_v2"), // New Express account for v2 architecture
-  stripeAccountStatusV2: varchar("stripe_account_status_v2").default("pending"), // pending, active, restricted
-  stripeOnboardingCompletedV2: boolean("stripe_onboarding_completed_v2").default(false),
-  stripeCapabilities: jsonb("stripe_capabilities").default({}), // Track account capabilities
-  
   // Subscription fields
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'standard', 'premium'
   subscriptionStatus: varchar("subscription_status").default("inactive"), // 'active', 'inactive', 'canceled'
@@ -648,53 +642,6 @@ export const subscriptionAuditLogs = pgTable("subscription_audit_logs", {
   };
 });
 
-// Stripe Connect V2 Transfer tracking
-export const stripeTransfersV2 = pgTable("stripe_transfers_v2", {
-  id: serial("id").primaryKey(),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
-  stripeTransferId: varchar("stripe_transfer_id").notNull().unique(),
-  stripeAccountId: varchar("stripe_account_id").notNull(), // Wholesaler's Express account
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Amount transferred in GBP
-  currency: varchar("currency", { length: 3 }).default("GBP"),
-  status: varchar("status").notNull().default("pending"), // pending, succeeded, failed
-  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(), // Platform fee deducted
-  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0.00"), // Delivery fee (stayed with platform)
-  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Original payment intent
-  metadata: jsonb("metadata").default({}),
-  transferredAt: timestamp("transferred_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    orderIdIdx: index("stripe_transfers_v2_order_id_idx").on(table.orderId),
-    wholesalerIdIdx: index("stripe_transfers_v2_wholesaler_id_idx").on(table.wholesalerId),
-    stripeTransferIdIdx: index("stripe_transfers_v2_stripe_id_idx").on(table.stripeTransferId),
-    statusIdx: index("stripe_transfers_v2_status_idx").on(table.status),
-  };
-});
-
-// Payment calculations for audit trail
-export const paymentCalculationsV2 = pgTable("payment_calculations_v2", {
-  id: serial("id").primaryKey(),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  stripePaymentIntentId: varchar("stripe_payment_intent_id").notNull().unique(),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(), // Total customer paid
-  productSubtotal: decimal("product_subtotal", { precision: 10, scale: 2 }).notNull(),
-  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull(),
-  transactionFee: decimal("transaction_fee", { precision: 10, scale: 2 }).notNull(),
-  customerPlatformFee: decimal("customer_platform_fee", { precision: 10, scale: 2 }).notNull(),
-  wholesalerPlatformFee: decimal("wholesaler_platform_fee", { precision: 10, scale: 2 }).notNull(),
-  platformTotal: decimal("platform_total", { precision: 10, scale: 2 }).notNull(), // Total kept by platform
-  wholesalerShare: decimal("wholesaler_share", { precision: 10, scale: 2 }).notNull(), // Amount for wholesaler
-  customerPlatformFeeRate: decimal("customer_platform_fee_rate", { precision: 5, scale: 4 }).notNull(), // e.g., 0.0550
-  wholesalerPlatformFeeRate: decimal("wholesaler_platform_fee_rate", { precision: 5, scale: 4 }).notNull(), // e.g., 0.0330
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    orderIdIdx: index("payment_calculations_v2_order_id_idx").on(table.orderId),
-    stripePaymentIntentIdx: index("payment_calculations_v2_stripe_pi_idx").on(table.stripePaymentIntentId),
-  };
-});
 
 
 // Relations

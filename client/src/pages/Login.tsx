@@ -14,8 +14,6 @@ export default function Login() {
   const [teamMemberLogin, setTeamMemberLogin] = useState({ email: '', password: '' });
   const [businessOwnerLogin, setBusinessOwnerLogin] = useState({ email: '', password: '' });
   const [loginMethod, setLoginMethod] = useState<'google' | 'email'>('google');
-  const [emergencyLogin, setEmergencyLogin] = useState({ email: '', code: '' });
-  const [showEmergency, setShowEmergency] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -38,51 +36,9 @@ export default function Login() {
       console.error('Login error:', error);
       toast({
         title: "Login Failed",
-        description: "Google authentication unavailable. Use emergency login if needed.",
+        description: "There was an error signing you in. Please try again.",
         variant: "destructive",
       });
-      setShowEmergency(true);
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmergencyLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/auth/emergency-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emergencyLogin),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        
-        toast({
-          title: "Emergency Access Granted",
-          description: "You've been signed in successfully.",
-        });
-        
-        setTimeout(() => {
-          setLocation('/');
-        }, 100);
-      } else {
-        throw new Error(data.error || 'Emergency login failed');
-      }
-    } catch (error: any) {
-      console.error('Emergency login error:', error);
-      toast({
-        title: "Emergency Login Failed",
-        description: error.message || "Invalid emergency code.",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -261,56 +217,7 @@ export default function Login() {
                     </Button>
                     <div className="text-center text-sm text-gray-500">
                       <p>Secure sign-in powered by Google OAuth 2.0</p>
-                      {showEmergency && (
-                        <button
-                          type="button"
-                          onClick={() => setShowEmergency(!showEmergency)}
-                          className="text-red-600 hover:text-red-800 text-xs underline mt-2"
-                        >
-                          Google login issues? Try emergency access
-                        </button>
-                      )}
                     </div>
-                    
-                    {showEmergency && (
-                      <div className="border-t pt-4 mt-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-3">Emergency Access</h4>
-                        <form onSubmit={handleEmergencyLogin} className="space-y-3">
-                          <div>
-                            <Label htmlFor="emergency-email" className="text-xs">Email</Label>
-                            <Input
-                              id="emergency-email"
-                              type="email"
-                              placeholder="your.email@company.com"
-                              value={emergencyLogin.email}
-                              onChange={(e) => setEmergencyLogin({...emergencyLogin, email: e.target.value})}
-                              className="h-9 text-sm"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="emergency-code" className="text-xs">Emergency Code</Label>
-                            <Input
-                              id="emergency-code"
-                              type="password"
-                              placeholder="Emergency access code"
-                              value={emergencyLogin.code}
-                              onChange={(e) => setEmergencyLogin({...emergencyLogin, code: e.target.value})}
-                              className="h-9 text-sm"
-                              required
-                            />
-                          </div>
-                          <Button
-                            type="submit"
-                            disabled={isLoading}
-                            size="sm"
-                            className="w-full h-9 text-sm"
-                          >
-                            {isLoading ? 'Accessing...' : 'Emergency Login'}
-                          </Button>
-                        </form>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleBusinessOwnerLogin} className="space-y-4">

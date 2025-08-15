@@ -36,8 +36,6 @@ import {
   logLimitReached 
 } from "./subscriptionLogger";
 import { registerWebhookRoutes } from "./webhook-handler";
-import stripeConnectRoutesV2 from "./stripe-connect-routes";
-import stripeConnectWebhookV2 from "./stripe-connect-webhook";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -1069,42 +1067,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/google/callback', async (req, res) => {
     try {
-      console.log('🔍 Google callback received with query:', req.query);
-      
-      const { code, error, error_description } = req.query;
-      
-      // Handle Google OAuth errors
-      if (error) {
-        console.error('❌ Google OAuth error:', error, error_description);
-        return res.redirect(`/login?error=oauth_error&details=${encodeURIComponent(error_description || error.toString())}`);
-      }
+      const { code } = req.query;
       
       if (!code || typeof code !== 'string') {
-        console.error('❌ No authorization code received from Google');
-        return res.redirect('/login?error=no_code');
+        return res.status(400).json({ error: 'Authorization code is required' });
       }
 
-      console.log('🔍 Processing Google auth code...');
-      
       // Verify Google token and get user info
       const googleUser = await verifyGoogleToken(code);
-      console.log('✅ Google user verified:', googleUser.email);
       
       // Create or update user in database
       const user = await createOrUpdateUser(googleUser);
-      console.log('✅ User created/updated in database:', user.email);
       
       // Set user session with enhanced session data
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
-      console.log(`🔐 Google auth session created for user ${user.email} with ID ${user.id}`);
+      console.log(`🔐 Google auth session created for user ${user.email}`);
       
       // Redirect to dashboard for authenticated users
       res.redirect('/dashboard');
     } catch (error) {
-      console.error('❌ Google auth callback error:', error);
-      res.redirect(`/login?error=auth_failed&details=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`);
+      console.error('Google auth callback error:', error);
+      res.redirect('/login?error=auth_failed');
     }
   });
 
@@ -1118,63 +1103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Emergency authentication bypass for production issues
-  app.post('/api/auth/emergency-login', async (req: any, res) => {
-    try {
-      const { email, code } = req.body;
-      
-      // Emergency access for main accounts when Google OAuth fails
-      if (!email || !code) {
-        return res.status(400).json({ error: 'Email and emergency code required' });
-      }
-      
-      // Simple emergency codes (change these regularly)
-      const emergencyCodes = {
-        'hello@quikpik.co': 'QUIK2025'
-      };
-      
-      if (emergencyCodes[email as keyof typeof emergencyCodes] !== code) {
-        return res.status(403).json({ error: 'Invalid emergency code' });
-      }
-      
-      // Find or create user
-      let user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        // Create emergency user
-        user = await storage.createUser({
-          id: `emergency_${Date.now()}`,
-          email,
-          firstName: 'Quikpik',
-          lastName: 'Admin',
-          role: 'wholesaler',
-          businessName: 'Quikpik Platform',
-          defaultCurrency: 'GBP',
-          googleId: `emergency_${email}`,
-          profileImageUrl: '',
-          isFirstLogin: false
-        });
-      }
-      
-      // Set session
-      (req.session as any).userId = user.id;
-      (req.session as any).user = user;
-      
-      console.log(`🚨 Emergency login successful for ${email}`);
-      res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
-    } catch (error) {
-      console.error('Emergency login error:', error);
-      res.status(500).json({ error: 'Emergency login failed' });
-    }
-  });
-
   // Authentication recovery endpoint for Surulere Foods Wholesale
   app.post('/api/auth/recover', async (req: any, res) => {
     try {
       const { email } = req.body;
       
       // Allow recovery for the consolidated wholesaler account
-      if (!email || email !== 'hello@quikpik.co') {
+      if (!email || (email !== 'hello@quikpik.co' && email !== 'mogunjemilua@gmail.com')) {
         return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
       }
       
@@ -1851,10 +1786,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // OLD STRIPE CONNECT REMOVED - Now using V2 system
-      return res.status(400).json({ 
-        message: "Old Stripe Connect system removed. Please use V2 endpoints.",
-        migrateToV2: true 
+      // Stripe Connect is required - check wholesaler has connected account
+      if (!wholesaler.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler must complete Stripe Connect onboarding before accepting orders",
+          requiresOnboarding: true 
+        });
+      }
+
+      // STRIPE CONNECT: PRODUCTS-ONLY PAYMENT (NO DELIVERY COST)
+      // Platform keeps: Platform fee (3.3% of products) + Transaction fee
+      // Delivery cost will be collected separately by platform
+      const platformProductFee = wholesalerPlatformFee; // 3.3% of product subtotal
+      const platformTransactionFee = customerTransactionFee; // 5.5% of PRODUCTS ONLY + £0.50
+      
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(totalCustomerPaysStripe * 100), // PRODUCTS + TRANSACTION FEE ONLY
+        currency: 'gbp',
+        receipt_email: customerEmail,
+        automatic_payment_methods: { enabled: true },
+        application_fee_amount: Math.round((platformProductFee + customerTransactionFee) * 100), // Platform fee + transaction fee ONLY
+        metadata: {
+          customerName,
+          customerEmail,
+          customerPhone,
+          customerAddress: JSON.stringify(customerAddress),
+          productSubtotal: productSubtotal.toFixed(2),
+          shippingCost: deliveryCost.toString(),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
+          wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+          wholesalerReceives: wholesalerReceives.toFixed(2),
+          totalCustomerPaysStripe: totalCustomerPaysStripe.toFixed(2),
+          totalCustomerPaysWithDelivery: (totalCustomerPaysStripe + deliveryCost).toFixed(2),
+          platformProductFee: platformProductFee.toFixed(2),
+          platformTransactionFee: platformTransactionFee.toFixed(2),
+          deliveryCostSeparate: deliveryCost.toFixed(2),
+          wholesalerId: firstProduct.wholesalerId,
+          orderType: 'customer_portal',
+          hasStripeConnect: 'true',
+          paymentMethod: 'products_only_stripe',
+          deliveryPaymentMethod: 'separate_platform_collection',
+          items: JSON.stringify(validatedItems.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            unitPrice: parseFloat(item.unitPrice)
+          }))),
+          shippingInfo: JSON.stringify(shippingInfo ? {
+            option: shippingInfo.option,
+            service: shippingInfo.service ? {
+              serviceId: shippingInfo.service.serviceId,
+              serviceName: shippingInfo.service.serviceName,
+              price: shippingInfo.service.price
+            } : null
+          } : { option: 'pickup' })
+        }
+      }, {
+        stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
+      });
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        productSubtotal: productSubtotal.toFixed(2),
+        shippingCost: deliveryCost.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
+        stripePaymentAmount: totalCustomerPaysStripe.toFixed(2), // What customer pays Stripe
+        totalCustomerPays: (totalCustomerPaysStripe + deliveryCost).toFixed(2), // Total including delivery
+        wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+        wholesalerReceives: wholesalerReceives.toFixed(2),
+        deliveryCollectionMethod: deliveryCost > 0 ? 'separate_platform_charge' : 'none'
       });
 
     } catch (error) {
@@ -2626,8 +2626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const wholesaler = await storage.getUser(order.wholesalerId);
         
         if (customer?.email && wholesaler) {
-          // OLD STRIPE CONNECT FUNCTION REMOVED
-          // Refund receipt would be handled by V2 system
+          // Create Stripe credit note for professional refund receipt
+          await createStripeRefundReceipt(order, refund, wholesaler, customer, reason);
           
           // Also send custom refund receipt email
           await sendRefundReceipt(customer, order, refund, wholesaler, reason);
@@ -3711,27 +3711,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OLD STRIPE CONNECT ONBOARDING REMOVED
-  // Replaced with V2 system: /api/stripe-v2/create-account & /api/stripe-v2/create-account-link
+  // Stripe Connect onboarding for wholesalers
   app.post("/api/stripe/connect-onboarding", requireAuth, async (req: any, res) => {
-    res.status(410).json({ 
-      message: "This endpoint has been removed. Please use V2 Stripe Connect endpoints.",
-      newEndpoints: [
-        "POST /api/stripe-v2/create-account",
-        "POST /api/stripe-v2/create-account-link"
-      ]
-    });
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.role !== 'wholesaler') {
+        return res.status(403).json({ message: "Only wholesalers can onboard to Stripe Connect" });
+      }
+
+      let accountId = user.stripeAccountId;
+
+      // Create Connect account if it doesn't exist
+      if (!accountId) {
+        // Determine country based on currency preference
+        const country = user.preferredCurrency === 'USD' ? 'US' : 
+                       user.preferredCurrency === 'EUR' ? 'DE' : 'GB';
+        
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: country,
+          email: user.email!,
+          capabilities: {
+            transfers: { requested: true },
+            card_payments: { requested: true }
+          },
+          business_profile: {
+            name: user.businessName || `${user.firstName} ${user.lastName}`,
+            support_email: user.email!,
+          },
+          metadata: {
+            userId: userId,
+            businessName: user.businessName || '',
+            currency: user.preferredCurrency || 'GBP'
+          }
+        });
+        accountId = account.id;
+        
+        // Save account ID to user
+        await storage.updateUserSettings(userId, { stripeAccountId: accountId });
+      }
+
+      // Create account link for onboarding
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${req.protocol}://${req.get('host')}/settings?tab=integrations&stripe_onboarding=refresh`,
+        return_url: `${req.protocol}://${req.get('host')}/settings?tab=integrations&stripe_onboarding=complete`,
+        type: 'account_onboarding',
+      });
+
+      res.json({ onboardingUrl: accountLink.url });
+    } catch (error: any) {
+      console.error("Error creating Stripe Connect onboarding:", error);
+      res.status(500).json({ message: "Error creating onboarding: " + error.message });
+    }
   });
 
   // Duplicate removed - using /api/stripe/connect/status below
 
-  // OLD STRIPE PAYMENT INTENT ENDPOINT REMOVED  
-  // Replaced with V2 system: /api/stripe-v2/create-payment-intent
+  // Stripe payment routes with Connect integration
   app.post("/api/create-payment-intent", requireAuth, async (req: any, res) => {
-    res.status(410).json({ 
-      message: "This endpoint has been removed. Please use V2 Stripe Connect payment processing.",
-      newEndpoint: "POST /api/stripe-v2/create-payment-intent"
-    });
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const { orderId } = req.body;
+      const userId = req.user.id;
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (order.retailerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to pay for this order" });
+      }
+
+      // Get wholesaler's Stripe account
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler?.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler has not set up payment processing. Please contact them to complete their account setup." 
+        });
+      }
+
+      // Check if wholesaler's account can accept payments
+      const account = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+      if (!account.charges_enabled) {
+        return res.status(400).json({ 
+          message: "Wholesaler's payment account is not fully set up. Please contact them to complete verification." 
+        });
+      }
+
+      // Get retailer information for receipt email
+      const retailer = await storage.getUser(userId);
+      
+      const totalAmount = Math.round(parseFloat(order.total) * 100); // Convert to cents
+      const platformFeeAmount = Math.round(parseFloat(order.platformFee) * 100); // 5% platform fee in cents
+
+      const paymentIntentData: any = {
+        amount: totalAmount,
+        currency: "gbp", // Always use GBP for platform
+        application_fee_amount: platformFeeAmount, // Quikpik's platform fee
+        transfer_data: {
+          destination: wholesaler.stripeAccountId, // Money goes to wholesaler
+        },
+        metadata: {
+          orderId: order.id.toString(),
+          retailerId: userId,
+          wholesalerId: order.wholesalerId,
+          platformFee: order.platformFee,
+          subtotal: order.subtotal
+        }
+      };
+
+      // Add receipt email if available
+      if (retailer?.email) {
+        paymentIntentData.receipt_email = retailer.email;
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+      console.log(`💳 Payment intent created for Order #${orderId}`);
+      if (retailer?.email) {
+        console.log(`✅ Stripe receipt will be automatically sent to: ${retailer.email}`);
+      }
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ message: "Error creating payment intent: " + error.message });
+    }
   });
 
   // Duplicate removed - using /api/webhooks/stripe below
@@ -4378,13 +4498,31 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
-  // OLD STRIPE ACCOUNT TEST ENDPOINT REMOVED
-  // Use V2 endpoints for account status checking
+  // Test endpoint for Stripe account checking
   app.get("/api/test-stripe-account/:wholesalerId", async (req: any, res) => {
-    res.status(410).json({ 
-      message: "This test endpoint has been removed. Use V2 system.",
-      newEndpoint: "GET /api/stripe-v2/account-status/:wholesalerId"
-    });
+    try {
+      const { wholesalerId } = req.params;
+      console.log(`🔍 Test - Looking up wholesaler: ${wholesalerId}`);
+      
+      const wholesaler = await storage.getUser(wholesalerId);
+      console.log(`🔍 Test - Wholesaler result:`, wholesaler ? {
+        id: wholesaler.id,
+        businessName: wholesaler.businessName,
+        stripeAccountId: wholesaler.stripeAccountId,
+        email: wholesaler.email
+      } : 'null');
+      
+      res.json({
+        wholesalerId,
+        found: !!wholesaler,
+        hasStripeAccount: !!(wholesaler?.stripeAccountId),
+        stripeAccountId: wholesaler?.stripeAccountId,
+        businessName: wholesaler?.businessName
+      });
+    } catch (error: any) {
+      console.error("Test endpoint error:", error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Test endpoint to check if basic DB connection works
@@ -4764,13 +4902,37 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // WhatsApp API Routes (Shared Service)
 
-  // OLD STRIPE CONNECT STATUS ENDPOINT REMOVED
-  // Replaced with V2 system: /api/stripe-v2/account-status/:wholesalerId
+  // Stripe Connect status endpoint for priority alert
   app.get("/api/stripe/connect/status", requireAuth, async (req: any, res) => {
-    res.status(410).json({ 
-      message: "This endpoint has been removed. Please use V2 Stripe Connect status endpoint.",
-      newEndpoint: "GET /api/stripe-v2/account-status/:wholesalerId"
-    });
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if Stripe Connect is properly configured
+      const hasStripeConnect = !!(user.stripeAccountId);
+      
+      // For a marketplace, we need BOTH platform keys AND Connect account
+      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
+      const isConnected = hasStripeConnect; // Connect account is required
+      const hasPayoutsEnabled = hasStripeConnect;
+      
+      res.json({
+        isConnected,
+        hasStripeKeys,
+        hasStripeConnect,
+        accountId: user.stripeAccountId,
+        hasPayoutsEnabled,
+        requiresInfo: false,
+        paymentProcessingType: hasStripeConnect ? 'connect' : 'direct'
+      });
+    } catch (error) {
+      console.error("Error fetching Stripe Connect status:", error);
+      res.status(500).json({ error: "Failed to fetch Stripe Connect status" });
+    }
   });
 
   // WhatsApp status endpoint for priority alert
@@ -6309,9 +6471,9 @@ Return only the taglines, one per line, without numbers or formatting.`;
       const userId = req.user.id;
       const { search, status, date_range } = req.query;
 
-      // OLD STRIPE CONNECT REMOVED - Return empty array
+      // Get user's Stripe Connect account ID
       const user = await storage.getUser(userId);
-      if (!user?.stripeAccountIdV2) {
+      if (!user?.stripeAccountId) {
         return res.json([]);
       }
 
@@ -6353,8 +6515,41 @@ Return only the taglines, one per line, without numbers or formatting.`;
         }
       }
 
-      // OLD STRIPE CONNECT REMOVED - Return empty array
-      return res.json([]);
+      // Fetch invoices from Stripe Connect account
+      const invoices = await stripe.invoices.list(stripeParams, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      // Filter by search term if provided
+      let filteredInvoices = invoices.data;
+      if (search) {
+        const searchLower = search.toString().toLowerCase();
+        filteredInvoices = invoices.data.filter(invoice => 
+          invoice.number?.toLowerCase().includes(searchLower) ||
+          invoice.customer_name?.toLowerCase().includes(searchLower) ||
+          invoice.customer_email?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Format invoices for frontend
+      const formattedInvoices = filteredInvoices.map(invoice => ({
+        id: invoice.id,
+        number: invoice.number,
+        status: invoice.status,
+        amount_due: invoice.amount_due,
+        amount_paid: invoice.amount_paid,
+        amount_remaining: invoice.amount_remaining,
+        currency: invoice.currency,
+        created: invoice.created,
+        due_date: invoice.due_date,
+        customer_name: invoice.customer_name,
+        customer_email: invoice.customer_email,
+        description: invoice.description,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+        invoice_pdf: invoice.invoice_pdf,
+      }));
+
+      res.json(formattedInvoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       res.status(500).json({ message: "Failed to fetch invoices" });
@@ -6370,17 +6565,76 @@ Return only the taglines, one per line, without numbers or formatting.`;
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      // OLD STRIPE CONNECT REMOVED - Return default empty metrics
-      return res.json({
-        totalRevenue: 0,
-        revenueChange: 0,
-        paidInvoices: 0,
-        paidInvoicesChange: 0,
-        pendingAmount: 0,
-        pendingCount: 0,
-        platformFees: 0
+      if (!user?.stripeAccountId) {
+        return res.json({
+          totalRevenue: 0,
+          revenueChange: 0,
+          paidInvoices: 0,
+          paidInvoicesChange: 0,
+          pendingAmount: 0,
+          pendingCount: 0,
+          platformFees: 0
+        });
+      }
+
+      // Get current month and last month dates
+      const now = new Date();
+      const currentMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
+      const lastMonthStart = Math.floor(new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime() / 1000);
+      const lastMonthEnd = currentMonthStart - 1;
+
+      // Fetch current month invoices
+      const currentMonthInvoices = await stripe.invoices.list({
+        created: { gte: currentMonthStart },
+        limit: 100
+      }, {
+        stripeAccount: user.stripeAccountId,
       });
-      // Unreachable code removed
+
+      // Fetch last month invoices for comparison
+      const lastMonthInvoices = await stripe.invoices.list({
+        created: { gte: lastMonthStart, lte: lastMonthEnd },
+        limit: 100
+      }, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      // Calculate current month metrics
+      const currentRevenue = currentMonthInvoices.data
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
+
+      const currentPaidCount = currentMonthInvoices.data
+        .filter(inv => inv.status === 'paid').length;
+
+      // Calculate last month metrics for comparison
+      const lastRevenue = lastMonthInvoices.data
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount_paid, 0) / 100;
+
+      const lastPaidCount = lastMonthInvoices.data
+        .filter(inv => inv.status === 'paid').length;
+
+      // Calculate pending amounts
+      const pendingInvoices = currentMonthInvoices.data.filter(inv => inv.status === 'open');
+      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount_due, 0) / 100;
+
+      // Calculate changes
+      const revenueChange = lastRevenue > 0 ? ((currentRevenue - lastRevenue) / lastRevenue * 100) : 0;
+      const paidInvoicesChange = lastPaidCount > 0 ? ((currentPaidCount - lastPaidCount) / lastPaidCount * 100) : 0;
+
+      // Platform fees (5% of total revenue)
+      const platformFees = currentRevenue * 0.05;
+
+      res.json({
+        totalRevenue: currentRevenue,
+        revenueChange: Math.round(revenueChange * 10) / 10,
+        paidInvoices: currentPaidCount,
+        paidInvoicesChange: Math.round(paidInvoicesChange * 10) / 10,
+        pendingAmount,
+        pendingCount: pendingInvoices.length,
+        platformFees: Math.round(platformFees * 100) / 100
+      });
     } catch (error) {
       console.error("Error fetching financial summary:", error);
       res.status(500).json({ message: "Failed to fetch financial summary" });
@@ -6396,8 +6650,35 @@ Return only the taglines, one per line, without numbers or formatting.`;
       const userId = req.user.id;
       const { invoiceId } = req.params;
 
-      // OLD STRIPE CONNECT REMOVED - No invoice download capability
-      return res.status(404).json({ message: "Invoice download not available - old Stripe Connect system removed" });
+      const user = await storage.getUser(userId);
+      if (!user?.stripeAccountId) {
+        return res.status(404).json({ message: "Stripe account not found" });
+      }
+
+      // Get invoice from Stripe
+      const invoice = await stripe.invoices.retrieve(invoiceId, {
+        stripeAccount: user.stripeAccountId,
+      });
+
+      if (!invoice.invoice_pdf) {
+        return res.status(404).json({ message: "Invoice PDF not available" });
+      }
+
+      // Fetch the PDF
+      const response = await fetch(invoice.invoice_pdf);
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice PDF');
+      }
+
+      const buffer = await response.arrayBuffer();
+      
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.pdf"`,
+        'Content-Length': buffer.byteLength.toString()
+      });
+
+      res.send(Buffer.from(buffer));
     } catch (error) {
       console.error("Error downloading invoice:", error);
       res.status(500).json({ message: "Failed to download invoice" });
@@ -6684,8 +6965,76 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       let paymentIntent;
 
-      // OLD STRIPE CONNECT REMOVED - Redirect to V2 system
-      throw new Error('Old payment system removed. Please use Stripe Connect V2 endpoints for payment processing.');
+      // Try creating payment intent with Stripe Connect if available
+      if (wholesaler.stripeAccountId) {
+        try {
+          // Create payment intent with Stripe Connect - PRODUCTS ONLY
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays PRODUCTS + transaction fee ONLY
+            currency: 'gbp', // Always use GBP for platform
+            application_fee_amount: Math.round((platformFee + customerTransactionFee) * 100), // Platform keeps fees ONLY (no delivery)
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              customerTransactionFee: customerTransactionFee.toFixed(2),
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Product earnings only
+              connectAccountUsed: 'true',
+              paymentMethod: 'products_only_stripe',
+              deliveryPaymentMethod: 'separate_platform_collection',
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
+          });
+        } catch (connectError: any) {
+          console.error('❌ Stripe Connect payment creation failed:', connectError.message);
+          throw new Error(`Stripe Connect required. Wholesaler must complete onboarding: ${connectError.message}`);
+        }
+      } else {
+        // STRIPE CONNECT REQUIRED - No fallback allowed
+        throw new Error('Wholesaler must complete Stripe Connect onboarding before accepting orders');
+      }
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
+        shippingCost: shippingCost.toFixed(2), // Delivery cost (SEPARATE)
+        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50 on products only
+        stripePaymentAmount: totalAmountWithFee.toFixed(2), // What customer pays Stripe (products + fee)
+        totalCustomerPays: (totalAmountWithFee + shippingCost).toFixed(2), // Total including delivery
+        wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
+        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Wholesaler receives product total minus 3.3%
+        deliveryCollectionMethod: shippingCost > 0 ? 'separate_platform_charge' : 'none'
+      });
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
       res.status(500).json({ message: 'Error creating payment intent: ' + error.message });
@@ -7232,9 +7581,165 @@ Please contact the customer to confirm this order.
     }
   }
 
-  // OLD STRIPE CONNECT INVOICE FUNCTIONS REMOVED
-  // These functions used the old Stripe Connect architecture and are replaced by V2 system
-  // Invoice and receipt generation would now be handled by the V2 Stripe Connect system
+  async function createStripeInvoiceForOrder(order: any, items: any[], wholesaler: any, customer: any) {
+    if (!stripe || !wholesaler.stripeAccountId) {
+      console.log('Stripe not configured or no Connect account, skipping Stripe invoice');
+      return;
+    }
+
+    try {
+      // Create or retrieve Stripe customer
+      let stripeCustomer;
+      try {
+        // Try to find existing customer by email
+        const existingCustomers = await stripe.customers.list({
+          email: customer.email,
+          limit: 1
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+
+        if (existingCustomers.data.length > 0) {
+          stripeCustomer = existingCustomers.data[0];
+        } else {
+          // Create new customer
+          stripeCustomer = await stripe.customers.create({
+            email: customer.email,
+            name: `${customer.firstName} ${customer.lastName || ''}`.trim(),
+            phone: customer.phoneNumber,
+            metadata: {
+              order_id: order.id.toString(),
+              customer_type: 'marketplace_customer'
+            }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId
+          });
+        }
+      } catch (customerError) {
+        console.error('Error creating/retrieving Stripe customer:', customerError);
+        return;
+      }
+
+      // Create Stripe invoice
+      const invoice = await stripe.invoices.create({
+        customer: stripeCustomer.id,
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: `Order #${order.id} - ${wholesaler.businessName || 'Quikpik Merchant'}`,
+        metadata: {
+          order_id: order.id.toString(),
+          platform: 'quikpik_merchant'
+        },
+        auto_advance: false, // Don't auto-finalize
+        collection_method: 'send_invoice',
+        days_until_due: 30
+      }, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Add line items to invoice
+      for (const item of items) {
+        await stripe.invoiceItems.create({
+          customer: stripeCustomer.id,
+          invoice: invoice.id,
+          amount: Math.round(parseFloat(item.unitPrice) * item.quantity * 100), // Convert to cents
+          currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+          description: `${item.productName || item.product?.name || 'Product'} (Qty: ${item.quantity})`,
+          metadata: {
+            product_id: item.productId?.toString() || '',
+            quantity: item.quantity.toString(),
+            unit_price: item.unitPrice
+          }
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+      }
+
+      // Add platform fee as separate line item
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+      const platformFee = subtotal * 0.05;
+      
+      await stripe.invoiceItems.create({
+        customer: stripeCustomer.id,
+        invoice: invoice.id,
+        amount: Math.round(platformFee * 100), // Convert to cents
+        currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
+        description: 'Quikpik Platform Fee (5%)',
+        metadata: {
+          type: 'platform_fee',
+          percentage: '5'
+        }
+      }, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Finalize and send the invoice
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Mark as paid since payment was already processed
+      await stripe.invoices.pay(finalizedInvoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      // Send the invoice to customer
+      await stripe.invoices.sendInvoice(finalizedInvoice.id, {}, {
+        stripeAccount: wholesaler.stripeAccountId
+      });
+
+      console.log(`✅ Stripe invoice created and sent to ${customer.email} for order ${order.id}`);
+      return finalizedInvoice;
+
+    } catch (error) {
+      console.error('❌ Failed to create Stripe invoice:', error);
+    }
+  }
+
+  async function createStripeRefundReceipt(order: any, refund: any, wholesaler: any, customer: any, reason: string) {
+    if (!stripe || !wholesaler.stripeAccountId) {
+      console.log('Stripe not configured or no Connect account, skipping Stripe refund receipt');
+      return;
+    }
+
+    try {
+      // Create a credit note for the refund
+      if (refund && refund.id) {
+        // Find the original invoice to create a credit note
+        const invoices = await stripe.invoices.list({
+          customer: customer.email,
+          limit: 10
+        }, {
+          stripeAccount: wholesaler.stripeAccountId
+        });
+
+        const originalInvoice = invoices.data.find(inv => 
+          inv.metadata?.order_id === order.id.toString()
+        );
+
+        if (originalInvoice) {
+          // Create credit note for the refund
+          const creditNote = await stripe.creditNotes.create({
+            invoice: originalInvoice.id,
+            amount: refund.amount, // Amount in cents
+            reason: 'requested_by_customer',
+            memo: reason || 'Refund processed for order',
+            metadata: {
+              order_id: order.id.toString(),
+              refund_id: refund.id,
+              refund_reason: reason || 'Customer requested refund'
+            }
+          }, {
+            stripeAccount: wholesaler.stripeAccountId
+          });
+
+          console.log(`✅ Stripe credit note created for refund ${refund.id}`);
+          return creditNote;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to create Stripe refund receipt:', error);
+    }
+  }
 
   async function sendRefundReceipt(customer: any, order: any, refund: any, wholesaler: any, reason: string) {
     if (!sgMail) {
@@ -11478,31 +11983,6 @@ The Quikpik Team
       res.status(500).json({ message: "Failed to fetch inventory insights" });
     }
   });
-
-  // ============================================================================
-  // STRIPE CONNECT V2 ROUTES - "Separate Charges and Transfers" Architecture
-  // ============================================================================
-  console.log('🆕 Registering Stripe Connect V2 routes...');
-
-  // V2 Account management
-  app.post('/api/stripe-v2/create-account', stripeConnectRoutesV2.createConnectAccountV2);
-  app.post('/api/stripe-v2/create-account-link', stripeConnectRoutesV2.createAccountLinkV2);
-  app.get('/api/stripe-v2/account-status/:wholesalerId', stripeConnectRoutesV2.getAccountStatusV2);
-
-  // V2 Payment processing  
-  app.post('/api/stripe-v2/calculate-payment', stripeConnectRoutesV2.calculatePaymentV2);
-  app.post('/api/stripe-v2/create-payment-intent', stripeConnectRoutesV2.createPaymentIntentV2);
-  app.post('/api/stripe-v2/process-payment', stripeConnectRoutesV2.processPaymentV2);
-
-  // V2 Platform management
-  app.get('/api/stripe-v2/platform-balance', stripeConnectRoutesV2.getPlatformBalanceV2);
-  app.get('/api/stripe-v2/recent-transfers', stripeConnectRoutesV2.getRecentTransfersV2);
-
-  // V2 Webhook endpoint
-  app.post('/api/webhooks/stripe-v2', stripeConnectWebhookV2.handleStripeWebhookV2);
-
-  console.log('✅ Stripe Connect V2 routes registered successfully');
-  console.log('🔗 V2 Webhook endpoint: /api/webhooks/stripe-v2');
 
   return httpServer;
 }
