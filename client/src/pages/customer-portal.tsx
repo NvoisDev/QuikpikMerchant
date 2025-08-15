@@ -382,7 +382,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           console.log('🚚 FRONTEND: === END DEBUG ===');
           
           const data = await response.json();
-          setClientSecret(data.clientSecret);
+          
+          console.log('🔍 PAYMENT INTENT RESPONSE DEBUG:', {
+            hasClientSecret: !!data.clientSecret,
+            clientSecretPreview: data.clientSecret?.substring(0, 30) + '...',
+            responseKeys: Object.keys(data),
+            fullResponse: data
+          });
+          
+          if (data.clientSecret) {
+            console.log('✅ Payment intent created successfully! Client secret received:', data.clientSecret?.substring(0, 20) + '...');
+            setClientSecret(data.clientSecret);
+          } else {
+            console.error('❌ No client secret in response:', data);
+            throw new Error('No client secret received');
+          }
         } catch (error: any) {
           console.error("Error creating payment intent:", error);
           
@@ -469,6 +483,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     );
   }
 
+  console.log('💳 STRIPE ELEMENTS DEBUG:', {
+    hasClientSecret: !!clientSecret,
+    clientSecretPreview: clientSecret?.substring(0, 30) + '...',
+    stripePromiseStatus: !!stripePromise,
+    elementOptions: { clientSecret }
+  });
+
   return (
     <Elements 
       stripe={stripePromise} 
@@ -488,6 +509,14 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  console.log('💳 PAYMENT FORM CONTENT DEBUG:', {
+    hasStripe: !!stripe,
+    hasElements: !!elements,
+    isProcessing,
+    totalAmount,
+    componentMounted: true
+  });
   const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -673,6 +702,18 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           <PaymentElement 
             options={{
               layout: "tabs",
+            }}
+            onReady={() => {
+              console.log('✅ PaymentElement is ready and mounted!');
+            }}
+            onChange={(event) => {
+              console.log('💳 PaymentElement change:', event);
+            }}
+            onLoaderStart={() => {
+              console.log('🔄 PaymentElement loader started');
+            }}
+            onLoadError={(error) => {
+              console.error('❌ PaymentElement load error:', error);
             }}
           />
         </div>
