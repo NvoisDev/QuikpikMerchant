@@ -495,6 +495,11 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
 
     if (!stripe || !elements) {
       console.error('💳 Payment Error: Stripe or Elements not loaded');
+      toast({
+        title: "Payment Error",
+        description: "Payment form not ready. Please refresh the page and try again.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -644,7 +649,26 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          <PaymentElement />
+          {stripe && elements ? (
+            <PaymentElement 
+              options={{
+                layout: "tabs"
+              }}
+            />
+          ) : (
+            <div className="text-center py-8">
+              <div className="flex space-x-1 justify-center mb-2">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-2 h-6 bg-blue-500 rounded-full animate-pulse"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-gray-600">Loading payment form...</p>
+            </div>
+          )}
         </div>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -662,7 +686,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           isLoading={isProcessing}
           variant="success"
           size="lg"
-          disabled={!stripe}
+          disabled={!stripe || !elements}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
           Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
