@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .payment-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        #payment-element {
+            margin: 20px 0;
+        }
+        
+        .pay-button {
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .pay-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #ef4444;
+            margin-top: 10px;
+            padding: 10px;
+            background: #fef2f2;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <h2>Complete Your Payment</h2>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Setting up secure payment...</p>
+        </div>
+        
+        <form id="payment-form" style="display: none;">
+            <div id="payment-element"></div>
+            <button id="submit-button" class="pay-button">
+                Pay Now
+            </button>
+            <div id="error-message" class="error" style="display: none;"></div>
+        </form>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const wholesalerId = urlParams.get('wholesalerId');
+        const customerEmail = urlParams.get('customerEmail');
+        const customerName = urlParams.get('customerName');
+        const totalAmount = urlParams.get('totalAmount');
+        
+        // Initialize Stripe
+        const stripe = Stripe('{{STRIPE_PUBLIC_KEY}}');
+        let elements;
+        let paymentElement;
+
+        // Create payment intent
+        async function createPaymentIntent() {
+            try {
+                const response = await fetch('/api/marketplace/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        wholesalerId,
+                        customerEmail,
+                        customerName,
+                        items: JSON.parse(urlParams.get('items') || '[]'),
+                        shippingData: {
+                            option: urlParams.get('shippingOption') || 'pickup'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.clientSecret) {
+                    initializeStripeElements(data.clientSecret);
+                } else {
+                    throw new Error('No client secret received');
+                }
+            } catch (error) {
+                console.error('Error creating payment intent:', error);
+                showError('Unable to initialize payment. Please refresh and try again.');
+            }
+        }
+
+        function initializeStripeElements(clientSecret) {
+            elements = stripe.elements({
+                clientSecret,
+                appearance: {
+                    theme: 'stripe'
+                }
+            });
+
+            paymentElement = elements.create('payment');
+            paymentElement.mount('#payment-element');
+
+            paymentElement.on('ready', () => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('payment-form').style.display = 'block';
+            });
+
+            paymentElement.on('loaderror', (event) => {
+                showError('Payment form failed to load: ' + event.error.message);
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('payment-form').style.display = 'block';
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        // Handle form submission
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('payment-form');
+            const submitButton = document.getElementById('submit-button');
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                submitButton.disabled = true;
+                submitButton.textContent = 'Processing...';
+
+                const {error} = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: window.location.origin + '/payment-success',
+                    },
+                    redirect: 'if_required'
+                });
+
+                if (error) {
+                    showError(error.message);
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Pay Now';
+                } else {
+                    // Payment succeeded
+                    window.parent.postMessage({
+                        type: 'payment_success',
+                        data: { totalAmount }
+                    }, '*');
+                }
+            });
+
+            // Initialize payment
+            createPaymentIntent();
+        });
+    </script>
+</body>
+</html>

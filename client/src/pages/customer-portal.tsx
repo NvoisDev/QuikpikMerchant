@@ -4374,90 +4374,70 @@ export default function CustomerPortal() {
                 </h3>
                 
                 {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
-                  <StripeCheckoutForm 
-                    key={`checkout-${customerData.shippingOption}-${customerData.selectedShippingService?.serviceId || 'none'}`}
-                    cart={cart}
-                    customerData={{
-                      ...customerData,
-                      // CRITICAL FIX: Ensure shipping data is preserved for payment processing
-                      shippingOption: customerData.shippingOption,
-                      selectedShippingService: customerData.selectedShippingService
-                    }}
-                    wholesaler={wholesaler}
-                    totalAmount={(() => {
-                      // Calculate the total amount that customer will pay (including transaction fees)
-                      // NEW PAYMENT STRUCTURE: Products-only Stripe payment
-                      const subtotal = cart.reduce((total, item) => {
-                        if (item.sellingType === "pallets") {
-                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                        } else {
-                          const basePrice = parseFloat(item.product.price) || 0;
-                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                            basePrice,
-                            item.quantity,
-                            item.product.promotionalOffers || [],
-                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                            item.product.promoActive
-                          );
-                          return total + pricing.totalCost;
-                        }
-                      }, 0);
-                      // Transaction fee based on PRODUCT TOTAL ONLY (no delivery cost)
-                      const transactionFee = subtotal * 0.055 + 0.50;
-                      const shippingCost = cartStats.shippingCost || 0;
-                      // Customer pays: Products + Transaction Fee + Delivery (but Stripe only charges products + fee)
-                      return subtotal + transactionFee + shippingCost; // Total cost to customer
-                    })()}
-                    onSuccess={() => {
-                      // Calculate order totals
-                      const subtotal = cart.reduce((total, item) => {
-                        if (item.sellingType === "pallets") {
-                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                        } else {
-                          const basePrice = parseFloat(item.product.price) || 0;
-                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                            basePrice,
-                            item.quantity,
-                            item.product.promotionalOffers || [],
-                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                            item.product.promoActive
-                          );
-                          return total + pricing.totalCost;
-                        }
-                      }, 0);
-                      // NEW PAYMENT STRUCTURE: Transaction fee on products only
-                      const transactionFee = subtotal * 0.055 + 0.50;
-                      const shippingCost = cartStats.shippingCost || 0;
-                      const totalAmount = subtotal + transactionFee + shippingCost; // Total customer pays
-                      
-                      // Generate order number (will be replaced by actual order number from backend)
-                      // Get actual order number from backend response (will be updated after order creation)
-                      const placeholderOrderNumber = `#${Date.now().toString().slice(-6)}`;
-                      
-                      // Capture order data for thank you page
-                      setCompletedOrder({
-                        orderNumber: placeholderOrderNumber, // Will be updated with real order number
-                        cart: [...cart],
-                        customerData: { ...customerData },
-                        totalAmount,
-                        subtotal,
-                        transactionFee,
-                        shippingCost
-                      });
-                      
-                      // Hide checkout and show thank you page
-                      setShowCheckout(false);
-                      setShowThankYou(true);
-                      
-                      // Invalidate customer orders cache to show new orders immediately
-                      queryClient.invalidateQueries({ 
-                        queryKey: [`/api/customer-orders`, wholesalerId, authenticatedCustomer?.phone] 
-                      });
-                      
-                      // Also clear all queries to ensure fresh data
-                      queryClient.clear();
-                    }}
-                  />
+                  <div className="border rounded-lg p-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="font-semibold">Secure Payment Processing</span>
+                      </div>
+                      <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
+                    </div>
+                    
+                    <div className="text-center py-8 text-red-600">
+                      <p className="font-semibold">Payment System Testing</p>
+                      <p className="text-sm mt-2">Click the button below to test payment intent creation:</p>
+                      <button 
+                        onClick={async () => {
+                          console.log('🧪 Testing payment intent creation...');
+                          try {
+                            const response = await fetch('/api/marketplace/create-payment-intent', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                items: cart.map(item => ({
+                                  productId: parseInt(item.product.id), // Convert to integer
+                                  quantity: item.quantity,
+                                  unitPrice: parseFloat(item.product.price || "0")
+                                })),
+                                customerData,
+                                wholesalerId: parseInt(wholesaler.id), // Convert to integer
+                                customerEmail: customerData.email,
+                                customerName: customerData.name,
+                                shippingData: {
+                                  option: customerData.shippingOption,
+                                  service: customerData.selectedShippingService,
+                                  address: {
+                                    name: customerData.name,
+                                    email: customerData.email,
+                                    phone: customerData.phone,
+                                    address: customerData.address,
+                                    city: customerData.city,
+                                    state: customerData.state,
+                                    postalCode: customerData.postalCode,
+                                    country: customerData.country
+                                  }
+                                }
+                              })
+                            });
+                            
+                            const data = await response.json();
+                            console.log('🧪 Payment intent response:', data);
+                            
+                            if (data.clientSecret) {
+                              alert('✅ Payment intent created successfully! ClientSecret: ' + data.clientSecret.substring(0, 20) + '...');
+                            } else {
+                              alert('❌ No clientSecret in response: ' + JSON.stringify(data));
+                            }
+                          } catch (error) {
+                            console.error('🧪 Payment intent test failed:', error);
+                            alert('❌ Error: ' + error.message);
+                          }
+                        }}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Test Payment Intent Creation
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
