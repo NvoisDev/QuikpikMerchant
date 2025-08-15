@@ -1069,29 +1069,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/google/callback', async (req, res) => {
     try {
-      const { code } = req.query;
+      console.log('🔍 Google callback received with query:', req.query);
+      
+      const { code, error, error_description } = req.query;
+      
+      // Handle Google OAuth errors
+      if (error) {
+        console.error('❌ Google OAuth error:', error, error_description);
+        return res.redirect(`/login?error=oauth_error&details=${encodeURIComponent(error_description || error.toString())}`);
+      }
       
       if (!code || typeof code !== 'string') {
-        return res.status(400).json({ error: 'Authorization code is required' });
+        console.error('❌ No authorization code received from Google');
+        return res.redirect('/login?error=no_code');
       }
 
+      console.log('🔍 Processing Google auth code...');
+      
       // Verify Google token and get user info
       const googleUser = await verifyGoogleToken(code);
+      console.log('✅ Google user verified:', googleUser.email);
       
       // Create or update user in database
       const user = await createOrUpdateUser(googleUser);
+      console.log('✅ User created/updated in database:', user.email);
       
       // Set user session with enhanced session data
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
-      console.log(`🔐 Google auth session created for user ${user.email}`);
+      console.log(`🔐 Google auth session created for user ${user.email} with ID ${user.id}`);
       
       // Redirect to dashboard for authenticated users
       res.redirect('/dashboard');
     } catch (error) {
-      console.error('Google auth callback error:', error);
-      res.redirect('/login?error=auth_failed');
+      console.error('❌ Google auth callback error:', error);
+      res.redirect(`/login?error=auth_failed&details=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`);
     }
   });
 
@@ -1125,22 +1138,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Find or create user
-      const existingUsers = await storage.getUsers();
-      let user = existingUsers.find(u => u.email === email);
+      let user = await storage.getUserByEmail(email);
       
       if (!user) {
-        const newUser = {
+        // Create emergency user
+        user = await storage.createUser({
           id: `emergency_${Date.now()}`,
-          googleId: `emergency_${email}`,
           email,
-          name: 'Quikpik Admin',
-          picture: '',
-          givenName: '',
-          familyName: '',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        user = await storage.createUser(newUser);
+          firstName: 'Quikpik',
+          lastName: 'Admin',
+          role: 'wholesaler',
+          businessName: 'Quikpik Platform',
+          defaultCurrency: 'GBP',
+          googleId: `emergency_${email}`,
+          profileImageUrl: '',
+          isFirstLogin: false
+        });
       }
       
       // Set session

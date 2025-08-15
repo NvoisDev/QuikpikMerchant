@@ -49,11 +49,19 @@ export function getGoogleAuthUrl(): string {
 
 export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
   try {
+    console.log('🔍 Verifying Google token with code:', code.substring(0, 10) + '...');
+    
     const { tokens } = await client.getToken(code);
+    console.log('✅ Received tokens from Google');
+    
     client.setCredentials(tokens);
 
+    if (!tokens.id_token) {
+      throw new Error('No ID token received from Google');
+    }
+
     const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token!,
+      idToken: tokens.id_token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
@@ -62,17 +70,19 @@ export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
       throw new Error('No payload found in Google token');
     }
 
+    console.log('✅ Google token verified for user:', payload.email);
+
     return {
-      id: payload.sub,
+      id: payload.sub!,
       email: payload.email!,
       name: payload.name!,
-      picture: payload.picture!,
+      picture: payload.picture || '',
       given_name: payload.given_name,
       family_name: payload.family_name
     };
   } catch (error) {
-    console.error('Error verifying Google token:', error);
-    throw new Error('Failed to verify Google token');
+    console.error('❌ Error verifying Google token:', error);
+    throw new Error(`Failed to verify Google token: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
