@@ -320,44 +320,73 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
         
         try {
+          // V2 SYSTEM: First calculate payment split
+          const productSubtotal = cart.reduce((total, item) => {
+            if (item.sellingType === "pallets") {
+              return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+            } else {
+              const basePrice = parseFloat(item.product.price) || 0;
+              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                basePrice,
+                item.quantity,
+                item.product.promotionalOffers || [],
+                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                item.product.promoActive
+              );
+              return total + (pricing.effectivePrice * item.quantity);
+            }
+          }, 0);
+
+          const deliveryFee = customerData.selectedShippingService?.price || 0;
+
+          // Step 1: Calculate payment split with V2 system
+          const calculationResponse = await apiRequest("POST", "/api/stripe-v2/calculate-payment", {
+            productSubtotal,
+            deliveryFee
+          });
+
+          if (!calculationResponse.success) {
+            throw new Error('Payment calculation failed');
+          }
+
+          // Generate temporary order ID for V2 system
+          const tempOrderId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+          // Step 2: Create payment intent with V2 system
           const response = await apiRequest("POST", "/api/stripe-v2/create-payment-intent", {
-            items: cart.map(item => ({
-              productId: item.product.id,
-              quantity: item.quantity || 0,
-              unitPrice: (() => {
-                if (item.sellingType === "pallets") {
-                  return parseFloat(item.product.palletPrice || "0") || 0;
-                } else {
-                  const basePrice = parseFloat(item.product.price) || 0;
-                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                    basePrice,
-                    item.quantity,
-                    item.product.promotionalOffers || [],
-                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                    item.product.promoActive
-                  );
-                  return pricing.effectivePrice;
-                }
-              })()
-            })),
-            customerData,
+            calculation: calculationResponse.calculation,
+            orderId: tempOrderId,
             wholesalerId: wholesaler.id,
-            totalAmount: cart.reduce((total, item) => {
-              if (item.sellingType === "pallets") {
-                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-              } else {
-                const basePrice = parseFloat(item.product.price) || 0;
-                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                  basePrice,
-                  item.quantity,
-                  item.product.promotionalOffers || [],
-                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                  item.product.promoActive
-                );
-                return total + pricing.totalCost;
-              }
-            }, 0), // Send ONLY product subtotal - backend will add transaction fees
-            shippingInfo: shippingDataAtCreation
+            customerId: "temp_customer", // Will be replaced by webhook
+            metadata: {
+              items: JSON.stringify(cart.map(item => ({
+                productId: item.product.id,
+                quantity: item.quantity || 0,
+                unitPrice: (() => {
+                  if (item.sellingType === "pallets") {
+                    return parseFloat(item.product.palletPrice || "0") || 0;
+                  } else {
+                    const basePrice = parseFloat(item.product.price) || 0;
+                    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                      basePrice,
+                      item.quantity,
+                      item.product.promotionalOffers || [],
+                      item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                      item.product.promoActive
+                    );
+                    return pricing.effectivePrice;
+                  }
+                })(),
+                productName: item.product.name,
+                sellingType: item.sellingType
+              }))),
+              customerData: JSON.stringify(customerData),
+              shippingInfo: JSON.stringify(shippingDataAtCreation),
+              totalAmount: calculationResponse.calculation.totalAmount.toString(),
+              productSubtotal: productSubtotal.toString(),
+              notes: customerData.notes || '',
+              orderType: 'customer_portal'
+            }
           });
           
           console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
@@ -372,8 +401,8 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           });
           console.log('🚚 FRONTEND: === END DEBUG ===');
           
-          const data = await response.json();
-          setClientSecret(data.clientSecret);
+          console.log('✅ V2 Payment intent created:', response);
+          setClientSecret(response.client_secret);
         } catch (error: any) {
           console.error("Error creating payment intent:", error);
           
@@ -3907,34 +3936,57 @@ export default function CustomerPortal() {
                       return transactionFee.toFixed(2);
                     })()}</span>
                   </div>
-                  {/* Shipping Method Display */}
+                  {/* Shipping Method Display - Fixed to show actual selected method */}
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Shipping Method:</span>
                     <div className="flex items-center gap-2">
-                      {customerData.shippingOption === 'pickup' ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                          📦 Pickup - FREE
-                        </Badge>
-                      ) : customerData.shippingOption === 'delivery' && cartStats.shippingCost > 0 ? (
-                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                          🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}
-                        </Badge>
-                      ) : customerData.shippingOption === 'delivery' ? (
-                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-                          🚚 Delivery - Quote Required
-                        </Badge>
+                      {capturedShippingData ? (
+                        // Use captured shipping data that was sent to backend
+                        capturedShippingData.option === 'pickup' ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            📦 Pickup - FREE
+                          </Badge>
+                        ) : capturedShippingData.option === 'delivery' && capturedShippingData.service ? (
+                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                            🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{capturedShippingData.service.price.toFixed(2)}
+                          </Badge>
+                        ) : capturedShippingData.option === 'delivery' ? (
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+                            🚚 Delivery - Quote Required
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+                            Processing...
+                          </Badge>
+                        )
                       ) : (
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                          Not Selected
-                        </Badge>
+                        // Fallback to current customer data
+                        customerData.shippingOption === 'pickup' ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            📦 Pickup - FREE
+                          </Badge>
+                        ) : customerData.shippingOption === 'delivery' && cartStats.shippingCost > 0 ? (
+                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                            🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}
+                          </Badge>
+                        ) : customerData.shippingOption === 'delivery' ? (
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+                            🚚 Delivery - Quote Required
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+                            Not Selected
+                          </Badge>
+                        )
                       )}
                     </div>
                   </div>
                   
-                  {cartStats.shippingCost > 0 && (
+                  {/* Show delivery cost using captured shipping data or fallback */}
+                  {((capturedShippingData?.service?.price || cartStats.shippingCost) > 0) && (
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Delivery Cost:</span>
-                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
+                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(capturedShippingData?.service?.price || cartStats.shippingCost).toFixed(2)}</span>
                     </div>
                   )}
                   <Separator className="my-2" />
