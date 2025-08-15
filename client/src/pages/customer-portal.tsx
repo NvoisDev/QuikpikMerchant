@@ -495,6 +495,23 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
 
     if (!stripe || !elements) {
       console.error('💳 Payment Error: Stripe or Elements not loaded');
+      toast({
+        title: "Payment Error",
+        description: "Payment system is not ready. Please refresh the page and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if PaymentElement is properly mounted
+    const paymentElement = elements.getElement('payment');
+    if (!paymentElement) {
+      console.error('💳 Payment Error: PaymentElement not found');
+      toast({
+        title: "Payment Error", 
+        description: "Payment form is not ready. Please refresh the page and try again.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -644,7 +661,11 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          <PaymentElement />
+          <PaymentElement 
+            options={{
+              layout: "tabs",
+            }}
+          />
         </div>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -662,10 +683,10 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           isLoading={isProcessing}
           variant="success"
           size="lg"
-          disabled={!stripe}
+          disabled={!stripe || !elements || isProcessing}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
+          {isProcessing ? "Processing..." : `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${totalAmount.toFixed(2)}`}
         </ButtonLoader>
       </form>
 
