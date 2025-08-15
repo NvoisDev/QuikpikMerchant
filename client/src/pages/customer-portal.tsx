@@ -4399,7 +4399,7 @@ export default function CustomerPortal() {
                                   unitPrice: parseFloat(item.product.price || "0")
                                 })),
                                 customerData,
-                                wholesalerId: parseInt(wholesaler.id), // Convert to integer
+                                wholesalerId: wholesaler.id, // Keep as string
                                 customerEmail: customerData.email,
                                 customerName: customerData.name,
                                 shippingData: {
