@@ -6,33 +6,11 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
 }
 
-// Flexible redirect URI system for different environments
+// Fixed redirect URI system - always use quikpik.app for consistency
 const getRedirectUri = () => {
-  // Always use quikpik.app for production (when accessed via the custom domain)
-  if (process.env.CUSTOM_DOMAIN || (typeof window !== 'undefined' && window.location.hostname === 'quikpik.app')) {
-    return 'https://quikpik.app/api/auth/google/callback';
-  }
-  
-  // Check if we're on Replit development environment
-  if (process.env.REPLIT_CLUSTER || process.env.REPL_ID) {
-    // Use the current Replit domain for development
-    const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0];
-    if (replitDomain) {
-      return `https://${replitDomain}/api/auth/google/callback`;
-    }
-  }
-  
-  // Production fallback
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://quikpik.app/api/auth/google/callback';
-  }
-  
-  // Priority order for development
-  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
-    return process.env.GOOGLE_OAUTH_REDIRECT_URI;
-  }
-  
-  return 'http://localhost:5000/api/auth/google/callback';
+  // Always use the production domain for OAuth consistency
+  // This prevents redirect URI mismatches across different environments
+  return 'https://quikpik.app/api/auth/google/callback';
 };
 
 const redirectUri = getRedirectUri();

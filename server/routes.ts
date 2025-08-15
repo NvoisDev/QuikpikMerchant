@@ -1117,8 +1117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simple emergency codes (change these regularly)
       const emergencyCodes = {
-        'hello@quikpik.co': 'QUIK2025',
-        'mogunjemilua@gmail.com': 'ADMIN2025'
+        'hello@quikpik.co': 'QUIK2025'
       };
       
       if (emergencyCodes[email as keyof typeof emergencyCodes] !== code) {
@@ -1134,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: `emergency_${Date.now()}`,
           googleId: `emergency_${email}`,
           email,
-          name: email === 'hello@quikpik.co' ? 'Quikpik Admin' : 'Michael Ogunjemilua',
+          name: 'Quikpik Admin',
           picture: '',
           givenName: '',
           familyName: '',
@@ -1162,7 +1161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email } = req.body;
       
       // Allow recovery for the consolidated wholesaler account
-      if (!email || (email !== 'hello@quikpik.co' && email !== 'mogunjemilua@gmail.com')) {
+      if (!email || email !== 'hello@quikpik.co') {
         return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
       }
       

@@ -6,6 +6,7 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
+**Google OAuth Fix (Jan 15, 2025)**: Standardized redirect URI to always use `https://quikpik.app/api/auth/google/callback` to prevent environment-based mismatches.
 
 ## System Architecture
 ### Frontend
