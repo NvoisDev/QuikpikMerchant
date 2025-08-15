@@ -36,6 +36,8 @@ import {
   logLimitReached 
 } from "./subscriptionLogger";
 import { registerWebhookRoutes } from "./webhook-handler";
+import stripeConnectRoutesV2 from "./stripe-connect-routes";
+import stripeConnectWebhookV2 from "./stripe-connect-webhook";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
@@ -11983,6 +11985,31 @@ The Quikpik Team
       res.status(500).json({ message: "Failed to fetch inventory insights" });
     }
   });
+
+  // ============================================================================
+  // STRIPE CONNECT V2 ROUTES - "Separate Charges and Transfers" Architecture
+  // ============================================================================
+  console.log('🆕 Registering Stripe Connect V2 routes...');
+
+  // V2 Account management
+  app.post('/api/stripe-v2/create-account', stripeConnectRoutesV2.createConnectAccountV2);
+  app.post('/api/stripe-v2/create-account-link', stripeConnectRoutesV2.createAccountLinkV2);
+  app.get('/api/stripe-v2/account-status/:wholesalerId', stripeConnectRoutesV2.getAccountStatusV2);
+
+  // V2 Payment processing  
+  app.post('/api/stripe-v2/calculate-payment', stripeConnectRoutesV2.calculatePaymentV2);
+  app.post('/api/stripe-v2/create-payment-intent', stripeConnectRoutesV2.createPaymentIntentV2);
+  app.post('/api/stripe-v2/process-payment', stripeConnectRoutesV2.processPaymentV2);
+
+  // V2 Platform management
+  app.get('/api/stripe-v2/platform-balance', stripeConnectRoutesV2.getPlatformBalanceV2);
+  app.get('/api/stripe-v2/recent-transfers', stripeConnectRoutesV2.getRecentTransfersV2);
+
+  // V2 Webhook endpoint
+  app.post('/api/webhooks/stripe-v2', stripeConnectWebhookV2.handleStripeWebhookV2);
+
+  console.log('✅ Stripe Connect V2 routes registered successfully');
+  console.log('🔗 V2 Webhook endpoint: /api/webhooks/stripe-v2');
 
   return httpServer;
 }
