@@ -812,6 +812,10 @@ export default function CustomerPortal() {
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   
+  // Order success states
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<number | null>(null);
+  
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
   
