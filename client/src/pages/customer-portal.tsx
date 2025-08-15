@@ -75,10 +75,12 @@ interface ExtendedProduct {
   moq?: number;
 }
 
-// Initialize Stripe
+// Initialize Stripe with enhanced debugging
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
+  console.error('❌ Missing VITE_STRIPE_PUBLIC_KEY environment variable');
   throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
 }
+console.log('🔑 Initializing Stripe with public key:', import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 20) + '...');
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 // Utility functions
@@ -496,10 +498,21 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   });
   const { toast } = useToast();
 
-  // Monitor when Elements are ready
+  // Monitor when Elements are ready with enhanced logging
   useEffect(() => {
+    console.log('💳 Stripe Elements Status:', { 
+      stripe: !!stripe, 
+      elements: !!elements,
+      stripeLoaded: stripe !== null,
+      elementsLoaded: elements !== null
+    });
+    
     if (stripe && elements) {
+      console.log('✅ Both Stripe and Elements are ready');
       setElementsReady(true);
+    } else {
+      console.log('⏳ Waiting for Stripe and Elements to load...');
+      setElementsReady(false);
     }
   }, [stripe, elements]);
 
@@ -661,23 +674,26 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="p-4 border rounded-lg">
+        <div className="p-4 border rounded-lg min-h-[200px] flex items-center justify-center">
           {elementsReady ? (
-            <PaymentElement 
-              options={{
-                layout: "tabs",
-                paymentMethodOrder: ['card']
-              }}
-              onReady={() => console.log('💳 PaymentElement mounted successfully')}
-              onLoadError={(error) => {
-                console.error('💳 PaymentElement load error:', error);
-                toast({
-                  title: "Payment Form Error",
-                  description: "Unable to load payment form. Please refresh and try again.",
-                  variant: "destructive",
-                });
-              }}
-            />
+            <div className="w-full">
+              <PaymentElement 
+                options={{
+                  layout: "tabs"
+                }}
+                onReady={() => {
+                  console.log('💳 SUCCESS: PaymentElement mounted and ready for input');
+                }}
+                onLoadError={(error) => {
+                  console.error('💳 ERROR: PaymentElement failed to load:', error);
+                  toast({
+                    title: "Payment Form Error",
+                    description: "Unable to load payment form. Please refresh and try again.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            </div>
           ) : (
             <div className="text-center py-8">
               <div className="flex space-x-1 justify-center mb-2">
@@ -689,7 +705,10 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
                   />
                 ))}
               </div>
-              <p className="text-sm text-gray-600">Loading payment form...</p>
+              <p className="text-sm text-gray-600">Initializing secure payment form...</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Stripe: {stripe ? '✅' : '⏳'} | Elements: {elements ? '✅' : '⏳'}
+              </p>
             </div>
           )}
         </div>
