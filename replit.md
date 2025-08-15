@@ -35,6 +35,7 @@ Preferred communication style: Simple, everyday language.
     - Comprehensive subscription system with audit capabilities.
     - Platform-managed delivery payment system where the platform collects all delivery costs and manages payments to delivery providers (e.g., Parcel2Go).
     - Revolutionary V2 Stripe Connect architecture ("Separate Charges and Transfers") where the platform receives all funds first, then automatically distributes wholesaler share after deducting platform fees, maintaining centralized delivery payment control.
+    - **CRITICAL FIX (Jan 15, 2025)**: Frontend V2 migration completed - customer portal now uses proper V2 calculation flow (Step 1: calculate payment split, Step 2: create payment intent with exact amounts). Fixed delivery/pickup display discrepancy and eliminated incorrect total charging.
 
 ### Data Storage
 - **Primary Database**: PostgreSQL via Neon serverless.

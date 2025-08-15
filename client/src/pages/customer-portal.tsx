@@ -294,6 +294,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     option: string;
     service?: any;
   } | null>(null);
+  const [v2Calculation, setV2Calculation] = useState<any>(null);
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
@@ -348,6 +349,9 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           if (!calculationResponse.success) {
             throw new Error('Payment calculation failed');
           }
+
+          // Store V2 calculation for display consistency
+          setV2Calculation(calculationResponse.calculation);
 
           // Generate temporary order ID for V2 system
           const tempOrderId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -3915,25 +3919,31 @@ export default function CustomerPortal() {
                   
 
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Transaction Fee (5.5% + £0.50):</span>
+                    <span>Platform Fee (5.5% + £0.50):</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                      const subtotal = cart.reduce((total, item) => {
-                        if (item.sellingType === "pallets") {
-                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                        } else {
-                          const basePrice = parseFloat(item.product.price) || 0;
-                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                            basePrice,
-                            item.quantity,
-                            item.product.promotionalOffers || [],
-                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                            item.product.promoActive
-                          );
-                          return total + pricing.totalCost;
-                        }
-                      }, 0);
-                      const transactionFee = subtotal * 0.055 + 0.50;
-                      return transactionFee.toFixed(2);
+                      // V2 SYSTEM: Use V2 calculation data if available
+                      if (v2Calculation) {
+                        return (v2Calculation.customerPlatformFee + v2Calculation.breakdown.transactionFee).toFixed(2);
+                      } else {
+                        // Fallback calculation
+                        const subtotal = cart.reduce((total, item) => {
+                          if (item.sellingType === "pallets") {
+                            return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                          } else {
+                            const basePrice = parseFloat(item.product.price) || 0;
+                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                              basePrice,
+                              item.quantity,
+                              item.product.promotionalOffers || [],
+                              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                              item.product.promoActive
+                            );
+                            return total + (pricing.effectivePrice * item.quantity);
+                          }
+                        }, 0);
+                        const platformFee = subtotal * 0.055 + 0.50;
+                        return platformFee.toFixed(2);
+                      }
                     })()}</span>
                   </div>
                   {/* Shipping Method Display - Fixed to show actual selected method */}
@@ -3982,35 +3992,42 @@ export default function CustomerPortal() {
                     </div>
                   </div>
                   
-                  {/* Show delivery cost using captured shipping data or fallback */}
-                  {((capturedShippingData?.service?.price || cartStats.shippingCost) > 0) && (
+                  {/* Show delivery cost using V2 calculation data */}
+                  {((v2Calculation?.breakdown?.deliveryFee || capturedShippingData?.service?.price || cartStats.shippingCost) > 0) && (
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Delivery Cost:</span>
-                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(capturedShippingData?.service?.price || cartStats.shippingCost).toFixed(2)}</span>
+                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(v2Calculation?.breakdown?.deliveryFee || capturedShippingData?.service?.price || cartStats.shippingCost).toFixed(2)}</span>
                     </div>
                   )}
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total to Pay:</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                      const subtotal = cart.reduce((total, item) => {
-                        if (item.sellingType === "pallets") {
-                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                        } else {
-                          const basePrice = parseFloat(item.product.price) || 0;
-                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                            basePrice,
-                            item.quantity,
-                            item.product.promotionalOffers || [],
-                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                            item.product.promoActive
-                          );
-                          return total + pricing.totalCost;
-                        }
-                      }, 0);
-                      const transactionFee = subtotal * 0.055 + 0.50;
-                      const shippingCost = cartStats.shippingCost || 0;
-                      return (subtotal + transactionFee + shippingCost).toFixed(2);
+                      // V2 SYSTEM: Use the exact calculated total amount from V2 calculation
+                      if (v2Calculation) {
+                        return v2Calculation.totalAmount.toFixed(2);
+                      } else {
+                        // Fallback calculation before V2 data is available
+                        const subtotal = cart.reduce((total, item) => {
+                          if (item.sellingType === "pallets") {
+                            return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                          } else {
+                            const basePrice = parseFloat(item.product.price) || 0;
+                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                              basePrice,
+                              item.quantity,
+                              item.product.promotionalOffers || [],
+                              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                              item.product.promoActive
+                            );
+                            return total + (pricing.effectivePrice * item.quantity);
+                          }
+                        }, 0);
+                        const customerPlatformFee = subtotal * 0.055;
+                        const transactionFee = 0.50;
+                        const shippingCost = cartStats.shippingCost || 0;
+                        return (subtotal + customerPlatformFee + transactionFee + shippingCost).toFixed(2);
+                      }
                     })()}</span>
                   </div>
                 </div>
