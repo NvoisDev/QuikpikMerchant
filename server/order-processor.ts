@@ -179,8 +179,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-    // FIXED: Shipping information processing - detect delivery if shipping cost > 0
-    fulfillmentType: (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0) ? 'delivery' : 'pickup',
+    // FIXED: Shipping information processing - use shippingInfo.option instead of shipping cost
+    fulfillmentType: shippingInfo.option || 'pickup',
     deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
     deliveryCost: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
     shippingTotal: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
