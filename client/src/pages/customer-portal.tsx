@@ -463,7 +463,12 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   return (
     <Elements 
       stripe={stripePromise} 
-      options={{ clientSecret }}
+      options={{ 
+        clientSecret,
+        appearance: {
+          theme: 'stripe'
+        }
+      }}
     >
       <PaymentFormContent onSuccess={onSuccess} totalAmount={totalAmount} wholesaler={wholesaler} />
     </Elements>
@@ -479,6 +484,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [elementsReady, setElementsReady] = useState(false);
   const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -489,6 +495,13 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     message: ''
   });
   const { toast } = useToast();
+
+  // Monitor when Elements are ready
+  useEffect(() => {
+    if (stripe && elements) {
+      setElementsReady(true);
+    }
+  }, [stripe, elements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -649,10 +662,20 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          {stripe && elements ? (
+          {elementsReady ? (
             <PaymentElement 
               options={{
-                layout: "tabs"
+                layout: "tabs",
+                paymentMethodOrder: ['card']
+              }}
+              onReady={() => console.log('💳 PaymentElement mounted successfully')}
+              onLoadError={(error) => {
+                console.error('💳 PaymentElement load error:', error);
+                toast({
+                  title: "Payment Form Error",
+                  description: "Unable to load payment form. Please refresh and try again.",
+                  variant: "destructive",
+                });
               }}
             />
           ) : (
