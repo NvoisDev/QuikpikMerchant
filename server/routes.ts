@@ -1105,6 +1105,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Emergency authentication bypass for production issues
+  app.post('/api/auth/emergency-login', async (req: any, res) => {
+    try {
+      const { email, code } = req.body;
+      
+      // Emergency access for main accounts when Google OAuth fails
+      if (!email || !code) {
+        return res.status(400).json({ error: 'Email and emergency code required' });
+      }
+      
+      // Simple emergency codes (change these regularly)
+      const emergencyCodes = {
+        'hello@quikpik.co': 'QUIK2025',
+        'mogunjemilua@gmail.com': 'ADMIN2025'
+      };
+      
+      if (emergencyCodes[email as keyof typeof emergencyCodes] !== code) {
+        return res.status(403).json({ error: 'Invalid emergency code' });
+      }
+      
+      // Find or create user
+      const existingUsers = await storage.getUsers();
+      let user = existingUsers.find(u => u.email === email);
+      
+      if (!user) {
+        const newUser = {
+          id: `emergency_${Date.now()}`,
+          googleId: `emergency_${email}`,
+          email,
+          name: email === 'hello@quikpik.co' ? 'Quikpik Admin' : 'Michael Ogunjemilua',
+          picture: '',
+          givenName: '',
+          familyName: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        user = await storage.createUser(newUser);
+      }
+      
+      // Set session
+      (req.session as any).userId = user.id;
+      (req.session as any).user = user;
+      
+      console.log(`🚨 Emergency login successful for ${email}`);
+      res.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
+    } catch (error) {
+      console.error('Emergency login error:', error);
+      res.status(500).json({ error: 'Emergency login failed' });
+    }
+  });
+
   // Authentication recovery endpoint for Surulere Foods Wholesale
   app.post('/api/auth/recover', async (req: any, res) => {
     try {
