@@ -294,7 +294,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     option: string;
     service?: any;
   } | null>(null);
-  const [v2Calculation, setV2Calculation] = useState<any>(null);
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
@@ -321,76 +320,44 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
         
         try {
-          // V2 SYSTEM: First calculate payment split
-          const productSubtotal = cart.reduce((total, item) => {
-            if (item.sellingType === "pallets") {
-              return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-            } else {
-              const basePrice = parseFloat(item.product.price) || 0;
-              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                basePrice,
-                item.quantity,
-                item.product.promotionalOffers || [],
-                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                item.product.promoActive
-              );
-              return total + (pricing.effectivePrice * item.quantity);
-            }
-          }, 0);
-
-          const deliveryFee = customerData.selectedShippingService?.price || 0;
-
-          // Step 1: Calculate payment split with V2 system
-          const calculationResponse = await apiRequest("POST", "/api/stripe-v2/calculate-payment", {
-            productSubtotal,
-            deliveryFee
-          });
-
-          if (!calculationResponse.success) {
-            throw new Error('Payment calculation failed');
-          }
-
-          // Store V2 calculation for display consistency
-          setV2Calculation(calculationResponse.calculation);
-
-          // Generate temporary order ID for V2 system
-          const tempOrderId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-          // Step 2: Create payment intent with V2 system
-          const response = await apiRequest("POST", "/api/stripe-v2/create-payment-intent", {
-            calculation: calculationResponse.calculation,
-            orderId: tempOrderId,
+          const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
+            items: cart.map(item => ({
+              productId: item.product.id,
+              quantity: item.quantity || 0,
+              unitPrice: (() => {
+                if (item.sellingType === "pallets") {
+                  return parseFloat(item.product.palletPrice || "0") || 0;
+                } else {
+                  const basePrice = parseFloat(item.product.price) || 0;
+                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                    basePrice,
+                    item.quantity,
+                    item.product.promotionalOffers || [],
+                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                    item.product.promoActive
+                  );
+                  return pricing.effectivePrice;
+                }
+              })()
+            })),
+            customerData,
             wholesalerId: wholesaler.id,
-            customerId: "temp_customer", // Will be replaced by webhook
-            metadata: {
-              items: JSON.stringify(cart.map(item => ({
-                productId: item.product.id,
-                quantity: item.quantity || 0,
-                unitPrice: (() => {
-                  if (item.sellingType === "pallets") {
-                    return parseFloat(item.product.palletPrice || "0") || 0;
-                  } else {
-                    const basePrice = parseFloat(item.product.price) || 0;
-                    const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                      basePrice,
-                      item.quantity,
-                      item.product.promotionalOffers || [],
-                      item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                      item.product.promoActive
-                    );
-                    return pricing.effectivePrice;
-                  }
-                })(),
-                productName: item.product.name,
-                sellingType: item.sellingType
-              }))),
-              customerData: JSON.stringify(customerData),
-              shippingInfo: JSON.stringify(shippingDataAtCreation),
-              totalAmount: calculationResponse.calculation.totalAmount.toString(),
-              productSubtotal: productSubtotal.toString(),
-              notes: customerData.notes || '',
-              orderType: 'customer_portal'
-            }
+            totalAmount: cart.reduce((total, item) => {
+              if (item.sellingType === "pallets") {
+                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+              } else {
+                const basePrice = parseFloat(item.product.price) || 0;
+                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                  basePrice,
+                  item.quantity,
+                  item.product.promotionalOffers || [],
+                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                  item.product.promoActive
+                );
+                return total + pricing.totalCost;
+              }
+            }, 0), // Send ONLY product subtotal - backend will add transaction fees
+            shippingInfo: shippingDataAtCreation
           });
           
           console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
@@ -405,8 +372,8 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           });
           console.log('🚚 FRONTEND: === END DEBUG ===');
           
-          console.log('✅ V2 Payment intent created:', response);
-          setClientSecret(response.client_secret);
+          const data = await response.json();
+          setClientSecret(data.clientSecret);
         } catch (error: any) {
           console.error("Error creating payment intent:", error);
           
@@ -610,28 +577,32 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         console.log('💾 Creating order immediately to ensure it saves to database');
         
         try {
-          // V2 SYSTEM: Order creation is handled automatically by webhook
-          // Just proceed to success - the webhook will create the order
-          console.log('✅ V2 System: Payment succeeded, webhook will create order automatically');
-          
-          // Simulate successful response for compatibility
-          const response = { ok: true, json: () => Promise.resolve({ success: true, message: 'Order will be created by webhook' }) };
-          
-          // V2 SYSTEM: Process success directly
-          const orderData = { 
-            success: true, 
-            orderNumber: `QP-${Date.now()}`,
-            id: Math.floor(Math.random() * 1000000)
-          };
-          
-          console.log('✅ V2 Order creation initiated:', orderData);
-          setOrderSuccess(true);
-          setSuccessOrderId(orderData.id);
-          
-          toast({
-            title: "Payment Successful!",
-            description: `Order #${orderData.orderNumber} has been placed successfully. You'll receive a confirmation email shortly.`,
+          // Call the order creation endpoint directly to ensure order is saved
+          const response = await fetch("/api/marketplace/create-order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id
+            })
           });
+          
+          if (response.ok) {
+            const orderData = await response.json();
+            console.log('✅ Order created successfully:', orderData);
+            
+            toast({
+              title: "Payment Successful!",
+              description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
+            });
+          } else {
+            console.error('❌ Order creation failed:', response.status);
+            toast({
+              title: "Payment Successful!",
+              description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+            });
+          }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
           toast({
@@ -3919,115 +3890,79 @@ export default function CustomerPortal() {
                   
 
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Platform Fee (5.5% + £0.50):</span>
+                    <span>Transaction Fee (5.5% + £0.50):</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                      // V2 SYSTEM: Use V2 calculation data if available
-                      if (v2Calculation) {
-                        return (v2Calculation.customerPlatformFee + v2Calculation.breakdown.transactionFee).toFixed(2);
-                      } else {
-                        // Fallback calculation
-                        const subtotal = cart.reduce((total, item) => {
-                          if (item.sellingType === "pallets") {
-                            return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                          } else {
-                            const basePrice = parseFloat(item.product.price) || 0;
-                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                              basePrice,
-                              item.quantity,
-                              item.product.promotionalOffers || [],
-                              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                              item.product.promoActive
-                            );
-                            return total + (pricing.effectivePrice * item.quantity);
-                          }
-                        }, 0);
-                        const platformFee = subtotal * 0.055 + 0.50;
-                        return platformFee.toFixed(2);
-                      }
+                      const subtotal = cart.reduce((total, item) => {
+                        if (item.sellingType === "pallets") {
+                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                        } else {
+                          const basePrice = parseFloat(item.product.price) || 0;
+                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                            basePrice,
+                            item.quantity,
+                            item.product.promotionalOffers || [],
+                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                            item.product.promoActive
+                          );
+                          return total + pricing.totalCost;
+                        }
+                      }, 0);
+                      const transactionFee = subtotal * 0.055 + 0.50;
+                      return transactionFee.toFixed(2);
                     })()}</span>
                   </div>
-                  {/* Shipping Method Display - Fixed to show actual selected method */}
+                  {/* Shipping Method Display */}
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Shipping Method:</span>
                     <div className="flex items-center gap-2">
-                      {capturedShippingData ? (
-                        // Use captured shipping data that was sent to backend
-                        capturedShippingData.option === 'pickup' ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            📦 Pickup - FREE
-                          </Badge>
-                        ) : capturedShippingData.option === 'delivery' && capturedShippingData.service ? (
-                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                            🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{capturedShippingData.service.price.toFixed(2)}
-                          </Badge>
-                        ) : capturedShippingData.option === 'delivery' ? (
-                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-                            🚚 Delivery - Quote Required
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                            Processing...
-                          </Badge>
-                        )
+                      {customerData.shippingOption === 'pickup' ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                          📦 Pickup - FREE
+                        </Badge>
+                      ) : customerData.shippingOption === 'delivery' && cartStats.shippingCost > 0 ? (
+                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                          🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}
+                        </Badge>
+                      ) : customerData.shippingOption === 'delivery' ? (
+                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+                          🚚 Delivery - Quote Required
+                        </Badge>
                       ) : (
-                        // Fallback to current customer data
-                        customerData.shippingOption === 'pickup' ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            📦 Pickup - FREE
-                          </Badge>
-                        ) : customerData.shippingOption === 'delivery' && cartStats.shippingCost > 0 ? (
-                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                            🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}
-                          </Badge>
-                        ) : customerData.shippingOption === 'delivery' ? (
-                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-                            🚚 Delivery - Quote Required
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                            Not Selected
-                          </Badge>
-                        )
+                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+                          Not Selected
+                        </Badge>
                       )}
                     </div>
                   </div>
                   
-                  {/* Show delivery cost using V2 calculation data */}
-                  {((v2Calculation?.breakdown?.deliveryFee || capturedShippingData?.service?.price || cartStats.shippingCost) > 0) && (
+                  {cartStats.shippingCost > 0 && (
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Delivery Cost:</span>
-                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(v2Calculation?.breakdown?.deliveryFee || capturedShippingData?.service?.price || cartStats.shippingCost).toFixed(2)}</span>
+                      <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}</span>
                     </div>
                   )}
                   <Separator className="my-2" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total to Pay:</span>
                     <span>{getCurrencySymbol(wholesaler?.defaultCurrency)}{(() => {
-                      // V2 SYSTEM: Use the exact calculated total amount from V2 calculation
-                      if (v2Calculation) {
-                        return v2Calculation.totalAmount.toFixed(2);
-                      } else {
-                        // Fallback calculation before V2 data is available
-                        const subtotal = cart.reduce((total, item) => {
-                          if (item.sellingType === "pallets") {
-                            return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-                          } else {
-                            const basePrice = parseFloat(item.product.price) || 0;
-                            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                              basePrice,
-                              item.quantity,
-                              item.product.promotionalOffers || [],
-                              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                              item.product.promoActive
-                            );
-                            return total + (pricing.effectivePrice * item.quantity);
-                          }
-                        }, 0);
-                        const customerPlatformFee = subtotal * 0.055;
-                        const transactionFee = 0.50;
-                        const shippingCost = cartStats.shippingCost || 0;
-                        return (subtotal + customerPlatformFee + transactionFee + shippingCost).toFixed(2);
-                      }
+                      const subtotal = cart.reduce((total, item) => {
+                        if (item.sellingType === "pallets") {
+                          return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+                        } else {
+                          const basePrice = parseFloat(item.product.price) || 0;
+                          const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                            basePrice,
+                            item.quantity,
+                            item.product.promotionalOffers || [],
+                            item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                            item.product.promoActive
+                          );
+                          return total + pricing.totalCost;
+                        }
+                      }, 0);
+                      const transactionFee = subtotal * 0.055 + 0.50;
+                      const shippingCost = cartStats.shippingCost || 0;
+                      return (subtotal + transactionFee + shippingCost).toFixed(2);
                     })()}</span>
                   </div>
                 </div>
