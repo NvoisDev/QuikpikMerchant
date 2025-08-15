@@ -6906,13 +6906,20 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         // Recalculate from items if totalAmount is invalid
         console.log('⚠️ Invalid totalAmount, recalculating from items...');
         for (const item of items) {
+          console.log(`🔍 Processing item:`, { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice });
           const product = await storage.getProduct(item.productId);
+          console.log(`🔍 Found product:`, product ? { id: product.id, name: product.name, price: product.price } : 'NOT FOUND');
           if (product) {
             const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.price) || 0;
             const quantity = parseInt(item.quantity) || 0;
-            validatedTotalAmount += unitPrice * quantity;
+            const itemTotal = unitPrice * quantity;
+            console.log(`💰 Item calculation: ${unitPrice} × ${quantity} = ${itemTotal}`);
+            validatedTotalAmount += itemTotal;
+          } else {
+            console.log(`❌ Product not found for ID: ${item.productId}`);
           }
         }
+        console.log(`💰 Final recalculated total: ${validatedTotalAmount}`);
       }
       
       // Final validation
