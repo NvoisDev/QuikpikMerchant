@@ -314,10 +314,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       console.log('📦 Customer orders loaded:', { 
         totalOrders: ordersArray.length,
         orderIds: ordersArray.map((o: any) => o.id),
+        orderNumbers: ordersArray.map((o: any) => o.orderNumber),
         mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
+        latestOrders: ordersArray.slice(0, 5).map((o: any) => ({ id: o.id, orderNumber: o.orderNumber, total: o.total })),
         timestamp: new Date().toLocaleTimeString(),
         isArray: Array.isArray(ordersArray),
-        dataType: typeof data
+        dataType: typeof data,
+        hasSF198: ordersArray.some((o: any) => o.orderNumber === 'SF-198'),
+        hasSF199: ordersArray.some((o: any) => o.orderNumber === 'SF-199')
       });
       return ordersArray;
     }
@@ -450,15 +454,25 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
-  console.log('🎯 CustomerOrderHistory render - orders data:', { orders, isLoading, error });
-  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
-  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
-  console.log('🎯 CustomerOrderHistory render - filteredOrders length:', filteredOrders?.length || 0);
-  console.log('🎯 CustomerOrderHistory render - paginatedOrders length:', paginatedOrders?.length || 0);
-  console.log('🎯 CustomerOrderHistory render - currentPage:', currentPage);
-  console.log('🎯 CustomerOrderHistory render - totalPages:', totalPages);
-  console.log('🎯 CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
-  console.log('🎯 CustomerOrderHistory render - recent orders with delivery info:', Array.isArray(orders) && orders.length > 0 ? orders.slice(0, 3).map(o => ({ id: o.id, orderNumber: o.orderNumber, fulfillmentType: o.fulfillmentType, deliveryCarrier: o.deliveryCarrier, deliveryCost: o.deliveryCost })) : 'No orders');
+  console.log('🎯 CustomerOrderHistory RENDER STATE:', { 
+    ordersLength: Array.isArray(orders) ? orders.length : 'Not an array',
+    isLoading, 
+    error: error?.message,
+    filteredOrdersLength: filteredOrders?.length || 0,
+    paginatedOrdersLength: paginatedOrders?.length || 0,
+    currentPage,
+    totalPages,
+    searchTerm,
+    hasSF198: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-198'),
+    hasSF199: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-199'),
+    latestOrderNumbers: Array.isArray(orders) ? orders.slice(0, 5).map(o => o.orderNumber) : [],
+    firstOrderData: Array.isArray(orders) && orders.length > 0 ? { 
+      id: orders[0].id, 
+      orderNumber: orders[0].orderNumber, 
+      total: orders[0].total,
+      date: orders[0].date 
+    } : 'No orders'
+  });
   
   if (!orders || orders.length === 0) {
     return (
