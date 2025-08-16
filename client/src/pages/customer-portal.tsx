@@ -1535,12 +1535,12 @@ export default function CustomerPortal() {
   // Authentication is now required - no guest mode allowed;
 
   const handleViewAllProducts = () => {
-    setShowHomePage(false);
+    setActiveTab('products');
     setShowAllProducts(true);
   };
 
   const handleViewFeaturedProduct = () => {
-    setShowHomePage(false);
+    setActiveTab('products');
     setShowAllProducts(false);
   };
 
@@ -1659,8 +1659,8 @@ export default function CustomerPortal() {
         setCompletedOrder(null);
         setShowThankYou(false);
         // Navigate back to products
+        setActiveTab('products');
         setShowAllProducts(true);
-        setShowHomePage(false);
       }}
       onViewOrders={() => {
         // Clear cart and order data
@@ -1668,8 +1668,8 @@ export default function CustomerPortal() {
         setCompletedOrder(null);
         setShowThankYou(false);
         // Navigate to order history
+        setActiveTab('orders');
         setShowOrderHistory(true);
-        setShowHomePage(true);
         setShowAllProducts(false);
       }}
     />;
@@ -3927,8 +3927,8 @@ export default function CustomerPortal() {
           setShowCheckout(open);
           // When checkout dialog closes, ensure user returns to products view instead of auth screen
           if (!open) {
+            setActiveTab('products');
             setShowAllProducts(true);
-            setShowHomePage(false);
           }
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
