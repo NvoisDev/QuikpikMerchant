@@ -494,13 +494,20 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     searchTerm,
     hasSF198: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-198'),
     hasSF199: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-199'),
+    hasSF200: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-200'),
     latestOrderNumbers: Array.isArray(orders) ? orders.slice(0, 5).map(o => o.orderNumber) : [],
     firstOrderData: Array.isArray(orders) && orders.length > 0 ? { 
       id: orders[0].id, 
       orderNumber: orders[0].orderNumber, 
       total: orders[0].total,
       date: orders[0].date 
-    } : 'No orders'
+    } : 'No orders',
+    ordersDataSample: Array.isArray(orders) ? orders.slice(0, 3).map(o => ({ 
+      id: o.id, 
+      orderNumber: o.orderNumber, 
+      total: o.total, 
+      status: o.status 
+    })) : 'No orders to sample'
   });
   
   // Debug: Show what we have before rendering
@@ -530,7 +537,16 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             <p className="text-gray-500 text-lg mb-2">No orders yet</p>
             <p className="text-gray-400">Your order history will appear here once you place your first order.</p>
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-600">Debug: Backend reports {orders?.length || 0} orders available</p>
+              <p className="text-xs text-blue-600">
+                Debug: Backend reports orders but frontend showing empty.
+                Check browser console for detailed logs.
+              </p>
+              <button 
+                onClick={handleRefresh}
+                className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-xs"
+              >
+                Force Refresh
+              </button>
             </div>
           </div>
         </CardContent>

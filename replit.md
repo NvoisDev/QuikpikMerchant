@@ -47,5 +47,5 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Customer portal redesigned with modern tabbed interface (Home/Products/Orders/Account)
 - **RESOLVED**: Implemented grocery-style homepage with welcome banner, quick stats, search, and featured products
 - **RESOLVED**: Order recovery system successfully restored multiple orders (SF-195, SF-196, SF-197, SF-198)
-- **CURRENT ISSUE**: Customer portal authentication preventing new orders from displaying in frontend interface
-- **STATUS**: Backend successfully creates orders SF-198 (£1,131.46) and SF-199 (£611.24), but frontend authentication blocks order visibility
+- **CURRENT ISSUE**: Frontend display bug preventing orders from showing despite backend success
+- **STATUS**: Backend successfully creates orders SF-198 (£1,131.46), SF-199 (£611.24), and SF-200 (£752.34), all orders exist in database but frontend interface shows empty state
