@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
@@ -1787,48 +1788,69 @@ export default function CustomerPortal() {
 
               {/* Logout button for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                >
-                  <span className="hidden sm:inline">Log out</span>
-                  <span className="sm:hidden">Logout</span>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleLogout}
+                      variant="outline"
+                      size="sm"
+                      className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                    >
+                      <span className="hidden sm:inline">Log out</span>
+                      <span className="sm:hidden">Logout</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sign out of your account</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
 
               {/* Find Seller button for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <Button
-                  onClick={() => setShowWholesalerSearch(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
-                >
-                  <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Find Seller</span>
-                  <span className="sm:hidden">Seller</span>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setShowWholesalerSearch(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
+                    >
+                      <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Find Seller</span>
+                      <span className="sm:hidden">Seller</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Search for other wholesalers on Quikpik</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
               
 
               {!isPreviewMode && (
-                <Button
-                  onClick={() => setShowCheckout(true)}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
-                  disabled={cart.length === 0}
-                >
-                  <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
-                  <span className="sm:hidden">({cartStats.totalItems})</span>
-                  {cartStats.totalItems > 0 && (
-                    <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
-                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
-                    </Badge>
-                  )}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setShowCheckout(true)}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
+                      disabled={cart.length === 0}
+                    >
+                      <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
+                      <span className="sm:hidden">({cartStats.totalItems})</span>
+                      {cartStats.totalItems > 0 && (
+                        <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
+                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{cart.length === 0 ? 'Add products to cart first' : 'Review cart and proceed to checkout'}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -1980,25 +2002,57 @@ export default function CustomerPortal() {
         )}
         
         {/* Main Tabbed Interface */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="home" className="flex items-center gap-2">
-              <Store className="w-4 h-4" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Products
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" />
-              Orders
-            </TabsTrigger>
-            <TabsTrigger value="account" className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Account
-            </TabsTrigger>
-          </TabsList>
+        <TooltipProvider>
+          <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="home" className="flex items-center gap-2">
+                    <Store className="w-4 h-4" />
+                    Home
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View welcome dashboard with quick stats and featured products</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="products" className="flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Products
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Browse and search all available products</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="orders" className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4" />
+                    Orders
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View your order history and track deliveries</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="account" className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Account
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Manage your account settings and preferences</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsList>
           
           {/* HOME TAB - Modern Customer Portal Homepage */}
           <TabsContent value="home">
@@ -2068,33 +2122,46 @@ export default function CustomerPortal() {
               <Card>
                 <CardContent className="p-6">
                   <h2 className="text-lg font-semibold mb-4">Find Products Quickly</h2>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <Input
-                      placeholder="Search for products by name, category, or brand..."
-                      className="pl-12 h-12 text-base"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          setActiveTab('products');
-                          setSearchTerm(e.currentTarget.value);
-                        }
-                      }}
-                    />
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          placeholder="Search for products by name, category, or brand..."
+                          className="pl-12 h-12 text-base"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              setActiveTab('products');
+                              setSearchTerm(e.currentTarget.value);
+                            }
+                          }}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Press Enter to search products or use category buttons below</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <div className="flex gap-2 mt-3 flex-wrap">
                     {categories.slice(0, 5).map((category) => (
-                      <Button
-                        key={category}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setActiveTab('products');
-                        }}
-                        className="text-xs"
-                      >
-                        {category}
-                      </Button>
+                      <Tooltip key={category}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCategory(category);
+                              setActiveTab('products');
+                            }}
+                            className="text-xs"
+                          >
+                            {category}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Browse products in {category} category</p>
+                        </TooltipContent>
+                      </Tooltip>
                     ))}
                   </div>
                 </CardContent>
@@ -2143,13 +2210,20 @@ export default function CustomerPortal() {
                               )}
                             </div>
                             {!isGuestMode && (
-                              <Button
-                                size="sm"
-                                onClick={() => openQuantityEditor(product)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => openQuantityEditor(product)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Add {product.name} to cart</p>
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         </CardContent>
@@ -2165,21 +2239,35 @@ export default function CustomerPortal() {
                   <CardContent className="p-6">
                     <h3 className="font-semibold mb-4">Quick Actions</h3>
                     <div className="space-y-3">
-                      <Button 
-                        onClick={() => setActiveTab('products')} 
-                        className="w-full justify-start bg-green-600 hover:bg-green-700"
-                      >
-                        <Package className="w-4 h-4 mr-2" />
-                        Browse All Products
-                      </Button>
-                      <Button 
-                        onClick={() => setActiveTab('orders')} 
-                        variant="outline" 
-                        className="w-full justify-start"
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        View Order History
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => setActiveTab('products')} 
+                            className="w-full justify-start bg-green-600 hover:bg-green-700"
+                          >
+                            <Package className="w-4 h-4 mr-2" />
+                            Browse All Products
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View complete product catalog with search and filtering</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => setActiveTab('orders')} 
+                            variant="outline" 
+                            className="w-full justify-start"
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            View Order History
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Check all your past orders and delivery status</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </CardContent>
                 </Card>
@@ -2188,22 +2276,36 @@ export default function CustomerPortal() {
                   <CardContent className="p-6">
                     <h3 className="font-semibold mb-4">Need Help?</h3>
                     <div className="space-y-3">
-                      <Button 
-                        onClick={() => window.location.href = '/'} 
-                        variant="outline" 
-                        className="w-full justify-start"
-                      >
-                        <Phone className="w-4 h-4 mr-2" />
-                        Contact {wholesaler?.businessName}
-                      </Button>
-                      <Button 
-                        onClick={() => setActiveTab('account')} 
-                        variant="outline" 
-                        className="w-full justify-start"
-                      >
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Account Settings
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => window.location.href = '/'} 
+                            variant="outline" 
+                            className="w-full justify-start"
+                          >
+                            <Phone className="w-4 h-4 mr-2" />
+                            Contact {wholesaler?.businessName}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Get support or ask questions about products</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => setActiveTab('account')} 
+                            variant="outline" 
+                            className="w-full justify-start"
+                          >
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Account Settings
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Update your profile and preferences</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </CardContent>
                 </Card>
@@ -3637,7 +3739,8 @@ export default function CustomerPortal() {
               </div>
             )}
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </TooltipProvider>
       </div>
 
       {/* Modals and dialogs would go here... */}
