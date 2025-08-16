@@ -12,7 +12,7 @@ import { Truck, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+// Use shared stripePromise to prevent conflicts - will be passed as prop
 
 interface DeliveryPaymentFormProps {
   orderId: number;

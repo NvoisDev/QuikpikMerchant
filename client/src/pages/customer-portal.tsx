@@ -35,7 +35,7 @@ import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
-import DeliveryPaymentComponent from "@/components/delivery-payment";
+// Removed DeliveryPaymentComponent import to prevent Stripe conflicts
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -75,10 +75,11 @@ interface ExtendedProduct {
   moq?: number;
 }
 
-// Initialize Stripe
+// Initialize Stripe - Single instance to prevent conflicts
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
   throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
 }
+console.log('🔧 Initializing Stripe with public key:', import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 20) + '...');
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 // Utility functions
