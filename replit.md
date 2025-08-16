@@ -6,7 +6,6 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
-**Design Preference**: User strongly prefers SIMPLE, CLEAN, MODERN designs. Avoid gradients, excessive styling, glass morphism, or overly complex visual effects. Focus on minimal, functional aesthetics.
 
 ## System Architecture
 ### Frontend
