@@ -6896,7 +6896,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const platformFeeAmount = Math.round(totalAmountInDollars * platformFeePercentage * 100); // Convert back to cents
 
       // Simplify metadata to avoid 500-character limit per key
-      const simplifiedMetadata: any = {};
+      const simplifiedMetadata: any = {
+        orderType: 'customer_portal', // Required field for order creation
+        wholesalerId: wholesalerId,    // Required field for order creation
+        connectAccountUsed: 'true'     // Required field for order creation
+      };
+      
       if (metadata) {
         // Extract only essential fields from metadata
         Object.keys(metadata).forEach(key => {
@@ -6905,15 +6910,20 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             simplifiedMetadata[key] = value;
           } else if (typeof value === 'object') {
             // For complex objects like shipping info, extract only key details
-            if (key === 'shipping' && value.option === 'delivery' && value.service) {
-              simplifiedMetadata['shipping_option'] = 'delivery';
-              simplifiedMetadata['shipping_service'] = value.service.serviceName || 'Courier Service';
-              simplifiedMetadata['shipping_price'] = value.service.price?.toString() || '0';
-            } else if (key === 'shipping' && value.option === 'pickup') {
-              simplifiedMetadata['shipping_option'] = 'pickup';
+            if (key === 'shippingInfo' && value.option === 'delivery' && value.service) {
+              simplifiedMetadata['shippingInfo'] = JSON.stringify({
+                option: 'delivery',
+                service: {
+                  serviceName: value.service.serviceName,
+                  price: value.service.price,
+                  transitTime: value.service.transitTime
+                }
+              });
+            } else if (key === 'shippingInfo' && value.option === 'pickup') {
+              simplifiedMetadata['shippingInfo'] = JSON.stringify({ option: 'pickup' });
             } else {
               // For other objects, convert to a short string
-              const shortValue = JSON.stringify(value).substring(0, 500);
+              const shortValue = JSON.stringify(value).substring(0, 490);
               simplifiedMetadata[key] = shortValue;
             }
           } else {
