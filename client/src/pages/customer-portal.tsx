@@ -863,7 +863,7 @@ export default function CustomerPortal() {
     refetchOnWindowFocus: true,
     refetchInterval: 10 * 60 * 1000, // Check every 10 minutes
   });
-  const [showHomePage, setShowHomePage] = useState(true);
+
   // Check if coming from CustomerLogin with auth parameter or if user wants to login
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const hasAuthParam = urlParams.has('auth');
@@ -1676,7 +1676,7 @@ export default function CustomerPortal() {
   }
 
   // Show home page
-  if (showHomePage && !showAllProducts && !isPreviewMode && isAuthenticated) {
+  if (activeTab === 'home' && !showAllProducts && !isPreviewMode && isAuthenticated) {
     console.log('🏠 Showing customer home page');
     return <CustomerHome 
       wholesaler={wholesaler}
@@ -1797,45 +1797,17 @@ export default function CustomerPortal() {
               
 
 
-              {/* Home and Logout buttons for authenticated customers */}
+              {/* Logout button for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <>
-                  <Button
-                    onClick={() => {
-                      // Smart back navigation based on current view state
-                      if (featuredProductId) {
-                        // If viewing a featured product, go back to home page
-                        setFeaturedProductId(null);
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                      } else if (showAllProducts) {
-                        // If viewing all products, go back to home page
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                      } else {
-                        // Already on home page, just ensure state is correct
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                        setFeaturedProductId(null);
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs sm:text-sm"
-                  >
-                    <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                    {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
-                  </Button>
-                  <Button
-                    onClick={handleLogout}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                  >
-                    <span className="hidden sm:inline">Log out</span>
-                    <span className="sm:hidden">Logout</span>
-                  </Button>
-                </>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                >
+                  <span className="hidden sm:inline">Log out</span>
+                  <span className="sm:hidden">Logout</span>
+                </Button>
               )}
 
               {/* Find Seller button for authenticated customers */}
