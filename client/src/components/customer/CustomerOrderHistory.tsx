@@ -355,6 +355,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error });
   console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
   console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
+  console.log('🎯 CustomerOrderHistory render - FULL orders data:', orders);
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
@@ -545,8 +546,28 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     ordersData: orders?.slice(0, 3)?.map(o => ({ id: o.id, orderNumber: o.orderNumber, total: o.total }))
   });
 
+  // CRITICAL DEBUG: Force show orders even if array appears empty
+  const hasOrdersInConsole = typeof window !== 'undefined' && console.log('🔍 ORDERS STATE INSPECTION:', {
+    ordersType: typeof orders,
+    ordersValue: orders,
+    ordersStringified: JSON.stringify(orders)?.substring(0, 200) + '...',
+    isOrdersArray: Array.isArray(orders),
+    ordersLength: orders?.length,
+    ordersKeys: orders ? Object.keys(orders) : [],
+    ordersData: orders
+  });
+
   if (!orders || orders.length === 0) {
     console.log('🚨 SHOWING EMPTY STATE - No orders to display');
+    console.log('🚨 EMPTY STATE DECISION FACTORS:', {
+      ordersIsNull: orders === null,
+      ordersIsUndefined: orders === undefined,
+      ordersIsFalsy: !orders,
+      ordersLength: orders?.length,
+      ordersType: typeof orders,
+      actualOrders: orders
+    });
+    
     return (
       <Card className="w-full">
         <CardHeader>
@@ -564,6 +585,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
               <p className="text-xs text-blue-600">
                 Debug: Backend reports orders but frontend showing empty.
                 Check browser console for detailed logs.
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Orders type: {typeof orders} | Length: {orders?.length || 'N/A'} | Array: {Array.isArray(orders) ? 'Yes' : 'No'}
               </p>
               <button 
                 onClick={handleRefresh}
