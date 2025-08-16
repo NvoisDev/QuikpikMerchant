@@ -278,6 +278,12 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone], // Fixed query key
+    enabled: !!wholesalerId && !!customerPhone,
+    refetchInterval: 15000, // Auto-refresh every 15 seconds to catch new orders
+    refetchOnWindowFocus: true, // Refresh when window gains focus  
+    refetchOnMount: true, // Enable refetch on component mount to show fresh orders
+    staleTime: 0, // Always consider data stale - fetch fresh every time
+    gcTime: 0, // Don't cache results
     queryFn: async () => {
       // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
@@ -314,14 +320,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         dataType: typeof data
       });
       return ordersArray;
-    },
-    enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: false, // Disable auto-refetch to prevent conflicts
-    refetchIntervalInBackground: false,
-    staleTime: 0, // Always consider data stale - fetch fresh every time
-    gcTime: 0, // Don't cache results
-    refetchOnWindowFocus: false, // Disable to prevent conflicts
-    refetchOnMount: true // Enable refetch on component mount to show fresh orders
+    }
   });
 
   // Debug logging for orders state
