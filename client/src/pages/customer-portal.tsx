@@ -496,7 +496,10 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   return (
     <div className="space-y-4">
       <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded">
-        Debug Mode: Testing Stripe loading...
+        Debug Mode: Testing Stripe loading... (Check console for logs)
+      </div>
+      <div className="p-2 text-xs font-mono bg-gray-100 rounded">
+        Client Secret: {clientSecret ? `${clientSecret.substring(0, 30)}...` : 'None'}
       </div>
       <SimplePaymentTest clientSecret={clientSecret} />
     </div>

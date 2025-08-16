@@ -37,12 +37,18 @@ const PaymentTestForm = () => {
 };
 
 export const SimplePaymentTest = ({ clientSecret }: { clientSecret: string }) => {
-  console.log('SimplePaymentTest - clientSecret:', !!clientSecret);
+  console.log('🔍 SimplePaymentTest RENDER:', {
+    hasClientSecret: !!clientSecret,
+    clientSecretLength: clientSecret?.length,
+    stripePromiseLoaded: !!stripePromise
+  });
   
   if (!clientSecret) {
-    return <div className="p-4">No client secret provided</div>;
+    console.log('❌ No client secret - showing fallback');
+    return <div className="p-4 border border-red-200 bg-red-50">No client secret provided</div>;
   }
 
+  console.log('✅ Rendering Elements with client secret');
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
       <PaymentTestForm />
