@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2 } from "lucide-react";
+import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2, ShoppingBag, Clock, Truck, Shield, Award, TrendingUp } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CustomerOrderHistory } from "./CustomerOrderHistory";
 
-// Customer Statistics Component
+// Enhanced Customer Statistics Component
 function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; customerPhone: string }) {
   const { data: orders = [] } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone],
@@ -33,6 +33,12 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
 
   const totalOrders = orders.length;
   const totalSpent = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total || '0'), 0);
+  const recentOrders = orders.filter((order: any) => {
+    const orderDate = new Date(order.createdAt);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return orderDate >= thirtyDaysAgo;
+  }).length;
 
   // Format currency with commas for amounts over 1,000
   const formatCurrency = (amount: number) => {
@@ -40,16 +46,49 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
   };
 
   return (
-    <div className="flex items-center space-x-4 text-sm">
-      <div className="flex items-center space-x-1">
-        <Package className="w-4 h-4 text-blue-600" />
-        <span className="text-gray-600">{totalOrders} order{totalOrders !== 1 ? 's' : ''}</span>
-      </div>
-      <div className="flex items-center space-x-1">
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          {formatCurrency(totalSpent)} total
-        </Badge>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-500 rounded-lg">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-blue-600 font-medium">Total Orders</p>
+              <p className="text-2xl font-bold text-blue-900">{totalOrders}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-500 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-green-600 font-medium">Total Spent</p>
+              <p className="text-2xl font-bold text-green-900">{formatCurrency(totalSpent)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-purple-500 rounded-lg">
+              <Clock className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-purple-600 font-medium">Recent Orders</p>
+              <p className="text-2xl font-bold text-purple-900">{recentOrders}</p>
+              <p className="text-xs text-purple-600">Last 30 days</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -290,46 +329,58 @@ export function CustomerHome({
                                 <span className="text-xl text-gray-500 line-through">
                                   {pricing.original}
                                 </span>
-                                <Badge className="bg-red-100 text-red-800">PROMO</Badge>
+                                <Badge className="bg-red-100 text-red-800">
+                                  SALE
+                                </Badge>
                               </div>
                             );
                           } else {
                             return (
-                              <div className="text-3xl font-bold text-gray-900">
+                              <div className="text-3xl font-bold text-green-600">
                                 {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(featuredProduct.price).toFixed(2)}
-                                <span className="text-lg font-normal text-gray-600 ml-2">per unit</span>
                               </div>
                             );
                           }
                         })()}
+                        
+                        {featuredProduct.moq && (
+                          <p className="text-sm text-gray-500">
+                            Minimum order: {featuredProduct.moq} units
+                          </p>
+                        )}
                       </div>
 
-                      {/* Product Stats */}
-                      <div className="grid grid-cols-2 gap-4 py-4">
-                        <div className="text-center p-3 bg-gray-50 rounded-lg">
-                          <div className="text-2xl font-bold text-gray-900">
-                            {featuredProduct.stock?.toLocaleString() || 0}
-                          </div>
-                          <div className="text-sm text-gray-600">Units Available</div>
+                      {/* Product Features */}
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center space-x-2 text-green-600">
+                          <Shield className="w-4 h-4" />
+                          <span>Quality Guaranteed</span>
                         </div>
-                        <div className="text-center p-3 bg-gray-50 rounded-lg">
-                          <div className="text-2xl font-bold text-gray-900">
-                            {featuredProduct.moq || 1}
-                          </div>
-                          <div className="text-sm text-gray-600">Min. Order</div>
+                        <div className="flex items-center space-x-2 text-blue-600">
+                          <Truck className="w-4 h-4" />
+                          <span>Fast Delivery</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-purple-600">
+                          <Award className="w-4 h-4" />
+                          <span>Premium Product</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-orange-600">
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>Bulk Orders</span>
                         </div>
                       </div>
 
-                      {/* Action Button */}
-                      {onViewFeaturedProduct && (
-                        <Button 
+                      {/* CTA Button */}
+                      <div className="pt-4">
+                        <Button
                           onClick={onViewFeaturedProduct}
-                          className="w-full bg-green-600 hover:bg-green-700 text-lg py-3"
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 text-lg"
+                          size="lg"
                         >
                           View Product Details
-                          <ArrowRight className="ml-2 h-5 w-5" />
+                          <ArrowRight className="w-5 h-5 ml-2" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -338,74 +389,125 @@ export function CustomerHome({
           </div>
         )}
 
-        {/* Browse All Products Section */}
-        <div className="text-center space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Explore Our Complete Range
-            </h2>
-            <p className="text-gray-600">
-              Browse all available products and find exactly what you need for your business
-            </p>
-          </div>
-          
-          <Button 
-            onClick={onViewAllProducts}
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
-          >
-            <Package className="mr-2 h-5 w-5" />
-            Browse All Products
-          </Button>
+        {/* Quick Action Cards */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-gradient-to-br from-blue-50 to-blue-100" onClick={onViewAllProducts}>
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">Browse Products</h3>
+              <p className="text-sm text-blue-600">Explore our full product catalog</p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-gradient-to-br from-green-50 to-emerald-100">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-green-900 mb-2">Order History</h3>
+              <p className="text-sm text-green-600">View your past orders</p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Phone className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-purple-900 mb-2">Contact Support</h3>
+              <p className="text-sm text-purple-600">Get help with your orders</p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-gradient-to-br from-orange-50 to-orange-100" onClick={() => setShowWholesalerSearch(true)}>
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Search className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-orange-900 mb-2">Find Sellers</h3>
+              <p className="text-sm text-orange-600">Discover new suppliers</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Customer Order History */}
-        {(() => {
-          console.log('CustomerHome - Order History Debug:', {
-            hasCustomerData: !!customerData,
-            customerData,
-            hasWholesaler: !!wholesaler,
-            wholesalerId: wholesaler?.id,
-            customerPhone: customerData?.phone || customerData?.phoneNumber
-          });
-          
-          if (customerData && wholesaler?.id) {
-            return (
-              <div className="mb-6">
-                <CustomerOrderHistory 
-                  wholesalerId={wholesaler.id} 
-                  customerPhone={customerData.phone || customerData.phoneNumber || '+447507659550'} 
-                />
+        {/* Trust & Safety Section */}
+        <Card className="bg-gradient-to-r from-gray-50 to-gray-100 border-0">
+          <CardContent className="p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Why Choose Us?</h2>
+              <p className="text-gray-600">Your trusted wholesale partner</p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure Payments</h3>
+                <p className="text-gray-600">All transactions are processed securely through Stripe</p>
               </div>
-            );
-          }
-          
-          return null;
-        })()}
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Truck className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Fast Delivery</h3>
+                <p className="text-gray-600">Quick and reliable delivery to your location</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Award className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Quality Products</h3>
+                <p className="text-gray-600">Premium wholesale products you can trust</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Contact Information */}
-        <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Need Help? Contact Us
-            </h3>
-            <div className="grid md:grid-cols-3 gap-4 text-sm">
+        <Card className="border-0 bg-white shadow-lg">
+          <CardHeader>
+            <h2 className="text-xl font-bold text-gray-900">Get in Touch</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-6">
               {wholesaler?.businessPhone && (
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-green-600" />
-                  <span>{wholesaler.businessPhone}</span>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="font-medium text-gray-900">{wholesaler.businessPhone}</p>
+                  </div>
                 </div>
               )}
-              {wholesaler?.email && (
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-blue-600" />
-                  <span>{wholesaler.email}</span>
+              
+              {wholesaler?.businessEmail && (
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium text-gray-900">{wholesaler.businessEmail}</p>
+                  </div>
                 </div>
               )}
+              
               {wholesaler?.businessAddress && (
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-purple-600" />
-                  <span>{wholesaler.businessAddress}</span>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Location</p>
+                    <p className="font-medium text-gray-900">{wholesaler.businessAddress}</p>
+                  </div>
                 </div>
               )}
             </div>
