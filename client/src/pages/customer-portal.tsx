@@ -2019,21 +2019,236 @@ export default function CustomerPortal() {
         )}
         
         {/* Main Tabbed Interface */}
-        <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+        <Tabs defaultValue="home" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="home" className="flex items-center gap-2">
+              <Store className="w-4 h-4" />
+              Home
+            </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Products
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4" />
-              My Orders
+              Orders
             </TabsTrigger>
             <TabsTrigger value="account" className="flex items-center gap-2">
-              <Store className="w-4 h-4" />
+              <User className="w-4 h-4" />
               Account
             </TabsTrigger>
           </TabsList>
+          
+          {/* HOME TAB - Modern Customer Portal Homepage */}
+          <TabsContent value="home">
+            <div className="space-y-8">
+              {/* Welcome Banner */}
+              <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                        Welcome back, {authenticatedCustomer?.name || 'Valued Customer'}!
+                      </h1>
+                      <p className="text-gray-600">
+                        Shopping with {wholesaler?.businessName} • Ready to place your next order?
+                      </p>
+                    </div>
+                    <div className="hidden md:block">
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Account Status</p>
+                        <Badge className="bg-green-100 text-green-800 border-green-300">Active</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              {!isGuestMode && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Total Orders</p>
+                          <p className="text-2xl font-bold text-gray-900">178</p>
+                        </div>
+                        <ShoppingCart className="w-8 h-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Available Products</p>
+                          <p className="text-2xl font-bold text-gray-900">{products?.length || 0}</p>
+                        </div>
+                        <Package className="w-8 h-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Quick Reorder</p>
+                          <p className="text-sm text-gray-900">From recent orders</p>
+                        </div>
+                        <Plus className="w-8 h-8 text-purple-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Quick Search */}
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-lg font-semibold mb-4">Find Products Quickly</h2>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      placeholder="Search for products by name, category, or brand..."
+                      className="pl-12 h-12 text-base"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          setActiveTab('products');
+                          setSearchTerm(e.currentTarget.value);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    {categories.slice(0, 5).map((category) => (
+                      <Button
+                        key={category}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setActiveTab('products');
+                        }}
+                        className="text-xs"
+                      >
+                        {category}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Featured Products */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Featured Products</CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setActiveTab('products')}
+                    >
+                      View All
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {products?.slice(0, 3).map((product) => (
+                      <Card key={product.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {product.imageUrl ? (
+                                <img 
+                                  src={product.imageUrl} 
+                                  alt={product.name}
+                                  className="w-12 h-12 object-contain rounded-lg border bg-white"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center border">
+                                  <Package className="w-6 h-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-sm text-gray-900 truncate">{product.name}</h3>
+                              <p className="text-sm text-gray-500">{product.category}</p>
+                              {!isGuestMode && (
+                                <p className="text-sm font-semibold text-green-600">
+                                  {wholesaler?.defaultCurrency || '£'}{parseFloat(product.price).toFixed(2)}
+                                </p>
+                              )}
+                            </div>
+                            {!isGuestMode && (
+                              <Button
+                                size="sm"
+                                onClick={() => openQuantityEditor(product)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-4">Quick Actions</h3>
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => setActiveTab('products')} 
+                        className="w-full justify-start bg-green-600 hover:bg-green-700"
+                      >
+                        <Package className="w-4 h-4 mr-2" />
+                        Browse All Products
+                      </Button>
+                      <Button 
+                        onClick={() => setActiveTab('orders')} 
+                        variant="outline" 
+                        className="w-full justify-start"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        View Order History
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-4">Need Help?</h3>
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => window.location.href = '/'} 
+                        variant="outline" 
+                        className="w-full justify-start"
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Contact {wholesaler?.businessName}
+                      </Button>
+                      <Button 
+                        onClick={() => setActiveTab('account')} 
+                        variant="outline" 
+                        className="w-full justify-start"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Account Settings
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
           
           <TabsContent value="products">
             {/* Featured Product - Mobile Responsive Design */}
