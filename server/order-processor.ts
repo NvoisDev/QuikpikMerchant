@@ -66,6 +66,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const subtotal = parseFloat(paymentIntent.metadata.subtotal || '0');
   const originalShippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
   const transactionFee = parseFloat(paymentIntent.metadata.transactionFee || '0');
+  
+  // Additional missing variables
+  const connectAccountUsed = paymentIntent.metadata.connectAccountUsed || 'false';
+  const platformFee = parseFloat(paymentIntent.metadata.platformFee || '0');
+  const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+  const items = cart || [];
+  const customerTransactionFee = transactionFee;
+  const totalCustomerPays = totalAmount;
+  const wholesalerPlatformFee = (subtotal * 0.033).toFixed(2);
 
   console.log('🔍 Extracted order data:', {
     customerName,
@@ -193,8 +202,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     // FIXED: Shipping information processing - use shippingInfo.option instead of shipping cost
     fulfillmentType: shippingInfo?.option || 'pickup',
     deliveryCarrier: shippingInfo?.option === 'delivery' && shippingInfo?.service ? shippingInfo.service.serviceName : null,
+    // Calculate correct shipping cost from shippingInfo
     deliveryCost: deliveryCost.toFixed(2),
-    shippingTotal: deliveryCost.toFixed(2)
+    shippingTotal: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 
+      parseFloat(shippingInfo.service.price || '0').toFixed(2) : '0.00'
   };
   
   console.log('🚚 Order data with shipping fields:', {

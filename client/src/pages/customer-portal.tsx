@@ -2444,27 +2444,55 @@ export default function CustomerPortal() {
             }`}>
               {otherProducts.slice(0, 6).map((product) => (
                 viewMode === "grid" ? (
-                  // Grid View - Mobile Responsive with Fixed Height Layout
-                  <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
-                    <CardContent className="p-3 sm:p-4 lg:p-6 flex flex-col h-full">
-                      {/* Product Image - Mobile Optimized */}
-                      <div className="mb-3 sm:mb-4">
-                        {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
-                          <img 
-                            src={product.imageUrl || product.images[0]} 
-                            alt={product.name}
-                            className="w-full h-32 sm:h-36 lg:h-40 object-contain rounded-lg bg-white"
-                          />
-                        ) : (
-                          <div className="w-full h-32 sm:h-36 lg:h-40 bg-gray-50 rounded-lg flex items-center justify-center">
-                            <Package className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gray-300" />
-                          </div>
-                        )}
+                  // Grid View - Grocery Store Style Layout
+                  <Card key={product.id} className="product-card border-0 shadow-fresh hover:shadow-warm transition-all duration-300 h-full flex flex-col rounded-xl bg-white">
+                    <CardContent className="p-4 flex flex-col h-full">
+                      {/* Product Image - Grocery Store Style */}
+                      <div className="relative mb-4">
+                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-white rounded-lg overflow-hidden border border-gray-100">
+                          {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
+                            <img 
+                              src={product.imageUrl || product.images[0]} 
+                              alt={product.name}
+                              className="w-full h-full object-contain p-4 hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                              <Package className="w-12 h-12 text-green-400" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Fresh Badge - Top Left */}
+                        <div className="absolute top-2 left-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold shadow-sm ${
+                            product.stock > 100 
+                              ? "bg-green-500 text-white" 
+                              : product.stock > 0
+                              ? "bg-yellow-500 text-white"
+                              : "bg-red-500 text-white"
+                          }`}>
+                            {product.stock > 100 ? "Fresh" : product.stock > 0 ? "Limited" : "Sold Out"}
+                          </span>
+                        </div>
+                        
+                        {/* Sale Badge - Top Right */}
+                        {(() => {
+                          const pricing = calculatePromotionalPricing(product);
+                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                          return hasDiscounts && !isGuestMode ? (
+                            <div className="absolute top-2 right-2">
+                              <span className="savings-badge">
+                                SALE
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       
                       {/* Product Info - Flexible Growth Area */}
                       <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col">
-                        <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 line-clamp-2">{product.name}</h3>
+                        <h3 className="font-semibold text-base text-gray-900 line-clamp-2 mb-2">{product.name}</h3>
                         
                         {/* Product Tags */}
                         <div className="flex flex-wrap gap-2">
@@ -2569,35 +2597,40 @@ export default function CustomerPortal() {
                           )}
                         </div>
                         
-                        {/* Sale Tag */}
-                        {(() => {
-                          const pricing = calculatePromotionalPricing(product);
-                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
-                          
-                          return hasDiscounts && !isGuestMode ? (
-                            <div className="mb-2">
-                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
-                                SALE
-                              </span>
-                            </div>
-                          ) : null;
-                        })()}
-                        
-                        {/* Price */}
-                        <div className="flex items-baseline gap-2">
+                        {/* Price - Grocery Store Style */}
+                        <div className="mb-4">
                           {(() => {
                             const pricing = calculatePromotionalPricing(product);
                             const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                             
+                            if (isGuestMode) {
+                              return (
+                                <div className="text-center">
+                                  <span className="text-lg font-bold text-gray-400 blur-sm">
+                                    £XX.XX
+                                  </span>
+                                  <p className="text-xs text-gray-500 mt-1">Sign in to view pricing</p>
+                                </div>
+                              );
+                            }
+                            
                             return (
-                              <PriceDisplay 
-                                price={pricing.effectivePrice}
-                                originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
-                                currency={wholesaler?.defaultCurrency}
-                                isGuestMode={isGuestMode}
-                                size="medium"
-                                showStrikethrough={true}
-                              />
+                              <div className="text-center">
+                                {hasDiscounts ? (
+                                  <div className="space-y-1">
+                                    <div className="price-tag text-lg font-bold">
+                                      £{pricing.effectivePrice.toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-gray-500 line-through">
+                                      £{pricing.originalPrice.toFixed(2)}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-xl font-bold text-gray-900">
+                                    £{pricing.originalPrice.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
                             );
                           })()}
                         </div>
@@ -2605,65 +2638,55 @@ export default function CustomerPortal() {
                         {/* Spacer to push buttons to bottom */}
                         <div className="flex-1"></div>
                         
-                        {/* Action Buttons - Fixed Position at Bottom */}
+                        {/* Quick Stats - Grocery Style */}
                         {!isGuestMode && (
-                          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-2">
-                            <Button 
-                              onClick={() => openQuantityEditor(product)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                            {product.negotiationEnabled && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => openNegotiation(product)}
-                                className="px-2 sm:px-3 border-green-600 text-green-600 hover:bg-green-50 rounded-xl text-xs sm:text-sm"
-                              >
-                                💬
-                                <span className="hidden sm:inline ml-1">Quote</span>
-                              </Button>
-                            )}
+                          <div className="text-center text-xs text-gray-600 mb-3 space-y-1">
+                            <div>Min Order: {formatNumber(product.moq)} units</div>
+                            <div className={product.stock < 100 ? "text-red-600" : "text-green-600"}>
+                              {formatNumber(product.stock)} available
+                            </div>
                           </div>
                         )}
                         
-                        {/* Guest Call-to-Action - Fixed Position at Bottom */}
-                        {isGuestMode && (
-                          <div className="flex justify-end mt-3 sm:mt-4 pt-2">
+                        {/* Action Buttons - Grocery Store Style */}
+                        <div className="mt-auto">
+                          {!isGuestMode ? (
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={() => openQuantityEditor(product)}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+                                size="sm"
+                              >
+                                <ShoppingCart className="w-4 h-4 mr-2" />
+                                Add to Cart
+                              </Button>
+                              {product.negotiationEnabled && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => openNegotiation(product)}
+                                  className="border-green-600 text-green-600 hover:bg-green-50 rounded-lg"
+                                >
+                                  💬
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
                             <Button 
                               onClick={() => {
                                 toast({
-                                  title: "Contact Wholesaler Required",
-                                  description: "Please contact the wholesaler to be added as a customer before you can place orders.",
-                                  action: (
-                                    <Button
-                                      onClick={() => window.location.href = '/'}
-                                      size="sm"
-                                                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                                    >
-                                      Contact Wholesaler
-                                    </Button>
-                                  ),
-                                  variant: "default",
+                                  title: "Sign In Required",
+                                  description: "Please contact the wholesaler to get access and view pricing.",
                                 });
                               }}
+                              className="w-full bg-gray-400 text-white rounded-lg font-semibold"
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
+                              disabled
                             >
-                              <Plus className="w-4 h-4" />
+                              Sign In to Order
                             </Button>
-                          </div>
-                        )}
-                        
-                        {/* Quick Stats */}
-                        {!isGuestMode && (
-                          <div className="flex justify-between text-sm text-gray-600 mt-3">
-                            <span>MOQ: {formatNumber(product.moq)}</span>
-                            <span>Stock: {formatNumber(product.stock)}</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
