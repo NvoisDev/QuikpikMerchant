@@ -885,6 +885,7 @@ export default function CustomerPortal() {
     return urlFeatured ? parseInt(urlFeatured, 10) : null;
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
@@ -2019,7 +2020,7 @@ export default function CustomerPortal() {
         )}
         
         {/* Main Tabbed Interface */}
-        <Tabs defaultValue="home" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home" className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="home" className="flex items-center gap-2">
               <Store className="w-4 h-4" />
