@@ -6875,6 +6875,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const { amount, wholesalerId, customerEmail, metadata } = req.body;
       
       console.log(`💰 Clean payment intent request: amount=${amount}, wholesalerId=${wholesalerId}, customerEmail=${customerEmail}`);
+      console.log(`📦 Original metadata:`, JSON.stringify(metadata, null, 2));
       
       if (!stripe) {
         throw new Error('Stripe not configured');
@@ -6894,13 +6895,51 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       const platformFeePercentage = 0.033; // 3.3%
       const platformFeeAmount = Math.round(totalAmountInDollars * platformFeePercentage * 100); // Convert back to cents
 
+      // Simplify metadata to avoid 500-character limit per key
+      const simplifiedMetadata: any = {};
+      if (metadata) {
+        // Extract only essential fields from metadata
+        Object.keys(metadata).forEach(key => {
+          const value = metadata[key];
+          if (typeof value === 'string' && value.length <= 500) {
+            simplifiedMetadata[key] = value;
+          } else if (typeof value === 'object') {
+            // For complex objects like shipping info, extract only key details
+            if (key === 'shipping' && value.option === 'delivery' && value.service) {
+              simplifiedMetadata['shipping_option'] = 'delivery';
+              simplifiedMetadata['shipping_service'] = value.service.serviceName || 'Courier Service';
+              simplifiedMetadata['shipping_price'] = value.service.price?.toString() || '0';
+            } else if (key === 'shipping' && value.option === 'pickup') {
+              simplifiedMetadata['shipping_option'] = 'pickup';
+            } else {
+              // For other objects, convert to a short string
+              const shortValue = JSON.stringify(value).substring(0, 500);
+              simplifiedMetadata[key] = shortValue;
+            }
+          } else {
+            simplifiedMetadata[key] = String(value).substring(0, 500);
+          }
+        });
+      }
+
+      console.log(`📝 Simplified metadata:`, JSON.stringify(simplifiedMetadata, null, 2));
+      
+      // Validate each metadata value length
+      Object.keys(simplifiedMetadata).forEach(key => {
+        const value = simplifiedMetadata[key];
+        if (value && value.length > 500) {
+          console.warn(`⚠️ Metadata key '${key}' still too long: ${value.length} characters`);
+          simplifiedMetadata[key] = value.substring(0, 490) + '...'; // Truncate to 490 + '...' = 493 chars
+        }
+      });
+
       // Create Stripe Connect payment intent with destination charge
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount, // Total amount customer pays (includes transaction fees)
         currency: 'gbp',
         application_fee_amount: platformFeeAmount, // Platform fee
         receipt_email: customerEmail,
-        metadata: metadata || {},
+        metadata: simplifiedMetadata,
         transfer_data: {
           destination: wholesaler.stripeAccountId,
         },
