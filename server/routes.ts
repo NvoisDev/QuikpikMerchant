@@ -1945,7 +1945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionFee,
         wholesalerId,
         orderType,
-        items: itemsJson,
+        cart: itemsJson,
         connectAccountUsed,
         productSubtotal,
         customerTransactionFee,
