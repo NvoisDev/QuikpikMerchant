@@ -543,17 +543,13 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
       return;
     }
 
-    // Check if PaymentElement is properly mounted
+    // Log PaymentElement status but don't block if it's still mounting
     const paymentElement = elements.getElement('payment');
-    if (!paymentElement) {
-      console.error('💳 Payment Error: PaymentElement not found');
-      toast({
-        title: "Payment Error", 
-        description: "Payment form is not ready. Please refresh the page and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log('💳 PaymentElement status:', {
+      found: !!paymentElement,
+      elementsReady: !!elements,
+      stripeReady: !!stripe
+    });
 
     console.log('💳 Starting payment confirmation process...');
     setIsProcessing(true);
