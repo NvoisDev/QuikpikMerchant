@@ -370,57 +370,48 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             totalAmount: productSubtotal
           });
           
+          // Calculate shipping cost
+          const shippingCost = customerData.selectedShippingService?.price || 0;
+          
+          // Customer pays: products + shipping + transaction fee
+          const transactionFee = productSubtotal * 0.055 + 0.50;
+          const totalAmountInCents = Math.round((productSubtotal + shippingCost + transactionFee) * 100);
+
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
-            items: cart.map(item => ({
-              productId: item.product.id,
-              quantity: item.quantity || 0,
-              unitPrice: (() => {
-                if (item.sellingType === "pallets") {
-                  return parseFloat(item.product.palletPrice || "0") || 0;
-                } else {
-                  const basePrice = parseFloat(item.product.price) || 0;
-                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                    basePrice,
-                    item.quantity,
-                    item.product.promotionalOffers || [],
-                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                    item.product.promoActive
-                  );
-                  return pricing.effectivePrice;
-                }
-              })()
-            })),
-            customerData: {
-              name: customerData.name,
-              email: customerData.email,
-              phone: customerData.phone,
-              address: customerData.address,
-              shippingOption: customerData.shippingOption
-            },
+            amount: totalAmountInCents,
             wholesalerId: wholesaler.id,
-            totalAmount: productSubtotal, // Send product subtotal - backend will add fees
-            shippingInfo: shippingDataAtCreation
+            customerEmail: customerData.email,
+            metadata: {
+              cart: JSON.stringify(cart.map(item => ({
+                productId: item.product.id,
+                quantity: item.quantity,
+                sellingType: item.sellingType,
+                productName: item.product.name
+              }))),
+              customerData: JSON.stringify({
+                name: customerData.name,
+                email: customerData.email,
+                phone: customerData.phone,
+                address: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              shippingInfo: JSON.stringify({
+                option: customerData.shippingOption,
+                service: customerData.selectedShippingService
+              }),
+              subtotal: productSubtotal.toString(),
+              shippingCost: shippingCost.toString(),
+              transactionFee: transactionFee.toString()
+            }
           });
-          
-          console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
-          console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: Current customerData.shippingOption (might be different):', customerData.shippingOption);
-          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
-            shippingInfo: shippingDataAtCreation,
-            isDeliveryOrder: shippingDataAtCreation.option === 'delivery',
-            hasShippingService: !!shippingDataAtCreation.service,
-            willCreateDeliveryOrder: shippingDataAtCreation.option === 'delivery' && !!shippingDataAtCreation.service
-          });
-          console.log('🚚 FRONTEND: === END DEBUG ===');
-          
           const data = await response.json();
           
-          console.log('🔍 PAYMENT INTENT RESPONSE DEBUG:', {
+          console.log('🔍 PAYMENT INTENT RESPONSE:', {
             hasClientSecret: !!data.clientSecret,
-            clientSecretPreview: data.clientSecret?.substring(0, 30) + '...',
-            responseKeys: Object.keys(data),
-            fullResponse: data
+            success: response.ok
           });
           
           if (data.clientSecret) {

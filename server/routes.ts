@@ -6869,179 +6869,48 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     }
   });
 
-  // Create payment intent for customer portal orders (public - no auth required)
+  // Stripe Connect marketplace payment intent
   app.post('/api/marketplace/create-payment-intent', async (req, res) => {
     try {
-      const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
+      const { amount, wholesalerId, customerEmail, metadata } = req.body;
       
-      console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
-      console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
+      console.log(`💰 Clean payment intent request: amount=${amount}, wholesalerId=${wholesalerId}, customerEmail=${customerEmail}`);
       
-      console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
-      
-      // DEDUPLICATION: Check for recent incomplete payment intents with same customer email and amount
-      const fiveMinutesAgo = Math.floor((Date.now() - 5 * 60 * 1000) / 1000);
-      try {
-        const recentIntents = await stripe.paymentIntents.list({
-          limit: 10,
-          created: { gte: fiveMinutesAgo },
-        });
-        
-        const duplicateIntent = recentIntents.data.find(intent => 
-          intent.status === 'requires_payment_method' &&
-          intent.metadata.customerEmail === customerData.email &&
-          intent.metadata.wholesalerId === wholesalerId &&
-          Math.abs(intent.amount - Math.round((parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)) * 100)) < 100 // Within £1
-        );
-        
-        if (duplicateIntent) {
-          console.log(`♻️ DEDUPLICATION: Found recent incomplete payment intent ${duplicateIntent.id}, returning existing client_secret`);
-          return res.json({ 
-            clientSecret: duplicateIntent.client_secret,
-            productSubtotal: (parseFloat(totalAmount)).toFixed(2),
-            customerTransactionFee: ((parseFloat(totalAmount) * 0.055) + 0.50).toFixed(2),
-            totalCustomerPays: (parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)).toFixed(2),
-            wholesalerPlatformFee: (parseFloat(totalAmount) * 0.033).toFixed(2),
-            wholesalerReceives: (parseFloat(totalAmount) - (parseFloat(totalAmount) * 0.033)).toFixed(2)
-          });
-        }
-      } catch (error) {
-        console.log('⚠️ Error checking for duplicate payment intents, proceeding with new intent creation:', error.message);
-      }
-      
-      // Validate and recalculate totalAmount to prevent NaN errors
-      let validatedTotalAmount = 0;
-      
-      if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) > 0) {
-        validatedTotalAmount = parseFloat(totalAmount);
-      } else {
-        // Recalculate from items if totalAmount is invalid
-        console.log('⚠️ Invalid totalAmount, recalculating from items...');
-        for (const item of items) {
-          const product = await storage.getProduct(item.productId);
-          if (product) {
-            const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.price) || 0;
-            const quantity = parseInt(item.quantity) || 0;
-            validatedTotalAmount += unitPrice * quantity;
-          }
-        }
-      }
-      
-      // Final validation
-      if (!validatedTotalAmount || validatedTotalAmount <= 0) {
-        console.error(`❌ Invalid calculated totalAmount: ${validatedTotalAmount}`);
-        return res.status(400).json({ message: 'Unable to calculate valid total amount' });
-      }
-      
-      console.log(`✅ Using validated totalAmount: ${validatedTotalAmount}`);
-      
-      if (!items || !customerData || !wholesalerId) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-
-      // Get wholesaler information 
-      const wholesaler = await storage.getUser(wholesalerId);
-      if (!wholesaler) {
-        return res.status(404).json({ message: 'Wholesaler not found' });
-      }
-
-      // validatedTotalAmount is the product subtotal (without transaction fee)
-      // Add shipping cost if delivery option is selected
-      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
-        ? (shippingInfo.service && shippingInfo.service.price 
-           ? parseFloat(shippingInfo.service.price) 
-           : 90.00) // Default delivery cost for "Custom Quote Required" orders
-        : 0;
-      
-      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
-      
-      // NEW APPROACH: PRODUCTS-ONLY STRIPE PAYMENT
-      // Transaction fee based on PRODUCT TOTAL ONLY + £0.50 fixed fee
-      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + customerTransactionFee; // NO SHIPPING COST
-      
-      // Platform collects 3.3% from subtotal 
-      const platformFee = validatedTotalAmount * 0.033;
-      
-      // Wholesaler receives 96.7% of product total only (no delivery cost in Stripe)
-      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
-
-      // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
         throw new Error('Stripe not configured');
       }
 
-      let paymentIntent;
-
-      // Try creating payment intent with Stripe Connect if available
-      if (wholesaler.stripeAccountId) {
-        try {
-          // Create payment intent with Stripe Connect - PRODUCTS ONLY
-          paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays PRODUCTS + transaction fee ONLY
-            currency: 'gbp', // Always use GBP for platform
-            application_fee_amount: Math.round((platformFee + customerTransactionFee) * 100), // Platform keeps fees ONLY (no delivery)
-            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
-            metadata: {
-              orderType: 'customer_portal',
-              wholesalerId: wholesalerId,
-              customerName: customerData.name,
-              customerEmail: customerData.email,
-              customerPhone: customerData.phone,
-              customerAddress: JSON.stringify({
-                street: customerData.address,
-                city: customerData.city,
-                state: customerData.state,
-                postalCode: customerData.postalCode,
-                country: customerData.country
-              }),
-              totalAmount: validatedTotalAmount.toString(),
-              shippingCost: shippingCost.toFixed(2),
-              platformFee: platformFee.toFixed(2),
-              customerTransactionFee: customerTransactionFee.toFixed(2),
-              totalAmountWithFee: totalAmountWithFee.toFixed(2),
-              productSubtotal: validatedTotalAmount.toFixed(2),
-              totalCustomerPays: totalAmountWithFee.toFixed(2),
-              wholesalerPlatformFee: platformFee.toFixed(2),
-              wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Product earnings only
-              connectAccountUsed: 'true',
-              paymentMethod: 'products_only_stripe',
-              deliveryPaymentMethod: 'separate_platform_collection',
-              shippingInfo: JSON.stringify(shippingInfo ? {
-                option: shippingInfo.option,
-                service: shippingInfo.service ? {
-                  serviceId: shippingInfo.service.serviceId,
-                  serviceName: shippingInfo.service.serviceName,
-                  price: shippingInfo.service.price
-                } : null
-              } : { option: 'pickup' }),
-              items: JSON.stringify(items.map(item => ({
-                ...item,
-                productName: item.productName || 'Product'
-              })))
-            }
-          }, {
-            stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
-          });
-        } catch (connectError: any) {
-          console.error('❌ Stripe Connect payment creation failed:', connectError.message);
-          throw new Error(`Stripe Connect required. Wholesaler must complete onboarding: ${connectError.message}`);
-        }
-      } else {
-        // STRIPE CONNECT REQUIRED - No fallback allowed
-        throw new Error('Wholesaler must complete Stripe Connect onboarding before accepting orders');
+      if (!amount || !wholesalerId || !customerEmail) {
+        return res.status(400).json({ message: 'Missing required fields: amount, wholesalerId, customerEmail' });
+      }
+      // Get wholesaler information 
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler || !wholesaler.stripeAccountId) {
+        return res.status(400).json({ message: 'Wholesaler Stripe account not found' });
       }
 
-      res.json({ 
+      // Calculate platform fee (3.3% of total amount - transaction fees already included)
+      const totalAmountInDollars = amount / 100;
+      const platformFeePercentage = 0.033; // 3.3%
+      const platformFeeAmount = Math.round(totalAmountInDollars * platformFeePercentage * 100); // Convert back to cents
+
+      // Create Stripe Connect payment intent with destination charge
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount, // Total amount customer pays (includes transaction fees)
+        currency: 'gbp',
+        application_fee_amount: platformFeeAmount, // Platform fee
+        receipt_email: customerEmail,
+        metadata: metadata || {},
+        transfer_data: {
+          destination: wholesaler.stripeAccountId,
+        },
+      });
+
+      console.log(`✅ Payment intent created: ${paymentIntent.id} for £${(amount / 100).toFixed(2)}`);
+
+      res.json({
         clientSecret: paymentIntent.client_secret,
-        productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
-        shippingCost: shippingCost.toFixed(2), // Delivery cost (SEPARATE)
-        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50 on products only
-        stripePaymentAmount: totalAmountWithFee.toFixed(2), // What customer pays Stripe (products + fee)
-        totalCustomerPays: (totalAmountWithFee + shippingCost).toFixed(2), // Total including delivery
-        wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
-        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2), // Wholesaler receives product total minus 3.3%
-        deliveryCollectionMethod: shippingCost > 0 ? 'separate_platform_charge' : 'none'
+        paymentIntentId: paymentIntent.id
       });
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
