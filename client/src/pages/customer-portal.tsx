@@ -2122,6 +2122,35 @@ export default function CustomerPortal() {
                             
                             return badges;
                           })()}
+                          
+                          {/* Purchase Options Tags */}
+                          {(() => {
+                            const hasUnits = !!featuredProduct.price;
+                            const hasPallets = !!(featuredProduct.palletPrice && featuredProduct.unitsPerPallet);
+                            const unitsPerPallet = featuredProduct.unitsPerPallet || 0;
+                            
+                            if (hasUnits && hasPallets) {
+                              return (
+                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                  📦 Units & Pallet ({unitsPerPallet}/pallet)
+                                </span>
+                              );
+                            } else if (hasPallets && !hasUnits) {
+                              return (
+                                <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                                  📦 Pallet Only ({unitsPerPallet}/pallet)
+                                </span>
+                              );
+                            } else if (hasUnits && !hasPallets) {
+                              return (
+                                <span className="inline-block bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                                  📦 Units Only
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                          
                           {/* Product Size Information */}
                           {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
