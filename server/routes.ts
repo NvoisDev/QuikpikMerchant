@@ -6921,6 +6921,31 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               });
             } else if (key === 'shippingInfo' && value.option === 'pickup') {
               simplifiedMetadata['shippingInfo'] = JSON.stringify({ option: 'pickup' });
+            } else if (key === 'customerData' && value.name && value.email && value.phone) {
+              // Extract customer data fields directly into metadata
+              simplifiedMetadata['customerName'] = value.name;
+              simplifiedMetadata['customerEmail'] = value.email;
+              simplifiedMetadata['customerPhone'] = value.phone;
+              simplifiedMetadata['customerAddress'] = JSON.stringify({
+                address: value.address,
+                city: value.city,
+                state: value.state,
+                postalCode: value.postalCode,
+                country: value.country
+              });
+              // Keep original customerData as well
+              simplifiedMetadata[key] = JSON.stringify(value).substring(0, 490);
+            } else if (key === 'cart' && Array.isArray(value)) {
+              // Convert cart to items format for order creation
+              const items = value.map(item => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                sellingType: item.sellingType,
+                productName: item.productName,
+                unitPrice: item.unitPrice || '0.00'
+              }));
+              simplifiedMetadata['items'] = JSON.stringify(items).substring(0, 490);
+              simplifiedMetadata[key] = JSON.stringify(value).substring(0, 490);
             } else {
               // For other objects, convert to a short string
               const shortValue = JSON.stringify(value).substring(0, 490);
@@ -6930,6 +6955,18 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             simplifiedMetadata[key] = String(value).substring(0, 500);
           }
         });
+        
+        // Add calculated fields for order creation
+        if (metadata.subtotal && metadata.transactionFee) {
+          simplifiedMetadata['productSubtotal'] = String(metadata.subtotal);
+          simplifiedMetadata['customerTransactionFee'] = String(metadata.transactionFee);
+          simplifiedMetadata['totalAmount'] = String(totalAmountInDollars.toFixed(2));
+          simplifiedMetadata['totalCustomerPays'] = String(totalAmountInDollars.toFixed(2));
+          simplifiedMetadata['platformFee'] = String((platformFeeAmount / 100).toFixed(2));
+          simplifiedMetadata['wholesalerPlatformFee'] = String((platformFeeAmount / 100).toFixed(2));
+          const wholesalerReceives = totalAmountInDollars - (platformFeeAmount / 100);
+          simplifiedMetadata['wholesalerReceives'] = String(wholesalerReceives.toFixed(2));
+        }
       }
 
       console.log(`📝 Simplified metadata:`, JSON.stringify(simplifiedMetadata, null, 2));
