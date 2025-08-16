@@ -2034,7 +2034,7 @@ export default function CustomerPortal() {
               Orders
             </TabsTrigger>
             <TabsTrigger value="account" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
               Account
             </TabsTrigger>
           </TabsList>
@@ -2240,7 +2240,7 @@ export default function CustomerPortal() {
                         variant="outline" 
                         className="w-full justify-start"
                       >
-                        <User className="w-4 h-4 mr-2" />
+                        <Building2 className="w-4 h-4 mr-2" />
                         Account Settings
                       </Button>
                     </div>
