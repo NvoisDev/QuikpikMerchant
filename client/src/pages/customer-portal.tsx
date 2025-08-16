@@ -3381,20 +3381,26 @@ export default function CustomerPortal() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <Label className="text-sm font-medium text-gray-700">Customer Name</Label>
-                        <p className="mt-1 text-gray-900">{customerData?.name || 'Not provided'}</p>
+                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.name || customerData?.name || 'Not provided'}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-700">Phone Number</Label>
-                        <p className="mt-1 text-gray-900">{customerData?.phone || 'Not provided'}</p>
+                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.phone || customerData?.phone || 'Not provided'}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-700">Email Address</Label>
-                        <p className="mt-1 text-gray-900">{customerData?.email || 'Not provided'}</p>
+                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.email || customerData?.email || 'Not provided'}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-700">Wholesaler</Label>
                         <p className="mt-1 text-gray-900">{wholesaler?.businessName || 'Unknown'}</p>
                       </div>
+                      {authenticatedCustomer?.address && (
+                        <div className="md:col-span-2">
+                          <Label className="text-sm font-medium text-gray-700">Address</Label>
+                          <p className="mt-1 text-gray-900">{authenticatedCustomer.address}</p>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="border-t pt-6">
@@ -3410,18 +3416,31 @@ export default function CustomerPortal() {
                         </Button>
                         <Button 
                           variant="outline"
-                          onClick={() => {
-                            toast({
-                              title: "Feature Coming Soon",
-                              description: "Account settings will be available in a future update."
-                            });
-                          }}
-                          className="justify-start"
+                          onClick={handleLogout}
+                          className="justify-start text-red-600 border-red-300 hover:bg-red-50"
                         >
                           <Building2 className="w-4 h-4 mr-2" />
-                          Account Settings
+                          Sign Out
                         </Button>
                       </div>
+                      
+                      {wholesaler?.businessPhone && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                          <h4 className="text-sm font-medium text-gray-900 mb-2">Contact Information</h4>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600">
+                              <Phone className="w-3 h-3 inline mr-1" />
+                              {wholesaler.businessPhone}
+                            </p>
+                            {wholesaler.email && (
+                              <p className="text-sm text-gray-600">
+                                <Mail className="w-3 h-3 inline mr-1" />
+                                {wholesaler.email}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
