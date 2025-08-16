@@ -276,6 +276,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const ordersPerPage = 10;
   const queryClient = useQueryClient();
 
+  console.log('🔄 QUERY SETUP:', { wholesalerId, customerPhone, enabled: !!wholesalerId && !!customerPhone });
+  
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: [`customer-orders`, wholesalerId, customerPhone],
     enabled: !!wholesalerId && !!customerPhone,
@@ -347,6 +349,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         hasSF201: ordersArray.some((o: any) => o.orderNumber === 'SF-201')
       });
       
+      console.log('🎯 QUERY FUNCTION RETURNING:', { ordersArray, length: ordersArray.length });
       return ordersArray;
     }
   });
@@ -547,7 +550,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   });
 
   // CRITICAL DEBUG: Force show orders even if array appears empty
-  const hasOrdersInConsole = typeof window !== 'undefined' && console.log('🔍 ORDERS STATE INSPECTION:', {
+  console.log('🔍 ORDERS STATE INSPECTION:', {
     ordersType: typeof orders,
     ordersValue: orders,
     ordersStringified: JSON.stringify(orders)?.substring(0, 200) + '...',
@@ -655,7 +658,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         ) : (
         <div className="space-y-2">
           {paginatedOrders.map((order: Order, index: number) => {
-            console.log(`Rendering order ${index}:`, order);
+            console.log(`🎯 Rendering order ${index}:`, order);
             return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
