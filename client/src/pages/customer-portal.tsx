@@ -2002,7 +2002,7 @@ export default function CustomerPortal() {
         )}
         
         {/* Main Tabbed Interface */}
-        <TooltipProvider>
+        <TooltipProvider delayDuration={300}>
           <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home" className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
               <Tooltip>
