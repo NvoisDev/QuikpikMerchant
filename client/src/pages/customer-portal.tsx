@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
@@ -28,6 +29,7 @@ import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { CustomerHome } from "@/components/customer/CustomerHome";
 import { ThankYouPage } from "@/components/customer/ThankYouPage";
+import { CustomerOrderHistory } from '@/components/customer/CustomerOrderHistory';
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
@@ -2016,9 +2018,27 @@ export default function CustomerPortal() {
           </div>
         )}
         
-        {/* Featured Product - Mobile Responsive Design */}
-        {featuredProduct && (
-          <div className="mb-8 sm:mb-12">
+        {/* Main Tabbed Interface */}
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Products
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              My Orders
+            </TabsTrigger>
+            <TabsTrigger value="account" className="flex items-center gap-2">
+              <Store className="w-4 h-4" />
+              Account
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="products">
+            {/* Featured Product - Mobile Responsive Design */}
+            {featuredProduct && (
+              <div className="mb-8 sm:mb-12">
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="grid lg:grid-cols-2">
@@ -2361,8 +2381,8 @@ export default function CustomerPortal() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+              </div>
+            )}
 
         {/* Search and Filters - Mobile Optimized */}
         {(!featuredProduct || showAllProducts) && (
@@ -3320,8 +3340,109 @@ export default function CustomerPortal() {
               </div>
             )}
           </div>
-          </>
+          </> 
         )}
+          </TabsContent>
+          
+          <TabsContent value="orders">
+            {!isGuestMode ? (
+              <CustomerOrderHistory 
+                wholesalerId={wholesalerId!}
+                customerPhone={customerData?.phone || authenticatedCustomer?.phone || ''} 
+              />
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Sign In Required</h3>
+                <p className="max-w-md mx-auto">
+                  Please contact the wholesaler to be added as a customer and access your order history.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/'}
+                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Contact Wholesaler
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="account">
+            {!isGuestMode ? (
+              <div className="max-w-2xl">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Store className="w-5 h-5" />
+                      Account Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Customer Name</Label>
+                        <p className="mt-1 text-gray-900">{customerData?.name || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Phone Number</Label>
+                        <p className="mt-1 text-gray-900">{customerData?.phone || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Email Address</Label>
+                        <p className="mt-1 text-gray-900">{customerData?.email || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Wholesaler</Label>
+                        <p className="mt-1 text-gray-900">{wholesaler?.businessName || 'Unknown'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Button 
+                          variant="outline"
+                          onClick={() => window.location.href = '/'}
+                          className="justify-start"
+                        >
+                          <Phone className="w-4 h-4 mr-2" />
+                          Contact Wholesaler
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            toast({
+                              title: "Feature Coming Soon",
+                              description: "Account settings will be available in a future update."
+                            });
+                          }}
+                          className="justify-start"
+                        >
+                          <Building2 className="w-4 h-4 mr-2" />
+                          Account Settings
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <Store className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Sign In Required</h3>
+                <p className="max-w-md mx-auto">
+                  Please contact the wholesaler to be added as a customer and access your account information.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/'}
+                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Contact Wholesaler
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modals and dialogs would go here... */}
