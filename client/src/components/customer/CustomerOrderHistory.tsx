@@ -210,140 +210,184 @@ function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOrderHist
                         View Details
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold">Order {order.orderNumber}</DialogTitle>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                          <span className="text-sm text-gray-500">
-                            Placed on {new Date(order.createdAt).toLocaleDateString('en-GB')}
-                          </span>
-                        </div>
-                      </DialogHeader>
+                    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+                      <div className="p-6 pb-0">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-semibold">Order {order.orderNumber}</DialogTitle>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
+                            <span className="text-sm text-gray-500">
+                              {new Date(order.createdAt).toLocaleDateString('en-GB')}
+                            </span>
+                          </div>
+                        </DialogHeader>
+                      </div>
                       
-                      <Tabs defaultValue="delivery" className="mt-6">
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="delivery" className="flex items-center space-x-2">
-                            <Truck className="w-4 h-4" />
-                            <span>Delivery Information</span>
-                          </TabsTrigger>
-                          <TabsTrigger value="summary" className="flex items-center space-x-2">
-                            <CreditCard className="w-4 h-4" />
-                            <span>Order Summary</span>
-                          </TabsTrigger>
-                        </TabsList>
+                      <Tabs defaultValue="delivery" className="mt-4">
+                        <div className="border-b bg-gray-50">
+                          <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto rounded-none border-0">
+                            <TabsTrigger 
+                              value="delivery" 
+                              className="text-gray-600 data-[state=active]:text-black data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none border-b-2 border-transparent py-4 px-6 font-medium"
+                            >
+                              Delivery information
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="summary" 
+                              className="text-gray-600 data-[state=active]:text-black data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none border-b-2 border-transparent py-4 px-6 font-medium"
+                            >
+                              Order summary
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
                         
-                        <TabsContent value="delivery" className="mt-6 space-y-6">
-                          {/* Delivery Address */}
-                          <div className="bg-gray-50 p-4 rounded-lg">
+                        <TabsContent value="delivery" className="mt-0 p-6 space-y-6">
+                          {/* Delivery to Address */}
+                          <div className="space-y-4">
                             <div className="flex items-start space-x-3">
-                              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mt-1">
-                                <MapPin className="w-4 h-4 text-white" />
+                              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900 mb-1">Delivery Address</h4>
-                                <div className="text-sm text-gray-600 space-y-1">
-                                  <div className="font-medium">{order.customerName || 'Customer'}</div>
-                                  <div>{order.deliveryAddress || 'Address not provided'}</div>
-                                  {order.customerPhone && <div>Phone: {order.customerPhone}</div>}
-                                  {order.customerEmail && <div>Email: {order.customerEmail}</div>}
+                                <h4 className="font-medium text-gray-900 text-sm">Delivery to</h4>
+                                <div className="text-gray-600 text-sm mt-1">
+                                  <div className="font-medium">{order.customerName || 'Customer Name'}</div>
+                                  <div>{order.deliveryAddress || 'Dhaka, Bangladesh. Block B, Road 3, California, USA'}</div>
                                 </div>
                               </div>
+                              <button className="text-green-600 text-sm font-medium ml-auto">Edit</button>
                             </div>
                           </div>
 
-                          {/* Delivery Details */}
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div className="bg-white border rounded-lg p-4">
-                              <h4 className="font-semibold text-gray-900 mb-3">Delivery Method</h4>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Type:</span>
-                                  <span className="font-medium capitalize">{order.fulfillmentType || 'Standard'}</span>
+                          {/* Review item by store */}
+                          <div className="space-y-4">
+                            <h4 className="font-medium text-gray-900">Review item by store</h4>
+                            
+                            {/* Store Item */}
+                            <div className="border rounded-lg">
+                              <div className="flex items-center justify-between p-4 bg-gray-50">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">S</span>
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium text-gray-900">Surulere Foods market</h5>
+                                    <p className="text-sm text-gray-600">Delivery in 15 minutes</p>
+                                  </div>
                                 </div>
-                                {order.deliveryCarrier && (
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Carrier:</span>
-                                    <span className="font-medium">{order.deliveryCarrier}</span>
-                                  </div>
-                                )}
-                                {order.deliveryCost && (
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Delivery Cost:</span>
-                                    <span className="font-medium">£{parseFloat(order.deliveryCost).toFixed(2)}</span>
-                                  </div>
-                                )}
+                                <button className="text-gray-400">
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414L11.414 12l3.293 3.293a1 1 0 01-1.414 1.414L10 13.414l-3.293 3.293a1 1 0 01-1.414-1.414L8.586 12 5.293 8.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
                               </div>
-                            </div>
-
-                            <div className="bg-white border rounded-lg p-4">
-                              <h4 className="font-semibold text-gray-900 mb-3">Order Status</h4>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Status:</span>
-                                  <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Payment:</span>
-                                  <span className="font-medium">{order.paymentMethod || 'Card Payment'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Order Date:</span>
-                                  <span className="font-medium">{new Date(order.createdAt).toLocaleDateString('en-GB')}</span>
-                                </div>
+                              
+                              {/* Items in this store */}
+                              <div className="p-4 space-y-3">
+                                {order.items?.map((item: OrderItem, index: number) => (
+                                  <div key={index} className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <Package className="w-6 h-6 text-gray-400" />
+                                      </div>
+                                      <div>
+                                        <h6 className="font-medium text-gray-900 text-sm">{item.productName}</h6>
+                                        <p className="text-xs text-gray-500">{item.quantity} unit</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                      <span className="text-sm font-medium">£{parseFloat(item.total).toFixed(2)}</span>
+                                      <div className="flex items-center space-x-2">
+                                        <button className="w-6 h-6 border rounded-full flex items-center justify-center text-gray-500">-</button>
+                                        <span className="text-sm font-medium">{item.quantity}</span>
+                                        <button className="w-6 h-6 border rounded-full flex items-center justify-center text-gray-500">+</button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div className="px-4 pb-4">
+                                <button className="text-green-600 text-sm font-medium flex items-center space-x-1">
+                                  <span>Replace with</span>
+                                  <Package className="w-4 h-4" />
+                                  <span>Loblaws</span>
+                                </button>
                               </div>
                             </div>
                           </div>
                         </TabsContent>
                         
-                        <TabsContent value="summary" className="mt-6 space-y-6">
-                          {/* Items Ordered */}
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-4">Items in this order</h4>
-                            <div className="space-y-3">
-                              {order.items?.map((item: OrderItem, index: number) => (
-                                <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
-                                      <Package className="w-6 h-6 text-gray-400" />
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-gray-900">{item.productName}</div>
-                                      <div className="text-sm text-gray-600">
-                                        Qty: {item.quantity} × £{parseFloat(item.unitPrice).toFixed(2)}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-lg font-semibold text-gray-900">
-                                    £{parseFloat(item.total).toFixed(2)}
-                                  </div>
+                        <TabsContent value="summary" className="mt-0 p-6">
+                          <div className="space-y-6">
+                            {/* Payment Methods */}
+                            <div className="space-y-4">
+                              <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
+                                <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
+                                  <CreditCard className="w-3 h-3 text-white" />
                                 </div>
-                              ))}
+                                <span className="text-sm font-medium text-orange-800">Online Payment</span>
+                              </div>
+                              
+                              <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                                <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
+                                  <Truck className="w-3 h-3 text-gray-500" />
+                                </div>
+                                <span className="text-sm text-gray-600">Cash on delivery</span>
+                              </div>
+                              
+                              <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                                <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
+                                  <Package className="w-3 h-3 text-gray-500" />
+                                </div>
+                                <span className="text-sm text-gray-600">Pick up delivery</span>
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Payment Summary */}
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="font-semibold text-gray-900 mb-4">Payment Summary</h4>
+                            {/* Promo Code */}
                             <div className="space-y-2">
+                              <div className="flex space-x-2">
+                                <Input placeholder="Add Promo" className="flex-1" />
+                                <Button className="bg-green-600 hover:bg-green-700 text-white">Apply</Button>
+                              </div>
+                            </div>
+
+                            {/* Order Summary */}
+                            <div className="space-y-3 pt-4 border-t">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal:</span>
-                                <span>£{parseFloat(order.subtotal || order.total).toFixed(2)}</span>
+                                <span className="text-gray-600">Subtotal</span>
+                                <span className="font-medium">£ {parseFloat(order.subtotal || order.total).toFixed(2)}</span>
                               </div>
-                              {order.deliveryCost && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600">Delivery:</span>
-                                  <span>£{parseFloat(order.deliveryCost).toFixed(2)}</span>
-                                </div>
-                              )}
-                              <div className="border-t pt-2 mt-3">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-lg font-semibold text-gray-900">Total:</span>
-                                  <span className="text-xl font-bold text-green-600">
-                                    £{parseFloat(order.total).toFixed(2)}
-                                  </span>
-                                </div>
+                              
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Delivery fee</span>
+                                <span className="font-medium">£ {order.deliveryCost ? parseFloat(order.deliveryCost).toFixed(2) : '5.00'}</span>
                               </div>
+                              
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Coupon Discount</span>
+                                <span className="font-medium text-red-500">-£ 4.60</span>
+                              </div>
+                              
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Taxes</span>
+                                <span className="font-medium">£ 10.00</span>
+                              </div>
+                              
+                              <div className="flex justify-between text-lg font-bold pt-3 border-t">
+                                <span>Total</span>
+                                <span>£ {parseFloat(order.total).toFixed(2)}</span>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="space-y-3 pt-4">
+                              <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
+                                Continue with Klarna
+                              </Button>
+                              <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                                Confirm order
+                              </Button>
                             </div>
                           </div>
                         </TabsContent>
