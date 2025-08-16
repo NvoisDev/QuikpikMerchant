@@ -309,6 +309,17 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         isCreatingIntent
       });
       
+      console.log('🔍 Payment Intent Creation Check:', {
+        hasCart: cart.length > 0,
+        hasWholesaler: !!wholesaler,
+        hasName: !!customerData.name,
+        hasEmail: !!customerData.email,
+        hasPhone: !!customerData.phone,
+        hasShipping: !!customerData.shippingOption,
+        hasClientSecret: !!clientSecret,
+        isCreating: isCreatingIntent
+      });
+      
       if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
         setIsCreatingIntent(true);
         
@@ -339,6 +350,19 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             }
           }, 0);
 
+          console.log('🚀 MAKING API REQUEST TO CREATE PAYMENT INTENT...');
+          console.log('🛒 CART DEBUG:', {
+            cartLength: cart.length,
+            cartItems: cart.map(item => ({
+              id: item.product?.id,
+              name: item.product?.name,
+              quantity: item.quantity,
+              sellingType: item.sellingType
+            })),
+            wholesalerId: wholesaler?.id,
+            totalAmount: productSubtotal
+          });
+          
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
             items: cart.map(item => ({
               productId: item.product.id,
@@ -492,17 +516,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     elementOptions: { clientSecret }
   });
 
-  // Use test component for debugging
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded">
-        Debug Mode: Testing Stripe loading... (Check console for logs)
-      </div>
-      <div className="p-2 text-xs font-mono bg-gray-100 rounded">
-        Client Secret: {clientSecret ? `${clientSecret.substring(0, 30)}...` : 'None'}
-      </div>
-      <SimplePaymentTest clientSecret={clientSecret} />
-    </div>
+    <Elements 
+      stripe={stripePromise} 
+      options={{ clientSecret }}
+    >
+      <PaymentFormContent onSuccess={onSuccess} totalAmount={totalAmount} wholesaler={wholesaler} />
+    </Elements>
   );
 };
 
