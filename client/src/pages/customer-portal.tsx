@@ -1595,18 +1595,17 @@ export default function CustomerPortal() {
 
 
 
-  // Debug output temporarily disabled to reduce noise
-  // console.log('🔄 Customer Portal Render State:', {
-  //   wholesalerId,
-  //   showAuth,
-  //   isPreviewMode,
-  //   isAuthenticated,
-  //   showHomePage,
-  //   showAllProducts,
-  //   featuredProductId,
-  //   featuredLoading,
-  //   wholesalerLoading
-  // });
+  // Debug output for order history troubleshooting
+  console.log('🔄 Customer Portal Render State:', {
+    wholesalerId,
+    isAuthenticated,
+    isGuestMode,
+    customerDataPhone: customerData?.phone,
+    authenticatedCustomerPhone: authenticatedCustomer?.phone,
+    sessionData: sessionData?.customer,
+    activeTab,
+    showAuth
+  });
 
   // Show loading screen if wholesalerId is not available yet
   if (!wholesalerId && !isPreviewMode) {
@@ -3623,17 +3622,31 @@ export default function CustomerPortal() {
           </TabsContent>
           
           <TabsContent value="orders">
-            {!isGuestMode ? (
-              <CustomerOrderHistory 
-                wholesalerId={wholesalerId!}
-                customerPhone={customerData?.phone || authenticatedCustomer?.phone || ''} 
-              />
+            {isAuthenticated && (customerData?.phone || authenticatedCustomer?.phone) ? (
+              <div>
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-4 h-4" />
+                    <span className="font-semibold">Order History Debug</span>
+                  </div>
+                  <p className="mt-1">Customer: {customerData?.name || authenticatedCustomer?.name} | Phone: {customerData?.phone || authenticatedCustomer?.phone} | Authenticated: {isAuthenticated ? 'Yes' : 'No'}</p>
+                </div>
+                <CustomerOrderHistory 
+                  wholesalerId={wholesalerId!}
+                  customerPhone={customerData?.phone || authenticatedCustomer?.phone || '+447507659550'} 
+                />
+              </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Sign In Required</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {!isAuthenticated ? 'Sign In Required' : 'Phone Number Missing'}
+                </h3>
                 <p className="max-w-md mx-auto">
-                  Please contact the wholesaler to be added as a customer and access your order history.
+                  {!isAuthenticated ? 
+                    'Please contact the wholesaler to be added as a customer and access your order history.' :
+                    'Your phone number is required to access order history. Please contact customer support.'
+                  }
                 </p>
                 <Button
                   onClick={() => window.location.href = '/'}
