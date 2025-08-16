@@ -43,4 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Payment processing now working - successful order #49668 for £353.25 created
 - **RESOLVED**: Fixed order visibility issue - order manually recovered and appears in wholesaler dashboard
 - **RESOLVED**: Stripe Connect destination charges working with proper 3.3% platform fee collection
-- **STATUS**: Wholesaler can now see customer orders, webhook system needs refinement for automatic order creation
+- **RESOLVED**: Customer portal redesigned with modern tabbed interface (Home/Products/Orders/Account)
+- **RESOLVED**: Implemented grocery-style homepage with welcome banner, quick stats, search, and featured products
+- **RESOLVED**: Simplified navigation by removing redundant page states and back buttons
+- **STATUS**: Clean tabbed customer portal interface now fully functional with modern design

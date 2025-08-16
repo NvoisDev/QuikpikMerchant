@@ -1675,19 +1675,7 @@ export default function CustomerPortal() {
     />;
   }
 
-  // Show home page
-  if (activeTab === 'home' && !showAllProducts && !isPreviewMode && isAuthenticated) {
-    console.log('🏠 Showing customer home page');
-    return <CustomerHome 
-      wholesaler={wholesaler}
-      featuredProduct={featuredProduct}
-      onViewAllProducts={handleViewAllProducts}
-      onViewFeaturedProduct={handleViewFeaturedProduct}
-      customerData={authenticatedCustomer}
-      onLogout={handleLogout}
-
-    />;
-  }
+  // Remove old CustomerHome - now handled by tabbed interface
 
   // Early loading state only for authenticated users with featured products
   if (featuredProductId && featuredLoading && isAuthenticated) {
