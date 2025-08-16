@@ -105,7 +105,18 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       }
       
       // Handle customer portal orders directly in webhook
-      if (orderType === 'customer_portal') {
+      console.log(`🔍 Checking if this is a customer portal order:`, {
+        orderType,
+        hasCustomerData: !!paymentIntent?.metadata?.customerData,
+        hasCart: !!paymentIntent?.metadata?.cart,
+        allMetadataKeys: Object.keys(paymentIntent?.metadata || {})
+      });
+      
+      // Check for customer portal order by presence of customer data and cart
+      const isCustomerPortalOrder = orderType === 'customer_portal' || 
+        (paymentIntent?.metadata?.customerData && paymentIntent?.metadata?.cart);
+      
+      if (isCustomerPortalOrder) {
         console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
         
         try {

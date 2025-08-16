@@ -40,33 +40,48 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
 }
 
 export async function processCustomerPortalOrder(paymentIntent: any) {
-  const {
+  console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+  
+  // Extract data from metadata - handle both direct metadata and JSON strings
+  const customerData = paymentIntent.metadata.customerData ? 
+    JSON.parse(paymentIntent.metadata.customerData) : null;
+  const cart = paymentIntent.metadata.cart ? 
+    JSON.parse(paymentIntent.metadata.cart) : null;
+  const shippingInfo = paymentIntent.metadata.shippingInfo ? 
+    JSON.parse(paymentIntent.metadata.shippingInfo) : null;
+    
+  // Use either direct metadata or parsed customerData
+  const customerName = customerData?.name || paymentIntent.metadata.customerName;
+  const customerEmail = customerData?.email || paymentIntent.metadata.customerEmail;
+  const customerPhone = customerData?.phone || paymentIntent.metadata.customerPhone;
+  const customerAddress = customerData ? JSON.stringify({
+    street: customerData.address,
+    city: customerData.city,
+    state: customerData.state,
+    postalCode: customerData.postalCode,
+    country: customerData.country
+  }) : paymentIntent.metadata.customerAddress;
+  
+  const wholesalerId = paymentIntent.metadata.wholesalerId;
+  const subtotal = parseFloat(paymentIntent.metadata.subtotal || '0');
+  const originalShippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+  const transactionFee = parseFloat(paymentIntent.metadata.transactionFee || '0');
+
+  console.log('🔍 Extracted order data:', {
     customerName,
     customerEmail,
     customerPhone,
-    customerAddress,
-    totalAmount,
-    platformFee,
-    transactionFee,
     wholesalerId,
-    orderType,
-    items: itemsJson,
-    connectAccountUsed,
-    productSubtotal,
-    customerTransactionFee,
-    totalCustomerPays,
-    totalPlatformKeeps,
-    wholesalerPlatformFee,
-    wholesalerReceives,
-    deliveryCost,
-    marketplaceArchitecture
-  } = paymentIntent.metadata;
+    subtotal,
+    originalShippingCost,
+    transactionFee,
+    hasCart: !!cart,
+    cartLength: cart?.length || 0
+  });
 
-  if (orderType !== 'customer_portal') {
-    throw new Error('Invalid order type for customer portal processing');
+  if (!cart || cart.length === 0) {
+    throw new Error('No cart items found in payment metadata');
   }
-
-  const items = JSON.parse(itemsJson);
 
   // Create customer if doesn't exist or update existing one
   let customer = await storage.getUserByPhone(customerPhone);
@@ -138,21 +153,16 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   // Use the correct total from metadata - for marketplace architecture this includes everything
   // MARKETPLACE FIX: Use totalCustomerPays which includes products + delivery + transaction fee
-  const shippingCost = parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
-  const correctTotal = totalCustomerPays || paymentIntent.amount / 100; // Total customer paid (all inclusive)
-
-  // Extract and process shipping data from payment metadata
-  const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-  const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+  const deliveryCost = parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
+  const correctTotal = paymentIntent.metadata.totalCustomerPays || paymentIntent.amount / 100; // Total customer paid (all inclusive)
   
   console.log('🚚 Processing shipping metadata:', {
-    hasShippingInfo: !!shippingInfoJson,
-    shippingInfoRaw: shippingInfoJson,
+    hasShippingInfo: !!shippingInfo,
     parsedShippingInfo: shippingInfo,
-    customerChoice: shippingInfo.option,
-    hasService: !!shippingInfo.service,
-    serviceName: shippingInfo.service?.serviceName,
-    servicePrice: shippingInfo.service?.price
+    customerChoice: shippingInfo?.option,
+    hasService: !!shippingInfo?.service,
+    serviceName: shippingInfo?.service?.serviceName,
+    servicePrice: shippingInfo?.service?.price
   });
 
   // Get wholesaler info for logging
@@ -173,20 +183,18 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerEmail, // Store customer email
     customerPhone, // Store customer phone
     // CRITICAL FIX: Calculate subtotal from items if metadata is missing
-    subtotal: productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
-      ? parseFloat(productSubtotal).toFixed(2) 
-      : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2),
-    platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
-    customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+    subtotal: subtotal.toFixed(2),
+    platformFee: (subtotal * 0.033).toFixed(2), // 3.3% platform fee
+    customerTransactionFee: transactionFee.toFixed(2), // Customer transaction fee (5.5% + £0.50)
     total: correctTotal, // Total = subtotal + customer transaction fee
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
     // FIXED: Shipping information processing - use shippingInfo.option instead of shipping cost
-    fulfillmentType: shippingInfo.option || 'pickup',
-    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-    deliveryCost: paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
-    shippingTotal: paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
+    fulfillmentType: shippingInfo?.option || 'pickup',
+    deliveryCarrier: shippingInfo?.option === 'delivery' && shippingInfo?.service ? shippingInfo.service.serviceName : null,
+    deliveryCost: deliveryCost.toFixed(2),
+    shippingTotal: deliveryCost.toFixed(2)
   };
   
   console.log('🚚 Order data with shipping fields:', {

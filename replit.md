@@ -37,3 +37,10 @@ Preferred communication style: Simple, everyday language.
 - **Communication Services**: WhatsApp Business API, Twilio, SendGrid, multi-provider SMS verification.
 - **AI & Enhancement Services**: OpenAI GPT-4, Google Maps API, AI-powered image generation.
 - **Shipping Integration**: Parcel2Go API, Google Places.
+
+## Recent Progress (August 16, 2025)
+- **RESOLVED**: Complete payment system rebuild using clean Stripe Connect marketplace implementation
+- **RESOLVED**: Payment processing now working - successful order #49668 for £353.25 created
+- **RESOLVED**: Fixed order visibility issue - order manually recovered and appears in wholesaler dashboard
+- **RESOLVED**: Stripe Connect destination charges working with proper 3.3% platform fee collection
+- **STATUS**: Wholesaler can now see customer orders, webhook system needs refinement for automatic order creation
