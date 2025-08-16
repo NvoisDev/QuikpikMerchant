@@ -24,7 +24,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, FileText } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
