@@ -306,7 +306,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         selectedShippingService: customerData.selectedShippingService,
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
-        isCreatingIntent
+        isCreatingIntent,
+        currentCustomerData: {
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address,
+          shippingOption: customerData.shippingOption
+        }
       });
       
       console.log('🔍 Payment Intent Creation Check:', {
@@ -4396,7 +4403,25 @@ export default function CustomerPortal() {
                   <span>Payment Information</span>
                 </h3>
                 
-                {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
+                {(() => {
+                  const showPaymentForm = cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country;
+                  console.log('💳 PAYMENT FORM VISIBILITY CHECK:', {
+                    showPaymentForm,
+                    cartLength: cart.length,
+                    customerData: {
+                      name: !!customerData.name,
+                      email: !!customerData.email,
+                      phone: !!customerData.phone,
+                      address: !!customerData.address,
+                      city: !!customerData.city,
+                      state: !!customerData.state,
+                      postalCode: !!customerData.postalCode,
+                      country: !!customerData.country,
+                      shippingOption: !!customerData.shippingOption
+                    }
+                  });
+                  return showPaymentForm;
+                })() ? (
                   <StripeCheckoutForm 
                     key={`checkout-${customerData.shippingOption}-${customerData.selectedShippingService?.serviceId || 'none'}`}
                     cart={cart}
@@ -4485,6 +4510,19 @@ export default function CustomerPortal() {
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>Please complete all required customer information to proceed with payment</p>
+                    <div className="mt-2 text-xs text-gray-400 font-mono">
+                      Missing: {[
+                        !cart.length && 'cart items',
+                        !customerData.name && 'name',
+                        !customerData.email && 'email', 
+                        !customerData.phone && 'phone',
+                        !customerData.address && 'address',
+                        !customerData.city && 'city',
+                        !customerData.state && 'state',
+                        !customerData.postalCode && 'postal code',
+                        !customerData.country && 'country'
+                      ].filter(Boolean).join(', ')}
+                    </div>
                   </div>
                 )}
               </div>
