@@ -40,10 +40,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Progress (August 16, 2025)
 - **RESOLVED**: Complete payment system rebuild using clean Stripe Connect marketplace implementation
-- **RESOLVED**: Payment processing now working - successful order #49668 for £353.25 created
-- **RESOLVED**: Fixed order visibility issue - order manually recovered and appears in wholesaler dashboard
-- **RESOLVED**: Stripe Connect destination charges working with proper 3.3% platform fee collection
+- **RESOLVED**: Payment processing now working - successful orders SF-194 through SF-198 created
+- **RESOLVED**: Fixed automatic order creation by enhancing payment intent metadata to include all required fields
+- **RESOLVED**: Resolved phone number parsing issue in storage layer (space prefix vs "+" prefix)
+- **RESOLVED**: Fixed JSON parsing errors in shipping info metadata by simplifying complex delivery service data
 - **RESOLVED**: Customer portal redesigned with modern tabbed interface (Home/Products/Orders/Account)
 - **RESOLVED**: Implemented grocery-style homepage with welcome banner, quick stats, search, and featured products
-- **RESOLVED**: Simplified navigation by removing redundant page states and back buttons
-- **STATUS**: Clean tabbed customer portal interface now fully functional with modern design
+- **RESOLVED**: Order recovery system successfully restored multiple orders (SF-195, SF-196, SF-197, SF-198)
+- **STATUS**: Automatic order creation now fully functional - new orders appear immediately in customer portal

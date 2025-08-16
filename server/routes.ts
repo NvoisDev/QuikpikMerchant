@@ -1955,6 +1955,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = paymentIntent.metadata;
 
       if (orderType === 'customer_portal') {
+        // Check if itemsJson exists and is valid JSON
+        if (!itemsJson || itemsJson === 'undefined') {
+          return res.status(400).json({ message: 'Order items data is missing or invalid' });
+        }
         const items = JSON.parse(itemsJson);
 
         // Create customer if doesn't exist or update existing one
@@ -2110,7 +2114,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+              deliveryAddress: (() => {
+                try {
+                  if (!customerAddress || customerAddress === 'undefined') return 'Address not provided';
+                  if (typeof customerAddress === 'string') {
+                    // Try to parse as JSON first
+                    const parsed = JSON.parse(customerAddress);
+                    return parsed.address || customerAddress;
+                  }
+                  return customerAddress;
+                } catch {
+                  // If parsing fails, use as string
+                  return customerAddress || 'Address not provided';
+                }
+              })(),
               // 🚚 ADDED: Shipping information processing
               fulfillmentType: shippingInfo.option || 'pickup',
               deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
