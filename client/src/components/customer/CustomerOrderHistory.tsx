@@ -334,16 +334,42 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
-    console.log('🔍 FilteredOrders - input data:', { orders, isArray: Array.isArray(orders), length: orders?.length });
+    console.log('🔍 FilteredOrders - DEBUG:', { 
+      ordersReceived: orders,
+      isOrdersArray: Array.isArray(orders), 
+      ordersLength: orders?.length,
+      ordersType: typeof orders,
+      firstOrder: orders?.[0],
+      searchTerm,
+      hasLatestOrders: orders ? [
+        orders.some((o: any) => o.orderNumber === 'SF-198'),
+        orders.some((o: any) => o.orderNumber === 'SF-199')
+      ] : [false, false]
+    });
     
-    if (!orders || !Array.isArray(orders)) {
-      console.log('❌ FilteredOrders - returning empty array due to invalid orders data');
+    if (!orders) {
+      console.log('❌ FilteredOrders - orders is null/undefined');
       return [];
     }
     
-    if (!searchTerm) return orders;
+    if (!Array.isArray(orders)) {
+      console.log('❌ FilteredOrders - orders is not an array:', typeof orders);
+      return [];
+    }
     
-    return orders.filter((order: Order) => {
+    if (orders.length === 0) {
+      console.log('❌ FilteredOrders - orders array is empty');
+      return [];
+    }
+    
+    console.log('✅ FilteredOrders - valid orders array with', orders.length, 'items');
+    
+    if (!searchTerm) {
+      console.log('✅ FilteredOrders - returning all', orders.length, 'orders (no search)');
+      return orders;
+    }
+    
+    const filtered = orders.filter((order: Order) => {
       const searchLower = searchTerm.toLowerCase();
       return (
         order.orderNumber.toLowerCase().includes(searchLower) ||
@@ -354,6 +380,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         format(new Date(order.date), 'MMM d, yyyy').toLowerCase().includes(searchLower)
       );
     });
+    
+    console.log('✅ FilteredOrders - filtered', filtered.length, 'orders from', orders.length);
+    return filtered;
   }, [orders, searchTerm]);
 
   // Pagination calculations
@@ -474,7 +503,19 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     } : 'No orders'
   });
   
+  // Debug: Show what we have before rendering
+  console.log('🎯 FINAL RENDER CHECK:', {
+    hasOrders: !!orders,
+    ordersLength: orders?.length || 0,
+    isOrdersArray: Array.isArray(orders),
+    filteredLength: filteredOrders?.length || 0,
+    paginatedLength: paginatedOrders?.length || 0,
+    willShowEmptyState: !orders || orders.length === 0,
+    ordersData: orders?.slice(0, 3)?.map(o => ({ id: o.id, orderNumber: o.orderNumber, total: o.total }))
+  });
+
   if (!orders || orders.length === 0) {
+    console.log('🚨 SHOWING EMPTY STATE - No orders to display');
     return (
       <Card className="w-full">
         <CardHeader>
@@ -488,6 +529,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             <ShoppingBag className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 text-lg mb-2">No orders yet</p>
             <p className="text-gray-400">Your order history will appear here once you place your first order.</p>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-600">Debug: Backend reports {orders?.length || 0} orders available</p>
+            </div>
           </div>
         </CardContent>
       </Card>
