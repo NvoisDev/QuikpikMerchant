@@ -530,6 +530,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🚀 PAYMENT FORM SUBMITTED! Starting checkout process...');
     e.preventDefault();
 
     if (!stripe || !elements) {
@@ -672,7 +673,15 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
     } catch (error: any) {
-      console.error('Unexpected payment error:', error);
+      console.error('💥 UNEXPECTED PAYMENT ERROR:', error);
+      console.error('💥 Error Details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        type: typeof error,
+        isNetworkError: error.name === 'NetworkError',
+        isTimeoutError: error.name === 'TimeoutError'
+      });
       
       // Enhanced error handling for unexpected payment errors
       let errorMessage = "An unexpected error occurred during payment. Please try again.";
@@ -692,6 +701,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 Payment processing completed, setting isProcessing to false');
       setIsProcessing(false);
     }
   };
