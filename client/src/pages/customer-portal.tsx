@@ -35,6 +35,7 @@ import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
+import { SimplePaymentTest } from "@/components/SimplePaymentTest";
 // Removed DeliveryPaymentComponent import to prevent Stripe conflicts
 
 // Type-safe Product interface that matches actual database schema
@@ -491,13 +492,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     elementOptions: { clientSecret }
   });
 
+  // Use test component for debugging
   return (
-    <Elements 
-      stripe={stripePromise} 
-      options={{ clientSecret }}
-    >
-      <PaymentFormContent onSuccess={onSuccess} totalAmount={totalAmount} wholesaler={wholesaler} />
-    </Elements>
+    <div className="space-y-4">
+      <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded">
+        Debug Mode: Testing Stripe loading...
+      </div>
+      <SimplePaymentTest clientSecret={clientSecret} />
+    </div>
   );
 };
 
