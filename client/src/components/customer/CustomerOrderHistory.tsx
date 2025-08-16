@@ -277,52 +277,76 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const queryClient = useQueryClient();
 
   const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone], // Fixed query key
+    queryKey: [`customer-orders`, wholesalerId, customerPhone],
     enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: 15000, // Auto-refresh every 15 seconds to catch new orders
-    refetchOnWindowFocus: true, // Refresh when window gains focus  
-    refetchOnMount: true, // Enable refetch on component mount to show fresh orders
-    staleTime: 0, // Always consider data stale - fetch fresh every time
-    gcTime: 0, // Don't cache results
-    queryFn: async () => {
-      // Encode the phone number properly for URL
+    refetchInterval: 10000, // Reduced to 10 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async (): Promise<Order[]> => {
       const encodedPhone = encodeURIComponent(customerPhone);
-      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone, timestamp: new Date().toLocaleTimeString() });
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?t=${Date.now()}`, {
+      console.log('🔄 ORDERS FETCH START:', { 
+        wholesalerId, 
+        customerPhone, 
+        encodedPhone, 
+        timestamp: new Date().toLocaleTimeString(),
+        url: `/api/customer-orders/${wholesalerId}/${encodedPhone}`
+      });
+      
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?cacheBust=${Date.now()}`, {
+        method: 'GET',
         credentials: 'include',
-        cache: 'no-store', // Force fresh request every time
+        cache: 'no-store',
         headers: {
+          'Accept': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+          'Pragma': 'no-cache'
         }
       });
       
-      console.log('📡 Response status:', response.status, response.statusText);
+      console.log('📡 API RESPONSE:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API ERROR:', { status: response.status, errorText });
         if (response.status === 403) {
-          throw new Error('You must be added to this wholesaler\'s customer list to view orders');
+          throw new Error('Customer not found in wholesaler list');
         }
-        throw new Error('Failed to fetch order history');
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
-      const data = await response.json();
       
-      // Ensure we always return an array
-      const ordersArray = Array.isArray(data) ? data : [];
-      
-      console.log('📦 Customer orders loaded:', { 
-        totalOrders: ordersArray.length,
-        orderIds: ordersArray.map((o: any) => o.id),
-        orderNumbers: ordersArray.map((o: any) => o.orderNumber),
-        mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
-        latestOrders: ordersArray.slice(0, 5).map((o: any) => ({ id: o.id, orderNumber: o.orderNumber, total: o.total })),
-        timestamp: new Date().toLocaleTimeString(),
-        isArray: Array.isArray(ordersArray),
-        dataType: typeof data,
-        hasSF198: ordersArray.some((o: any) => o.orderNumber === 'SF-198'),
-        hasSF199: ordersArray.some((o: any) => o.orderNumber === 'SF-199')
+      const rawData = await response.json();
+      console.log('📊 RAW API DATA:', { 
+        type: typeof rawData, 
+        isArray: Array.isArray(rawData), 
+        length: rawData?.length,
+        sample: rawData?.slice?.(0, 3)
       });
+      
+      const ordersArray = Array.isArray(rawData) ? rawData : [];
+      
+      console.log('📦 PROCESSED ORDERS:', { 
+        totalCount: ordersArray.length,
+        hasOrders: ordersArray.length > 0,
+        orderNumbers: ordersArray.map((o: any) => o.orderNumber),
+        latestThree: ordersArray.slice(0, 3).map((o: any) => ({ 
+          id: o.id, 
+          orderNumber: o.orderNumber, 
+          total: o.total, 
+          status: o.status 
+        })),
+        hasSF198: ordersArray.some((o: any) => o.orderNumber === 'SF-198'),
+        hasSF199: ordersArray.some((o: any) => o.orderNumber === 'SF-199'),
+        hasSF200: ordersArray.some((o: any) => o.orderNumber === 'SF-200'),
+        hasSF201: ordersArray.some((o: any) => o.orderNumber === 'SF-201')
+      });
+      
       return ordersArray;
     }
   });
