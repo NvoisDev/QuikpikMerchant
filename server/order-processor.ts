@@ -220,13 +220,22 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   });
 
   // Create order items with orderId for storage
-  const orderItems = items.map((item: any) => ({
-    orderId: 0, // Will be set after order creation
-    productId: item.productId,
-    quantity: item.quantity,
-    unitPrice: parseFloat(item.unitPrice).toFixed(2),
-    total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
-  }));
+  const orderItems = items.map((item: any) => {
+    // CRITICAL FIX: Handle undefined/NaN unitPrice values properly
+    const rawUnitPrice = item.unitPrice || item.price || '0';
+    const parsedUnitPrice = parseFloat(rawUnitPrice);
+    const safeUnitPrice = isNaN(parsedUnitPrice) ? 0 : parsedUnitPrice;
+    
+    console.log(`🔍 Order item price validation: productId=${item.productId}, rawUnitPrice=${rawUnitPrice}, parsedUnitPrice=${parsedUnitPrice}, safeUnitPrice=${safeUnitPrice}`);
+    
+    return {
+      orderId: 0, // Will be set after order creation
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: safeUnitPrice.toFixed(2),
+      total: (safeUnitPrice * item.quantity).toFixed(2)
+    };
+  });
 
   // CRITICAL FIX: Check if order already exists for this payment intent to prevent duplicates
   const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);

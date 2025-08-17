@@ -2154,13 +2154,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             // Create order items with orderId for storage
-            const orderItems = items.map((item: any) => ({
-              orderId: 0, // Will be set after order creation
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: parseFloat(item.unitPrice).toFixed(2),
-              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
-            }));
+            const orderItems = items.map((item: any) => {
+              // CRITICAL FIX: Handle undefined/NaN unitPrice values properly
+              const rawUnitPrice = item.unitPrice || item.price || '0';
+              const parsedUnitPrice = parseFloat(rawUnitPrice);
+              const safeUnitPrice = isNaN(parsedUnitPrice) ? 0 : parsedUnitPrice;
+              
+              console.log(`🔍 Order item price validation: productId=${item.productId}, rawUnitPrice=${rawUnitPrice}, parsedUnitPrice=${parsedUnitPrice}, safeUnitPrice=${safeUnitPrice}`);
+              
+              return {
+                orderId: 0, // Will be set after order creation
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: safeUnitPrice.toFixed(2),
+                total: (safeUnitPrice * item.quantity).toFixed(2)
+              };
+            });
 
             // Use transaction-aware storage method
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);

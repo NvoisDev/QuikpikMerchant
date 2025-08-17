@@ -121,14 +121,11 @@ const formatCurrency = (amount: string | number) => {
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
-  // Calculate customer payment details
+  // Use actual order values from database
   const subtotal = parseFloat(order.subtotal);
-  const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
-  const deliveryCost = parseFloat(order.shippingTotal || '0');
+  const transactionFee = parseFloat(order.customerTransactionFee || '0');
+  const deliveryCost = parseFloat(order.deliveryCost || order.shippingTotal || '0');
   const totalPaid = parseFloat(order.total);
-  
-  // Calculate what the total should be for verification
-  const calculatedTotal = subtotal + transactionFee + deliveryCost;
   
   return (
     <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -205,13 +202,20 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span>Transaction Fee (5.5% + £0.50):</span>
+              <span>Transaction Fee:</span>
               <span>{formatCurrency(transactionFee)}</span>
             </div>
             {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span>Delivery Cost:</span>
                 <span>{formatCurrency(deliveryCost)}</span>
+              </div>
+            )}
+            {/* Show delivery info even if cost is 0 */}
+            {order.fulfillmentType === 'delivery' && deliveryCost === 0 && (
+              <div className="flex justify-between text-xs text-green-600">
+                <span>Delivery:</span>
+                <span>Free Delivery</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
