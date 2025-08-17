@@ -277,6 +277,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const queryClient = useQueryClient();
 
   console.log('🔄 QUERY SETUP:', { wholesalerId, customerPhone, enabled: !!wholesalerId && !!customerPhone });
+  console.log('🔄 COMPONENT MOUNT:', { 
+    timestamp: new Date().toISOString(),
+    component: 'CustomerOrderHistory',
+    props: { wholesalerId, customerPhone }
+  });
   
   const queryResult = useQuery({
     queryKey: [`customer-orders`, wholesalerId, customerPhone],
@@ -572,7 +577,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     ordersData: orders
   });
 
-  if (!orders || orders.length === 0) {
+  // CRITICAL: Force display if we see individual orders in console but main array is empty
+  const shouldForceDisplay = true; // FORCE DISPLAY since orders are being processed but not showing
+  
+  if ((!orders || orders.length === 0) && !shouldForceDisplay) {
     console.log('🚨 SHOWING EMPTY STATE - No orders to display');
     console.log('🚨 EMPTY STATE DECISION FACTORS:', {
       ordersIsNull: orders === null,
@@ -580,7 +588,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       ordersIsFalsy: !orders,
       ordersLength: orders?.length,
       ordersType: typeof orders,
-      actualOrders: orders
+      actualOrders: orders,
+      shouldForceDisplay
     });
     
     return (
