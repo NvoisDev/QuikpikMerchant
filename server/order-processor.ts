@@ -182,6 +182,14 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     servicePrice: shippingInfo?.service?.price,
     extractedDeliveryCost: deliveryCost
   });
+  
+  console.log('🔍 CRITICAL DEBUG - shippingInfo analysis:', {
+    rawShippingInfoMetadata: paymentIntent.metadata.shippingInfo,
+    parsedShippingInfo: shippingInfo,
+    shippingOptionFromParsed: shippingInfo?.option,
+    willSetFulfillmentTypeTo: shippingInfo?.option || 'pickup',
+    isDeliveryOrder: shippingInfo?.option === 'delivery'
+  });
 
   // Get wholesaler info for logging
   const wholesaler = await storage.getUser(wholesalerId);

@@ -1857,12 +1857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientSecret: paymentIntent.client_secret,
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toFixed(2),
-        customerTransactionFee: customerTransactionFee.toFixed(2),
-        stripePaymentAmount: totalCustomerPaysStripe.toFixed(2), // What customer pays Stripe
-        totalCustomerPays: (totalCustomerPaysStripe + deliveryCost).toFixed(2), // Total including delivery
+        customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
+        stripePaymentAmount: totalCustomerPaysAll.toFixed(2), // What customer pays Stripe
+        totalCustomerPays: totalCustomerPaysAll.toFixed(2), // Total including delivery
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-        wholesalerReceives: wholesalerReceives.toFixed(2),
-        deliveryCollectionMethod: deliveryCost > 0 ? 'separate_platform_charge' : 'none'
+        wholesalerReceives: wholesalerReceivesNew.toFixed(2),
+        deliveryCollectionMethod: deliveryCost > 0 ? 'marketplace_platform_collects' : 'none'
       });
 
     } catch (error) {
