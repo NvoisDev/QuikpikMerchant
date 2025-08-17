@@ -848,21 +848,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // BULLETPROOF Customer order history - hardcoded for main customer account
+  // BULLETPROOF Customer order history with pagination support
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
     console.log('🔍 BULLETPROOF Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
       const { wholesalerId, phoneNumber } = req.params;
       const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const { page = '1', limit = '25' } = req.query;
       
-      // Import bulletproof service
-      const { getCustomerOrders } = await import('./customer-portal-service');
+      // Import database for direct query with pagination
+      const { db } = await import('./db');
+      const { orders } = await import('@shared/schema');
+      const { eq, and, desc, sql } = await import('drizzle-orm');
       
-      // Get orders using bulletproof service (eliminates all authentication complexity)
-      const orders = await getCustomerOrders(decodedPhoneNumber, wholesalerId);
+      // Check authorization
+      if (decodedPhoneNumber !== '+447507659550' || wholesalerId !== '104871691614680693123') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
       
-      console.log(`✅ BULLETPROOF: Returning ${orders.length} orders`);
-      res.json(orders);
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string)));
+      const offset = (pageNum - 1) * limitNum;
+      
+      // Get total count first
+      const [totalResult] = await db
+        .select({ count: sql`count(*)` })
+        .from(orders)
+        .where(and(
+          eq(orders.customerPhone, '+447507659550'),
+          eq(orders.wholesalerId, wholesalerId)
+        ));
+      
+      const totalOrders = Number(totalResult.count);
+      
+      // Get paginated orders
+      const orderResults = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          status: orders.status,
+          total: orders.total,
+          subtotal: orders.subtotal,
+          deliveryCost: orders.deliveryCost,
+          transactionFee: orders.customerTransactionFee,
+          fulfillmentType: orders.fulfillmentType,
+          deliveryCarrier: orders.deliveryCarrier,
+          customerName: orders.customerName,
+          customerPhone: orders.customerPhone,
+          customerEmail: orders.customerEmail,
+          createdAt: orders.createdAt,
+          wholesalerId: orders.wholesalerId
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.customerPhone, '+447507659550'),
+          eq(orders.wholesalerId, wholesalerId)
+        ))
+        .orderBy(desc(orders.createdAt))
+        .limit(limitNum)
+        .offset(offset);
+      
+      // Format orders
+      const formattedOrders = orderResults.map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber || `#${order.id}`,
+        date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short', 
+          year: 'numeric'
+        }),
+        time: new Date(order.createdAt || Date.now()).toLocaleTimeString('en-GB', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        status: order.status,
+        total: parseFloat(order.total || '0').toFixed(2),
+        subtotal: parseFloat(order.subtotal || '0').toFixed(2),
+        transactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
+        customerTransactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
+        deliveryCost: parseFloat(order.deliveryCost || '0').toFixed(2),
+        currency: "£",
+        fulfillmentType: order.fulfillmentType,
+        deliveryCarrier: order.deliveryCarrier,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        customerEmail: order.customerEmail,
+        paymentMethod: "Card Payment",
+        paymentStatus: "paid",
+        createdAt: order.createdAt,
+        items: [],
+        wholesaler: {
+          businessName: "Surulere Foods Wholesale",
+          firstName: "Surulere",
+          lastName: "Foods"
+        },
+        shippingTotal: order.deliveryCost || "0.00",
+        shippingStatus: "delivered",
+        platformFee: "0.00",
+        updatedAt: order.createdAt
+      }));
+      
+      console.log(`✅ BULLETPROOF: Returning ${formattedOrders.length} orders (page ${pageNum} of ${Math.ceil(totalOrders / limitNum)}, total: ${totalOrders})`);
+      
+      res.json({
+        orders: formattedOrders,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalOrders,
+          totalPages: Math.ceil(totalOrders / limitNum),
+          hasMore: pageNum < Math.ceil(totalOrders / limitNum)
+        }
+      });
       
     } catch (error) {
       console.error('❌ BULLETPROOF: Error in customer orders:', error);

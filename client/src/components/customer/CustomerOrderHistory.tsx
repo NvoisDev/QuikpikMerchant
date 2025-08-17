@@ -290,12 +290,13 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
+  const [apiPage, setApiPage] = useState(1);
   const queryClient = useQueryClient();
 
   // Query setup for customer orders
   
   const queryResult = useQuery({
-    queryKey: [`customer-orders`, wholesalerId, customerPhone],
+    queryKey: [`customer-orders`, wholesalerId, customerPhone, apiPage],
     enabled: !!wholesalerId && !!customerPhone,
     refetchInterval: 10000, // Reduced to 10 seconds
     refetchOnWindowFocus: true,
@@ -306,7 +307,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       const encodedPhone = encodeURIComponent(customerPhone);
       // Fetching customer orders with cache-busting
       
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?cacheBust=${Date.now()}`, {
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?page=${apiPage}&limit=25&cacheBust=${Date.now()}`, {
         method: 'GET',
         credentials: 'include',
         cache: 'no-store',
@@ -328,12 +329,15 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       }
       
       const rawData = await response.json();
-      const ordersArray = Array.isArray(rawData) ? rawData : [];
+      // Handle both old format (direct array) and new paginated format
+      const ordersArray = Array.isArray(rawData) ? rawData : (rawData.orders || []);
       
       console.log('🛒 ORDERS DATA RECEIVED:', {
         rawDataType: typeof rawData,
         isArray: Array.isArray(rawData),
+        hasPagination: !!rawData.pagination,
         arrayLength: ordersArray.length,
+        totalOrders: rawData.pagination?.total || ordersArray.length,
         firstThreeOrders: ordersArray.slice(0, 3).map(o => ({
           orderNumber: o?.orderNumber,
           total: o?.total,

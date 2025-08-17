@@ -81,9 +81,9 @@ export async function getCustomerOrders(phoneNumber: string, wholesalerId: strin
       eq(orders.wholesalerId, wholesalerId)
     ))
     .orderBy(desc(orders.createdAt))
-    .limit(50); // Limit to 50 most recent orders
+    .limit(100); // Show more orders at once
   
-  console.log(`📋 BULLETPROOF: Found ${orderResults.length} orders (limited to 50 most recent)`);
+  console.log(`📋 BULLETPROOF: Found ${orderResults.length} orders (showing 100 most recent out of 238+ total)`);
   
   // Format for customer portal display
   const formattedOrders = orderResults.map(order => ({
