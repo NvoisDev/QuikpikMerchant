@@ -239,35 +239,49 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     parsedCustomerData: customerData
   });
 
-  // PERMANENT FIX: For Surulere Foods, force use of main customer account before any lookup attempts
+  // ABSOLUTE PERMANENT FIX: For Surulere Foods, ALWAYS force use of main customer account
+  // This completely bypasses all customer lookup logic to prevent ANY duplicate account creation
   if (wholesalerId === '104871691614680693123') {
-    console.log(`🔧 SURULERE FOODS DETECTED: Forcing use of main customer account to prevent duplicates`);
-    const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
-    if (mainCustomer) {
-      console.log(`🔧 FORCED CUSTOMER: Using main account ${mainCustomer.id} for all Surulere Foods orders`);
-      // Override any extracted customer data with the known correct values
-      const forcedCustomerName = mainCustomer.firstName + ' ' + mainCustomer.lastName;
-      const forcedCustomerEmail = mainCustomer.email || customerEmail;
-      const forcedCustomerPhone = mainCustomer.phoneNumber;
-      
-      console.log(`🔧 FORCED DATA: name="${forcedCustomerName}", email="${forcedCustomerEmail}", phone="${forcedCustomerPhone}"`);
-      
-      // Use the forced customer directly and skip all lookup logic
-      return await createOrderWithCustomer(
-        paymentIntent, 
-        mainCustomer, 
-        forcedCustomerName, 
-        forcedCustomerEmail, 
-        forcedCustomerPhone, 
-        customerAddress, 
-        wholesalerId, 
-        subtotal, 
-        transactionFee, 
-        cart, 
-        shippingInfo
-      );
-    } else {
-      console.log(`🚨 CRITICAL ERROR: Main customer account not found for Surulere Foods!`);
+    console.log(`🔧 SURULERE FOODS DETECTED: FORCING use of main customer account - BYPASSING ALL LOOKUPS`);
+    
+    try {
+      const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
+      if (mainCustomer) {
+        console.log(`🔧 FORCED CUSTOMER SUCCESS: Using main account ${mainCustomer.id} for ALL Surulere Foods orders`);
+        
+        // Override any extracted customer data with the known correct values
+        const forcedCustomerName = mainCustomer.firstName + ' ' + mainCustomer.lastName;
+        const forcedCustomerEmail = mainCustomer.email || customerEmail;
+        const forcedCustomerPhone = mainCustomer.phoneNumber;
+        
+        console.log(`🔧 FORCED DATA OVERRIDE: name="${forcedCustomerName}", email="${forcedCustomerEmail}", phone="${forcedCustomerPhone}"`);
+        console.log(`🔧 SKIPPING ALL CUSTOMER LOOKUP LOGIC - USING FORCED CUSTOMER ACCOUNT`);
+        
+        // Use the forced customer directly and skip ALL lookup logic
+        const orderResult = await createOrderWithCustomer(
+          paymentIntent, 
+          mainCustomer, 
+          forcedCustomerName, 
+          forcedCustomerEmail, 
+          forcedCustomerPhone, 
+          customerAddress, 
+          wholesalerId, 
+          subtotal, 
+          transactionFee, 
+          cart, 
+          shippingInfo
+        );
+        
+        console.log(`✅ FORCED CUSTOMER ORDER CREATED: ${orderResult.orderNumber} for account ${mainCustomer.id}`);
+        return orderResult;
+        
+      } else {
+        console.log(`🚨 CRITICAL ERROR: Main customer account 'customer_michael_ogunjemilua_main' not found!`);
+        throw new Error('Main customer account not found for Surulere Foods');
+      }
+    } catch (forcedCustomerError) {
+      console.error(`🚨 FORCED CUSTOMER LOGIC FAILED:`, forcedCustomerError);
+      throw forcedCustomerError; // Don't continue with normal logic if forced logic fails
     }
   }
 
