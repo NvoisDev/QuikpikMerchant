@@ -102,6 +102,7 @@ export async function getCustomerOrders(phoneNumber: string, wholesalerId: strin
     total: parseFloat(order.total || '0').toFixed(2),
     subtotal: parseFloat(order.subtotal || '0').toFixed(2),
     transactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
+    customerTransactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
     deliveryCost: parseFloat(order.deliveryCost || '0').toFixed(2),
     currency: "£",
     fulfillmentType: order.fulfillmentType,
@@ -111,7 +112,18 @@ export async function getCustomerOrders(phoneNumber: string, wholesalerId: strin
     customerEmail: order.customerEmail,
     paymentMethod: "Card Payment",
     paymentStatus: "paid",
-    createdAt: order.createdAt
+    createdAt: order.createdAt,
+    // Add required fields for frontend compatibility
+    items: [], // Empty array to prevent map errors
+    wholesaler: {
+      businessName: "Surulere Foods Wholesale",
+      firstName: "Surulere",
+      lastName: "Foods"
+    },
+    shippingTotal: order.deliveryCost || "0.00",
+    shippingStatus: "delivered",
+    platformFee: "0.00",
+    updatedAt: order.createdAt
   }));
   
   return formattedOrders;

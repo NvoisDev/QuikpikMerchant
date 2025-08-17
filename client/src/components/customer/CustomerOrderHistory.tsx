@@ -586,14 +586,20 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     
                     {/* Compact Items List */}
                     <div className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="text-xs text-gray-700">
-                          <span className="font-medium">{item.productName}</span>
-                          <span className="text-gray-500 ml-1">
-                            {item.quantity} units × {formatCurrency(item.unitPrice)}
-                          </span>
+                      {order.items && order.items.length > 0 ? (
+                        order.items.map((item, index) => (
+                          <div key={index} className="text-xs text-gray-700">
+                            <span className="font-medium">{item.productName}</span>
+                            <span className="text-gray-500 ml-1">
+                              {item.quantity} units × {formatCurrency(item.unitPrice)}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-gray-500 italic">
+                          Order details available in full view
                         </div>
-                      ))}
+                      )}
                     </div>
                     
                     {/* Summary - Customer Payment Details */}
