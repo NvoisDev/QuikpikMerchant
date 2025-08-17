@@ -208,17 +208,26 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>Transaction Fee:</span>
               <span>{formatCurrency(transactionFee)}</span>
             </div>
-            {deliveryCost > 0 && (
+            {/* Calculate and display delivery cost */}
+            {order.fulfillmentType === 'delivery' && (
               <div className="flex justify-between text-xs">
                 <span>Delivery Cost:</span>
-                <span>{formatCurrency(deliveryCost)}</span>
+                <span>
+                  {deliveryCost > 0 ? formatCurrency(deliveryCost) : 
+                   // Calculate implied delivery cost from total - subtotal - fees
+                   (() => {
+                     const impliedDelivery = totalPaid - subtotal - transactionFee;
+                     return impliedDelivery > 0 ? formatCurrency(impliedDelivery) : 'Free Delivery';
+                   })()
+                  }
+                </span>
               </div>
             )}
-            {/* Show delivery info even if cost is 0 */}
-            {order.fulfillmentType === 'delivery' && deliveryCost === 0 && (
-              <div className="flex justify-between text-xs text-green-600">
-                <span>Delivery:</span>
-                <span>Free Delivery</span>
+            {/* For pickup orders, show collection info */}
+            {order.fulfillmentType === 'pickup' && (
+              <div className="flex justify-between text-xs text-blue-600">
+                <span>Collection:</span>
+                <span>Free Collection</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
