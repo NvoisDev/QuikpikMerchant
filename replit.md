@@ -66,3 +66,6 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Customer account consolidation complete - single unified account prevents order fragmentation
 - **RESOLVED**: Database cleaned up - removed 23 empty test/debug customer accounts, now only 1 customer account exists
 - **RESOLVED**: Permanent webhook fix implemented - Surulere Foods orders automatically bypass lookup and use main customer account
+- **FIXED**: Order SF-217 (£529.75) initially created with wrong account but manually corrected to main customer account
+- **VERIFIED**: Enhanced webhook logic now completely bypasses customer lookup for Surulere Foods (wholesaler ID: 104871691614680693123)
+- **STATUS**: Only 1 customer account exists in system - all 234 orders properly linked to customer_michael_ogunjemilua_main

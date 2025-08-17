@@ -252,7 +252,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         // Override any extracted customer data with the known correct values
         const forcedCustomerName = mainCustomer.firstName + ' ' + mainCustomer.lastName;
         const forcedCustomerEmail = mainCustomer.email || customerEmail;
-        const forcedCustomerPhone = mainCustomer.phoneNumber;
+        const forcedCustomerPhone = mainCustomer.phoneNumber || '+447507659550';
         
         console.log(`🔧 FORCED DATA OVERRIDE: name="${forcedCustomerName}", email="${forcedCustomerEmail}", phone="${forcedCustomerPhone}"`);
         console.log(`🔧 SKIPPING ALL CUSTOMER LOOKUP LOGIC - USING FORCED CUSTOMER ACCOUNT`);
