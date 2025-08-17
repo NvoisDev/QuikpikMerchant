@@ -162,7 +162,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   // Use the correct total from metadata - for marketplace architecture this includes everything
   // MARKETPLACE FIX: Use totalCustomerPays which includes products + delivery + transaction fee
-  const deliveryCost = parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
+  // FIXED: Extract delivery cost from shippingInfo service price, not metadata fields
+  const deliveryCost = shippingInfo?.option === 'delivery' && shippingInfo?.service 
+    ? parseFloat(shippingInfo.service.price || '0') 
+    : parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
   const correctTotal = paymentIntent.metadata.totalCustomerPays || paymentIntent.amount / 100; // Total customer paid (all inclusive)
   
   console.log('🚚 Processing shipping metadata:', {
@@ -171,7 +174,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerChoice: shippingInfo?.option,
     hasService: !!shippingInfo?.service,
     serviceName: shippingInfo?.service?.serviceName,
-    servicePrice: shippingInfo?.service?.price
+    servicePrice: shippingInfo?.service?.price,
+    extractedDeliveryCost: deliveryCost
   });
 
   // Get wholesaler info for logging
