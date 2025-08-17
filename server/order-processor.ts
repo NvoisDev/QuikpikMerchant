@@ -181,6 +181,7 @@ async function createOrderWithCustomer(
 
 export async function processCustomerPortalOrder(paymentIntent: any) {
   console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+  console.log('🔍 Checking wholesaler ID for forced customer logic:', paymentIntent.metadata.wholesalerId);
   
   // Extract data from metadata - handle both direct metadata and JSON strings
   const customerData = paymentIntent.metadata.customerData ? 
@@ -243,9 +244,12 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // This completely bypasses all customer lookup logic to prevent ANY duplicate account creation
   if (wholesalerId === '104871691614680693123') {
     console.log(`🔧 SURULERE FOODS DETECTED: FORCING use of main customer account - BYPASSING ALL LOOKUPS`);
+    console.log(`🔧 TESTING CUSTOMER LOOKUP: About to call storage.getUser('customer_michael_ogunjemilua_main')`);
     
     try {
+      console.log(`🔧 STORAGE LOOKUP: Calling storage.getUser('customer_michael_ogunjemilua_main')`);
       const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
+      console.log(`🔧 STORAGE RESULT:`, mainCustomer ? `Found customer: ${mainCustomer.id} (${mainCustomer.firstName} ${mainCustomer.lastName})` : 'Customer NOT FOUND');
       if (mainCustomer) {
         console.log(`🔧 FORCED CUSTOMER SUCCESS: Using main account ${mainCustomer.id} for ALL Surulere Foods orders`);
         
