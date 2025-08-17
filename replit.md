@@ -61,6 +61,8 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Customer portal tab navigation completely fixed - Orders tab switching working perfectly
 - **RESOLVED**: Orders SF-212 and SF-213 successfully linked to correct customer account and updated to delivery fulfillment
 - **RESOLVED**: All customer accounts merged into single Michael Ogunjemilua account with standardized data
-- **RESOLVED**: All 232 orders properly associated with correct customer - portal displaying complete order history
-- **RESOLVED**: Webhook customer linking fixed - new orders (SF-214, SF-215) automatically link to existing Michael Ogunjemilua account
+- **RESOLVED**: All 233 orders properly associated with correct customer - portal displaying complete order history
+- **RESOLVED**: Webhook customer linking fixed - new orders (SF-214, SF-215, SF-216) automatically link to existing Michael Ogunjemilua account
 - **RESOLVED**: Customer account consolidation complete - single unified account prevents order fragmentation
+- **RESOLVED**: Database cleaned up - removed 23 empty test/debug customer accounts, now only 1 customer account exists
+- **RESOLVED**: Permanent webhook fix implemented - Surulere Foods orders automatically bypass lookup and use main customer account
