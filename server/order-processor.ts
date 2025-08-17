@@ -47,8 +47,17 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     JSON.parse(paymentIntent.metadata.customerData) : null;
   const cart = paymentIntent.metadata.cart ? 
     JSON.parse(paymentIntent.metadata.cart) : null;
-  const shippingInfo = paymentIntent.metadata.shippingInfo ? 
-    JSON.parse(paymentIntent.metadata.shippingInfo) : null;
+  let shippingInfo = null;
+  try {
+    console.log('🔍 RAW SHIPPING INFO METADATA:', paymentIntent.metadata.shippingInfo);
+    shippingInfo = paymentIntent.metadata.shippingInfo ? 
+      JSON.parse(paymentIntent.metadata.shippingInfo) : null;
+    console.log('🔍 PARSED SHIPPING INFO:', shippingInfo);
+  } catch (error) {
+    console.error('❌ ERROR parsing shippingInfo:', error);
+    console.log('Setting shippingInfo to null due to parse error');
+    shippingInfo = null;
+  }
     
   // Use either direct metadata or parsed customerData
   const customerName = customerData?.name || paymentIntent.metadata.customerName;
@@ -168,10 +177,49 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // Use the correct total from metadata - for marketplace architecture this includes everything
   // MARKETPLACE FIX: Use totalCustomerPays which includes products + delivery + transaction fee
   // FIXED: Extract delivery cost from shippingInfo service price, not metadata fields
-  const deliveryCost = shippingInfo?.option === 'delivery' && shippingInfo?.service 
-    ? parseFloat(shippingInfo.service.price || '0') 
-    : parseFloat(paymentIntent.metadata.deliveryCost || paymentIntent.metadata.shippingCost || '0');
+  let deliveryCost = 0;
+  let fulfillmentType = 'pickup'; // Default
+  let deliveryCarrier = null;
+  let shippingTotal = '0.00';
+  
+  // ENHANCED: Multi-source fulfillment type detection with comprehensive fallbacks
+  if (shippingInfo?.option === 'delivery') {
+    console.log('✅ PRIMARY: Using shippingInfo.option = delivery');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(shippingInfo.service?.price || '0');
+    deliveryCarrier = shippingInfo.service?.serviceName || null;
+    shippingTotal = deliveryCost.toFixed(2);
+  } else if (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0) {
+    console.log('🔄 FALLBACK: Detected delivery from positive shippingCost');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+    deliveryCarrier = paymentIntent.metadata.deliveryService || 'Unknown Delivery Service';
+    shippingTotal = deliveryCost.toFixed(2);
+  } else if (parseFloat(paymentIntent.metadata.deliveryCost || '0') > 0) {
+    console.log('🔄 FALLBACK: Detected delivery from positive deliveryCost');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(paymentIntent.metadata.deliveryCost || '0');
+    deliveryCarrier = paymentIntent.metadata.deliveryCarrier || 'Unknown Delivery Service';
+    shippingTotal = deliveryCost.toFixed(2);
+  } else {
+    console.log('📦 DEFAULT: Using pickup (no delivery indicators found)');
+    fulfillmentType = 'pickup';
+    deliveryCost = 0;
+    deliveryCarrier = null;
+    shippingTotal = '0.00';
+  }
+  
   const correctTotal = paymentIntent.metadata.totalCustomerPays || paymentIntent.amount / 100; // Total customer paid (all inclusive)
+  
+  console.log('🚚 ENHANCED FULFILLMENT DETECTION RESULT:', {
+    finalFulfillmentType: fulfillmentType,
+    finalDeliveryCarrier: deliveryCarrier,
+    finalDeliveryCost: deliveryCost,
+    finalShippingTotal: shippingTotal,
+    detectionSource: shippingInfo?.option === 'delivery' ? 'shippingInfo.option' : 
+                   parseFloat(paymentIntent.metadata.shippingCost || '0') > 0 ? 'shippingCost metadata' : 
+                   parseFloat(paymentIntent.metadata.deliveryCost || '0') > 0 ? 'deliveryCost metadata' : 'default pickup'
+  });
   
   console.log('🚚 Processing shipping metadata:', {
     hasShippingInfo: !!shippingInfo,
@@ -216,20 +264,32 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-    // FIXED: Shipping information processing - use shippingInfo.option instead of shipping cost
-    fulfillmentType: shippingInfo?.option || 'pickup',
-    deliveryCarrier: shippingInfo?.option === 'delivery' && shippingInfo?.service ? shippingInfo.service.serviceName : null,
-    // Calculate correct shipping cost from shippingInfo
+    // ENHANCED: Use the comprehensive fulfillment detection results
+    fulfillmentType: fulfillmentType,
+    deliveryCarrier: deliveryCarrier,
     deliveryCost: deliveryCost.toFixed(2),
-    shippingTotal: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 
-      parseFloat(shippingInfo.service.price || '0').toFixed(2) : '0.00'
+    shippingTotal: shippingTotal
   };
   
   console.log('🚚 Order data with shipping fields:', {
     fulfillmentType: orderData.fulfillmentType,
     deliveryCarrier: orderData.deliveryCarrier,
     deliveryCost: orderData.deliveryCost,
+    shippingTotal: orderData.shippingTotal,
     willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+  });
+
+  console.log('🔍 FINAL DEBUG - Order data being passed to storage.createOrder:', {
+    ...orderData,
+    debugNote: 'This is the exact object going to the database'
+  });
+
+  console.log('🚨 CRITICAL BUG DEBUG - Tracing fulfillment type assignment:', {
+    shippingInfoExists: !!shippingInfo,
+    shippingInfoOption: shippingInfo?.option,
+    finalFulfillmentType: orderData.fulfillmentType,
+    expectedResult: shippingInfo?.option === 'delivery' ? 'Should save as delivery' : 'Should save as pickup',
+    bugCheck: shippingInfo?.option === 'delivery' && orderData.fulfillmentType === 'pickup' ? 'BUG DETECTED!' : 'Values match'
   });
 
   // Create order items with orderId for storage
