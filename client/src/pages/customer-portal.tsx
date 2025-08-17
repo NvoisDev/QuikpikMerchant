@@ -908,6 +908,7 @@ export default function CustomerPortal() {
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
+  const [showQuickReorder, setShowQuickReorder] = useState(false);
   
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
@@ -1984,6 +1985,86 @@ export default function CustomerPortal() {
         </div>
       )}
 
+      {/* Quick Reorder Modal */}
+      {showQuickReorder && (
+        <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-hidden">
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Quick Reorder</h3>
+                <Button
+                  onClick={() => setShowQuickReorder(false)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  ×
+                </Button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Reorder products from your recent orders</p>
+            </div>
+            <div className="overflow-y-auto max-h-80">
+              {customerOrders.length > 0 ? (
+                <div className="p-4 space-y-3">
+                  {customerOrders.slice(0, 5).map((order: any) => {
+                    const orderItems = JSON.parse(order.items || '[]');
+                    const orderDate = new Date(order.createdAt).toLocaleDateString();
+                    return (
+                      <div key={order.id} className="border rounded-lg p-3 hover:bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="font-medium text-sm">Order {order.orderNumber}</p>
+                            <p className="text-xs text-gray-500">{orderDate} • £{parseFloat(order.total || '0').toFixed(2)}</p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              // Add all items from this order to cart
+                              orderItems.forEach((item: any) => {
+                                const product = products?.find(p => p.id === item.productId);
+                                if (product) {
+                                  addToCart(product, item.quantity, item.sellingType || 'units');
+                                }
+                              });
+                              setShowQuickReorder(false);
+                              toast({
+                                title: "Added to Cart",
+                                description: `${orderItems.length} items from order ${order.orderNumber} added to cart`,
+                              });
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            Reorder
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {orderItems.slice(0, 3).map((item: any, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {item.productName} ({item.quantity})
+                            </Badge>
+                          ))}
+                          {orderItems.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{orderItems.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>No recent orders found</p>
+                  <p className="text-sm">Place your first order to see reorder options</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {/* Guest Mode Notice */}
         {isGuestMode && (
@@ -2121,7 +2202,7 @@ export default function CustomerPortal() {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setShowQuickReorder(true)}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
