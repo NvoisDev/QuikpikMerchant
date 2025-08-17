@@ -595,28 +595,44 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency(order.customerTransactionFee || '0')}</span>
                       </div>
-                      {/* Calculate and show delivery cost for delivery orders */}
+                      {/* Show delivery cost or collection based on fulfillment type */}
                       {(() => {
-                        const subtotal = parseFloat(order.subtotal);
+                        const subtotal = parseFloat(order.subtotal || '0');
                         const transactionFee = parseFloat(order.customerTransactionFee || '0');
-                        const total = parseFloat(order.total);
+                        const total = parseFloat(order.total || '0');
                         const deliveryCost = parseFloat(order.deliveryCost || '0');
                         
-                        // If it's a delivery order, calculate actual delivery cost
                         if (order.fulfillmentType === 'delivery') {
-                          const calculatedDelivery = deliveryCost > 0 ? deliveryCost : (total - subtotal - transactionFee);
+                          // For delivery orders, calculate actual delivery cost
+                          let actualDeliveryCost = deliveryCost;
+                          
+                          // If delivery cost is 0 but there's a difference, calculate it
+                          if (deliveryCost === 0 && total > subtotal + transactionFee) {
+                            actualDeliveryCost = total - subtotal - transactionFee;
+                          }
+                          
                           return (
                             <div className="flex justify-between text-xs">
                               <span>Delivery Cost:</span>
-                              <span>{calculatedDelivery > 0 ? formatCurrency(calculatedDelivery) : 'Free Delivery'}</span>
+                              <span>
+                                {actualDeliveryCost > 0 ? formatCurrency(actualDeliveryCost) : 'Free Delivery'}
+                              </span>
                             </div>
                           );
-                        } else {
+                        } else if (order.fulfillmentType === 'pickup') {
                           // For pickup orders, show collection
                           return (
                             <div className="flex justify-between text-xs text-blue-600">
                               <span>Collection:</span>
                               <span>Free Collection</span>
+                            </div>
+                          );
+                        } else {
+                          // Fallback for unknown fulfillment types
+                          return (
+                            <div className="flex justify-between text-xs text-gray-500">
+                              <span>Fulfillment:</span>
+                              <span>{order.fulfillmentType || 'Unknown'}</span>
                             </div>
                           );
                         }
