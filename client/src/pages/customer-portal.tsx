@@ -838,6 +838,24 @@ export default function CustomerPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
 
+  // Fetch customer orders count for homepage display
+  const { data: customerOrders = [] } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, authenticatedCustomer?.phone],
+    queryFn: async () => {
+      if (!wholesalerId || !authenticatedCustomer?.phone) return [];
+      const encodedPhone = encodeURIComponent(authenticatedCustomer.phone);
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
+    staleTime: 30000, // 30 seconds
+  });
+
+  const customerOrderCount = customerOrders?.length || 0;
+
   // Check for existing customer session on load
   const { data: sessionData, isLoading: sessionLoading, refetch: refetchSession } = useQuery({
     queryKey: ["/api/customer-auth/check", wholesalerId],
@@ -2086,7 +2104,7 @@ export default function CustomerPortal() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-500">Total Orders</p>
-                          <p className="text-2xl font-bold text-gray-900">178</p>
+                          <p className="text-2xl font-bold text-gray-900">{customerOrderCount || 0}</p>
                         </div>
                         <ShoppingCart className="w-8 h-8 text-green-600" />
                       </div>
