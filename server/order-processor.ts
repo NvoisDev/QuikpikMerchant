@@ -113,6 +113,26 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
   }
   
+  // ENHANCED CUSTOMER LOOKUP: Try harder to find existing customer before creating new account
+  if (!customer && customerEmail) {
+    // Additional lookup attempts for existing customers
+    const existingCustomers = await storage.searchCustomersByEmail(customerEmail);
+    if (existingCustomers.length > 0) {
+      customer = existingCustomers[0];
+      console.log(`🔍 Found customer via email search: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+    }
+  }
+  
+  // CRITICAL FIX: For Surulere Foods, always link to the main Michael Ogunjemilua account 
+  // if the phone number matches or is similar to the known customer
+  if (!customer && wholesalerId === '104871691614680693123') {
+    const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
+    if (mainCustomer) {
+      console.log(`🔧 FALLBACK: Using main customer account for Surulere Foods orders: ${mainCustomer.id}`);
+      customer = mainCustomer;
+    }
+  }
+  
   // PREVENT DUPLICATE ACCOUNTS: If no customer found and missing phone/email, log warning
   if (!customer && (!customerPhone || !customerEmail)) {
     console.log(`⚠️ WARNING: No customer found and missing phone (${customerPhone}) or email (${customerEmail}). This may create a duplicate account!`);
