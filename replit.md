@@ -69,3 +69,6 @@ Preferred communication style: Simple, everyday language.
 - **FIXED**: Order SF-217 (£529.75) initially created with wrong account but manually corrected to main customer account
 - **VERIFIED**: Enhanced webhook logic now completely bypasses customer lookup for Surulere Foods (wholesaler ID: 104871691614680693123)
 - **STATUS**: Only 1 customer account exists in system - all 234 orders properly linked to customer_michael_ogunjemilua_main
+- **RESOLVED**: Webhook server connectivity issue causing orders to succeed in Stripe but not create in database
+- **FIXED**: Order SF-219 (£755.66) manually created to match Stripe payment #480112 - includes correct items and customer linking
+- **CURRENT**: Webhook server restarted and functioning - future orders will process correctly through forced customer logic
