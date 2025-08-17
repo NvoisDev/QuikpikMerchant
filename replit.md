@@ -83,3 +83,5 @@ Preferred communication style: Simple, everyday language.
 - **ULTIMATE FORCE MODE**: Completely bypassed all logic paths to ensure orders go to main customer account
 - **BULLETPROOF REBUILD**: Created dedicated customer-portal-service.ts with hardcoded customer account to eliminate all authentication/creation issues
 - **SIMPLIFIED ARCHITECTURE**: Single source of truth for customer portal operations with no complex logic paths
+- **PERFORMANCE FIX**: Limited order history to 50 most recent orders to prevent JSON serialization errors with 238+ orders
+- **LIGHTWEIGHT RESPONSE**: Optimized order data format to reduce payload size and improve loading speed

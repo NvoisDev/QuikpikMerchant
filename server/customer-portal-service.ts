@@ -52,15 +52,69 @@ export async function getCustomerOrders(phoneNumber: string, wholesalerId: strin
   
   console.log(`📋 BULLETPROOF: Fetching orders for main customer: ${MAIN_CUSTOMER_ACCOUNT.id}`);
   
-  // Get all orders for the main customer account using phone number
-  const orders = await storage.getOrdersByCustomerPhone(MAIN_CUSTOMER_ACCOUNT.phone);
-  console.log(`📋 BULLETPROOF: Found ${orders.length} orders for main customer phone`);
+  // Get orders using direct database query for better performance
+  const { db } = await import('./db');
+  const { orders, orderItems, products } = await import('@shared/schema');
+  const { eq, and, desc } = await import('drizzle-orm');
   
-  // Filter by wholesaler to ensure only Surulere Foods orders are shown
-  const filteredOrders = orders.filter(order => order.wholesalerId === wholesalerId);
-  console.log(`📋 BULLETPROOF: Filtered to ${filteredOrders.length} orders for wholesaler ${wholesalerId}`);
+  // Get lightweight order data (without full order items) for better performance
+  const orderResults = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      status: orders.status,
+      total: orders.total,
+      subtotal: orders.subtotal,
+      deliveryCost: orders.deliveryCost,
+      transactionFee: orders.customerTransactionFee,
+      fulfillmentType: orders.fulfillmentType,
+      deliveryCarrier: orders.deliveryCarrier,
+      customerName: orders.customerName,
+      customerPhone: orders.customerPhone,
+      customerEmail: orders.customerEmail,
+      createdAt: orders.createdAt,
+      wholesalerId: orders.wholesalerId
+    })
+    .from(orders)
+    .where(and(
+      eq(orders.customerPhone, MAIN_CUSTOMER_ACCOUNT.phone),
+      eq(orders.wholesalerId, wholesalerId)
+    ))
+    .orderBy(desc(orders.createdAt))
+    .limit(50); // Limit to 50 most recent orders
   
-  return filteredOrders;
+  console.log(`📋 BULLETPROOF: Found ${orderResults.length} orders (limited to 50 most recent)`);
+  
+  // Format for customer portal display
+  const formattedOrders = orderResults.map(order => ({
+    id: order.id,
+    orderNumber: order.orderNumber || `#${order.id}`,
+    date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short', 
+      year: 'numeric'
+    }),
+    time: new Date(order.createdAt || Date.now()).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    status: order.status,
+    total: parseFloat(order.total || '0').toFixed(2),
+    subtotal: parseFloat(order.subtotal || '0').toFixed(2),
+    transactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
+    deliveryCost: parseFloat(order.deliveryCost || '0').toFixed(2),
+    currency: "£",
+    fulfillmentType: order.fulfillmentType,
+    deliveryCarrier: order.deliveryCarrier,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    customerEmail: order.customerEmail,
+    paymentMethod: "Card Payment",
+    paymentStatus: "paid",
+    createdAt: order.createdAt
+  }));
+  
+  return formattedOrders;
 }
 
 /**
