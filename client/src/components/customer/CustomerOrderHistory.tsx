@@ -320,6 +320,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       
       const rawData = await response.json();
       const ordersArray = Array.isArray(rawData) ? rawData : [];
+      
+      // DEBUG: Verify latest orders are received
+      console.log('✅ LATEST ORDERS RECEIVED:', ordersArray.slice(0, 3).map(o => `${o.orderNumber} (${o.date})`).join(', '));
+      
       return ordersArray;
     }
   });
@@ -540,6 +544,11 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </div>
         ) : (
         <div className="space-y-2">
+          {/* DEBUG: Show current orders being displayed */}
+          <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+            <strong>✅ DISPLAYING:</strong> {paginatedOrders.length} orders - Latest: {paginatedOrders.slice(0, 3).map(o => o.orderNumber).join(', ')}
+          </div>
+          
           {paginatedOrders.map((order: Order, index: number) => (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
