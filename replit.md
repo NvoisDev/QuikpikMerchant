@@ -75,3 +75,5 @@ Preferred communication style: Simple, everyday language.
 - **REBUILT FROM SCRATCH**: Replaced complex forced customer logic with simple direct approach
 - **SIMPLE SOLUTION**: All Surulere Foods orders now immediately use main customer account without any lookup logic
 - **BULLETPROOF**: Eliminates all customer creation paths for Surulere Foods - only uses existing account
+- **FIXED ORDER SF-220**: Manually corrected order to link to main customer account after webhook created wrong customer
+- **ENHANCED LOGGING**: Added comprehensive logging to track Surulere Foods order detection and processing

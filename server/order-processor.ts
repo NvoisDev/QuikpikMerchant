@@ -41,13 +41,16 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
 
 // Simple function to create order for main customer account
 async function createOrderForMainCustomer(paymentIntent: any) {
-  console.log('Creating order for main customer account');
+  console.log('🔧 Creating order for main customer account: customer_michael_ogunjemilua_main');
   
   // Get the main customer account
   const customer = await storage.getUser('customer_michael_ogunjemilua_main');
   if (!customer) {
+    console.error('🚨 CRITICAL: Main customer account not found!');
     throw new Error('Main customer account not found');
   }
+  
+  console.log(`✅ Main customer found: ${customer.id} (${customer.firstName} ${customer.lastName})`);
   
   // Extract order data
   const cart = JSON.parse(paymentIntent.metadata.cart || '[]');
@@ -87,9 +90,13 @@ async function createOrderForMainCustomer(paymentIntent: any) {
     total: (parseFloat(item.unitPrice || item.price || '0') * item.quantity).toFixed(2)
   }));
   
+  console.log('🔧 Creating order with data:', JSON.stringify(orderData, null, 2));
+  console.log('🔧 Creating order items:', JSON.stringify(orderItems, null, 2));
+  
   // Create the order
   const order = await storage.createOrder(orderData, orderItems);
-  console.log(`✅ Order ${order.orderNumber} created for customer ${customer.id}`);
+  console.log(`✅ SURULERE ORDER CREATED: ${order.orderNumber} for customer ${customer.id}`);
+  console.log(`✅ Order total: £${order.total} with ${orderItems.length} items`);
   
   return order;
 }
@@ -238,12 +245,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
   
   const wholesalerId = paymentIntent.metadata.wholesalerId;
+  console.log(`🔍 WHOLESALER ID CHECK: "${wholesalerId}" (type: ${typeof wholesalerId})`);
   
-  // SIMPLE APPROACH: For Surulere Foods, always use the main customer account
+  // BULLETPROOF: For Surulere Foods, always use the main customer account
   if (wholesalerId === '104871691614680693123') {
-    console.log('🔧 Surulere Foods order detected - using main customer account');
+    console.log('🔧 SURULERE FOODS DETECTED - using main customer account (direct approach)');
     return await createOrderForMainCustomer(paymentIntent);
   }
+  
+  console.log('🔍 Not Surulere Foods order, proceeding with normal customer portal logic');
   
   // Extract data from metadata - handle both direct metadata and JSON strings
   const customerData = paymentIntent.metadata.customerData ? 
