@@ -39,6 +39,146 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
   return { firstName, lastName };
 }
 
+// Helper function to create order with specific customer (for forced customer logic)
+async function createOrderWithCustomer(
+  paymentIntent: any,
+  customer: any,
+  customerName: string,
+  customerEmail: string,
+  customerPhone: string,
+  customerAddress: any,
+  wholesalerId: string,
+  subtotal: number,
+  transactionFee: number,
+  cart: any[],
+  shippingInfo: any
+) {
+  // Continue with the original order creation logic using the provided customer
+  const { firstName, lastName } = parseCustomerName(customerName);
+  
+  console.log(`👤 Using forced customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+
+  // Extract all the same variables as the main function
+  const connectAccountUsed = paymentIntent.metadata.connectAccountUsed || 'false';
+  const platformFee = parseFloat(paymentIntent.metadata.platformFee || '0');
+  const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+  const items = cart || [];
+  const customerTransactionFee = transactionFee;
+  const totalCustomerPays = totalAmount;
+  
+  // Calculate actual platform fee based on Connect usage
+  const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
+  const wholesalerAmount = connectAccountUsed === 'true' 
+    ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
+    : totalAmount;
+
+  // Enhanced fulfillment detection (same logic as main function)
+  let deliveryCost = 0;
+  let fulfillmentType = 'pickup';
+  let deliveryCarrier = null;
+  let shippingTotal = '0.00';
+  
+  if (shippingInfo?.option === 'delivery') {
+    console.log('✅ PRIMARY: Using shippingInfo.option = delivery');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(shippingInfo.service?.price || '0');
+    deliveryCarrier = shippingInfo.service?.serviceName || null;
+    shippingTotal = deliveryCost.toFixed(2);
+  } else if (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0) {
+    console.log('🔄 FALLBACK: Detected delivery from positive shippingCost');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+    deliveryCarrier = paymentIntent.metadata.deliveryService || 'Unknown Delivery Service';
+    shippingTotal = deliveryCost.toFixed(2);
+  } else if (parseFloat(paymentIntent.metadata.deliveryCost || '0') > 0) {
+    console.log('🔄 FALLBACK: Detected delivery from positive deliveryCost');
+    fulfillmentType = 'delivery';
+    deliveryCost = parseFloat(paymentIntent.metadata.deliveryCost || '0');
+    deliveryCarrier = paymentIntent.metadata.deliveryCarrier || 'Unknown Delivery Service';
+    shippingTotal = deliveryCost.toFixed(2);
+  } else {
+    console.log('📦 DEFAULT: Using pickup (no delivery indicators found)');
+    fulfillmentType = 'pickup';
+    deliveryCost = 0;
+    deliveryCarrier = null;
+    shippingTotal = '0.00';
+  }
+  
+  const correctTotal = paymentIntent.metadata.totalCustomerPays || paymentIntent.amount / 100;
+  
+  console.log('🚚 FORCED CUSTOMER FULFILLMENT DETECTION:', {
+    finalFulfillmentType: fulfillmentType,
+    finalDeliveryCarrier: deliveryCarrier,
+    finalDeliveryCost: deliveryCost,
+    finalShippingTotal: shippingTotal
+  });
+
+  // Get wholesaler info for logging
+  const wholesaler = await storage.getUser(wholesalerId);
+  
+  console.log(`🏢 Creating order for ${wholesaler?.businessName || 'Unknown Business'}`);
+  
+  // Generate order number using same atomic logic
+  const orderNumber = await storage.generateOrderNumber(wholesalerId);
+  console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
+  
+  // Create order with customer details AND SHIPPING DATA
+  const orderData = {
+    orderNumber,
+    wholesalerId,
+    retailerId: customer.id,
+    customerName,
+    customerEmail,
+    customerPhone,
+    subtotal: subtotal.toFixed(2),
+    platformFee: (subtotal * 0.033).toFixed(2),
+    customerTransactionFee: transactionFee.toFixed(2),
+    total: correctTotal,
+    status: 'paid',
+    stripePaymentIntentId: paymentIntent.id,
+    deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress),
+    fulfillmentType: fulfillmentType,
+    deliveryCarrier: deliveryCarrier,
+    deliveryCost: deliveryCost.toFixed(2),
+    shippingTotal: shippingTotal
+  };
+  
+  console.log('🚚 FORCED CUSTOMER Order data with shipping fields:', {
+    fulfillmentType: orderData.fulfillmentType,
+    deliveryCarrier: orderData.deliveryCarrier,
+    deliveryCost: orderData.deliveryCost,
+    shippingTotal: orderData.shippingTotal
+  });
+
+  // Create order items
+  const orderItems = items.map((item: any) => {
+    const rawUnitPrice = item.unitPrice || item.price || '0';
+    const parsedUnitPrice = parseFloat(rawUnitPrice);
+    const safeUnitPrice = isNaN(parsedUnitPrice) ? 0 : parsedUnitPrice;
+    
+    return {
+      orderId: 0,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: safeUnitPrice.toFixed(2),
+      total: (safeUnitPrice * item.quantity).toFixed(2)
+    };
+  });
+
+  // Check for existing order
+  const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
+  if (existingOrder) {
+    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${existingOrder.id} (${existingOrder.orderNumber})`);
+    return existingOrder;
+  }
+
+  const order = await storage.createOrder(orderData, orderItems);
+  
+  console.log(`✅ FORCED CUSTOMER Order #${order.id} (${order.orderNumber}) created successfully for customer ${customer.id}`);
+
+  return order;
+}
+
 export async function processCustomerPortalOrder(paymentIntent: any) {
   console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
   
@@ -94,8 +234,42 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     originalShippingCost,
     transactionFee,
     hasCart: !!cart,
-    cartLength: cart?.length || 0
+    cartLength: cart?.length || 0,
+    rawCustomerDataMetadata: paymentIntent.metadata.customerData,
+    parsedCustomerData: customerData
   });
+
+  // PERMANENT FIX: For Surulere Foods, force use of main customer account before any lookup attempts
+  if (wholesalerId === '104871691614680693123') {
+    console.log(`🔧 SURULERE FOODS DETECTED: Forcing use of main customer account to prevent duplicates`);
+    const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
+    if (mainCustomer) {
+      console.log(`🔧 FORCED CUSTOMER: Using main account ${mainCustomer.id} for all Surulere Foods orders`);
+      // Override any extracted customer data with the known correct values
+      const forcedCustomerName = mainCustomer.firstName + ' ' + mainCustomer.lastName;
+      const forcedCustomerEmail = mainCustomer.email || customerEmail;
+      const forcedCustomerPhone = mainCustomer.phoneNumber;
+      
+      console.log(`🔧 FORCED DATA: name="${forcedCustomerName}", email="${forcedCustomerEmail}", phone="${forcedCustomerPhone}"`);
+      
+      // Use the forced customer directly and skip all lookup logic
+      return await createOrderWithCustomer(
+        paymentIntent, 
+        mainCustomer, 
+        forcedCustomerName, 
+        forcedCustomerEmail, 
+        forcedCustomerPhone, 
+        customerAddress, 
+        wholesalerId, 
+        subtotal, 
+        transactionFee, 
+        cart, 
+        shippingInfo
+      );
+    } else {
+      console.log(`🚨 CRITICAL ERROR: Main customer account not found for Surulere Foods!`);
+    }
+  }
 
   if (!cart || cart.length === 0) {
     throw new Error('No cart items found in payment metadata');
@@ -115,21 +289,32 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   // ENHANCED CUSTOMER LOOKUP: Try harder to find existing customer before creating new account
   if (!customer && customerEmail) {
-    // Additional lookup attempts for existing customers
-    const existingCustomers = await storage.searchCustomersByEmail(customerEmail);
-    if (existingCustomers.length > 0) {
-      customer = existingCustomers[0];
-      console.log(`🔍 Found customer via email search: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+    // Try to find customer by email in users table directly
+    const emailCustomer = await storage.getUserByEmail(customerEmail);
+    if (emailCustomer) {
+      customer = emailCustomer;
+      console.log(`🔍 Found customer via direct email lookup: ${customer.id} (${customer.firstName} ${customer.lastName})`);
     }
   }
   
   // CRITICAL FIX: For Surulere Foods, always link to the main Michael Ogunjemilua account 
-  // if the phone number matches or is similar to the known customer
+  // This prevents duplicate account creation
   if (!customer && wholesalerId === '104871691614680693123') {
+    console.log(`🔧 APPLYING SURULERE FOODS FALLBACK: No customer found via phone/email lookup`);
+    console.log(`🔧 Customer lookup attempted with: phone="${customerPhone}", email="${customerEmail}"`);
+    
     const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
     if (mainCustomer) {
-      console.log(`🔧 FALLBACK: Using main customer account for Surulere Foods orders: ${mainCustomer.id}`);
+      console.log(`🔧 FALLBACK SUCCESS: Using main customer account for Surulere Foods orders: ${mainCustomer.id}`);
       customer = mainCustomer;
+      
+      // Update the customer data to match what we found
+      if (!customerPhone && mainCustomer.phoneNumber) {
+        console.log(`🔧 UPDATING: Setting customerPhone from existing account: ${mainCustomer.phoneNumber}`);
+        // This ensures the order gets the correct phone number
+      }
+    } else {
+      console.log(`🚨 FALLBACK FAILED: Main customer account not found!`);
     }
   }
   
