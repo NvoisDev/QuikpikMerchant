@@ -2006,7 +2006,8 @@ export default function CustomerPortal() {
               {customerOrders.length > 0 ? (
                 <div className="p-4 space-y-3">
                   {customerOrders.slice(0, 5).map((order: any) => {
-                    const orderItems = JSON.parse(order.items || '[]');
+                    // Items are already an array from the API - no need to parse JSON
+                    const orderItems = Array.isArray(order.items) ? order.items : [];
                     const orderDate = new Date(order.createdAt).toLocaleDateString();
                     return (
                       <div key={order.id} className="border rounded-lg p-3 hover:bg-gray-50">
@@ -2018,17 +2019,25 @@ export default function CustomerPortal() {
                           <Button
                             onClick={() => {
                               // Add all items from this order to cart
-                              orderItems.forEach((item: any) => {
-                                const product = products?.find(p => p.id === item.productId);
-                                if (product) {
-                                  addToCart(product, item.quantity, item.sellingType || 'units');
-                                }
-                              });
-                              setShowQuickReorder(false);
-                              toast({
-                                title: "Added to Cart",
-                                description: `${orderItems.length} items from order ${order.orderNumber} added to cart`,
-                              });
+                              if (orderItems.length > 0) {
+                                orderItems.forEach((item: any) => {
+                                  const product = products?.find(p => p.id === item.productId || p.name === item.productName);
+                                  if (product) {
+                                    addToCart(product, item.quantity || 1, item.sellingType || 'units');
+                                  }
+                                });
+                                setShowQuickReorder(false);
+                                toast({
+                                  title: "Added to Cart",
+                                  description: `${orderItems.length} items from order ${order.orderNumber} added to cart`,
+                                });
+                              } else {
+                                toast({
+                                  title: "No Items Found",
+                                  description: "This order has no items available for reordering",
+                                  variant: "destructive",
+                                });
+                              }
                             }}
                             size="sm"
                             variant="outline"
@@ -2038,14 +2047,22 @@ export default function CustomerPortal() {
                           </Button>
                         </div>
                         <div className="flex flex-wrap gap-1">
-                          {orderItems.slice(0, 3).map((item: any, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {item.productName} ({item.quantity})
-                            </Badge>
-                          ))}
-                          {orderItems.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{orderItems.length - 3} more
+                          {orderItems.length > 0 ? (
+                            <>
+                              {orderItems.slice(0, 3).map((item: any, idx: number) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {item.productName || 'Unknown Product'} ({item.quantity || 0})
+                                </Badge>
+                              ))}
+                              {orderItems.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{orderItems.length - 3} more
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-gray-500">
+                              No item details available
                             </Badge>
                           )}
                         </div>
