@@ -2041,7 +2041,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
         const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+        let shippingInfo = { option: 'pickup' };
+        
+        if (shippingInfoJson) {
+          try {
+            shippingInfo = JSON.parse(shippingInfoJson);
+          } catch (error) {
+            console.error('❌ JSON parsing error for shipping info:', error.message);
+            console.error('🔍 Raw shipping JSON:', shippingInfoJson);
+            // Fallback to pickup if JSON is malformed
+            shippingInfo = { option: 'pickup' };
+          }
+        }
         
         console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
           hasShippingInfo: !!shippingInfoJson,
