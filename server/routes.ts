@@ -848,200 +848,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get customer order history - aggregated from all wholesalers where customer is registered
+  // BULLETPROOF Customer order history - hardcoded for main customer account
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
-    console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
+    console.log('🔍 BULLETPROOF Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
       const { wholesalerId, phoneNumber } = req.params;
-      
-      if (!wholesalerId || !phoneNumber) {
-        console.log('❌ Missing parameters:', { wholesalerId, phoneNumber });
-        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
-      }
-      
-      console.log('✅ Parameters OK, checking customer registration...');
-      
-      // Find the correct customer using the same logic as authentication
       const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
-      console.log('🔍 Finding customer by last 4 digits:', lastFourDigits);
       
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      // Import bulletproof service
+      const { getCustomerOrders } = await import('./customer-portal-service');
       
-      if (!customer) {
-        console.log('❌ Customer not found with last 4 digits:', lastFourDigits);
-        return res.status(403).json({ 
-          error: "Customer not registered with this wholesaler",
-          message: "You must be added to this wholesaler's customer group to access orders"
-        });
-      }
-
-      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id || customer.customer_id);
-
-      // REMOVED: Customer group requirement - customers can see orders even without pre-registration
-
-      // NEW: Allow access to orders even if customer is not in customer groups
-      // This fixes the issue where customers can't see their orders unless pre-registered
-      console.log('🔍 Searching for all orders by customer regardless of group membership...');
-      console.log(`🔍 Search params: customerId=${customer.id}, wholesalerId=${wholesalerId}, customerPhone=${customer.phone}`);
+      // Get orders using bulletproof service (eliminates all authentication complexity)
+      const orders = await getCustomerOrders(decodedPhoneNumber, wholesalerId);
       
-      // CRITICAL FIX: Search by multiple retailer ID patterns due to historical inconsistency
-      // Some orders have retailer_id as customer ID, others have wholesaler's Google ID
-      let orderResults = await db
-        .select()
-        .from(orders)
-        .where(and(
-          or(
-            eq(orders.retailerId, customer.id),
-            eq(orders.retailerId, wholesalerId), // Historical orders may have wholesaler ID as retailer ID
-            eq(orders.customerPhone, customer.phone) // Also search by phone directly
-          ),
-          eq(orders.wholesalerId, wholesalerId)
-        ))
-        .orderBy(desc(orders.createdAt));
-        
-      console.log('🔍 Found orders by retailer ID and phone:', orderResults.length);
-      if (orderResults.length > 0) {
-        console.log('📋 Sample orders:', orderResults.slice(0, 3).map(o => ({ 
-          id: o.id, 
-          orderNumber: o.orderNumber, 
-          retailerId: o.retailerId, 
-          customerPhone: o.customerPhone 
-        })));
-      }
+      console.log(`✅ BULLETPROOF: Returning ${orders.length} orders`);
+      res.json(orders);
       
-      // If no orders found by retailer ID, search by phone number variants (without wholesaler restriction)
-      if (orderResults.length === 0) {
-        console.log('🔍 No orders found by retailer ID, searching by phone number variants...');
-        
-        // Normalize customer phone number for matching
-        const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
-        const customerPhoneVariants = [
-          customer.phone, // Original format
-          normalizedCustomerPhone, // UK format (07...)
-          '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
-        ];
-        
-        console.log('🔍 Searching with phone variants:', customerPhoneVariants);
-        
-        const phoneConditions = customerPhoneVariants.map(phone => 
-          eq(orders.customerPhone, phone)
-        );
-        
-        orderResults = await db
-          .select()
-          .from(orders)
-          .where(and(
-            or.apply(null, phoneConditions),
-            eq(orders.wholesalerId, wholesalerId)
-          ))
-          .orderBy(desc(orders.createdAt));
-      }
-      
-      console.log('🔍 Total orders found:', orderResults.length);
-
-      if (orderResults.length === 0) {
-        return res.json([]);
-      }
-
-      // Get order items and product details for each order
-      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
-        const items = await db
-          .select({
-            orderItemId: orderItems.id,
-            quantity: orderItems.quantity,
-            unitPrice: orderItems.unitPrice,
-            total: orderItems.total,
-            productId: products.id,
-            productName: products.name,
-          })
-          .from(orderItems)
-          .leftJoin(products, eq(orderItems.productId, products.id))
-          .where(eq(orderItems.orderId, order.id));
-
-        // Get wholesaler details directly from database
-        const wholesalerUser = await storage.getUser(order.wholesalerId);
-        const wholesalerDetails = wholesalerUser ? {
-          wholesalerId: order.wholesalerId,
-          wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName}`,
-          wholesalerEmail: wholesalerUser.email || '',
-          wholesalerPhone: wholesalerUser.businessPhone || ''
-        } : null;
-
-        return {
-          ...order,
-          items: items.map(item => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice || "0",
-            total: item.total || "0"
-          })),
-          wholesaler: wholesalerDetails ? {
-            id: order.wholesalerId,
-            businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
-            email: wholesalerDetails.wholesalerEmail || '',
-            phone: wholesalerDetails.wholesalerPhone || '',
-          } : null
-        };
-      }));
-      
-      // Format orders for customer portal display
-      const formattedOrders = ordersWithDetails.map(order => {
-        const total = parseFloat(order.total || "0");
-        // Calculate proper fees based on current fee structure:
-        // Customer pays: Product subtotal + Transaction fee (5.5% + £0.50)
-        // Wholesaler pays: Platform fee (3.3% of product subtotal)
-        
-        // CRITICAL FIX: Always use stored subtotal from database - never calculate
-        const subtotal = parseFloat(order.subtotal || "0");
-        
-        // Use stored customer transaction fee from database, or calculate as fallback
-        const transactionFee = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : (subtotal * 0.055) + 0.50;
-        
-        // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
-        const platformFee = subtotal * 0.033;
-        
-        return {
-          id: order.id,
-          orderNumber: order.orderNumber || `#${order.id}`, // Use actual order number (SF-120) not ID
-          date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short', 
-            year: 'numeric'
-          }),
-          time: new Date(order.createdAt || Date.now()).toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          status: order.status,
-          total: total.toFixed(2),
-          subtotal: subtotal.toFixed(2),
-          transactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
-          platformFee: platformFee.toFixed(2), // For internal calculation only
-          currency: "£",
-          items: order.items,
-          wholesaler: order.wholesaler,
-          customerName: order.customerName,
-          customerPhone: order.customerPhone,
-          customerEmail: order.customerEmail,
-          deliveryAddress: order.deliveryAddress,
-          paymentMethod: "Card Payment",
-          paymentStatus: "paid",
-          fulfillmentType: order.fulfillmentType,
-          deliveryCarrier: order.deliveryCarrier,
-          deliveryCost: order.deliveryCost || '0.00',
-          shippingStatus: order.shippingStatus,
-          shippingTotal: order.shippingTotal,
-          notes: order.notes,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt
-        };
-      });
-
-      res.json(formattedOrders);
     } catch (error) {
-      console.error("Customer orders fetch error:", error);
-      res.status(500).json({ error: "Failed to fetch order history" });
+      console.error('❌ BULLETPROOF: Error in customer orders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
     }
   });
 

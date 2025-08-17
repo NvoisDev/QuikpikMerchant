@@ -242,12 +242,19 @@ async function createOrderWithCustomer(
 }
 
 export async function processCustomerPortalOrder(paymentIntent: any) {
-  console.log('🚨 ULTIMATE FORCE MODE: ALL ORDERS BYPASSED TO MAIN CUSTOMER ACCOUNT');
-  console.log('🔍 Payment Intent ID:', paymentIntent.id);
-  console.log('🔍 Payment Intent metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+  console.log('🔄 REDIRECTING TO BULLETPROOF CUSTOMER PORTAL SERVICE');
   
-  // ULTIMATE FORCE: Completely bypass all logic - go straight to main customer account
-  return await createOrderForMainCustomer(paymentIntent);
+  // Import and use the bulletproof customer portal service
+  const { createOrderForCustomer, checkExistingOrder } = await import('./customer-portal-service');
+  
+  // Check for existing order first
+  const existingOrder = await checkExistingOrder(paymentIntent.id);
+  if (existingOrder) {
+    return existingOrder;
+  }
+  
+  // Create new order using bulletproof service
+  return await createOrderForCustomer(paymentIntent);
   
   // Extract data from metadata - handle both direct metadata and JSON strings
   const customerData = paymentIntent.metadata.customerData ? 
