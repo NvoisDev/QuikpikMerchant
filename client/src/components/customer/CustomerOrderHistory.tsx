@@ -593,14 +593,34 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       </div>
                       <div className="flex justify-between text-xs">
                         <span>Transaction Fee:</span>
-                        <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
+                        <span>{formatCurrency(order.customerTransactionFee || '0')}</span>
                       </div>
-                      {parseFloat(order.shippingTotal || '0') > 0 && (
-                        <div className="flex justify-between text-xs">
-                          <span>Delivery Cost:</span>
-                          <span>{formatCurrency(order.shippingTotal)}</span>
-                        </div>
-                      )}
+                      {/* Calculate and show delivery cost for delivery orders */}
+                      {(() => {
+                        const subtotal = parseFloat(order.subtotal);
+                        const transactionFee = parseFloat(order.customerTransactionFee || '0');
+                        const total = parseFloat(order.total);
+                        const deliveryCost = parseFloat(order.deliveryCost || '0');
+                        
+                        // If it's a delivery order, calculate actual delivery cost
+                        if (order.fulfillmentType === 'delivery') {
+                          const calculatedDelivery = deliveryCost > 0 ? deliveryCost : (total - subtotal - transactionFee);
+                          return (
+                            <div className="flex justify-between text-xs">
+                              <span>Delivery Cost:</span>
+                              <span>{calculatedDelivery > 0 ? formatCurrency(calculatedDelivery) : 'Free Delivery'}</span>
+                            </div>
+                          );
+                        } else {
+                          // For pickup orders, show collection
+                          return (
+                            <div className="flex justify-between text-xs text-blue-600">
+                              <span>Collection:</span>
+                              <span>Free Collection</span>
+                            </div>
+                          );
+                        }
+                      })()}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total Paid:</span>
                         <span className="text-green-700">{formatCurrency(order.total)}</span>
