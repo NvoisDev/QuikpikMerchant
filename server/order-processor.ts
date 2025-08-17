@@ -242,13 +242,11 @@ async function createOrderWithCustomer(
 }
 
 export async function processCustomerPortalOrder(paymentIntent: any) {
-  console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
+  console.log('🚨 ULTIMATE FORCE MODE: ALL ORDERS BYPASSED TO MAIN CUSTOMER ACCOUNT');
+  console.log('🔍 Payment Intent ID:', paymentIntent.id);
+  console.log('🔍 Payment Intent metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
   
-  const wholesalerId = paymentIntent.metadata.wholesalerId;
-  console.log(`🔍 WHOLESALER ID CHECK: "${wholesalerId}" (type: ${typeof wholesalerId})`);
-  
-  // FORCE: ALL orders go to main customer account (emergency fix)
-  console.log('🚨 EMERGENCY MODE: FORCING ALL ORDERS TO MAIN CUSTOMER ACCOUNT');
+  // ULTIMATE FORCE: Completely bypass all logic - go straight to main customer account
   return await createOrderForMainCustomer(paymentIntent);
   
   // Extract data from metadata - handle both direct metadata and JSON strings
