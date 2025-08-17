@@ -278,7 +278,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
   console.log('🔄 QUERY SETUP:', { wholesalerId, customerPhone, enabled: !!wholesalerId && !!customerPhone });
   
-  const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
+  const queryResult = useQuery({
     queryKey: [`customer-orders`, wholesalerId, customerPhone],
     enabled: !!wholesalerId && !!customerPhone,
     refetchInterval: 10000, // Reduced to 10 seconds
@@ -353,9 +353,21 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       return ordersArray;
     }
   });
+  
+  const { data: orders, isLoading, error, refetch, isFetching } = queryResult;
+  
+  console.log('🔄 TANSTACK QUERY RESULT:', {
+    queryResult,
+    orders: orders,
+    ordersType: typeof orders,
+    ordersLength: orders?.length,
+    isLoading,
+    error: error?.message,
+    isFetching
+  });
 
   // Debug logging for orders state
-  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error });
+  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error: error?.message });
   console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
   console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
   console.log('🎯 CustomerOrderHistory render - FULL orders data:', orders);
