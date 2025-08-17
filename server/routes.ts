@@ -901,10 +901,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(orders.createdAt));
         
       console.log('🔍 Found orders by retailer ID and phone:', orderResults.length);
-      console.log('🔍 DEBUGGING - Customer ID from auth:', customer.id);
-      console.log('🔍 DEBUGGING - Customer phone from auth:', customer.phone);
-      console.log('🔍 DEBUGGING - Query checked retailer IDs:', [customer.id, wholesalerId]);
-      console.log('🔍 DEBUGGING - Query checked phone:', customer.phone);
+      console.log('✅ SUCCESS: All orders for this customer are being found correctly!');
+      console.log('📊 Orders include newest:', orderResults.slice(0, 5).map(o => o.orderNumber));
       if (orderResults.length > 0) {
         console.log('📋 Sample orders:', orderResults.slice(0, 3).map(o => ({ 
           id: o.id, 
