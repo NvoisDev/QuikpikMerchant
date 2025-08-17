@@ -124,8 +124,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   // Use actual order values from database
   const subtotal = parseFloat(order.subtotal);
   const transactionFee = parseFloat(order.customerTransactionFee || '0');
-  const deliveryCost = parseFloat(order.deliveryCost || order.shippingTotal || '0');
+  // CRITICAL FIX: deliveryCost and shippingTotal are already strings with correct values
+  const deliveryCost = parseFloat(order.deliveryCost || '0');
   const totalPaid = parseFloat(order.total);
+  
+  // Order price breakdown calculations
   
   return (
     <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -280,12 +283,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const ordersPerPage = 10;
   const queryClient = useQueryClient();
 
-  console.log('🔄 QUERY SETUP:', { wholesalerId, customerPhone, enabled: !!wholesalerId && !!customerPhone });
-  console.log('🔄 COMPONENT MOUNT:', { 
-    timestamp: new Date().toISOString(),
-    component: 'CustomerOrderHistory',
-    props: { wholesalerId, customerPhone }
-  });
+  // Query setup for customer orders
   
   const queryResult = useQuery({
     queryKey: [`customer-orders`, wholesalerId, customerPhone],
@@ -297,13 +295,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     gcTime: 0,
     queryFn: async (): Promise<Order[]> => {
       const encodedPhone = encodeURIComponent(customerPhone);
-      console.log('🔄 ORDERS FETCH START:', { 
-        wholesalerId, 
-        customerPhone, 
-        encodedPhone, 
-        timestamp: new Date().toLocaleTimeString(),
-        url: `/api/customer-orders/${wholesalerId}/${encodedPhone}`
-      });
+      // Fetching customer orders with cache-busting
       
       const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?cacheBust=${Date.now()}`, {
         method: 'GET',
@@ -316,105 +308,31 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         }
       });
       
-      console.log('📡 API RESPONSE:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      // Handle API response
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API ERROR:', { status: response.status, errorText });
         if (response.status === 403) {
           throw new Error('Customer not found in wholesaler list');
         }
-        throw new Error(`API Error: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to fetch orders: ${response.status}`);
       }
       
       const rawData = await response.json();
-      console.log('📊 RAW API DATA:', { 
-        type: typeof rawData, 
-        isArray: Array.isArray(rawData), 
-        length: rawData?.length,
-        sample: rawData?.slice?.(0, 3)
-      });
-      
       const ordersArray = Array.isArray(rawData) ? rawData : [];
-      
-      console.log('📦 PROCESSED ORDERS:', { 
-        totalCount: ordersArray.length,
-        hasOrders: ordersArray.length > 0,
-        orderNumbers: ordersArray.map((o: any) => o.orderNumber),
-        latestThree: ordersArray.slice(0, 3).map((o: any) => ({ 
-          id: o.id, 
-          orderNumber: o.orderNumber, 
-          total: o.total, 
-          status: o.status 
-        })),
-        hasSF198: ordersArray.some((o: any) => o.orderNumber === 'SF-198'),
-        hasSF199: ordersArray.some((o: any) => o.orderNumber === 'SF-199'),
-        hasSF200: ordersArray.some((o: any) => o.orderNumber === 'SF-200'),
-        hasSF201: ordersArray.some((o: any) => o.orderNumber === 'SF-201')
-      });
-      
-      console.log('🎯 QUERY FUNCTION RETURNING:', { ordersArray, length: ordersArray.length });
       return ordersArray;
     }
   });
   
   const { data: orders, isLoading, error, refetch, isFetching } = queryResult;
-  
-  console.log('🔄 TANSTACK QUERY RESULT:', {
-    queryResult,
-    orders: orders,
-    ordersType: typeof orders,
-    ordersLength: orders?.length,
-    isLoading,
-    error: error?.message,
-    isFetching
-  });
-
-  // Debug logging for orders state
-  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error: error?.message });
-  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
-  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
-  console.log('🎯 CustomerOrderHistory render - FULL orders data:', orders);
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
-    console.log('🔍 FilteredOrders - DEBUG:', { 
-      ordersReceived: orders,
-      isOrdersArray: Array.isArray(orders), 
-      ordersLength: orders?.length,
-      ordersType: typeof orders,
-      firstOrder: orders?.[0],
-      searchTerm,
-      hasLatestOrders: orders ? [
-        orders.some((o: any) => o.orderNumber === 'SF-198'),
-        orders.some((o: any) => o.orderNumber === 'SF-199')
-      ] : [false, false]
-    });
-    
-    if (!orders) {
-      console.log('❌ FilteredOrders - orders is null/undefined');
+    if (!orders || !Array.isArray(orders)) {
       return [];
     }
-    
-    if (!Array.isArray(orders)) {
-      console.log('❌ FilteredOrders - orders is not an array:', typeof orders);
-      return [];
-    }
-    
-    if (orders.length === 0) {
-      console.log('❌ FilteredOrders - orders array is empty');
-      return [];
-    }
-    
-    console.log('✅ FilteredOrders - valid orders array with', orders.length, 'items');
     
     if (!searchTerm) {
-      console.log('✅ FilteredOrders - returning all', orders.length, 'orders (no search)');
       return orders;
     }
     
@@ -430,7 +348,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       );
     });
     
-    console.log('✅ FilteredOrders - filtered', filtered.length, 'orders from', orders.length);
     return filtered;
   }, [orders, searchTerm]);
 
@@ -532,69 +449,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
-  console.log('🎯 CustomerOrderHistory RENDER STATE:', { 
-    ordersLength: Array.isArray(orders) ? orders.length : 'Not an array',
-    isLoading, 
-    error: error?.message,
-    filteredOrdersLength: filteredOrders?.length || 0,
-    paginatedOrdersLength: paginatedOrders?.length || 0,
-    currentPage,
-    totalPages,
-    searchTerm,
-    hasSF198: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-198'),
-    hasSF199: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-199'),
-    hasSF200: Array.isArray(orders) && orders.some((o: any) => o.orderNumber === 'SF-200'),
-    latestOrderNumbers: Array.isArray(orders) ? orders.slice(0, 5).map(o => o.orderNumber) : [],
-    firstOrderData: Array.isArray(orders) && orders.length > 0 ? { 
-      id: orders[0].id, 
-      orderNumber: orders[0].orderNumber, 
-      total: orders[0].total,
-      date: orders[0].date 
-    } : 'No orders',
-    ordersDataSample: Array.isArray(orders) ? orders.slice(0, 3).map(o => ({ 
-      id: o.id, 
-      orderNumber: o.orderNumber, 
-      total: o.total, 
-      status: o.status 
-    })) : 'No orders to sample'
-  });
-  
-  // Debug: Show what we have before rendering
-  console.log('🎯 FINAL RENDER CHECK:', {
-    hasOrders: !!orders,
-    ordersLength: orders?.length || 0,
-    isOrdersArray: Array.isArray(orders),
-    filteredLength: filteredOrders?.length || 0,
-    paginatedLength: paginatedOrders?.length || 0,
-    willShowEmptyState: !orders || orders.length === 0,
-    ordersData: orders?.slice(0, 3)?.map(o => ({ id: o.id, orderNumber: o.orderNumber, total: o.total }))
-  });
-
-  // CRITICAL DEBUG: Force show orders even if array appears empty
-  console.log('🔍 ORDERS STATE INSPECTION:', {
-    ordersType: typeof orders,
-    ordersValue: orders,
-    ordersStringified: JSON.stringify(orders)?.substring(0, 200) + '...',
-    isOrdersArray: Array.isArray(orders),
-    ordersLength: orders?.length,
-    ordersKeys: orders ? Object.keys(orders) : [],
-    ordersData: orders
-  });
-
   // CRITICAL: Force display if we see individual orders in console but main array is empty
-  const shouldForceDisplay = true; // FORCE DISPLAY since orders are being processed but not showing
+  const shouldForceDisplay = false; // Reset to normal display logic now that data is flowing
   
   if ((!orders || orders.length === 0) && !shouldForceDisplay) {
-    console.log('🚨 SHOWING EMPTY STATE - No orders to display');
-    console.log('🚨 EMPTY STATE DECISION FACTORS:', {
-      ordersIsNull: orders === null,
-      ordersIsUndefined: orders === undefined,
-      ordersIsFalsy: !orders,
-      ordersLength: orders?.length,
-      ordersType: typeof orders,
-      actualOrders: orders,
-      shouldForceDisplay
-    });
     
     return (
       <Card className="w-full">
@@ -682,9 +540,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </div>
         ) : (
         <div className="space-y-2">
-          {paginatedOrders.map((order: Order, index: number) => {
-            console.log(`🎯 Rendering order ${index}:`, order);
-            return (
+          {paginatedOrders.map((order: Order, index: number) => (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
@@ -762,8 +618,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                 </div>
               </CardContent>
             </Card>
-            );
-          })}
+          ))}
         </div>
         )}
 
