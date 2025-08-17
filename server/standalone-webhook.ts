@@ -73,6 +73,8 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data?.object;
+      console.log(`💳 Payment Intent succeeded: ${paymentIntent?.id}`);
+      console.log(`🔍 Payment Intent wholesaler ID:`, paymentIntent?.metadata?.wholesalerId);
       console.log(`💰 Payment succeeded: ${paymentIntent?.id}`);
       console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
       
