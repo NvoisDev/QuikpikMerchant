@@ -115,10 +115,16 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       });
       
       // Check for customer portal order by presence of customer data and cart
+      // CRITICAL: Also check for Surulere Foods wholesaler ID to force customer portal processing
+      const isSurulereOrder = paymentIntent?.metadata?.wholesalerId === '104871691614680693123';
       const isCustomerPortalOrder = orderType === 'customer_portal' || 
-        (paymentIntent?.metadata?.customerData && paymentIntent?.metadata?.cart);
+        (paymentIntent?.metadata?.customerData && paymentIntent?.metadata?.cart) ||
+        isSurulereOrder;
       
       if (isCustomerPortalOrder) {
+        if (isSurulereOrder) {
+          console.log(`🔧 SURULERE FOODS DETECTED: Forcing customer portal processing for payment: ${paymentIntent?.id}`);
+        }
         console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
         
         try {

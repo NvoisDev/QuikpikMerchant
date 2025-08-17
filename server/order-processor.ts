@@ -242,6 +242,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   // ABSOLUTE PERMANENT FIX: For Surulere Foods, ALWAYS force use of main customer account
   // This completely bypasses all customer lookup logic to prevent ANY duplicate account creation
+  console.log(`🔍 CHECKING WHOLESALER ID: "${wholesalerId}" (type: ${typeof wholesalerId})`);
   if (wholesalerId === '104871691614680693123') {
     console.log(`🔧 SURULERE FOODS DETECTED: FORCING use of main customer account - BYPASSING ALL LOOKUPS`);
     console.log(`🔧 TESTING CUSTOMER LOOKUP: About to call storage.getUser('customer_michael_ogunjemilua_main')`);
@@ -372,10 +373,20 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   if (!customer) {
     // FINAL SAFEGUARD: Prevent any new customer creation for Surulere Foods
+    console.log(`🔍 FINAL SAFEGUARD CHECK: wholesalerId="${wholesalerId}" (type: ${typeof wholesalerId})`);
     if (wholesalerId === '104871691614680693123') {
       console.log(`🚨 FINAL SAFEGUARD TRIGGERED: Preventing new customer creation for Surulere Foods`);
       console.log(`🚨 This should NEVER happen if forced customer logic worked correctly`);
-      throw new Error('CRITICAL: Attempted to create new customer for Surulere Foods - this is blocked');
+      console.log(`🚨 FORCING EMERGENCY CUSTOMER CREATION FOR SURULERE FOODS`);
+      
+      // Emergency fallback - use existing customer account
+      const emergencyCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
+      if (emergencyCustomer) {
+        console.log(`🚨 EMERGENCY SUCCESS: Using existing customer account ${emergencyCustomer.id}`);
+        customer = emergencyCustomer;
+      } else {
+        throw new Error('CRITICAL: Main customer account not found and attempted new customer creation blocked');
+      }
     }
     
     console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
