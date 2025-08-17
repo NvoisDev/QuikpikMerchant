@@ -104,6 +104,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
   }
   
+  // PREVENT DUPLICATE ACCOUNTS: If no customer found and missing phone/email, log warning
+  if (!customer && (!customerPhone || !customerEmail)) {
+    console.log(`⚠️ WARNING: No customer found and missing phone (${customerPhone}) or email (${customerEmail}). This may create a duplicate account!`);
+  }
+  
   if (!customer) {
     console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
     customer = await storage.createCustomer({
