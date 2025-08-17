@@ -62,6 +62,50 @@ async function createOrderForMainCustomer(paymentIntent: any) {
   // Generate order number
   const orderNumber = await storage.generateOrderNumber(paymentIntent.metadata.wholesalerId);
   
+  // Parse shipping info for proper fulfillment detection
+  let shippingInfo = null;
+  try {
+    if (paymentIntent.metadata.shippingInfo) {
+      shippingInfo = JSON.parse(paymentIntent.metadata.shippingInfo);
+    }
+  } catch (error) {
+    console.log('🚨 Failed to parse shipping info metadata:', error);
+  }
+
+  // Enhanced fulfillment detection matching main function logic
+  let finalDeliveryCost = 0;
+  let fulfillmentType = 'pickup';
+  let deliveryCarrier = null;
+  
+  if (shippingInfo?.option === 'delivery') {
+    console.log('✅ FORCED CUSTOMER - PRIMARY: Using shippingInfo.option = delivery');
+    fulfillmentType = 'delivery';
+    finalDeliveryCost = parseFloat(shippingInfo.service?.price || '0');
+    deliveryCarrier = shippingInfo.service?.serviceName || null;
+  } else if (parseFloat(paymentIntent.metadata.shippingCost || '0') > 0) {
+    console.log('🔄 FORCED CUSTOMER - FALLBACK: Detected delivery from positive shippingCost');
+    fulfillmentType = 'delivery';
+    finalDeliveryCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+    deliveryCarrier = paymentIntent.metadata.deliveryService || 'Unknown Delivery Service';
+  } else if (deliveryCost > 0) {
+    console.log('🔄 FORCED CUSTOMER - FALLBACK: Detected delivery from positive deliveryCost');
+    fulfillmentType = 'delivery';
+    finalDeliveryCost = deliveryCost;
+    deliveryCarrier = paymentIntent.metadata.deliveryCarrier || 'Unknown Delivery Service';
+  } else {
+    console.log('📦 FORCED CUSTOMER - DEFAULT: Using pickup (no delivery indicators found)');
+    fulfillmentType = 'pickup';
+    finalDeliveryCost = 0;
+    deliveryCarrier = null;
+  }
+
+  console.log('🚚 FORCED CUSTOMER FULFILLMENT DETECTION:', {
+    shippingInfoOption: shippingInfo?.option,
+    finalFulfillmentType: fulfillmentType,
+    finalDeliveryCarrier: deliveryCarrier,
+    finalDeliveryCost: finalDeliveryCost
+  });
+
   // Create order data
   const orderData = {
     wholesalerId: paymentIntent.metadata.wholesalerId || '104871691614680693123',
@@ -74,8 +118,9 @@ async function createOrderForMainCustomer(paymentIntent: any) {
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerEmail: customer.email || 'mogunjemilua@gmail.com',
     customerPhone: customer.phoneNumber || '+447507659550',
-    fulfillmentType: deliveryCost > 0 ? 'delivery' : 'pickup',
-    deliveryCost: deliveryCost.toFixed(2),
+    fulfillmentType: fulfillmentType,
+    deliveryCost: finalDeliveryCost.toFixed(2),
+    deliveryCarrier: deliveryCarrier,
     transactionFee: transactionFee.toFixed(2),
     customerTransactionFee: transactionFee.toFixed(2),
     orderNumber
