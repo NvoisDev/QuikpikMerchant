@@ -72,6 +72,6 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Webhook server connectivity issue causing orders to succeed in Stripe but not create in database
 - **FIXED**: Order SF-219 (£755.66) manually created to match Stripe payment #480112 - includes correct items and customer linking
 - **CURRENT**: Webhook server restarted and functioning - future orders will process correctly through forced customer logic
-- **PERMANENT FIX**: Enhanced webhook detection to force customer portal processing for ALL Surulere Foods orders
-- **BULLETPROOF**: Added emergency customer fallback in final safeguard to absolutely prevent new account creation
-- **DEBUGGING**: Added extensive logging to track wholesaler ID detection and forced customer logic execution
+- **REBUILT FROM SCRATCH**: Replaced complex forced customer logic with simple direct approach
+- **SIMPLE SOLUTION**: All Surulere Foods orders now immediately use main customer account without any lookup logic
+- **BULLETPROOF**: Eliminates all customer creation paths for Surulere Foods - only uses existing account

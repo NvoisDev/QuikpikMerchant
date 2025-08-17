@@ -39,6 +39,61 @@ export function parseCustomerName(fullName: string): { firstName: string; lastNa
   return { firstName, lastName };
 }
 
+// Simple function to create order for main customer account
+async function createOrderForMainCustomer(paymentIntent: any) {
+  console.log('Creating order for main customer account');
+  
+  // Get the main customer account
+  const customer = await storage.getUser('customer_michael_ogunjemilua_main');
+  if (!customer) {
+    throw new Error('Main customer account not found');
+  }
+  
+  // Extract order data
+  const cart = JSON.parse(paymentIntent.metadata.cart || '[]');
+  const subtotal = parseFloat(paymentIntent.metadata.subtotal || '0');
+  const transactionFee = parseFloat(paymentIntent.metadata.transactionFee || '0');
+  const deliveryCost = parseFloat(paymentIntent.metadata.deliveryCost || '0');
+  const total = (paymentIntent.amount / 100);
+  
+  // Generate order number
+  const orderNumber = await storage.generateOrderNumber(paymentIntent.metadata.wholesalerId);
+  
+  // Create order data
+  const orderData = {
+    wholesalerId: paymentIntent.metadata.wholesalerId,
+    retailerId: customer.id,
+    status: 'pending' as const,
+    subtotal: subtotal.toFixed(2),
+    platformFee: '0.00',
+    total: total.toFixed(2),
+    stripePaymentIntentId: paymentIntent.id,
+    customerName: `${customer.firstName} ${customer.lastName}`,
+    customerEmail: customer.email || '',
+    customerPhone: customer.phoneNumber || '',
+    fulfillmentType: deliveryCost > 0 ? 'delivery' : 'pickup',
+    deliveryCost: deliveryCost.toFixed(2),
+    transactionFee: transactionFee.toFixed(2),
+    customerTransactionFee: transactionFee.toFixed(2),
+    orderNumber
+  };
+  
+  // Create order items
+  const orderItems = cart.map((item: any) => ({
+    orderId: 0,
+    productId: item.productId,
+    quantity: item.quantity,
+    unitPrice: parseFloat(item.unitPrice || item.price || '0').toFixed(2),
+    total: (parseFloat(item.unitPrice || item.price || '0') * item.quantity).toFixed(2)
+  }));
+  
+  // Create the order
+  const order = await storage.createOrder(orderData, orderItems);
+  console.log(`✅ Order ${order.orderNumber} created for customer ${customer.id}`);
+  
+  return order;
+}
+
 // Helper function to create order with specific customer (for forced customer logic)
 async function createOrderWithCustomer(
   paymentIntent: any,
@@ -181,7 +236,14 @@ async function createOrderWithCustomer(
 
 export async function processCustomerPortalOrder(paymentIntent: any) {
   console.log('🔍 Processing customer portal order with metadata:', JSON.stringify(paymentIntent.metadata, null, 2));
-  console.log('🔍 Checking wholesaler ID for forced customer logic:', paymentIntent.metadata.wholesalerId);
+  
+  const wholesalerId = paymentIntent.metadata.wholesalerId;
+  
+  // SIMPLE APPROACH: For Surulere Foods, always use the main customer account
+  if (wholesalerId === '104871691614680693123') {
+    console.log('🔧 Surulere Foods order detected - using main customer account');
+    return await createOrderForMainCustomer(paymentIntent);
+  }
   
   // Extract data from metadata - handle both direct metadata and JSON strings
   const customerData = paymentIntent.metadata.customerData ? 
@@ -240,84 +302,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     parsedCustomerData: customerData
   });
 
-  // ABSOLUTE PERMANENT FIX: For Surulere Foods, ALWAYS force use of main customer account
-  // This completely bypasses all customer lookup logic to prevent ANY duplicate account creation
-  console.log(`🔍 CHECKING WHOLESALER ID: "${wholesalerId}" (type: ${typeof wholesalerId})`);
-  if (wholesalerId === '104871691614680693123') {
-    console.log(`🔧 SURULERE FOODS DETECTED: FORCING use of main customer account - BYPASSING ALL LOOKUPS`);
-    console.log(`🔧 TESTING CUSTOMER LOOKUP: About to call storage.getUser('customer_michael_ogunjemilua_main')`);
-    
-    try {
-      console.log(`🔧 STORAGE LOOKUP: Calling storage.getUser('customer_michael_ogunjemilua_main')`);
-      const mainCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
-      console.log(`🔧 STORAGE RESULT:`, mainCustomer ? `Found customer: ${mainCustomer.id} (${mainCustomer.firstName} ${mainCustomer.lastName})` : 'Customer NOT FOUND');
-      if (mainCustomer) {
-        console.log(`🔧 FORCED CUSTOMER SUCCESS: Using main account ${mainCustomer.id} for ALL Surulere Foods orders`);
-        
-        // Override any extracted customer data with the known correct values
-        const forcedCustomerName = mainCustomer.firstName + ' ' + mainCustomer.lastName;
-        const forcedCustomerEmail = mainCustomer.email || customerEmail;
-        const forcedCustomerPhone = mainCustomer.phoneNumber || '+447507659550';
-        
-        console.log(`🔧 FORCED DATA OVERRIDE: name="${forcedCustomerName}", email="${forcedCustomerEmail}", phone="${forcedCustomerPhone}"`);
-        console.log(`🔧 SKIPPING ALL CUSTOMER LOOKUP LOGIC - USING FORCED CUSTOMER ACCOUNT`);
-        
-        // Use the forced customer directly and skip ALL lookup logic
-        const orderResult = await createOrderWithCustomer(
-          paymentIntent, 
-          mainCustomer, 
-          forcedCustomerName, 
-          forcedCustomerEmail, 
-          forcedCustomerPhone, 
-          customerAddress, 
-          wholesalerId, 
-          subtotal, 
-          transactionFee, 
-          cart, 
-          shippingInfo
-        );
-        
-        console.log(`✅ FORCED CUSTOMER ORDER CREATED: ${orderResult.orderNumber} for account ${mainCustomer.id}`);
-        return orderResult;
-        
-      } else {
-        console.log(`🚨 CRITICAL ERROR: Main customer account 'customer_michael_ogunjemilua_main' not found!`);
-        console.log(`🚨 ATTEMPTING EMERGENCY CUSTOMER CREATION FOR SURULERE FOODS`);
-        
-        // Emergency: Create the main customer account if it doesn't exist
-        const emergencyCustomer = await storage.createCustomer({
-          id: 'customer_michael_ogunjemilua_main',
-          phoneNumber: '+447507659550',
-          firstName: 'Michael',
-          lastName: 'Ogunjemilua',
-          role: 'customer',
-          email: 'mogunjemilua@gmail.com'
-        });
-        
-        console.log(`🚨 EMERGENCY CUSTOMER CREATED: ${emergencyCustomer.id}`);
-        
-        const orderResult = await createOrderWithCustomer(
-          paymentIntent, 
-          emergencyCustomer, 
-          'Michael Ogunjemilua', 
-          'mogunjemilua@gmail.com', 
-          '+447507659550', 
-          customerAddress, 
-          wholesalerId, 
-          subtotal, 
-          transactionFee, 
-          cart, 
-          shippingInfo
-        );
-        
-        console.log(`✅ EMERGENCY ORDER CREATED: ${orderResult.orderNumber} for account ${emergencyCustomer.id}`);
-        return orderResult;
-      }
-    } catch (forcedCustomerError) {
-      console.error(`🚨 FORCED CUSTOMER LOGIC FAILED:`, forcedCustomerError);
-      throw forcedCustomerError; // Don't continue with normal logic if forced logic fails
-    }
-  }
+  // This code path should only run for non-Surulere orders
+  console.log('Processing order for other wholesaler:', wholesalerId);
 
   if (!cart || cart.length === 0) {
     throw new Error('No cart items found in payment metadata');
@@ -372,23 +358,6 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   }
   
   if (!customer) {
-    // FINAL SAFEGUARD: Prevent any new customer creation for Surulere Foods
-    console.log(`🔍 FINAL SAFEGUARD CHECK: wholesalerId="${wholesalerId}" (type: ${typeof wholesalerId})`);
-    if (wholesalerId === '104871691614680693123') {
-      console.log(`🚨 FINAL SAFEGUARD TRIGGERED: Preventing new customer creation for Surulere Foods`);
-      console.log(`🚨 This should NEVER happen if forced customer logic worked correctly`);
-      console.log(`🚨 FORCING EMERGENCY CUSTOMER CREATION FOR SURULERE FOODS`);
-      
-      // Emergency fallback - use existing customer account
-      const emergencyCustomer = await storage.getUser('customer_michael_ogunjemilua_main');
-      if (emergencyCustomer) {
-        console.log(`🚨 EMERGENCY SUCCESS: Using existing customer account ${emergencyCustomer.id}`);
-        customer = emergencyCustomer;
-      } else {
-        throw new Error('CRITICAL: Main customer account not found and attempted new customer creation blocked');
-      }
-    }
-    
     console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
     customer = await storage.createCustomer({
       phoneNumber: customerPhone,
