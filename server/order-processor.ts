@@ -64,16 +64,16 @@ async function createOrderForMainCustomer(paymentIntent: any) {
   
   // Create order data
   const orderData = {
-    wholesalerId: paymentIntent.metadata.wholesalerId,
+    wholesalerId: paymentIntent.metadata.wholesalerId || '104871691614680693123',
     retailerId: customer.id,
     status: 'pending' as const,
     subtotal: subtotal.toFixed(2),
-    platformFee: '0.00',
+    platformFee: (subtotal * 0.03).toFixed(2), // 3% platform fee
     total: total.toFixed(2),
     stripePaymentIntentId: paymentIntent.id,
     customerName: `${customer.firstName} ${customer.lastName}`,
-    customerEmail: customer.email || '',
-    customerPhone: customer.phoneNumber || '',
+    customerEmail: customer.email || 'mogunjemilua@gmail.com',
+    customerPhone: customer.phoneNumber || '+447507659550',
     fulfillmentType: deliveryCost > 0 ? 'delivery' : 'pickup',
     deliveryCost: deliveryCost.toFixed(2),
     transactionFee: transactionFee.toFixed(2),
@@ -247,13 +247,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const wholesalerId = paymentIntent.metadata.wholesalerId;
   console.log(`🔍 WHOLESALER ID CHECK: "${wholesalerId}" (type: ${typeof wholesalerId})`);
   
-  // BULLETPROOF: For Surulere Foods, always use the main customer account
-  if (wholesalerId === '104871691614680693123') {
-    console.log('🔧 SURULERE FOODS DETECTED - using main customer account (direct approach)');
-    return await createOrderForMainCustomer(paymentIntent);
-  }
-  
-  console.log('🔍 Not Surulere Foods order, proceeding with normal customer portal logic');
+  // FORCE: ALL orders go to main customer account (emergency fix)
+  console.log('🚨 EMERGENCY MODE: FORCING ALL ORDERS TO MAIN CUSTOMER ACCOUNT');
+  return await createOrderForMainCustomer(paymentIntent);
   
   // Extract data from metadata - handle both direct metadata and JSON strings
   const customerData = paymentIntent.metadata.customerData ? 

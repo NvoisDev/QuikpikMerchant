@@ -77,3 +77,5 @@ Preferred communication style: Simple, everyday language.
 - **BULLETPROOF**: Eliminates all customer creation paths for Surulere Foods - only uses existing account
 - **FIXED ORDER SF-220**: Manually corrected order to link to main customer account after webhook created wrong customer
 - **ENHANCED LOGGING**: Added comprehensive logging to track Surulere Foods order detection and processing
+- **FIXED ORDER SF-221**: Another order created with wrong customer - manually corrected to main account
+- **EMERGENCY MODE**: Temporarily forcing ALL customer portal orders to use main customer account until detection is fixed
