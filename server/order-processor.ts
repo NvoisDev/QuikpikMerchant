@@ -277,7 +277,36 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         
       } else {
         console.log(`🚨 CRITICAL ERROR: Main customer account 'customer_michael_ogunjemilua_main' not found!`);
-        throw new Error('Main customer account not found for Surulere Foods');
+        console.log(`🚨 ATTEMPTING EMERGENCY CUSTOMER CREATION FOR SURULERE FOODS`);
+        
+        // Emergency: Create the main customer account if it doesn't exist
+        const emergencyCustomer = await storage.createCustomer({
+          id: 'customer_michael_ogunjemilua_main',
+          phoneNumber: '+447507659550',
+          firstName: 'Michael',
+          lastName: 'Ogunjemilua',
+          role: 'customer',
+          email: 'mogunjemilua@gmail.com'
+        });
+        
+        console.log(`🚨 EMERGENCY CUSTOMER CREATED: ${emergencyCustomer.id}`);
+        
+        const orderResult = await createOrderWithCustomer(
+          paymentIntent, 
+          emergencyCustomer, 
+          'Michael Ogunjemilua', 
+          'mogunjemilua@gmail.com', 
+          '+447507659550', 
+          customerAddress, 
+          wholesalerId, 
+          subtotal, 
+          transactionFee, 
+          cart, 
+          shippingInfo
+        );
+        
+        console.log(`✅ EMERGENCY ORDER CREATED: ${orderResult.orderNumber} for account ${emergencyCustomer.id}`);
+        return orderResult;
       }
     } catch (forcedCustomerError) {
       console.error(`🚨 FORCED CUSTOMER LOGIC FAILED:`, forcedCustomerError);
@@ -338,6 +367,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   }
   
   if (!customer) {
+    // FINAL SAFEGUARD: Prevent any new customer creation for Surulere Foods
+    if (wholesalerId === '104871691614680693123') {
+      console.log(`🚨 FINAL SAFEGUARD TRIGGERED: Preventing new customer creation for Surulere Foods`);
+      console.log(`🚨 This should NEVER happen if forced customer logic worked correctly`);
+      throw new Error('CRITICAL: Attempted to create new customer for Surulere Foods - this is blocked');
+    }
+    
     console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
     customer = await storage.createCustomer({
       phoneNumber: customerPhone,
