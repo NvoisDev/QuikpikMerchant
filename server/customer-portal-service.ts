@@ -52,11 +52,15 @@ export async function getCustomerOrders(phoneNumber: string, wholesalerId: strin
   
   console.log(`📋 BULLETPROOF: Fetching orders for main customer: ${MAIN_CUSTOMER_ACCOUNT.id}`);
   
-  // Get all orders for the main customer account
-  const orders = await storage.getOrdersByCustomer(MAIN_CUSTOMER_ACCOUNT.id, wholesalerId);
-  console.log(`📋 BULLETPROOF: Found ${orders.length} orders for main customer`);
+  // Get all orders for the main customer account using phone number
+  const orders = await storage.getOrdersByCustomerPhone(MAIN_CUSTOMER_ACCOUNT.phone);
+  console.log(`📋 BULLETPROOF: Found ${orders.length} orders for main customer phone`);
   
-  return orders;
+  // Filter by wholesaler to ensure only Surulere Foods orders are shown
+  const filteredOrders = orders.filter(order => order.wholesalerId === wholesalerId);
+  console.log(`📋 BULLETPROOF: Filtered to ${filteredOrders.length} orders for wholesaler ${wholesalerId}`);
+  
+  return filteredOrders;
 }
 
 /**
@@ -71,13 +75,13 @@ export async function createOrderForCustomer(paymentIntent: any) {
     throw new Error(`Order creation denied - invalid wholesaler ID: ${paymentIntent.metadata?.wholesalerId}`);
   }
   
-  // Get the main customer account
+  // Get the main customer account  
   const customer = await storage.getUser(MAIN_CUSTOMER_ACCOUNT.id);
   if (!customer) {
     throw new Error('Main customer account not found in database');
   }
   
-  console.log(`🛒 Using main customer account: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+  console.log(`🛒 BULLETPROOF: Using main customer account: ${customer.id} (${customer.firstName} ${customer.lastName})`);
   
   // Parse order data from payment intent
   const cart = JSON.parse(paymentIntent.metadata.cart || '[]');
