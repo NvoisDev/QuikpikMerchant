@@ -54,4 +54,5 @@ Preferred communication style: Simple, everyday language.
 - **RESOLVED**: Customer portal order display fully functional - latest orders SF-208, SF-207, SF-206 displaying correctly
 - **RESOLVED**: Fixed delivery cost calculation error (was showing £255.84 instead of £0.00) - now displays correct values
 - **RESOLVED**: Frontend-backend synchronization issues resolved - real-time order data flowing properly
-- **STATUS**: System fully operational - order tracking verified end-to-end, 224+ total orders, latest SF-208
+- **RESOLVED**: Successfully merged duplicate customer account - order SF-209 moved to correct Michael Ogunjemilua account
+- **STATUS**: System fully operational - order tracking verified end-to-end, 225 total orders, latest SF-209
