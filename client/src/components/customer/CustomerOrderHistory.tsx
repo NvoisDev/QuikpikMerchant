@@ -330,7 +330,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
       const rawData = await response.json();
       const ordersArray = Array.isArray(rawData) ? rawData : [];
       
-
+      console.log('🛒 ORDERS DATA RECEIVED:', {
+        rawDataType: typeof rawData,
+        isArray: Array.isArray(rawData),
+        arrayLength: ordersArray.length,
+        firstThreeOrders: ordersArray.slice(0, 3).map(o => ({
+          orderNumber: o?.orderNumber,
+          total: o?.total,
+          customerTransactionFee: o?.customerTransactionFee,
+          fulfillmentType: o?.fulfillmentType,
+          deliveryCost: o?.deliveryCost
+        }))
+      });
       
       return ordersArray;
     }

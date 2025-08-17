@@ -906,6 +906,12 @@ export default function CustomerPortal() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
   
+  // Debug tab changes
+  const handleTabChange = (newTab: string) => {
+    console.log(`🔄 Tab change: ${activeTab} → ${newTab}`);
+    setActiveTab(newTab);
+  };
+  
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
   const [showQuickReorder, setShowQuickReorder] = useState(false);
@@ -2118,7 +2124,7 @@ export default function CustomerPortal() {
         
         {/* Main Tabbed Interface */}
         <TooltipProvider delayDuration={300}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue="home" className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
               <Tooltip>
                 <TooltipTrigger asChild>
