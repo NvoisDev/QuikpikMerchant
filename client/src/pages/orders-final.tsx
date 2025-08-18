@@ -82,7 +82,7 @@ export default function OrdersFinal() {
   }, [selectedOrder]);
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
-    queryKey: ['/api/public-orders'],
+    queryKey: ['/api/orders'],
     retry: 1,
     staleTime: 30000
   });
