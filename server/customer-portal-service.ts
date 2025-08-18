@@ -203,10 +203,10 @@ export async function createOrderForCustomer(paymentIntent: any) {
 export async function checkExistingOrder(paymentIntentId: string) {
   console.log(`🔍 Checking for existing order with payment intent: ${paymentIntentId}`);
   
-  const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
-  if (existingOrder) {
-    console.log(`⚠️ Order already exists: ${existingOrder.orderNumber} (ID: ${existingOrder.id})`);
-    return existingOrder;
+  const foundOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
+  if (foundOrder) {
+    console.log(`⚠️ Order already exists: ${foundOrder.orderNumber} (ID: ${foundOrder.id})`);
+    return foundOrder;
   }
   
   return null;

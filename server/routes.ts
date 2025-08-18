@@ -2022,9 +2022,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .limit(1);
             
             if (existingOrderResult.length > 0) {
-              const existingOrder = existingOrderResult[0];
-              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
-              throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
+              const duplicateOrder = existingOrderResult[0];
+              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${duplicateOrder.id} (${duplicateOrder.orderNumber})`);
+              throw new Error(`DUPLICATE_ORDER:${duplicateOrder.id}:${duplicateOrder.orderNumber}`);
             }
 
             // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record (FOR UPDATE removed for Neon compatibility)
