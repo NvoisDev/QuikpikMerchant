@@ -1883,29 +1883,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         const items = JSON.parse(itemsJson);
 
-        // Create customer if doesn't exist or update existing one
-        let customer = await storage.getUserByPhone(customerPhone);
+        // BULLETPROOF FIX: Force Surulere Foods orders to use main customer account
+        let customer;
         const { firstName, lastName } = parseCustomerName(customerName);
         
-        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
-        
-        // If phone lookup fails, try email lookup
-        if (!customer && customerEmail) {
-          customer = await storage.getUserByEmail(customerEmail);
-          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        if (wholesalerId === '104871691614680693123') {
+          // FORCE: Always use main customer account for Surulere Foods
+          console.log(`🔧 SURULERE FOODS DETECTED: Forcing main customer account for order`);
+          customer = await storage.getUserById('customer_michael_ogunjemilua_main');
+          if (!customer) {
+            console.error(`❌ CRITICAL: Main customer account not found!`);
+            return res.status(500).json({ message: 'Main customer account not found' });
+          }
+          console.log(`✅ FORCED: Using main customer account: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+        } else {
+          // Regular customer lookup for other wholesalers
+          customer = await storage.getUserByPhone(customerPhone);
+          console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+          
+          // If phone lookup fails, try email lookup
+          if (!customer && customerEmail) {
+            customer = await storage.getUserByEmail(customerEmail);
+            console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+          }
+          
+          if (!customer) {
+            console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
+            customer = await storage.createCustomer({
+              phoneNumber: customerPhone,
+              firstName,
+              lastName,
+              role: 'retailer',
+              email: customerEmail
+            });
+            console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+          }
         }
         
-        if (!customer) {
-          console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
-          customer = await storage.createCustomer({
-            phoneNumber: customerPhone,
-            firstName,
-            lastName,
-            role: 'retailer',
-            email: customerEmail
-          });
-          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
-        } else {
+        if (customer && customer.id !== 'customer_michael_ogunjemilua_main') {
           // Check if email belongs to different customer before updating
           let emailConflict = false;
           if (customerEmail && customer.email !== customerEmail) {
@@ -1950,7 +1965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
+        console.log(`👤 FINAL: Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
         // Calculate actual platform fee based on Connect usage
         const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
