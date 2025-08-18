@@ -273,10 +273,10 @@ async function createOrderWithCustomer(
   });
 
   // Check for existing order
-  const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
-  if (existingOrder) {
-    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${existingOrder.id} (${existingOrder.orderNumber})`);
-    return existingOrder;
+  const priorOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
+  if (priorOrder) {
+    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${priorOrder.id} (${priorOrder.orderNumber})`);
+    return priorOrder;
   }
 
   const order = await storage.createOrder(orderData, orderItems);
@@ -606,10 +606,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   });
 
   // CRITICAL FIX: Check if order already exists for this payment intent to prevent duplicates
-  const duplicateOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
-  if (duplicateOrder) {
-    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${duplicateOrder.id} (${duplicateOrder.orderNumber})`);
-    return duplicateOrder; // Return existing order instead of creating duplicate
+  const previousOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
+  if (previousOrder) {
+    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${previousOrder.id} (${previousOrder.orderNumber})`);
+    return previousOrder; // Return existing order instead of creating duplicate
   }
 
   const order = await storage.createOrder(orderData, orderItems);
