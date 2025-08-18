@@ -240,7 +240,7 @@ export default function OrdersFinal() {
 
       
       // Refresh orders data with multiple query invalidations
-      queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
       // Update selected order if it's the one being modified
