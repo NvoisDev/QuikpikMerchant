@@ -293,9 +293,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const { createOrderForCustomer, checkExistingOrder } = await import('./customer-portal-service');
   
   // Check for existing order first
-  const existingOrder = await checkExistingOrder(paymentIntent.id);
-  if (existingOrder) {
-    return existingOrder;
+  const portalExistingOrder = await checkExistingOrder(paymentIntent.id);
+  if (portalExistingOrder) {
+    return portalExistingOrder;
   }
   
   // Create new order using bulletproof service
@@ -606,10 +606,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   });
 
   // CRITICAL FIX: Check if order already exists for this payment intent to prevent duplicates
-  const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
-  if (existingOrder) {
-    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${existingOrder.id} (${existingOrder.orderNumber})`);
-    return existingOrder; // Return existing order instead of creating duplicate
+  const duplicateOrder = await storage.getOrderByPaymentIntentId(paymentIntent.id);
+  if (duplicateOrder) {
+    console.log(`⚠️ Order already exists for payment intent ${paymentIntent.id}: Order #${duplicateOrder.id} (${duplicateOrder.orderNumber})`);
+    return duplicateOrder; // Return existing order instead of creating duplicate
   }
 
   const order = await storage.createOrder(orderData, orderItems);
