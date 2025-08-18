@@ -347,6 +347,17 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         }))
       });
       
+      console.log('🔍 ORDERS ARRAY DEBUG:', {
+        ordersArrayLength: ordersArray.length,
+        ordersArrayType: typeof ordersArray,
+        isArrayValid: Array.isArray(ordersArray),
+        firstOrder: ordersArray[0] ? {
+          id: ordersArray[0].id,
+          orderNumber: ordersArray[0].orderNumber,
+          total: ordersArray[0].total
+        } : null
+      });
+      
       return ordersArray;
     }
   });
@@ -476,8 +487,18 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
+  // CRITICAL: Debug the orders data before empty check
+  console.log('🔍 EMPTY CHECK DEBUG:', {
+    orders: orders,
+    ordersType: typeof orders,
+    ordersLength: orders?.length,
+    isArray: Array.isArray(orders),
+    ordersExist: !!orders,
+    truthyCheck: !orders || orders.length === 0
+  });
+  
   // CRITICAL: Force display if we see individual orders in console but main array is empty
-  const shouldForceDisplay = false; // Reset to normal display logic now that data is flowing
+  const shouldForceDisplay = true; // Force display to debug the issue
   
   if ((!orders || orders.length === 0) && !shouldForceDisplay) {
     
