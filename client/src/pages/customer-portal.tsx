@@ -848,7 +848,9 @@ export default function CustomerPortal() {
         credentials: 'include',
       });
       if (!response.ok) return [];
-      return response.json();
+      const rawData = await response.json();
+      // Handle both old format (direct array) and new paginated format
+      return Array.isArray(rawData) ? rawData : (rawData.orders || []);
     },
     enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
     staleTime: 30000, // 30 seconds
