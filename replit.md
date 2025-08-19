@@ -5,6 +5,14 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 6 - ENHANCED MODAL WITH FREE-TYPE QUANTITY INPUT**
+- ✅ **Enhanced Quantity Selection**: Upgraded modal to two-step process with free-type quantity input
+- ✅ **Flexible Input**: Users can type any quantity directly or use +/- buttons for incremental changes
+- ✅ **Smart Validation**: Input automatically enforces minimum requirements (12 units, 1 pallet) while allowing higher quantities
+- ✅ **Professional UX**: Large, centered input field with real-time price calculations and clear validation messages
+- ✅ **Workflow Enhancement**: Step 1: Choose type (units/pallets) → Step 2: Enter/adjust quantity → Add to cart
+- ✅ **MOQ Protection**: System prevents adding quantities below minimums while providing helpful feedback
+
 **VERSION CONTROL 5 - COMPLETE PAYMENT SYSTEM & UNIT/PALLET MODAL FIX**
 - ✅ **CRITICAL FIX**: Removed global payment lock that was blocking all payments with 429 "system_busy" errors
 - ✅ **MOQ Validation Fix**: Backend now properly validates unit vs pallet quantities based on unitPrice matching
