@@ -1321,6 +1321,16 @@ export default function CustomerPortal() {
       return;
     }
     
+    // Validate quantity meets MOQ requirements
+    const minQuantity = sellingType === "pallets" ? (product.palletMoq || 1) : product.moq;
+    if (quantity < minQuantity) {
+      toast({
+        title: "Minimum Order Required",
+        description: `Minimum order for ${product.name} is ${minQuantity} ${sellingType === "pallets" ? "pallets" : "units"}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.product.id === product.id && item.sellingType === sellingType);
@@ -1342,6 +1352,27 @@ export default function CustomerPortal() {
       description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
     });
   }, [toast, isPreviewMode]);
+
+  // Function to clean up cart items that don't meet MOQ
+  const cleanUpCart = useCallback(() => {
+    setCart(prevCart => {
+      const validItems = prevCart.filter(item => {
+        const minQuantity = item.sellingType === "pallets" ? (item.product.palletMoq || 1) : item.product.moq;
+        return item.quantity >= minQuantity;
+      });
+      
+      if (validItems.length !== prevCart.length) {
+        const removedItems = prevCart.length - validItems.length;
+        toast({
+          title: "Cart Updated",
+          description: `${removedItems} item(s) removed for not meeting minimum order quantities`,
+          variant: "default",
+        });
+      }
+      
+      return validItems;
+    });
+  }, [toast]);
 
   // Handle add to cart from quantity editor
   const handleAddToCart = () => {
@@ -2079,7 +2110,8 @@ export default function CustomerPortal() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
-                                          if (cartItem.quantity <= 1) {
+                                          if (cartItem.quantity <= product.moq) {
+                                            // Remove item if at or below MOQ
                                             setCart(cart.filter(item => item.product.id !== product.id));
                                           } else {
                                             const updatedCart = cart.map(item => 
@@ -2116,7 +2148,7 @@ export default function CustomerPortal() {
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => addToCart(product, 1)}
+                                      onClick={() => addToCart(product, product.moq)}
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
