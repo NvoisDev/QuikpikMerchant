@@ -1939,7 +1939,170 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6">
-              {/* Products content will be here */}
+              {/* Product Search and Filters */}
+              <div className="bg-white rounded-lg shadow-sm border p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Search Products */}
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Category Filter */}
+                  <div className="sm:w-64">
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Products Grid */}
+              <div className="space-y-4">
+                {productsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => (
+                      <ProductCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : productsError ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load products</h3>
+                    <p className="text-gray-500 mb-4">There was an error loading the product catalog.</p>
+                    <Button onClick={() => refetchProducts()} variant="outline">
+                      Try Again
+                    </Button>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-500">
+                      {searchTerm || selectedCategory !== "all" 
+                        ? "Try adjusting your search or filters"
+                        : "This store doesn't have any products available yet."
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredProducts.map((product) => {
+                      const pricing = calculatePromotionalPricing(product, 1);
+                      const cartItem = cart.find(item => item.product.id === product.id);
+                      
+                      return (
+                        <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
+                          <CardContent className="p-4">
+                            {/* Product Image */}
+                            <div className="relative aspect-square mb-4 bg-gray-50 rounded-lg overflow-hidden">
+                              {product.imageUrl || (product.images && product.images.length > 0) ? (
+                                <img 
+                                  src={product.imageUrl || product.images[0]} 
+                                  alt={product.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="w-12 h-12 text-gray-300" />
+                                </div>
+                              )}
+                              
+                              {/* Sale Badge */}
+                              {product.promoActive && product.promoPrice && (
+                                <div className="absolute top-2 left-2">
+                                  <Badge variant="destructive" className="text-xs">
+                                    SALE
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Product Info */}
+                            <div className="space-y-3">
+                              <div>
+                                <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">
+                                  {product.name}
+                                </h3>
+                                {product.description && (
+                                  <p className="text-sm text-gray-600 line-clamp-2">
+                                    {cleanAIDescription(product.description)}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {/* Pricing */}
+                              <div className="flex items-center justify-between">
+                                <PriceDisplay
+                                  price={pricing.effectivePrice}
+                                  originalPrice={pricing.effectivePrice !== pricing.basePrice ? pricing.basePrice : undefined}
+                                  currency={product.currency}
+                                  isGuestMode={false}
+                                  size="medium"
+                                  showStrikethrough={true}
+                                />
+                                
+                                {/* Add to Cart Controls */}
+                                <div className="flex items-center space-x-2">
+                                  {cartItem ? (
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="text-sm font-medium w-8 text-center">
+                                        {cartItem.quantity}
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => addToCart(product)}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6">
@@ -1956,6 +2119,23 @@ export default function CustomerPortal() {
               {/* Account content will be here */}
             </TabsContent>
           </Tabs>
+        )}
+
+        {/* Floating Cart Button - Only show when authenticated and cart has items */}
+        {isAuthenticated && !isGuestMode && cart.length > 0 && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <Button
+              onClick={() => setShowCheckout(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg h-14 w-14 p-0 relative"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
+                  {cart.reduce((total, item) => total + item.quantity, 0)}
+                </span>
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>
