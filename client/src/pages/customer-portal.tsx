@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
@@ -22,11 +23,12 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, History, User, Settings } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { CustomerHome } from "@/components/customer/CustomerHome";
+import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { ThankYouPage } from "@/components/customer/ThankYouPage";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
@@ -781,6 +783,9 @@ export default function CustomerPortal() {
     return urlFeatured ? parseInt(urlFeatured, 10) : null;
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  
+  // Tab state for modern interface
+  const [activeTab, setActiveTab] = useState("products");
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
@@ -1913,6 +1918,26 @@ export default function CustomerPortal() {
             </div>
           </div>
         )}
+
+        {/* Modern Tab Navigation - Only for authenticated users */}
+        {isAuthenticated && !isGuestMode && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="products" className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Products
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Order History
+              </TabsTrigger>
+              <TabsTrigger value="account" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Account
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="products" className="space-y-6">
         
         {/* Featured Product - Mobile Responsive Design */}
         {featuredProduct && (
@@ -3167,6 +3192,62 @@ export default function CustomerPortal() {
             )}
           </div>
           </>
+        )}
+            </TabsContent>
+
+            <TabsContent value="orders" className="space-y-6">
+              {/* Order History Content */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold mb-4">Your Order History</h2>
+                <CustomerOrderHistory 
+                  wholesalerId={wholesalerId}
+                  customerPhone={authenticatedCustomer?.phone}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="account" className="space-y-6">
+              {/* Account Information Content */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold mb-4">Account Information</h2>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Name</Label>
+                    <p className="text-gray-900">{authenticatedCustomer?.name || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Phone</Label>
+                    <p className="text-gray-900">{authenticatedCustomer?.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Email</Label>
+                    <p className="text-gray-900">{authenticatedCustomer?.email || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Customer Group</Label>
+                    <p className="text-gray-900">{authenticatedCustomer?.customerGroupName || 'Default'}</p>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <Button
+                      onClick={handleLogout}
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      Log Out
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Non-authenticated content (guest mode) */}
+        {!isAuthenticated && isGuestMode && featuredProduct && (
+          <div className="space-y-6">
+            {/* Guest mode featured product display would go here */}
+          </div>
         )}
       </div>
 
