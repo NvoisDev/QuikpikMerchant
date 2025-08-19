@@ -12,8 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
 import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
@@ -24,13 +22,12 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, FileText } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2 } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { CustomerHome } from "@/components/customer/CustomerHome";
 import { ThankYouPage } from "@/components/customer/ThankYouPage";
-import { CustomerOrderHistory } from '@/components/customer/CustomerOrderHistory';
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
@@ -38,8 +35,6 @@ import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
-import { SimplePaymentTest } from "@/components/SimplePaymentTest";
-// Removed DeliveryPaymentComponent import to prevent Stripe conflicts
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -79,11 +74,10 @@ interface ExtendedProduct {
   moq?: number;
 }
 
-// Initialize Stripe - Single instance to prevent conflicts
+// Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
   throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
 }
-console.log('🔧 Initializing Stripe with public key:', import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 20) + '...');
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 // Utility functions
@@ -309,25 +303,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         selectedShippingService: customerData.selectedShippingService,
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
-        isCreatingIntent,
-        currentCustomerData: {
-          name: customerData.name,
-          email: customerData.email,
-          phone: customerData.phone,
-          address: customerData.address,
-          shippingOption: customerData.shippingOption
-        }
-      });
-      
-      console.log('🔍 Payment Intent Creation Check:', {
-        hasCart: cart.length > 0,
-        hasWholesaler: !!wholesaler,
-        hasName: !!customerData.name,
-        hasEmail: !!customerData.email,
-        hasPhone: !!customerData.phone,
-        hasShipping: !!customerData.shippingOption,
-        hasClientSecret: !!clientSecret,
-        isCreating: isCreatingIntent
+        isCreatingIntent
       });
       
       if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
@@ -343,87 +319,60 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
         
         try {
-          // Calculate product subtotal
-          const productSubtotal = cart.reduce((total, item) => {
-            if (item.sellingType === "pallets") {
-              return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-            } else {
-              const basePrice = parseFloat(item.product.price) || 0;
-              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                basePrice,
-                item.quantity,
-                item.product.promotionalOffers || [],
-                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                item.product.promoActive
-              );
-              return total + pricing.totalCost;
-            }
-          }, 0);
-
-          console.log('🚀 MAKING API REQUEST TO CREATE PAYMENT INTENT...');
-          console.log('🛒 CART DEBUG:', {
-            cartLength: cart.length,
-            cartItems: cart.map(item => ({
-              id: item.product?.id,
-              name: item.product?.name,
-              quantity: item.quantity,
-              sellingType: item.sellingType
-            })),
-            wholesalerId: wholesaler?.id,
-            totalAmount: productSubtotal
-          });
-          
-          // Calculate shipping cost
-          const shippingCost = customerData.selectedShippingService?.price || 0;
-          
-          // Customer pays: products + shipping + transaction fee
-          const transactionFee = productSubtotal * 0.055 + 0.50;
-          const totalAmountInCents = Math.round((productSubtotal + shippingCost + transactionFee) * 100);
-
           const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
-            amount: totalAmountInCents,
+            items: cart.map(item => ({
+              productId: item.product.id,
+              quantity: item.quantity || 0,
+              unitPrice: (() => {
+                if (item.sellingType === "pallets") {
+                  return parseFloat(item.product.palletPrice || "0") || 0;
+                } else {
+                  const basePrice = parseFloat(item.product.price) || 0;
+                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                    basePrice,
+                    item.quantity,
+                    item.product.promotionalOffers || [],
+                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                    item.product.promoActive
+                  );
+                  return pricing.effectivePrice;
+                }
+              })()
+            })),
+            customerData,
             wholesalerId: wholesaler.id,
-            customerEmail: customerData.email,
-            metadata: {
-              cart: JSON.stringify(cart.map(item => ({
-                productId: item.product.id,
-                quantity: item.quantity,
-                sellingType: item.sellingType,
-                productName: item.product.name
-              }))),
-              customerData: JSON.stringify({
-                name: customerData.name,
-                email: customerData.email,
-                phone: customerData.phone,
-                address: customerData.address,
-                city: customerData.city,
-                state: customerData.state,
-                postalCode: customerData.postalCode,
-                country: customerData.country
-              }),
-              shippingInfo: JSON.stringify({
-                option: customerData.shippingOption,
-                service: customerData.selectedShippingService
-              }),
-              subtotal: productSubtotal.toString(),
-              shippingCost: shippingCost.toString(),
-              transactionFee: transactionFee.toString()
-            }
+            totalAmount: cart.reduce((total, item) => {
+              if (item.sellingType === "pallets") {
+                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
+              } else {
+                const basePrice = parseFloat(item.product.price) || 0;
+                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                  basePrice,
+                  item.quantity,
+                  item.product.promotionalOffers || [],
+                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                  item.product.promoActive
+                );
+                return total + pricing.totalCost;
+              }
+            }, 0), // Send ONLY product subtotal - backend will add transaction fees
+            shippingInfo: shippingDataAtCreation
           });
+          
+          console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
+          console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
+          console.log('🚚 FRONTEND: Current customerData.shippingOption (might be different):', customerData.shippingOption);
+          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', shippingDataAtCreation);
+          console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
+            shippingInfo: shippingDataAtCreation,
+            isDeliveryOrder: shippingDataAtCreation.option === 'delivery',
+            hasShippingService: !!shippingDataAtCreation.service,
+            willCreateDeliveryOrder: shippingDataAtCreation.option === 'delivery' && !!shippingDataAtCreation.service
+          });
+          console.log('🚚 FRONTEND: === END DEBUG ===');
+          
           const data = await response.json();
-          
-          console.log('🔍 PAYMENT INTENT RESPONSE:', {
-            hasClientSecret: !!data.clientSecret,
-            success: response.ok
-          });
-          
-          if (data.clientSecret) {
-            console.log('✅ Payment intent created successfully! Client secret received:', data.clientSecret?.substring(0, 20) + '...');
-            setClientSecret(data.clientSecret);
-          } else {
-            console.error('❌ No client secret in response:', data);
-            throw new Error('No client secret received');
-          }
+          setClientSecret(data.clientSecret);
         } catch (error: any) {
           console.error("Error creating payment intent:", error);
           
@@ -510,13 +459,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     );
   }
 
-  console.log('💳 STRIPE ELEMENTS DEBUG:', {
-    hasClientSecret: !!clientSecret,
-    clientSecretPreview: clientSecret?.substring(0, 30) + '...',
-    stripePromiseStatus: !!stripePromise,
-    elementOptions: { clientSecret }
-  });
-
   return (
     <Elements 
       stripe={stripePromise} 
@@ -536,14 +478,6 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-
-  console.log('💳 PAYMENT FORM CONTENT DEBUG:', {
-    hasStripe: !!stripe,
-    hasElements: !!elements,
-    isProcessing,
-    totalAmount,
-    componentMounted: true
-  });
   const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -556,26 +490,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('🚀 PAYMENT FORM SUBMITTED! Starting checkout process...');
     e.preventDefault();
 
     if (!stripe || !elements) {
       console.error('💳 Payment Error: Stripe or Elements not loaded');
-      toast({
-        title: "Payment Error",
-        description: "Payment system is not ready. Please refresh the page and try again.",
-        variant: "destructive",
-      });
       return;
     }
-
-    // Log PaymentElement status but don't block if it's still mounting
-    const paymentElement = elements.getElement('payment');
-    console.log('💳 PaymentElement status:', {
-      found: !!paymentElement,
-      elementsReady: !!elements,
-      stripeReady: !!stripe
-    });
 
     console.log('💳 Starting payment confirmation process...');
     setIsProcessing(true);
@@ -695,15 +615,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
     } catch (error: any) {
-      console.error('💥 UNEXPECTED PAYMENT ERROR:', error);
-      console.error('💥 Error Details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        type: typeof error,
-        isNetworkError: error.name === 'NetworkError',
-        isTimeoutError: error.name === 'TimeoutError'
-      });
+      console.error('Unexpected payment error:', error);
       
       // Enhanced error handling for unexpected payment errors
       let errorMessage = "An unexpected error occurred during payment. Please try again.";
@@ -723,7 +635,6 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         variant: "destructive",
       });
     } finally {
-      console.log('🏁 Payment processing completed, setting isProcessing to false');
       setIsProcessing(false);
     }
   };
@@ -732,23 +643,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 border rounded-lg">
-          <PaymentElement 
-            options={{
-              layout: "tabs",
-            }}
-            onReady={() => {
-              console.log('✅ PaymentElement is ready and mounted!');
-            }}
-            onChange={(event) => {
-              console.log('💳 PaymentElement change:', event);
-            }}
-            onLoaderStart={() => {
-              console.log('🔄 PaymentElement loader started');
-            }}
-            onLoadError={(error) => {
-              console.error('❌ PaymentElement load error:', error);
-            }}
-          />
+          <PaymentElement />
         </div>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -766,10 +661,10 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           isLoading={isProcessing}
           variant="success"
           size="lg"
-          disabled={!stripe || !elements || isProcessing}
+          disabled={!stripe}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          {isProcessing ? "Processing..." : `Pay ${getCurrencySymbol(wholesaler?.defaultCurrency)}${totalAmount.toFixed(2)}`}
+          Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
         </ButtonLoader>
       </form>
 
@@ -838,26 +733,6 @@ export default function CustomerPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
 
-  // Fetch customer orders count for homepage display
-  const { data: customerOrders = [] } = useQuery({
-    queryKey: [`/api/customer-orders`, wholesalerId, authenticatedCustomer?.phone],
-    queryFn: async () => {
-      if (!wholesalerId || !authenticatedCustomer?.phone) return [];
-      const encodedPhone = encodeURIComponent(authenticatedCustomer.phone);
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) return [];
-      const rawData = await response.json();
-      // Handle both old format (direct array) and new paginated format
-      return Array.isArray(rawData) ? rawData : (rawData.orders || []);
-    },
-    enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
-    staleTime: 30000, // 30 seconds
-  });
-
-  const customerOrderCount = customerOrders?.length || 0;
-
   // Check for existing customer session on load
   const { data: sessionData, isLoading: sessionLoading, refetch: refetchSession } = useQuery({
     queryKey: ["/api/customer-auth/check", wholesalerId],
@@ -884,7 +759,7 @@ export default function CustomerPortal() {
     refetchOnWindowFocus: true,
     refetchInterval: 10 * 60 * 1000, // Check every 10 minutes
   });
-
+  const [showHomePage, setShowHomePage] = useState(true);
   // Check if coming from CustomerLogin with auth parameter or if user wants to login
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const hasAuthParam = urlParams.has('auth');
@@ -906,17 +781,9 @@ export default function CustomerPortal() {
     return urlFeatured ? parseInt(urlFeatured, 10) : null;
   });
   const [showOrderHistory, setShowOrderHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState("home");
-  
-  // Debug tab changes
-  const handleTabChange = (newTab: string) => {
-    console.log(`🔄 Tab change: ${activeTab} → ${newTab}`);
-    setActiveTab(newTab);
-  };
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
-  const [showQuickReorder, setShowQuickReorder] = useState(false);
   
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
@@ -1563,12 +1430,12 @@ export default function CustomerPortal() {
   // Authentication is now required - no guest mode allowed;
 
   const handleViewAllProducts = () => {
-    setActiveTab('products');
+    setShowHomePage(false);
     setShowAllProducts(true);
   };
 
   const handleViewFeaturedProduct = () => {
-    setActiveTab('products');
+    setShowHomePage(false);
     setShowAllProducts(false);
   };
 
@@ -1622,17 +1489,18 @@ export default function CustomerPortal() {
 
 
 
-  // Debug output for order history troubleshooting
-  console.log('🔄 Customer Portal Render State:', {
-    wholesalerId,
-    isAuthenticated,
-    isGuestMode,
-    customerDataPhone: customerData?.phone,
-    authenticatedCustomerPhone: authenticatedCustomer?.phone,
-    sessionData: sessionData?.customer,
-    activeTab,
-    showAuth
-  });
+  // Debug output temporarily disabled to reduce noise
+  // console.log('🔄 Customer Portal Render State:', {
+  //   wholesalerId,
+  //   showAuth,
+  //   isPreviewMode,
+  //   isAuthenticated,
+  //   showHomePage,
+  //   showAllProducts,
+  //   featuredProductId,
+  //   featuredLoading,
+  //   wholesalerLoading
+  // });
 
   // Show loading screen if wholesalerId is not available yet
   if (!wholesalerId && !isPreviewMode) {
@@ -1686,8 +1554,8 @@ export default function CustomerPortal() {
         setCompletedOrder(null);
         setShowThankYou(false);
         // Navigate back to products
-        setActiveTab('products');
         setShowAllProducts(true);
+        setShowHomePage(false);
       }}
       onViewOrders={() => {
         // Clear cart and order data
@@ -1695,14 +1563,26 @@ export default function CustomerPortal() {
         setCompletedOrder(null);
         setShowThankYou(false);
         // Navigate to order history
-        setActiveTab('orders');
         setShowOrderHistory(true);
+        setShowHomePage(true);
         setShowAllProducts(false);
       }}
     />;
   }
 
-  // Remove old CustomerHome - now handled by tabbed interface
+  // Show home page
+  if (showHomePage && !showAllProducts && !isPreviewMode && isAuthenticated) {
+    console.log('🏠 Showing customer home page');
+    return <CustomerHome 
+      wholesaler={wholesaler}
+      featuredProduct={featuredProduct}
+      onViewAllProducts={handleViewAllProducts}
+      onViewFeaturedProduct={handleViewFeaturedProduct}
+      customerData={authenticatedCustomer}
+      onLogout={handleLogout}
+
+    />;
+  }
 
   // Early loading state only for authenticated users with featured products
   if (featuredProductId && featuredLoading && isAuthenticated) {
@@ -1812,71 +1692,78 @@ export default function CustomerPortal() {
               
 
 
-              {/* Logout button for authenticated customers */}
+              {/* Home and Logout buttons for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleLogout}
-                      variant="outline"
-                      size="sm"
-                      className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                    >
-                      <span className="hidden sm:inline">Log out</span>
-                      <span className="sm:hidden">Logout</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Sign out of your account</p>
-                  </TooltipContent>
-                </Tooltip>
+                <>
+                  <Button
+                    onClick={() => {
+                      // Smart back navigation based on current view state
+                      if (featuredProductId) {
+                        // If viewing a featured product, go back to home page
+                        setFeaturedProductId(null);
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                      } else if (showAllProducts) {
+                        // If viewing all products, go back to home page
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                      } else {
+                        // Already on home page, just ensure state is correct
+                        setShowHomePage(true);
+                        setShowAllProducts(false);
+                        setFeaturedProductId(null);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs sm:text-sm"
+                  >
+                    <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
+                  </Button>
+                  <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    size="sm"
+                    className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                  >
+                    <span className="hidden sm:inline">Log out</span>
+                    <span className="sm:hidden">Logout</span>
+                  </Button>
+                </>
               )}
 
               {/* Find Seller button for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setShowWholesalerSearch(true)}
-                      variant="outline"
-                      size="sm"
-                      className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
-                    >
-                      <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Find Seller</span>
-                      <span className="sm:hidden">Seller</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Search for other wholesalers on Quikpik</p>
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  onClick={() => setShowWholesalerSearch(true)}
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
+                >
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Find Seller</span>
+                  <span className="sm:hidden">Seller</span>
+                </Button>
               )}
               
 
               {!isPreviewMode && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setShowCheckout(true)}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
-                      disabled={cart.length === 0}
-                    >
-                      <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
-                      <span className="sm:hidden">({cartStats.totalItems})</span>
-                      {cartStats.totalItems > 0 && (
-                        <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
-                          {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
-                        </Badge>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{cart.length === 0 ? 'Add products to cart first' : 'Review cart and proceed to checkout'}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  onClick={() => setShowCheckout(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
+                  disabled={cart.length === 0}
+                >
+                  <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
+                  <span className="sm:hidden">({cartStats.totalItems})</span>
+                  {cartStats.totalItems > 0 && (
+                    <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
+                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
+                    </Badge>
+                  )}
+                </Button>
               )}
             </div>
           </div>
@@ -1993,103 +1880,6 @@ export default function CustomerPortal() {
         </div>
       )}
 
-      {/* Quick Reorder Modal */}
-      {showQuickReorder && (
-        <div className="fixed inset-0 bg-black bg-opacity-25 z-50 flex items-start justify-center pt-20">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Quick Reorder</h3>
-                <Button
-                  onClick={() => setShowQuickReorder(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  ×
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Reorder products from your recent orders</p>
-            </div>
-            <div className="overflow-y-auto max-h-80">
-              {customerOrders.length > 0 ? (
-                <div className="p-4 space-y-3">
-                  {customerOrders.slice(0, 5).map((order: any) => {
-                    // Items are already an array from the API - no need to parse JSON
-                    const orderItems = Array.isArray(order.items) ? order.items : [];
-                    const orderDate = new Date(order.createdAt).toLocaleDateString();
-                    return (
-                      <div key={order.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-medium text-sm">Order {order.orderNumber}</p>
-                            <p className="text-xs text-gray-500">{orderDate} • £{parseFloat(order.total || '0').toFixed(2)}</p>
-                          </div>
-                          <Button
-                            onClick={() => {
-                              // Add all items from this order to cart
-                              if (orderItems.length > 0) {
-                                orderItems.forEach((item: any) => {
-                                  const product = products?.find(p => p.id === item.productId || p.name === item.productName);
-                                  if (product) {
-                                    addToCart(product, item.quantity || 1, item.sellingType || 'units');
-                                  }
-                                });
-                                setShowQuickReorder(false);
-                                toast({
-                                  title: "Added to Cart",
-                                  description: `${orderItems.length} items from order ${order.orderNumber} added to cart`,
-                                });
-                              } else {
-                                toast({
-                                  title: "No Items Found",
-                                  description: "This order has no items available for reordering",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            Reorder
-                          </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {orderItems.length > 0 ? (
-                            <>
-                              {orderItems.slice(0, 3).map((item: any, idx: number) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {item.productName || 'Unknown Product'} ({item.quantity || 0})
-                                </Badge>
-                              ))}
-                              {orderItems.length > 3 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{orderItems.length - 3} more
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <Badge variant="outline" className="text-xs text-gray-500">
-                              No item details available
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p>No recent orders found</p>
-                  <p className="text-sm">Place your first order to see reorder options</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {/* Guest Mode Notice */}
         {isGuestMode && (
@@ -2124,322 +1914,9 @@ export default function CustomerPortal() {
           </div>
         )}
         
-        {/* Main Tabbed Interface */}
-        <TooltipProvider delayDuration={300}>
-          <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue="home" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="home" className="flex items-center gap-2">
-                    <Store className="w-4 h-4" />
-                    Home
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View welcome dashboard with quick stats and featured products</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="products" className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Products
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Browse and search all available products</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="orders" className="flex items-center gap-2">
-                    <ShoppingCart className="w-4 h-4" />
-                    Orders
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View your order history and track deliveries</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="account" className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    Account
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Manage your account settings and preferences</p>
-                </TooltipContent>
-              </Tooltip>
-            </TabsList>
-          
-          {/* HOME TAB - Modern Customer Portal Homepage */}
-          <TabsContent value="home">
-            <div className="space-y-8">
-              {/* Welcome Banner */}
-              <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                        Welcome back, {authenticatedCustomer?.name || 'Valued Customer'}!
-                      </h1>
-                      <p className="text-gray-600">
-                        Shopping with {wholesaler?.businessName} • Ready to place your next order?
-                      </p>
-                    </div>
-                    <div className="hidden md:block">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Account Status</p>
-                        <Badge className="bg-green-100 text-green-800 border-green-300">Active</Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Stats */}
-              {!isGuestMode && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Total Orders</p>
-                          <p className="text-2xl font-bold text-gray-900">{customerOrderCount || 0}</p>
-                        </div>
-                        <ShoppingCart className="w-8 h-8 text-green-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Available Products</p>
-                          <p className="text-2xl font-bold text-gray-900">{products?.length || 0}</p>
-                        </div>
-                        <Package className="w-8 h-8 text-blue-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setShowQuickReorder(true)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Quick Reorder</p>
-                          <p className="text-sm text-gray-900">From recent orders</p>
-                        </div>
-                        <Plus className="w-8 h-8 text-purple-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Quick Search */}
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold mb-4">Find Products Quickly</h2>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <Input
-                          placeholder="Search for products by name, category, or brand..."
-                          className="pl-12 h-12 text-base"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              setActiveTab('products');
-                              setSearchTerm(e.currentTarget.value);
-                            }
-                          }}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Press Enter to search products or use category buttons below</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {categories.slice(0, 5).map((category) => (
-                      <Tooltip key={category}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCategory(category);
-                              setActiveTab('products');
-                            }}
-                            className="text-xs"
-                          >
-                            {category}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Browse products in {category} category</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Featured Products */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Featured Products</CardTitle>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setActiveTab('products')}
-                    >
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {products?.slice(0, 3).map((product) => (
-                      <Card key={product.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              {product.imageUrl ? (
-                                <img 
-                                  src={product.imageUrl} 
-                                  alt={product.name}
-                                  className="w-12 h-12 object-contain rounded-lg border bg-white"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center border">
-                                  <Package className="w-6 h-6 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-sm text-gray-900 truncate">{product.name}</h3>
-                              <p className="text-sm text-gray-500">{product.category}</p>
-                              {!isGuestMode && (
-                                <p className="text-sm font-semibold text-green-600">
-                                  {wholesaler?.defaultCurrency || '£'}{parseFloat(product.price).toFixed(2)}
-                                </p>
-                              )}
-                            </div>
-                            {!isGuestMode && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => openQuantityEditor(product)}
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Add {product.name} to cart</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4">Quick Actions</h3>
-                    <div className="space-y-3">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            onClick={() => setActiveTab('products')} 
-                            className="w-full justify-start bg-green-600 hover:bg-green-700"
-                          >
-                            <Package className="w-4 h-4 mr-2" />
-                            Browse All Products
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View complete product catalog with search and filtering</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            onClick={() => setActiveTab('orders')} 
-                            variant="outline" 
-                            className="w-full justify-start"
-                          >
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            View Order History
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Check all your past orders and delivery status</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold mb-4">Need Help?</h3>
-                    <div className="space-y-3">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            onClick={() => window.location.href = '/'} 
-                            variant="outline" 
-                            className="w-full justify-start"
-                          >
-                            <Phone className="w-4 h-4 mr-2" />
-                            Contact {wholesaler?.businessName}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Get support or ask questions about products</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            onClick={() => setActiveTab('account')} 
-                            variant="outline" 
-                            className="w-full justify-start"
-                          >
-                            <Building2 className="w-4 h-4 mr-2" />
-                            Account Settings
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Update your profile and preferences</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="products">
-            {/* Featured Product - Mobile Responsive Design */}
-            {featuredProduct && (
-              <div className="mb-8 sm:mb-12">
+        {/* Featured Product - Mobile Responsive Design */}
+        {featuredProduct && (
+          <div className="mb-8 sm:mb-12">
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="grid lg:grid-cols-2">
@@ -2543,35 +2020,6 @@ export default function CustomerPortal() {
                             
                             return badges;
                           })()}
-                          
-                          {/* Purchase Options Tags */}
-                          {(() => {
-                            const hasUnits = !!featuredProduct.price;
-                            const hasPallets = !!(featuredProduct.palletPrice && featuredProduct.unitsPerPallet);
-                            const unitsPerPallet = featuredProduct.unitsPerPallet || 0;
-                            
-                            if (hasUnits && hasPallets) {
-                              return (
-                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                                  📦 Units & Pallet ({unitsPerPallet}/pallet)
-                                </span>
-                              );
-                            } else if (hasPallets && !hasUnits) {
-                              return (
-                                <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                                  📦 Pallet Only ({unitsPerPallet}/pallet)
-                                </span>
-                              );
-                            } else if (hasUnits && !hasPallets) {
-                              return (
-                                <span className="inline-block bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-                                  📦 Units Only
-                                </span>
-                              );
-                            }
-                            return null;
-                          })()}
-                          
                           {/* Product Size Information */}
                           {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && featuredProduct.unitSize && (
                             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -2782,8 +2230,8 @@ export default function CustomerPortal() {
                 </div>
               </CardContent>
             </Card>
-              </div>
-            )}
+          </div>
+        )}
 
         {/* Search and Filters - Mobile Optimized */}
         {(!featuredProduct || showAllProducts) && (
@@ -2894,55 +2342,27 @@ export default function CustomerPortal() {
             }`}>
               {otherProducts.slice(0, 6).map((product) => (
                 viewMode === "grid" ? (
-                  // Grid View - Grocery Store Style Layout
-                  <Card key={product.id} className="product-card border-0 shadow-fresh hover:shadow-warm transition-all duration-300 h-full flex flex-col rounded-xl bg-white">
-                    <CardContent className="p-4 flex flex-col h-full">
-                      {/* Product Image - Grocery Store Style */}
-                      <div className="relative mb-4">
-                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-white rounded-lg overflow-hidden border border-gray-100">
-                          {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
-                            <img 
-                              src={product.imageUrl || product.images[0]} 
-                              alt={product.name}
-                              className="w-full h-full object-contain p-4 hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                              <Package className="w-12 h-12 text-green-400" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Fresh Badge - Top Left */}
-                        <div className="absolute top-2 left-2">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold shadow-sm ${
-                            product.stock > 100 
-                              ? "bg-green-500 text-white" 
-                              : product.stock > 0
-                              ? "bg-yellow-500 text-white"
-                              : "bg-red-500 text-white"
-                          }`}>
-                            {product.stock > 100 ? "Fresh" : product.stock > 0 ? "Limited" : "Sold Out"}
-                          </span>
-                        </div>
-                        
-                        {/* Sale Badge - Top Right */}
-                        {(() => {
-                          const pricing = calculatePromotionalPricing(product);
-                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
-                          return hasDiscounts && !isGuestMode ? (
-                            <div className="absolute top-2 right-2">
-                              <span className="savings-badge">
-                                SALE
-                              </span>
-                            </div>
-                          ) : null;
-                        })()}
+                  // Grid View - Mobile Responsive with Fixed Height Layout
+                  <Card key={product.id} className="border-0 shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
+                    <CardContent className="p-3 sm:p-4 lg:p-6 flex flex-col h-full">
+                      {/* Product Image - Mobile Optimized */}
+                      <div className="mb-3 sm:mb-4">
+                        {product.imageUrl || (product.images && Array.isArray(product.images) && product.images.length > 0) ? (
+                          <img 
+                            src={product.imageUrl || product.images[0]} 
+                            alt={product.name}
+                            className="w-full h-32 sm:h-36 lg:h-40 object-contain rounded-lg bg-white"
+                          />
+                        ) : (
+                          <div className="w-full h-32 sm:h-36 lg:h-40 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <Package className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gray-300" />
+                          </div>
+                        )}
                       </div>
                       
                       {/* Product Info - Flexible Growth Area */}
                       <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col">
-                        <h3 className="font-semibold text-base text-gray-900 line-clamp-2 mb-2">{product.name}</h3>
+                        <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 line-clamp-2">{product.name}</h3>
                         
                         {/* Product Tags */}
                         <div className="flex flex-wrap gap-2">
@@ -3047,40 +2467,35 @@ export default function CustomerPortal() {
                           )}
                         </div>
                         
-                        {/* Price - Grocery Store Style */}
-                        <div className="mb-4">
+                        {/* Sale Tag */}
+                        {(() => {
+                          const pricing = calculatePromotionalPricing(product);
+                          const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
+                          
+                          return hasDiscounts && !isGuestMode ? (
+                            <div className="mb-2">
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                SALE
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
+                        
+                        {/* Price */}
+                        <div className="flex items-baseline gap-2">
                           {(() => {
                             const pricing = calculatePromotionalPricing(product);
                             const hasDiscounts = pricing.effectivePrice < pricing.originalPrice;
                             
-                            if (isGuestMode) {
-                              return (
-                                <div className="text-center">
-                                  <span className="text-lg font-bold text-gray-400 blur-sm">
-                                    £XX.XX
-                                  </span>
-                                  <p className="text-xs text-gray-500 mt-1">Sign in to view pricing</p>
-                                </div>
-                              );
-                            }
-                            
                             return (
-                              <div className="text-center">
-                                {hasDiscounts ? (
-                                  <div className="space-y-1">
-                                    <div className="price-tag text-lg font-bold">
-                                      £{pricing.effectivePrice.toFixed(2)}
-                                    </div>
-                                    <div className="text-sm text-gray-500 line-through">
-                                      £{pricing.originalPrice.toFixed(2)}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-xl font-bold text-gray-900">
-                                    £{pricing.originalPrice.toFixed(2)}
-                                  </div>
-                                )}
-                              </div>
+                              <PriceDisplay 
+                                price={pricing.effectivePrice}
+                                originalPrice={hasDiscounts ? pricing.originalPrice : undefined}
+                                currency={wholesaler?.defaultCurrency}
+                                isGuestMode={isGuestMode}
+                                size="medium"
+                                showStrikethrough={true}
+                              />
                             );
                           })()}
                         </div>
@@ -3088,55 +2503,65 @@ export default function CustomerPortal() {
                         {/* Spacer to push buttons to bottom */}
                         <div className="flex-1"></div>
                         
-                        {/* Quick Stats - Grocery Style */}
+                        {/* Action Buttons - Fixed Position at Bottom */}
                         {!isGuestMode && (
-                          <div className="text-center text-xs text-gray-600 mb-3 space-y-1">
-                            <div>Min Order: {formatNumber(product.moq)} units</div>
-                            <div className={product.stock < 100 ? "text-red-600" : "text-green-600"}>
-                              {formatNumber(product.stock)} available
-                            </div>
+                          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-2">
+                            <Button 
+                              onClick={() => openQuantityEditor(product)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                            {product.negotiationEnabled && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => openNegotiation(product)}
+                                className="px-2 sm:px-3 border-green-600 text-green-600 hover:bg-green-50 rounded-xl text-xs sm:text-sm"
+                              >
+                                💬
+                                <span className="hidden sm:inline ml-1">Quote</span>
+                              </Button>
+                            )}
                           </div>
                         )}
                         
-                        {/* Action Buttons - Grocery Store Style */}
-                        <div className="mt-auto">
-                          {!isGuestMode ? (
-                            <div className="flex gap-2">
-                              <Button 
-                                onClick={() => openQuantityEditor(product)}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
-                                size="sm"
-                              >
-                                <ShoppingCart className="w-4 h-4 mr-2" />
-                                Add to Cart
-                              </Button>
-                              {product.negotiationEnabled && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => openNegotiation(product)}
-                                  className="border-green-600 text-green-600 hover:bg-green-50 rounded-lg"
-                                >
-                                  💬
-                                </Button>
-                              )}
-                            </div>
-                          ) : (
+                        {/* Guest Call-to-Action - Fixed Position at Bottom */}
+                        {isGuestMode && (
+                          <div className="flex justify-end mt-3 sm:mt-4 pt-2">
                             <Button 
                               onClick={() => {
                                 toast({
-                                  title: "Sign In Required",
-                                  description: "Please contact the wholesaler to get access and view pricing.",
+                                  title: "Contact Wholesaler Required",
+                                  description: "Please contact the wholesaler to be added as a customer before you can place orders.",
+                                  action: (
+                                    <Button
+                                      onClick={() => window.location.href = '/'}
+                                      size="sm"
+                                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      Contact Wholesaler
+                                    </Button>
+                                  ),
+                                  variant: "default",
                                 });
                               }}
-                              className="w-full bg-gray-400 text-white rounded-lg font-semibold"
                               size="sm"
-                              disabled
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl w-8 h-8 p-0"
                             >
-                              Sign In to Order
+                              <Plus className="w-4 h-4" />
                             </Button>
-                          )}
-                        </div>
+                          </div>
+                        )}
+                        
+                        {/* Quick Stats */}
+                        {!isGuestMode && (
+                          <div className="flex justify-between text-sm text-gray-600 mt-3">
+                            <span>MOQ: {formatNumber(product.moq)}</span>
+                            <span>Stock: {formatNumber(product.stock)}</span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -3741,143 +3166,8 @@ export default function CustomerPortal() {
               </div>
             )}
           </div>
-          </> 
+          </>
         )}
-          </TabsContent>
-          
-          <TabsContent value="orders">
-            {isAuthenticated && (customerData?.phone || authenticatedCustomer?.phone) ? (
-              <div>
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="w-4 h-4" />
-                    <span className="font-semibold">Order History Debug</span>
-                  </div>
-                  <p className="mt-1">Customer: {customerData?.name || authenticatedCustomer?.name} | Phone: {customerData?.phone || authenticatedCustomer?.phone} | Authenticated: {isAuthenticated ? 'Yes' : 'No'}</p>
-                </div>
-                <CustomerOrderHistory 
-                  wholesalerId={wholesalerId!}
-                  customerPhone={customerData?.phone || authenticatedCustomer?.phone || '+447507659550'} 
-                />
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {!isAuthenticated ? 'Sign In Required' : 'Phone Number Missing'}
-                </h3>
-                <p className="max-w-md mx-auto">
-                  {!isAuthenticated ? 
-                    'Please contact the wholesaler to be added as a customer and access your order history.' :
-                    'Your phone number is required to access order history. Please contact customer support.'
-                  }
-                </p>
-                <Button
-                  onClick={() => window.location.href = '/'}
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Contact Wholesaler
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="account">
-            {!isGuestMode ? (
-              <div className="max-w-2xl">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="w-5 h-5" />
-                      Account Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Customer Name</Label>
-                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.name || customerData?.name || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Phone Number</Label>
-                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.phone || customerData?.phone || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Email Address</Label>
-                        <p className="mt-1 text-gray-900">{authenticatedCustomer?.email || customerData?.email || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Wholesaler</Label>
-                        <p className="mt-1 text-gray-900">{wholesaler?.businessName || 'Unknown'}</p>
-                      </div>
-                      {authenticatedCustomer?.address && (
-                        <div className="md:col-span-2">
-                          <Label className="text-sm font-medium text-gray-700">Address</Label>
-                          <p className="mt-1 text-gray-900">{authenticatedCustomer.address}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="border-t pt-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Button 
-                          variant="outline"
-                          onClick={() => window.location.href = '/'}
-                          className="justify-start"
-                        >
-                          <Phone className="w-4 h-4 mr-2" />
-                          Contact Wholesaler
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={handleLogout}
-                          className="justify-start text-red-600 border-red-300 hover:bg-red-50"
-                        >
-                          <Building2 className="w-4 h-4 mr-2" />
-                          Sign Out
-                        </Button>
-                      </div>
-                      
-                      {wholesaler?.businessPhone && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="text-sm font-medium text-gray-900 mb-2">Contact Information</h4>
-                          <div className="space-y-1">
-                            <p className="text-sm text-gray-600">
-                              <Phone className="w-3 h-3 inline mr-1" />
-                              {wholesaler.businessPhone}
-                            </p>
-                            {wholesaler.email && (
-                              <p className="text-sm text-gray-600">
-                                <Mail className="w-3 h-3 inline mr-1" />
-                                {wholesaler.email}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Store className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Sign In Required</h3>
-                <p className="max-w-md mx-auto">
-                  Please contact the wholesaler to be added as a customer and access your account information.
-                </p>
-                <Button
-                  onClick={() => window.location.href = '/'}
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Contact Wholesaler
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-          </Tabs>
-        </TooltipProvider>
       </div>
 
       {/* Modals and dialogs would go here... */}
@@ -4155,8 +3445,8 @@ export default function CustomerPortal() {
           setShowCheckout(open);
           // When checkout dialog closes, ensure user returns to products view instead of auth screen
           if (!open) {
-            setActiveTab('products');
             setShowAllProducts(true);
+            setShowHomePage(false);
           }
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -4620,30 +3910,6 @@ export default function CustomerPortal() {
                       return transactionFee.toFixed(2);
                     })()}</span>
                   </div>
-                  {/* Shipping Method Display */}
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Shipping Method:</span>
-                    <div className="flex items-center gap-2">
-                      {customerData.shippingOption === 'pickup' ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                          📦 Pickup - FREE
-                        </Badge>
-                      ) : customerData.shippingOption === 'delivery' && cartStats.shippingCost > 0 ? (
-                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                          🚚 Delivery - {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.shippingCost.toFixed(2)}
-                        </Badge>
-                      ) : customerData.shippingOption === 'delivery' ? (
-                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-                          🚚 Delivery - Quote Required
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                          Not Selected
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
                   {cartStats.shippingCost > 0 && (
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Delivery Cost:</span>
@@ -5002,25 +4268,7 @@ export default function CustomerPortal() {
                   <span>Payment Information</span>
                 </h3>
                 
-                {(() => {
-                  const showPaymentForm = cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country;
-                  console.log('💳 PAYMENT FORM VISIBILITY CHECK:', {
-                    showPaymentForm,
-                    cartLength: cart.length,
-                    customerData: {
-                      name: !!customerData.name,
-                      email: !!customerData.email,
-                      phone: !!customerData.phone,
-                      address: !!customerData.address,
-                      city: !!customerData.city,
-                      state: !!customerData.state,
-                      postalCode: !!customerData.postalCode,
-                      country: !!customerData.country,
-                      shippingOption: !!customerData.shippingOption
-                    }
-                  });
-                  return showPaymentForm;
-                })() ? (
+                {cart.length > 0 && customerData.name && customerData.email && customerData.phone && customerData.address && customerData.city && customerData.state && customerData.postalCode && customerData.country ? (
                   <StripeCheckoutForm 
                     key={`checkout-${customerData.shippingOption}-${customerData.selectedShippingService?.serviceId || 'none'}`}
                     cart={cart}
@@ -5033,7 +4281,6 @@ export default function CustomerPortal() {
                     wholesaler={wholesaler}
                     totalAmount={(() => {
                       // Calculate the total amount that customer will pay (including transaction fees)
-                      // NEW PAYMENT STRUCTURE: Products-only Stripe payment
                       const subtotal = cart.reduce((total, item) => {
                         if (item.sellingType === "pallets") {
                           return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
@@ -5049,11 +4296,9 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
-                      // Transaction fee based on PRODUCT TOTAL ONLY (no delivery cost)
                       const transactionFee = subtotal * 0.055 + 0.50;
                       const shippingCost = cartStats.shippingCost || 0;
-                      // Customer pays: Products + Transaction Fee + Delivery (but Stripe only charges products + fee)
-                      return subtotal + transactionFee + shippingCost; // Total cost to customer
+                      return subtotal + transactionFee + shippingCost;
                     })()}
                     onSuccess={() => {
                       // Calculate order totals
@@ -5072,10 +4317,9 @@ export default function CustomerPortal() {
                           return total + pricing.totalCost;
                         }
                       }, 0);
-                      // NEW PAYMENT STRUCTURE: Transaction fee on products only
                       const transactionFee = subtotal * 0.055 + 0.50;
                       const shippingCost = cartStats.shippingCost || 0;
-                      const totalAmount = subtotal + transactionFee + shippingCost; // Total customer pays
+                      const totalAmount = subtotal + transactionFee + shippingCost;
                       
                       // Generate order number (will be replaced by actual order number from backend)
                       // Get actual order number from backend response (will be updated after order creation)
@@ -5109,19 +4353,6 @@ export default function CustomerPortal() {
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>Please complete all required customer information to proceed with payment</p>
-                    <div className="mt-2 text-xs text-gray-400 font-mono">
-                      Missing: {[
-                        !cart.length && 'cart items',
-                        !customerData.name && 'name',
-                        !customerData.email && 'email', 
-                        !customerData.phone && 'phone',
-                        !customerData.address && 'address',
-                        !customerData.city && 'city',
-                        !customerData.state && 'state',
-                        !customerData.postalCode && 'postal code',
-                        !customerData.country && 'country'
-                      ].filter(Boolean).join(', ')}
-                    </div>
                   </div>
                 )}
               </div>

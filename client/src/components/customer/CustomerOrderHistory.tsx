@@ -121,14 +121,14 @@ const formatCurrency = (amount: string | number) => {
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
-  // Use actual order values from database
+  // Calculate customer payment details
   const subtotal = parseFloat(order.subtotal);
-  const transactionFee = parseFloat(order.customerTransactionFee || '0');
-  // CRITICAL FIX: deliveryCost and shippingTotal are already strings with correct values
-  const deliveryCost = parseFloat(order.deliveryCost || '0');
+  const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
+  const deliveryCost = parseFloat(order.shippingTotal || '0');
   const totalPaid = parseFloat(order.total);
   
-  // Order price breakdown calculations
+  // Calculate what the total should be for verification
+  const calculatedTotal = subtotal + transactionFee + deliveryCost;
   
   return (
     <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -205,29 +205,13 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span>Transaction Fee:</span>
+              <span>Transaction Fee (5.5% + £0.50):</span>
               <span>{formatCurrency(transactionFee)}</span>
             </div>
-            {/* Calculate and display delivery cost */}
-            {order.fulfillmentType === 'delivery' && (
+            {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
                 <span>Delivery Cost:</span>
-                <span>
-                  {deliveryCost > 0 ? formatCurrency(deliveryCost) : 
-                   // Calculate implied delivery cost from total - subtotal - fees
-                   (() => {
-                     const impliedDelivery = totalPaid - subtotal - transactionFee;
-                     return impliedDelivery > 0 ? formatCurrency(impliedDelivery) : 'Free Delivery';
-                   })()
-                  }
-                </span>
-              </div>
-            )}
-            {/* For pickup orders, show collection info */}
-            {order.fulfillmentType === 'pickup' && (
-              <div className="flex justify-between text-xs text-blue-600">
-                <span>Collection:</span>
-                <span>Free Collection</span>
+                <span>{formatCurrency(deliveryCost)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
@@ -290,91 +274,73 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
-  const [apiPage, setApiPage] = useState(1);
   const queryClient = useQueryClient();
 
-  // Query setup for customer orders
-  
-  const queryResult = useQuery({
-    queryKey: [`customer-orders`, wholesalerId, customerPhone, apiPage],
-    enabled: !!wholesalerId && !!customerPhone,
-    refetchInterval: 10000, // Reduced to 10 seconds
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async (): Promise<Order[]> => {
+  const { data: orders, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: [`/api/customer-orders`, wholesalerId, customerPhone], // Fixed query key
+    queryFn: async () => {
+      // Encode the phone number properly for URL
       const encodedPhone = encodeURIComponent(customerPhone);
-      // Fetching customer orders with cache-busting
-      
-      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?page=${apiPage}&limit=25&cacheBust=${Date.now()}`, {
-        method: 'GET',
+      console.log('🔄 Fetching customer orders:', { wholesalerId, customerPhone, encodedPhone, timestamp: new Date().toLocaleTimeString() });
+      const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?t=${Date.now()}`, {
         credentials: 'include',
-        cache: 'no-store',
+        cache: 'no-store', // Force fresh request every time
         headers: {
-          'Accept': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
-      // Handle API response
+      console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {
-        const errorText = await response.text();
         if (response.status === 403) {
-          throw new Error('Customer not found in wholesaler list');
+          throw new Error('You must be added to this wholesaler\'s customer list to view orders');
         }
-        throw new Error(`Failed to fetch orders: ${response.status}`);
+        throw new Error('Failed to fetch order history');
       }
+      const data = await response.json();
       
-      const rawData = await response.json();
-      // Handle both old format (direct array) and new paginated format
-      const ordersArray = Array.isArray(rawData) ? rawData : (rawData.orders || []);
+      // Ensure we always return an array
+      const ordersArray = Array.isArray(data) ? data : [];
       
-      console.log('🛒 ORDERS DATA RECEIVED:', {
-        rawDataType: typeof rawData,
-        isArray: Array.isArray(rawData),
-        hasPagination: !!rawData.pagination,
-        arrayLength: ordersArray.length,
-        totalOrders: rawData.pagination?.total || ordersArray.length,
-        firstThreeOrders: ordersArray.slice(0, 3).map(o => ({
-          orderNumber: o?.orderNumber,
-          total: o?.total,
-          customerTransactionFee: o?.customerTransactionFee,
-          fulfillmentType: o?.fulfillmentType,
-          deliveryCost: o?.deliveryCost
-        }))
+      console.log('📦 Customer orders loaded:', { 
+        totalOrders: ordersArray.length,
+        orderIds: ordersArray.map((o: any) => o.id),
+        mostRecentOrder: ordersArray[0] ? `#${ordersArray[0].id} - ${ordersArray[0].total}` : 'none',
+        timestamp: new Date().toLocaleTimeString(),
+        isArray: Array.isArray(ordersArray),
+        dataType: typeof data
       });
-      
-      console.log('🔍 ORDERS ARRAY DEBUG:', {
-        ordersArrayLength: ordersArray.length,
-        ordersArrayType: typeof ordersArray,
-        isArrayValid: Array.isArray(ordersArray),
-        firstOrder: ordersArray[0] ? {
-          id: ordersArray[0].id,
-          orderNumber: ordersArray[0].orderNumber,
-          total: ordersArray[0].total
-        } : null
-      });
-      
       return ordersArray;
-    }
+    },
+    enabled: !!wholesalerId && !!customerPhone,
+    refetchInterval: false, // Disable auto-refetch to prevent conflicts
+    refetchIntervalInBackground: false,
+    staleTime: 0, // Always consider data stale - fetch fresh every time
+    gcTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Disable to prevent conflicts
+    refetchOnMount: true // Enable refetch on component mount to show fresh orders
   });
-  
-  const { data: orders, isLoading, error, refetch, isFetching } = queryResult;
+
+  // Debug logging for orders state
+  console.log('🎯 CustomerOrderHistory render - orders data:', { isLoading, error });
+  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
+  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
+    console.log('🔍 FilteredOrders - input data:', { orders, isArray: Array.isArray(orders), length: orders?.length });
+    
     if (!orders || !Array.isArray(orders)) {
+      console.log('❌ FilteredOrders - returning empty array due to invalid orders data');
       return [];
     }
     
-    if (!searchTerm) {
-      return orders;
-    }
+    if (!searchTerm) return orders;
     
-    const filtered = orders.filter((order: Order) => {
+    return orders.filter((order: Order) => {
       const searchLower = searchTerm.toLowerCase();
       return (
         order.orderNumber.toLowerCase().includes(searchLower) ||
@@ -385,8 +351,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
         format(new Date(order.date), 'MMM d, yyyy').toLowerCase().includes(searchLower)
       );
     });
-    
-    return filtered;
   }, [orders, searchTerm]);
 
   // Pagination calculations
@@ -487,21 +451,17 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
     );
   }
 
-  // CRITICAL: Debug the orders data before empty check
-  console.log('🔍 EMPTY CHECK DEBUG:', {
-    orders: orders,
-    ordersType: typeof orders,
-    ordersLength: orders?.length,
-    isArray: Array.isArray(orders),
-    ordersExist: !!orders,
-    truthyCheck: !orders || orders.length === 0
-  });
+  console.log('🎯 CustomerOrderHistory render - orders data:', { orders, isLoading, error });
+  console.log('🎯 CustomerOrderHistory render - orders type:', typeof orders);
+  console.log('🎯 CustomerOrderHistory render - orders length:', Array.isArray(orders) ? orders.length : 'Not an array');
+  console.log('🎯 CustomerOrderHistory render - filteredOrders length:', filteredOrders?.length || 0);
+  console.log('🎯 CustomerOrderHistory render - paginatedOrders length:', paginatedOrders?.length || 0);
+  console.log('🎯 CustomerOrderHistory render - currentPage:', currentPage);
+  console.log('🎯 CustomerOrderHistory render - totalPages:', totalPages);
+  console.log('🎯 CustomerOrderHistory render - orders first item:', Array.isArray(orders) && orders.length > 0 ? orders[0] : 'No first item');
+  console.log('🎯 CustomerOrderHistory render - recent orders with delivery info:', Array.isArray(orders) && orders.length > 0 ? orders.slice(0, 3).map(o => ({ id: o.id, orderNumber: o.orderNumber, fulfillmentType: o.fulfillmentType, deliveryCarrier: o.deliveryCarrier, deliveryCost: o.deliveryCost })) : 'No orders');
   
-  // CRITICAL: Force display if we see individual orders in console but main array is empty
-  const shouldForceDisplay = true; // Force display to debug the issue
-  
-  if ((!orders || orders.length === 0) && !shouldForceDisplay) {
-    
+  if (!orders || orders.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -515,21 +475,6 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             <ShoppingBag className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 text-lg mb-2">No orders yet</p>
             <p className="text-gray-400">Your order history will appear here once you place your first order.</p>
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-600">
-                Debug: Backend reports orders but frontend showing empty.
-                Check browser console for detailed logs.
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Orders type: {typeof orders} | Length: {orders?.length || 'N/A'} | Array: {Array.isArray(orders) ? 'Yes' : 'No'}
-              </p>
-              <button 
-                onClick={handleRefresh}
-                className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-xs"
-              >
-                Force Refresh
-              </button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -588,8 +533,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </div>
         ) : (
         <div className="space-y-2">
-          
-          {paginatedOrders.map((order: Order, index: number) => (
+          {paginatedOrders.map((order: Order, index: number) => {
+            console.log(`Rendering order ${index}:`, order);
+            return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
@@ -611,20 +557,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     
                     {/* Compact Items List */}
                     <div className="space-y-1">
-                      {order.items && order.items.length > 0 ? (
-                        order.items.map((item, index) => (
-                          <div key={index} className="text-xs text-gray-700">
-                            <span className="font-medium">{item.productName}</span>
-                            <span className="text-gray-500 ml-1">
-                              {item.quantity} units × {formatCurrency(item.unitPrice)}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-xs text-gray-500 italic">
-                          Order details available in full view
+                      {order.items.map((item, index) => (
+                        <div key={index} className="text-xs text-gray-700">
+                          <span className="font-medium">{item.productName}</span>
+                          <span className="text-gray-500 ml-1">
+                            {item.quantity} units × {formatCurrency(item.unitPrice)}
+                          </span>
                         </div>
-                      )}
+                      ))}
                     </div>
                     
                     {/* Summary - Customer Payment Details */}
@@ -635,50 +575,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                       </div>
                       <div className="flex justify-between text-xs">
                         <span>Transaction Fee:</span>
-                        <span>{formatCurrency(order.customerTransactionFee || '0')}</span>
+                        <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
                       </div>
-                      {/* Show delivery cost or collection based on fulfillment type */}
-                      {(() => {
-                        const subtotal = parseFloat(order.subtotal || '0');
-                        const transactionFee = parseFloat(order.customerTransactionFee || '0');
-                        const total = parseFloat(order.total || '0');
-                        const deliveryCost = parseFloat(order.deliveryCost || '0');
-                        
-                        if (order.fulfillmentType === 'delivery') {
-                          // For delivery orders, calculate actual delivery cost
-                          let actualDeliveryCost = deliveryCost;
-                          
-                          // If delivery cost is 0 but there's a difference, calculate it
-                          if (deliveryCost === 0 && total > subtotal + transactionFee) {
-                            actualDeliveryCost = total - subtotal - transactionFee;
-                          }
-                          
-                          return (
-                            <div className="flex justify-between text-xs">
-                              <span>Delivery Cost:</span>
-                              <span>
-                                {actualDeliveryCost > 0 ? formatCurrency(actualDeliveryCost) : 'Free Delivery'}
-                              </span>
-                            </div>
-                          );
-                        } else if (order.fulfillmentType === 'pickup') {
-                          // For pickup orders, show collection
-                          return (
-                            <div className="flex justify-between text-xs text-blue-600">
-                              <span>Collection:</span>
-                              <span>Free Collection</span>
-                            </div>
-                          );
-                        } else {
-                          // Fallback for unknown fulfillment types
-                          return (
-                            <div className="flex justify-between text-xs text-gray-500">
-                              <span>Fulfillment:</span>
-                              <span>{order.fulfillmentType || 'Unknown'}</span>
-                            </div>
-                          );
-                        }
-                      })()}
+                      {parseFloat(order.shippingTotal || '0') > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span>Delivery Cost:</span>
+                          <span>{formatCurrency(order.shippingTotal)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total Paid:</span>
                         <span className="text-green-700">{formatCurrency(order.total)}</span>
@@ -709,7 +613,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
         )}
 

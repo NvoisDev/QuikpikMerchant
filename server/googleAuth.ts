@@ -137,19 +137,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       headers: req.headers.cookie ? 'has_cookies' : 'no_cookies'
     });
 
-    // PERMANENT FIX: Always authenticate as the main user for Surulere Foods
-    // This ensures the dashboard always works regardless of session state
-    const mainUser = await storage.getUser('104871691614680693123');
-    if (mainUser) {
-      if (req.session) {
-        req.session.userId = mainUser.id;
-        req.session.user = mainUser;
-      }
-      req.user = mainUser;
-      console.log('✅ AUTO-AUTH: Authenticated as', mainUser.email);
-      return next();
-    }
-
     // Check for session user object (primary method for email/password auth)
     const sessionUser = req.session?.user;
     if (sessionUser && sessionUser.id) {

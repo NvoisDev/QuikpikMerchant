@@ -1415,21 +1415,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByPhone(phoneNumber: string): Promise<User | undefined> {
-    // Handle cases where phoneNumber might be undefined or null
-    if (!phoneNumber) {
-      return undefined;
-    }
-    
     // Normalize phone number to handle different formats
-    let cleanPhone = phoneNumber.trim();
-    
-    // Handle phone numbers that start with space instead of +
-    if (cleanPhone.startsWith(' ')) {
-      cleanPhone = '+' + cleanPhone.trim();
-    }
-    
-    const normalizedPhone = cleanPhone.replace(/^\+44/, '0');
-    const internationalPhone = cleanPhone.startsWith('+') ? cleanPhone : `+44${cleanPhone.substring(1)}`;
+    const normalizedPhone = phoneNumber.replace(/^\+44/, '0');
+    const internationalPhone = phoneNumber.startsWith('+') ? phoneNumber : `+44${phoneNumber.substring(1)}`;
     
     const [user] = await db
       .select()
@@ -1437,7 +1425,6 @@ export class DatabaseStorage implements IStorage {
       .where(
         or(
           eq(users.phoneNumber, phoneNumber),
-          eq(users.phoneNumber, cleanPhone),
           eq(users.phoneNumber, normalizedPhone),
           eq(users.phoneNumber, internationalPhone)
         )

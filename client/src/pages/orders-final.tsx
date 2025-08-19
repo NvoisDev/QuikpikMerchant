@@ -82,7 +82,7 @@ export default function OrdersFinal() {
   }, [selectedOrder]);
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
-    queryKey: ['/api/orders'],
+    queryKey: ['/api/public-orders'],
     retry: 1,
     staleTime: 30000
   });
@@ -240,7 +240,7 @@ export default function OrdersFinal() {
 
       
       // Refresh orders data with multiple query invalidations
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
       // Update selected order if it's the one being modified

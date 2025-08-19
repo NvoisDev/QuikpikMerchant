@@ -44,12 +44,11 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Don't use the default query function for customer orders
-      // queryFn: getQueryFn({ on401: "returnNull" }),
+      queryFn: getQueryFn({ on401: "returnNull" }), // Changed to returnNull to prevent errors
       refetchInterval: false,
-      refetchOnWindowFocus: true,
-      staleTime: 0, // Always fetch fresh data
-      retry: 3,
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+      retry: false,
     },
     mutations: {
       retry: false,

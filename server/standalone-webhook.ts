@@ -11,7 +11,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-07-30.basil",
+  apiVersion: "2025-06-30.basil",
 });
 
 // Middleware for JSON parsing
@@ -73,8 +73,6 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data?.object;
-      console.log(`💳 Payment Intent succeeded: ${paymentIntent?.id}`);
-      console.log(`🔍 Payment Intent wholesaler ID:`, paymentIntent?.metadata?.wholesalerId);
       console.log(`💰 Payment succeeded: ${paymentIntent?.id}`);
       console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
       
@@ -107,83 +105,19 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       }
       
       // Handle customer portal orders directly in webhook
-      console.log(`🔍 Checking if this is a customer portal order:`, {
-        orderType,
-        hasCustomerData: !!paymentIntent?.metadata?.customerData,
-        hasCart: !!paymentIntent?.metadata?.cart,
-        allMetadataKeys: Object.keys(paymentIntent?.metadata || {})
-      });
-      
-      // Check for customer portal order by presence of customer data and cart
-      // CRITICAL: Also check for Surulere Foods wholesaler ID to force customer portal processing
-      const wholesalerId = paymentIntent?.metadata?.wholesalerId;
-      const isSurulereOrder = wholesalerId === '104871691614680693123';
-      console.log(`🔍 WEBHOOK DETECTION CHECK: wholesalerId="${wholesalerId}", isSurulereOrder=${isSurulereOrder}`);
-      
-      const isCustomerPortalOrder = orderType === 'customer_portal' || 
-        (paymentIntent?.metadata?.customerData && paymentIntent?.metadata?.cart) ||
-        isSurulereOrder;
-      
-      if (isCustomerPortalOrder) {
-        if (isSurulereOrder) {
-          console.log(`🔧 SURULERE FOODS DETECTED: Forcing customer portal processing for payment: ${paymentIntent?.id}`);
-        }
+      if (orderType === 'customer_portal') {
         console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
         
         try {
-          // Step 1: Process the order first
+          // Import order processing logic directly
           const { processCustomerPortalOrder } = await import('./order-processor');
           
           console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
-          const orderResult = await processCustomerPortalOrder(paymentIntent);
-          console.log(`✅ Order created successfully: ${orderResult.orderNumber || orderResult.id}`);
           
-          // Step 2: Handle automatic transfer for marketplace architecture
-          const marketplaceArchitecture = paymentIntent?.metadata?.marketplaceArchitecture;
-          if (marketplaceArchitecture === 'platform_collects_all') {
-            
-            const wholesalerAccountId = paymentIntent?.metadata?.wholesalerStripeAccountId;
-            const wholesalerReceives = parseFloat(paymentIntent?.metadata?.wholesalerReceives || '0');
-            
-            if (wholesalerAccountId && wholesalerReceives > 0) {
-              console.log(`💸 Creating automatic transfer: £${wholesalerReceives} to ${wholesalerAccountId}`);
-              
-              try {
-                // Import Stripe from routes
-                const Stripe = (await import('stripe')).default;
-                const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-                  apiVersion: "2025-07-30.basil"
-                }) : null;
-
-                if (stripe) {
-                  // Create automatic transfer to wholesaler
-                  const transfer = await stripe.transfers.create({
-                    amount: Math.round(wholesalerReceives * 100), // Convert to pence
-                    currency: 'gbp',
-                    destination: wholesalerAccountId,
-                    metadata: {
-                      orderId: orderResult.id || 'unknown',
-                      orderNumber: orderResult.orderNumber || 'unknown',
-                      paymentIntentId: paymentIntent.id,
-                      purpose: 'marketplace_wholesaler_payment',
-                      productSubtotal: paymentIntent?.metadata?.productSubtotal || '0',
-                      platformFee: paymentIntent?.metadata?.wholesalerPlatformFee || '0'
-                    }
-                  });
-                  
-                  console.log(`✅ Transfer completed: ${transfer.id} - £${wholesalerReceives} to wholesaler`);
-                  
-                } else {
-                  console.error('❌ Stripe not configured for transfers');
-                }
-              } catch (transferError: any) {
-                console.error('❌ Transfer failed:', transferError);
-                // Don't fail the webhook if transfer fails, order was still created
-              }
-            } else {
-              console.log('⚠️ No transfer needed - missing account ID or zero amount');
-            }
-          }
+          // Process order directly without HTTP call
+          const orderResult = await processCustomerPortalOrder(paymentIntent);
+          
+          console.log(`✅ Webhook created order successfully: ${orderResult.orderNumber || orderResult.id}`);
           
           return res.json({
             received: true,

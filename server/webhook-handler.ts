@@ -96,67 +96,21 @@ export function registerWebhookRoutes(app: Express) {
           console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
           
           try {
-            // STRIPE CONNECT REQUIRED: Handle separate delivery fee transfer
-            const deliveryRouting = paymentIntent?.metadata?.deliveryRouting;
-            const platformDeliveryFee = parseFloat(paymentIntent?.metadata?.platformDeliveryFee || '0');
-            const platformTransactionFee = parseFloat(paymentIntent?.metadata?.platformTransactionFee || '0');
-            
-            console.log(`💰 Payment breakdown - Delivery Fee: £${platformDeliveryFee}, Transaction Fee: £${platformTransactionFee}`);
-            
-            // Step 1: Create the order first
+            // Import order processing logic directly
             const { processCustomerPortalOrder, parseCustomerName } = await import('./order-processor');
-            console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
-            const orderResult = await processCustomerPortalOrder(paymentIntent);
-            console.log(`✅ Order created successfully: ${orderResult.orderNumber || orderResult.id}`);
             
-            // Step 2: Handle separate delivery fee transfer (Stripe Connect required)
-            if (deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0) {
-              console.log(`🚛 Processing separate delivery fee transfer: £${platformDeliveryFee} to platform`);
-              
-              try {
-                // Get the charge ID from the payment intent
-                const chargeId = paymentIntent?.charges?.data?.[0]?.id;
-                if (!chargeId) {
-                  console.warn(`⚠️ No charge ID found for delivery transfer on payment ${paymentIntent?.id}`);
-                } else {
-                  // Import Stripe instance
-                  const { stripe } = await import('./index');
-                  
-                  if (stripe) {
-                    // Create separate transfer for delivery fee + transaction fee to platform
-                    const totalPlatformTransfer = platformDeliveryFee + platformTransactionFee;
-                    
-                    const deliveryTransfer = await stripe.transfers.create({
-                      amount: Math.round(totalPlatformTransfer * 100), // Convert to cents
-                      currency: 'gbp',
-                      description: `Delivery fee (£${platformDeliveryFee.toFixed(2)}) + Transaction fee (£${platformTransactionFee.toFixed(2)}) for order ${orderResult.orderNumber}`,
-                      metadata: {
-                        orderId: orderResult.id,
-                        orderNumber: orderResult.orderNumber,
-                        deliveryFee: platformDeliveryFee.toFixed(2),
-                        transactionFee: platformTransactionFee.toFixed(2),
-                        totalTransfer: totalPlatformTransfer.toFixed(2),
-                        purpose: 'parcel2go_prepaid_funding'
-                      }
-                    });
-                    
-                    console.log(`✅ Delivery fee transfer completed: ${deliveryTransfer.id} - £${totalPlatformTransfer.toFixed(2)} to platform`);
-                  } else {
-                    console.warn(`⚠️ Stripe not available for delivery transfer`);
-                  }
-                }
-              } catch (transferError) {
-                console.error(`❌ Delivery fee transfer failed:`, transferError);
-                // Don't fail the entire order process - delivery transfer can be handled manually
-              }
-            }
+            console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
+            
+            // Process order directly without HTTP call
+            const orderResult = await processCustomerPortalOrder(paymentIntent);
+            
+            console.log(`✅ Webhook created order successfully: ${orderResult.orderNumber || orderResult.id}`);
             
             return res.json({
               received: true,
               message: `Customer order created successfully`,
               orderId: orderResult.id,
-              orderNumber: orderResult.orderNumber,
-              deliveryFeeTransferred: deliveryRouting === 'separate_to_platform' && platformDeliveryFee > 0
+              orderNumber: orderResult.orderNumber
             });
             
           } catch (orderError) {

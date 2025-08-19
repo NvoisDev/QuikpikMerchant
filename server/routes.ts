@@ -42,7 +42,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-07-30.basil",
+  apiVersion: "2025-06-30.basil",
 }) : null;
 
 // Subscription price IDs for monthly plans in GBP
@@ -848,122 +848,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // BULLETPROOF Customer order history with pagination support
+  // Get customer order history - aggregated from all wholesalers where customer is registered
   app.get('/api/customer-orders/:wholesalerId/:phoneNumber', async (req, res) => {
-    console.log('🔍 BULLETPROOF Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
+    console.log('🔍 Customer orders route hit!', { wholesalerId: req.params.wholesalerId, phoneNumber: req.params.phoneNumber });
     try {
       const { wholesalerId, phoneNumber } = req.params;
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const { page = '1', limit = '25' } = req.query;
       
-      // Import database for direct query with pagination
-      const { db } = await import('./db');
-      const { orders } = await import('@shared/schema');
-      const { eq, and, desc, sql } = await import('drizzle-orm');
-      
-      // Check authorization
-      if (decodedPhoneNumber !== '+447507659550' || wholesalerId !== '104871691614680693123') {
-        return res.status(403).json({ error: 'Access denied' });
+      if (!wholesalerId || !phoneNumber) {
+        console.log('❌ Missing parameters:', { wholesalerId, phoneNumber });
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
       }
       
-      const pageNum = Math.max(1, parseInt(page as string));
-      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string)));
-      const offset = (pageNum - 1) * limitNum;
+      console.log('✅ Parameters OK, checking customer registration...');
       
-      // Get total count first
-      const [totalResult] = await db
-        .select({ count: sql`count(*)` })
+      // Find the correct customer using the same logic as authentication
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      console.log('🔍 Finding customer by last 4 digits:', lastFourDigits);
+      
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        console.log('❌ Customer not found with last 4 digits:', lastFourDigits);
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler",
+          message: "You must be added to this wholesaler's customer group to access orders"
+        });
+      }
+
+      console.log('✅ Customer verified:', customer.name, 'with ID:', customer.id || customer.customer_id);
+
+      // REMOVED: Customer group requirement - customers can see orders even without pre-registration
+
+      // NEW: Allow access to orders even if customer is not in customer groups
+      // This fixes the issue where customers can't see their orders unless pre-registered
+      console.log('🔍 Searching for all orders by customer regardless of group membership...');
+      console.log(`🔍 Search params: customerId=${customer.id}, wholesalerId=${wholesalerId}, customerPhone=${customer.phone}`);
+      
+      // CRITICAL FIX: Search by multiple retailer ID patterns due to historical inconsistency
+      // Some orders have retailer_id as customer ID, others have wholesaler's Google ID
+      let orderResults = await db
+        .select()
         .from(orders)
         .where(and(
-          eq(orders.customerPhone, '+447507659550'),
-          eq(orders.wholesalerId, wholesalerId)
-        ));
-      
-      const totalOrders = Number(totalResult.count);
-      
-      // Get paginated orders
-      const orderResults = await db
-        .select({
-          id: orders.id,
-          orderNumber: orders.orderNumber,
-          status: orders.status,
-          total: orders.total,
-          subtotal: orders.subtotal,
-          deliveryCost: orders.deliveryCost,
-          transactionFee: orders.customerTransactionFee,
-          fulfillmentType: orders.fulfillmentType,
-          deliveryCarrier: orders.deliveryCarrier,
-          customerName: orders.customerName,
-          customerPhone: orders.customerPhone,
-          customerEmail: orders.customerEmail,
-          createdAt: orders.createdAt,
-          wholesalerId: orders.wholesalerId
-        })
-        .from(orders)
-        .where(and(
-          eq(orders.customerPhone, '+447507659550'),
+          or(
+            eq(orders.retailerId, customer.id),
+            eq(orders.retailerId, wholesalerId), // Historical orders may have wholesaler ID as retailer ID
+            eq(orders.customerPhone, customer.phone) // Also search by phone directly
+          ),
           eq(orders.wholesalerId, wholesalerId)
         ))
-        .orderBy(desc(orders.createdAt))
-        .limit(limitNum)
-        .offset(offset);
+        .orderBy(desc(orders.createdAt));
+        
+      console.log('🔍 Found orders by retailer ID and phone:', orderResults.length);
+      if (orderResults.length > 0) {
+        console.log('📋 Sample orders:', orderResults.slice(0, 3).map(o => ({ 
+          id: o.id, 
+          orderNumber: o.orderNumber, 
+          retailerId: o.retailerId, 
+          customerPhone: o.customerPhone 
+        })));
+      }
       
-      // Format orders
-      const formattedOrders = orderResults.map(order => ({
-        id: order.id,
-        orderNumber: order.orderNumber || `#${order.id}`,
-        date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short', 
-          year: 'numeric'
-        }),
-        time: new Date(order.createdAt || Date.now()).toLocaleTimeString('en-GB', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        status: order.status,
-        total: parseFloat(order.total || '0').toFixed(2),
-        subtotal: parseFloat(order.subtotal || '0').toFixed(2),
-        transactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
-        customerTransactionFee: parseFloat(order.transactionFee || '0').toFixed(2),
-        deliveryCost: parseFloat(order.deliveryCost || '0').toFixed(2),
-        currency: "£",
-        fulfillmentType: order.fulfillmentType,
-        deliveryCarrier: order.deliveryCarrier,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        customerEmail: order.customerEmail,
-        paymentMethod: "Card Payment",
-        paymentStatus: "paid",
-        createdAt: order.createdAt,
-        items: [],
-        wholesaler: {
-          businessName: "Surulere Foods Wholesale",
-          firstName: "Surulere",
-          lastName: "Foods"
-        },
-        shippingTotal: order.deliveryCost || "0.00",
-        shippingStatus: "delivered",
-        platformFee: "0.00",
-        updatedAt: order.createdAt
+      // If no orders found by retailer ID, search by phone number variants (without wholesaler restriction)
+      if (orderResults.length === 0) {
+        console.log('🔍 No orders found by retailer ID, searching by phone number variants...');
+        
+        // Normalize customer phone number for matching
+        const normalizedCustomerPhone = customer.phone.replace(/^\+44/, '0').replace(/[^0-9]/g, '');
+        const customerPhoneVariants = [
+          customer.phone, // Original format
+          normalizedCustomerPhone, // UK format (07...)
+          '+44' + normalizedCustomerPhone.substring(1) // International format (+447...)
+        ];
+        
+        console.log('🔍 Searching with phone variants:', customerPhoneVariants);
+        
+        const phoneConditions = customerPhoneVariants.map(phone => 
+          eq(orders.customerPhone, phone)
+        );
+        
+        orderResults = await db
+          .select()
+          .from(orders)
+          .where(and(
+            or.apply(null, phoneConditions),
+            eq(orders.wholesalerId, wholesalerId)
+          ))
+          .orderBy(desc(orders.createdAt));
+      }
+      
+      console.log('🔍 Total orders found:', orderResults.length);
+
+      if (orderResults.length === 0) {
+        return res.json([]);
+      }
+
+      // Get order items and product details for each order
+      const ordersWithDetails = await Promise.all(orderResults.map(async (order) => {
+        const items = await db
+          .select({
+            orderItemId: orderItems.id,
+            quantity: orderItems.quantity,
+            unitPrice: orderItems.unitPrice,
+            total: orderItems.total,
+            productId: products.id,
+            productName: products.name,
+          })
+          .from(orderItems)
+          .leftJoin(products, eq(orderItems.productId, products.id))
+          .where(eq(orderItems.orderId, order.id));
+
+        // Get wholesaler details directly from database
+        const wholesalerUser = await storage.getUser(order.wholesalerId);
+        const wholesalerDetails = wholesalerUser ? {
+          wholesalerId: order.wholesalerId,
+          wholesalerName: wholesalerUser.businessName || `${wholesalerUser.firstName} ${wholesalerUser.lastName}`,
+          wholesalerEmail: wholesalerUser.email || '',
+          wholesalerPhone: wholesalerUser.businessPhone || ''
+        } : null;
+
+        return {
+          ...order,
+          items: items.map(item => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice || "0",
+            total: item.total || "0"
+          })),
+          wholesaler: wholesalerDetails ? {
+            id: order.wholesalerId,
+            businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
+            email: wholesalerDetails.wholesalerEmail || '',
+            phone: wholesalerDetails.wholesalerPhone || '',
+          } : null
+        };
       }));
       
-      console.log(`✅ BULLETPROOF: Returning ${formattedOrders.length} orders (page ${pageNum} of ${Math.ceil(totalOrders / limitNum)}, total: ${totalOrders})`);
-      
-      res.json({
-        orders: formattedOrders,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: totalOrders,
-          totalPages: Math.ceil(totalOrders / limitNum),
-          hasMore: pageNum < Math.ceil(totalOrders / limitNum)
-        }
+      // Format orders for customer portal display
+      const formattedOrders = ordersWithDetails.map(order => {
+        const total = parseFloat(order.total || "0");
+        // Calculate proper fees based on current fee structure:
+        // Customer pays: Product subtotal + Transaction fee (5.5% + £0.50)
+        // Wholesaler pays: Platform fee (3.3% of product subtotal)
+        
+        // CRITICAL FIX: Always use stored subtotal from database - never calculate
+        const subtotal = parseFloat(order.subtotal || "0");
+        
+        // Use stored customer transaction fee from database, or calculate as fallback
+        const transactionFee = order.customerTransactionFee ? parseFloat(order.customerTransactionFee) : (subtotal * 0.055) + 0.50;
+        
+        // Platform fee paid by wholesaler: 3.3% of product subtotal (not shown to customers but calculated for completeness)
+        const platformFee = subtotal * 0.033;
+        
+        return {
+          id: order.id,
+          orderNumber: order.orderNumber || `#${order.id}`, // Use actual order number (SF-120) not ID
+          date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short', 
+            year: 'numeric'
+          }),
+          time: new Date(order.createdAt || Date.now()).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          status: order.status,
+          total: total.toFixed(2),
+          subtotal: subtotal.toFixed(2),
+          transactionFee: transactionFee.toFixed(2), // What customer paid in transaction fees
+          platformFee: platformFee.toFixed(2), // For internal calculation only
+          currency: "£",
+          items: order.items,
+          wholesaler: order.wholesaler,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          customerEmail: order.customerEmail,
+          deliveryAddress: order.deliveryAddress,
+          paymentMethod: "Card Payment",
+          paymentStatus: "paid",
+          fulfillmentType: order.fulfillmentType,
+          deliveryCarrier: order.deliveryCarrier,
+          deliveryCost: order.deliveryCost || '0.00',
+          shippingStatus: order.shippingStatus,
+          shippingTotal: order.shippingTotal,
+          notes: order.notes,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
+        };
       });
-      
+
+      res.json(formattedOrders);
     } catch (error) {
-      console.error('❌ BULLETPROOF: Error in customer orders:', error);
-      res.status(500).json({ error: 'Failed to fetch orders' });
+      console.error("Customer orders fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch order history" });
     }
   });
 
@@ -1683,9 +1761,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // NEW MARKETPLACE ARCHITECTURE: Platform collects all funds first
-      // Delivery costs are included in total customer payment
+      // Include delivery cost in fee calculation
       const deliveryCost = shippingInfo?.service?.price || 0;
+      const amountBeforeFees = productSubtotal + deliveryCost;
+      
+      // NEW FEE STRUCTURE:
+      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
+      const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
+      const totalCustomerPays = amountBeforeFees + customerTransactionFee;
+      
+      // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
+      const wholesalerPlatformFee = productSubtotal * 0.033;
+      const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;
@@ -1699,43 +1786,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
-      
-      // Stripe Connect is required - check wholesaler has connected account
-      if (!wholesaler.stripeAccountId) {
-        return res.status(400).json({ 
-          message: "Wholesaler must complete Stripe Connect onboarding before accepting orders",
-          requiresOnboarding: true 
-        });
-      }
-
-      // NEW STRIPE CONNECT MARKETPLACE ARCHITECTURE
-      // Platform collects ALL funds first (products + delivery fees)
-      // Then automatically transfers wholesaler portion after deducting platform fees
-      
-      // Calculate total amount customer pays (products + delivery + transaction fee)
-      const customerTransactionFeeTotal = ((productSubtotal + deliveryCost) * 0.055) + 0.50;
-      const totalCustomerPaysAll = productSubtotal + deliveryCost + customerTransactionFeeTotal;
-      
-      // Calculate platform fees
-      const customerPlatformFee = customerTransactionFeeTotal; // 5.5% + £0.50 on total
-      const wholesalerPlatformFee = productSubtotal * 0.033; // 3.3% on products only
-      const totalPlatformFees = customerPlatformFee + wholesalerPlatformFee + deliveryCost; // Platform keeps delivery fees
-      
-      // Calculate wholesaler receives (product total minus platform fee)
-      const wholesalerReceivesNew = productSubtotal - wholesalerPlatformFee;
-      
-      console.log('🔄 MARKETPLACE PAYMENT BREAKDOWN:', {
-        productSubtotal: productSubtotal.toFixed(2),
-        deliveryCost: deliveryCost.toFixed(2),
-        customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
-        totalCustomerPays: totalCustomerPaysAll.toFixed(2),
-        platformKeeps: totalPlatformFees.toFixed(2),
-        wholesalerReceives: wholesalerReceivesNew.toFixed(2)
-      });
-
-      // Create marketplace payment intent - platform collects everything
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPaysAll * 100), // Platform collects ALL FUNDS
+        amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + transaction fee)
         currency: 'gbp',
         receipt_email: customerEmail,
         automatic_payment_methods: { enabled: true },
@@ -1745,17 +1797,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
           productSubtotal: productSubtotal.toFixed(2),
-          deliveryCost: deliveryCost.toFixed(2),
-          customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
+          shippingCost: deliveryCost.toString(),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
           wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-          wholesalerReceives: wholesalerReceivesNew.toFixed(2),
-          totalCustomerPays: totalCustomerPaysAll.toFixed(2),
-          totalPlatformKeeps: totalPlatformFees.toFixed(2),
+          wholesalerReceives: wholesalerReceives.toFixed(2),
+          totalCustomerPays: totalCustomerPays.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
-          wholesalerStripeAccountId: wholesaler.stripeAccountId,
           orderType: 'customer_portal',
-          marketplaceArchitecture: 'platform_collects_all',
-          paymentMethod: 'stripe_connect_marketplace',
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
@@ -1769,72 +1817,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               serviceName: shippingInfo.service.serviceName,
               price: shippingInfo.service.price
             } : null
-          } : { option: 'pickup' })
+          } : { option: 'pickup' }),
+          autoPayDelivery: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 'true' : 'false'
         }
-      }, {
-        stripeAccount: wholesaler.stripeAccountId // DIRECT CHARGE: Create charge directly on wholesaler account
       });
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
         productSubtotal: productSubtotal.toFixed(2),
-        shippingCost: deliveryCost.toFixed(2),
-        customerTransactionFee: customerTransactionFeeTotal.toFixed(2),
-        stripePaymentAmount: totalCustomerPaysAll.toFixed(2), // What customer pays Stripe
-        totalCustomerPays: totalCustomerPaysAll.toFixed(2), // Total including delivery
+        shippingCost: deliveryCost.toString(),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
+        totalCustomerPays: totalCustomerPays.toFixed(2),
         wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-        wholesalerReceives: wholesalerReceivesNew.toFixed(2),
-        deliveryCollectionMethod: deliveryCost > 0 ? 'marketplace_platform_collects' : 'none'
+        wholesalerReceives: wholesalerReceives.toFixed(2)
       });
 
     } catch (error) {
       console.error("Error creating payment intent:", error);
       res.status(500).json({ message: "Failed to create payment intent" });
-    }
-  });
-
-  // NEW: Platform Delivery Fee Collection Endpoint
-  app.post('/api/platform/collect-delivery-fee', async (req, res) => {
-    try {
-      const { orderId, deliveryCost, customerEmail, orderNumber } = req.body;
-      
-      if (!orderId || !deliveryCost || deliveryCost <= 0) {
-        return res.status(400).json({ message: 'Order ID and delivery cost required' });
-      }
-
-      // Create separate Stripe payment intent for delivery fee (directly to platform account)
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
-      }
-
-      const deliveryPaymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(deliveryCost * 100), // Delivery cost only
-        currency: 'gbp',
-        receipt_email: customerEmail,
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-          orderType: 'delivery_fee_collection',
-          originalOrderId: orderId.toString(),
-          orderNumber: orderNumber,
-          deliveryCost: deliveryCost.toString(),
-          collectionMethod: 'platform_direct',
-          purpose: 'parcel2go_prepaid_funding'
-        }
-        // NOTE: No stripeAccount parameter - this goes directly to platform account
-      });
-
-      console.log(`💳 DELIVERY FEE: Created separate payment intent for £${deliveryCost} delivery (Order ${orderNumber})`);
-      
-      res.json({
-        deliveryPaymentClientSecret: deliveryPaymentIntent.client_secret,
-        deliveryCost: deliveryCost.toString(),
-        orderNumber,
-        message: 'Delivery fee collection initiated'
-      });
-
-    } catch (error: any) {
-      console.error('❌ Error creating delivery payment intent:', error);
-      res.status(500).json({ message: 'Failed to create delivery payment intent: ' + error.message });
     }
   });
 
@@ -1867,7 +1867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionFee,
         wholesalerId,
         orderType,
-        cart: itemsJson,
+        items: itemsJson,
         connectAccountUsed,
         productSubtotal,
         customerTransactionFee,
@@ -1877,50 +1877,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = paymentIntent.metadata;
 
       if (orderType === 'customer_portal') {
-        // Check if itemsJson exists and is valid JSON
-        if (!itemsJson || itemsJson === 'undefined') {
-          return res.status(400).json({ message: 'Order items data is missing or invalid' });
-        }
         const items = JSON.parse(itemsJson);
 
-        // BULLETPROOF FIX: Force Surulere Foods orders to use main customer account
-        let customer;
+        // Create customer if doesn't exist or update existing one
+        let customer = await storage.getUserByPhone(customerPhone);
         const { firstName, lastName } = parseCustomerName(customerName);
         
-        if (wholesalerId === '104871691614680693123') {
-          // FORCE: Always use main customer account for Surulere Foods
-          console.log(`🔧 SURULERE FOODS DETECTED: Forcing main customer account for order`);
-          customer = await storage.getUserById('customer_michael_ogunjemilua_main');
-          if (!customer) {
-            console.error(`❌ CRITICAL: Main customer account not found!`);
-            return res.status(500).json({ message: 'Main customer account not found' });
-          }
-          console.log(`✅ FORCED: Using main customer account: ${customer.id} (${customer.firstName} ${customer.lastName})`);
-        } else {
-          // Regular customer lookup for other wholesalers
-          customer = await storage.getUserByPhone(customerPhone);
-          console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
-          
-          // If phone lookup fails, try email lookup
-          if (!customer && customerEmail) {
-            customer = await storage.getUserByEmail(customerEmail);
-            console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
-          }
-          
-          if (!customer) {
-            console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
-            customer = await storage.createCustomer({
-              phoneNumber: customerPhone,
-              firstName,
-              lastName,
-              role: 'retailer',
-              email: customerEmail
-            });
-            console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
-          }
+        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        
+        // If phone lookup fails, try email lookup
+        if (!customer && customerEmail) {
+          customer = await storage.getUserByEmail(customerEmail);
+          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
         }
         
-        if (customer && customer.id !== 'customer_michael_ogunjemilua_main') {
+        if (!customer) {
+          console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
+          customer = await storage.createCustomer({
+            phoneNumber: customerPhone,
+            firstName,
+            lastName,
+            role: 'retailer',
+            email: customerEmail
+          });
+          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+        } else {
           // Check if email belongs to different customer before updating
           let emailConflict = false;
           if (customerEmail && customer.email !== customerEmail) {
@@ -1965,7 +1946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        console.log(`👤 FINAL: Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
+        console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
         // Calculate actual platform fee based on Connect usage
         const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
@@ -1978,18 +1959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
         const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-        let shippingInfo = { option: 'pickup' };
-        
-        if (shippingInfoJson) {
-          try {
-            shippingInfo = JSON.parse(shippingInfoJson);
-          } catch (error) {
-            console.error('❌ JSON parsing error for shipping info:', error.message);
-            console.error('🔍 Raw shipping JSON:', shippingInfoJson);
-            // Fallback to pickup if JSON is malformed
-            shippingInfo = { option: 'pickup' };
-          }
-        }
+        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
         console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
           hasShippingInfo: !!shippingInfoJson,
@@ -2022,9 +1992,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .limit(1);
             
             if (existingOrderResult.length > 0) {
-              const duplicateOrder = existingOrderResult[0];
-              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${duplicateOrder.id} (${duplicateOrder.orderNumber})`);
-              throw new Error(`DUPLICATE_ORDER:${duplicateOrder.id}:${duplicateOrder.orderNumber}`);
+              const existingOrder = existingOrderResult[0];
+              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
+              throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
             }
 
             // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record (FOR UPDATE removed for Neon compatibility)
@@ -2062,20 +2032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: (() => {
-                try {
-                  if (!customerAddress || customerAddress === 'undefined') return 'Address not provided';
-                  if (typeof customerAddress === 'string') {
-                    // Try to parse as JSON first
-                    const parsed = JSON.parse(customerAddress);
-                    return parsed.address || customerAddress;
-                  }
-                  return customerAddress;
-                } catch {
-                  // If parsing fails, use as string
-                  return customerAddress || 'Address not provided';
-                }
-              })(),
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
               // 🚚 ADDED: Shipping information processing
               fulfillmentType: shippingInfo.option || 'pickup',
               deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
@@ -2091,22 +2048,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             // Create order items with orderId for storage
-            const orderItems = items.map((item: any) => {
-              // CRITICAL FIX: Handle undefined/NaN unitPrice values properly
-              const rawUnitPrice = item.unitPrice || item.price || '0';
-              const parsedUnitPrice = parseFloat(rawUnitPrice);
-              const safeUnitPrice = isNaN(parsedUnitPrice) ? 0 : parsedUnitPrice;
-              
-              console.log(`🔍 Order item price validation: productId=${item.productId}, rawUnitPrice=${rawUnitPrice}, parsedUnitPrice=${parsedUnitPrice}, safeUnitPrice=${safeUnitPrice}`);
-              
-              return {
-                orderId: 0, // Will be set after order creation
-                productId: item.productId,
-                quantity: item.quantity,
-                unitPrice: safeUnitPrice.toFixed(2),
-                total: (safeUnitPrice * item.quantity).toFixed(2)
-              };
-            });
+            const orderItems = items.map((item: any) => ({
+              orderId: 0, // Will be set after order creation
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice).toFixed(2),
+              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+            }));
 
             // Use transaction-aware storage method
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
@@ -6843,134 +6791,261 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     }
   });
 
-  // Stripe Connect marketplace payment intent
+  // Create payment intent for customer portal orders (public - no auth required)
   app.post('/api/marketplace/create-payment-intent', async (req, res) => {
     try {
-      const { amount, wholesalerId, customerEmail, metadata } = req.body;
+      const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
       
-      console.log(`💰 Clean payment intent request: amount=${amount}, wholesalerId=${wholesalerId}, customerEmail=${customerEmail}`);
-      console.log(`📦 Original metadata:`, JSON.stringify(metadata, null, 2));
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
       
+      console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
+      
+      // DEDUPLICATION: Check for recent incomplete payment intents with same customer email and amount
+      const fiveMinutesAgo = Math.floor((Date.now() - 5 * 60 * 1000) / 1000);
+      try {
+        const recentIntents = await stripe.paymentIntents.list({
+          limit: 10,
+          created: { gte: fiveMinutesAgo },
+        });
+        
+        const duplicateIntent = recentIntents.data.find(intent => 
+          intent.status === 'requires_payment_method' &&
+          intent.metadata.customerEmail === customerData.email &&
+          intent.metadata.wholesalerId === wholesalerId &&
+          Math.abs(intent.amount - Math.round((parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)) * 100)) < 100 // Within £1
+        );
+        
+        if (duplicateIntent) {
+          console.log(`♻️ DEDUPLICATION: Found recent incomplete payment intent ${duplicateIntent.id}, returning existing client_secret`);
+          return res.json({ 
+            clientSecret: duplicateIntent.client_secret,
+            productSubtotal: (parseFloat(totalAmount)).toFixed(2),
+            customerTransactionFee: ((parseFloat(totalAmount) * 0.055) + 0.50).toFixed(2),
+            totalCustomerPays: (parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)).toFixed(2),
+            wholesalerPlatformFee: (parseFloat(totalAmount) * 0.033).toFixed(2),
+            wholesalerReceives: (parseFloat(totalAmount) - (parseFloat(totalAmount) * 0.033)).toFixed(2)
+          });
+        }
+      } catch (error) {
+        console.log('⚠️ Error checking for duplicate payment intents, proceeding with new intent creation:', error.message);
+      }
+      
+      // Validate and recalculate totalAmount to prevent NaN errors
+      let validatedTotalAmount = 0;
+      
+      if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) > 0) {
+        validatedTotalAmount = parseFloat(totalAmount);
+      } else {
+        // Recalculate from items if totalAmount is invalid
+        console.log('⚠️ Invalid totalAmount, recalculating from items...');
+        for (const item of items) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.price) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            validatedTotalAmount += unitPrice * quantity;
+          }
+        }
+      }
+      
+      // Final validation
+      if (!validatedTotalAmount || validatedTotalAmount <= 0) {
+        console.error(`❌ Invalid calculated totalAmount: ${validatedTotalAmount}`);
+        return res.status(400).json({ message: 'Unable to calculate valid total amount' });
+      }
+      
+      console.log(`✅ Using validated totalAmount: ${validatedTotalAmount}`);
+      
+      if (!items || !customerData || !wholesalerId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      // Get wholesaler information 
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: 'Wholesaler not found' });
+      }
+
+      // validatedTotalAmount is the product subtotal (without transaction fee)
+      // Add shipping cost if delivery option is selected
+      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
+        ? (shippingInfo.service && shippingInfo.service.price 
+           ? parseFloat(shippingInfo.service.price) 
+           : 90.00) // Default delivery cost for "Custom Quote Required" orders
+        : 0;
+      
+      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
+      
+      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
+      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
+      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
+      
+      // Platform collects 3.3% from subtotal 
+      const platformFee = validatedTotalAmount * 0.033;
+      
+      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
+      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
+      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
+      const wholesalerAmount = autoPayDelivery 
+        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
+        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
+
+      // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
         throw new Error('Stripe not configured');
       }
 
-      if (!amount || !wholesalerId || !customerEmail) {
-        return res.status(400).json({ message: 'Missing required fields: amount, wholesalerId, customerEmail' });
-      }
-      // Get wholesaler information 
-      const wholesaler = await storage.getUser(wholesalerId);
-      if (!wholesaler || !wholesaler.stripeAccountId) {
-        return res.status(400).json({ message: 'Wholesaler Stripe account not found' });
-      }
+      let paymentIntent;
 
-      // Calculate platform fee (3.3% of total amount - transaction fees already included)
-      const totalAmountInDollars = amount / 100;
-      const platformFeePercentage = 0.033; // 3.3%
-      const platformFeeAmount = Math.round(totalAmountInDollars * platformFeePercentage * 100); // Convert back to cents
-
-      // Simplify metadata to avoid 500-character limit per key
-      const simplifiedMetadata: any = {
-        orderType: 'customer_portal', // Required field for order creation
-        wholesalerId: wholesalerId,    // Required field for order creation
-        connectAccountUsed: 'true'     // Required field for order creation
-      };
-      
-      if (metadata) {
-        // Extract only essential fields from metadata
-        Object.keys(metadata).forEach(key => {
-          const value = metadata[key];
-          if (typeof value === 'string' && value.length <= 500) {
-            simplifiedMetadata[key] = value;
-          } else if (typeof value === 'object') {
-            // For complex objects like shipping info, extract only key details
-            if (key === 'shippingInfo' && value.option === 'delivery' && value.service) {
-              simplifiedMetadata['shippingInfo'] = JSON.stringify({
-                option: 'delivery',
-                service: {
-                  serviceName: value.service.serviceName,
-                  price: value.service.price,
-                  transitTime: value.service.transitTime
-                }
-              });
-            } else if (key === 'shippingInfo' && value.option === 'pickup') {
-              simplifiedMetadata['shippingInfo'] = JSON.stringify({ option: 'pickup' });
-            } else if (key === 'customerData' && value.name && value.email && value.phone) {
-              // Extract customer data fields directly into metadata
-              simplifiedMetadata['customerName'] = value.name;
-              simplifiedMetadata['customerEmail'] = value.email;
-              simplifiedMetadata['customerPhone'] = value.phone;
-              simplifiedMetadata['customerAddress'] = JSON.stringify({
-                address: value.address,
-                city: value.city,
-                state: value.state,
-                postalCode: value.postalCode,
-                country: value.country
-              });
-              // Keep original customerData as well
-              simplifiedMetadata[key] = JSON.stringify(value).substring(0, 490);
-            } else if (key === 'cart' && Array.isArray(value)) {
-              // Convert cart to items format for order creation
-              const items = value.map(item => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                sellingType: item.sellingType,
-                productName: item.productName,
-                unitPrice: item.unitPrice || '0.00'
-              }));
-              simplifiedMetadata['items'] = JSON.stringify(items).substring(0, 490);
-              simplifiedMetadata[key] = JSON.stringify(value).substring(0, 490);
-            } else {
-              // For other objects, convert to a short string
-              const shortValue = JSON.stringify(value).substring(0, 490);
-              simplifiedMetadata[key] = shortValue;
+      // Try creating payment intent with Stripe Connect if available
+      if (wholesaler.stripeAccountId) {
+        try {
+          // Create payment intent with Stripe Connect and 3.3% platform fee
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+            currency: 'gbp', // Always use GBP for platform
+            application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
+            transfer_data: {
+              destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
+            },
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              customerTransactionFee: customerTransactionFee.toFixed(2),
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
+              connectAccountUsed: 'true',
+              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
             }
-          } else {
-            simplifiedMetadata[key] = String(value).substring(0, 500);
+          });
+        } catch (connectError: any) {
+          console.log('Connect payment failed, falling back to regular payment:', connectError.message);
+          
+          // Fallback to regular payment intent for demo/test purposes
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+            currency: 'gbp', // Always use GBP for platform
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              customerTransactionFee: customerTransactionFee.toFixed(2),
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
+              connectAccountUsed: 'false',
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          });
+        }
+      } else {
+        // Create regular payment intent when no Connect account
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+          currency: 'gbp', // Always use GBP for platform
+          metadata: {
+            orderType: 'customer_portal',
+            wholesalerId: wholesalerId,
+            customerName: customerData.name,
+            customerEmail: customerData.email,
+            customerPhone: customerData.phone,
+            customerAddress: JSON.stringify({
+              street: customerData.address,
+              city: customerData.city,
+              state: customerData.state,
+              postalCode: customerData.postalCode,
+              country: customerData.country
+            }),
+            totalAmount: validatedTotalAmount.toString(),
+            shippingCost: shippingCost.toFixed(2),
+            platformFee: platformFee.toFixed(2),
+            customerTransactionFee: customerTransactionFee.toFixed(2),
+            totalAmountWithFee: totalAmountWithFee.toFixed(2),
+            productSubtotal: validatedTotalAmount.toFixed(2),
+            totalCustomerPays: totalAmountWithFee.toFixed(2),
+            wholesalerPlatformFee: platformFee.toFixed(2),
+            wholesalerReceives: wholesalerAmount,
+            connectAccountUsed: 'false',
+            shippingInfo: JSON.stringify(shippingInfo ? {
+              option: shippingInfo.option,
+              service: shippingInfo.service ? {
+                serviceId: shippingInfo.service.serviceId,
+                serviceName: shippingInfo.service.serviceName,
+                price: shippingInfo.service.price
+              } : null
+            } : { option: 'pickup' }),
+            items: JSON.stringify(items.map(item => ({
+              ...item,
+              productName: item.productName || 'Product'
+            })))
           }
         });
-        
-        // Add calculated fields for order creation
-        if (metadata.subtotal && metadata.transactionFee) {
-          simplifiedMetadata['productSubtotal'] = String(metadata.subtotal);
-          simplifiedMetadata['customerTransactionFee'] = String(metadata.transactionFee);
-          simplifiedMetadata['totalAmount'] = String(totalAmountInDollars.toFixed(2));
-          simplifiedMetadata['totalCustomerPays'] = String(totalAmountInDollars.toFixed(2));
-          simplifiedMetadata['platformFee'] = String((platformFeeAmount / 100).toFixed(2));
-          simplifiedMetadata['wholesalerPlatformFee'] = String((platformFeeAmount / 100).toFixed(2));
-          const wholesalerReceives = totalAmountInDollars - (platformFeeAmount / 100);
-          simplifiedMetadata['wholesalerReceives'] = String(wholesalerReceives.toFixed(2));
-        }
       }
 
-      console.log(`📝 Simplified metadata:`, JSON.stringify(simplifiedMetadata, null, 2));
-      
-      // Validate each metadata value length
-      Object.keys(simplifiedMetadata).forEach(key => {
-        const value = simplifiedMetadata[key];
-        if (value && value.length > 500) {
-          console.warn(`⚠️ Metadata key '${key}' still too long: ${value.length} characters`);
-          simplifiedMetadata[key] = value.substring(0, 490) + '...'; // Truncate to 490 + '...' = 493 chars
-        }
-      });
-
-      // Create Stripe Connect payment intent with destination charge
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount, // Total amount customer pays (includes transaction fees)
-        currency: 'gbp',
-        application_fee_amount: platformFeeAmount, // Platform fee
-        receipt_email: customerEmail,
-        metadata: simplifiedMetadata,
-        transfer_data: {
-          destination: wholesaler.stripeAccountId,
-        },
-      });
-
-      console.log(`✅ Payment intent created: ${paymentIntent.id} for £${(amount / 100).toFixed(2)}`);
-
-      res.json({
+      res.json({ 
         clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id
+        productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
+        shippingCost: shippingCost.toFixed(2), // Delivery cost
+        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50
+        totalCustomerPays: totalAmountWithFee.toFixed(2), // Total customer payment including shipping
+        wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
+        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2) // Wholesaler receives product total minus 3.3%
       });
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
