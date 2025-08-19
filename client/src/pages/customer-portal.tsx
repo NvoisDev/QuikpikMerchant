@@ -2013,9 +2013,9 @@ export default function CustomerPortal() {
                           <CardContent className="p-4">
                             {/* Product Image */}
                             <div className="relative aspect-square mb-4 bg-gray-50 rounded-lg overflow-hidden">
-                              {product.imageUrl || (product.images && product.images.length > 0) ? (
+                              {product.imageUrl ? (
                                 <img 
-                                  src={product.imageUrl || product.images[0]} 
+                                  src={product.imageUrl} 
                                   alt={product.name}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                                 />
@@ -2052,8 +2052,8 @@ export default function CustomerPortal() {
                               <div className="flex items-center justify-between">
                                 <PriceDisplay
                                   price={pricing.effectivePrice}
-                                  originalPrice={pricing.effectivePrice !== pricing.basePrice ? pricing.basePrice : undefined}
-                                  currency={product.currency}
+                                  originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                  currency={'GBP'}
                                   isGuestMode={false}
                                   size="medium"
                                   showStrikethrough={true}
@@ -2066,7 +2066,18 @@ export default function CustomerPortal() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
+                                        onClick={() => {
+                                          if (cartItem.quantity <= 1) {
+                                            setCart(cart.filter(item => item.product.id !== product.id));
+                                          } else {
+                                            const updatedCart = cart.map(item => 
+                                              item.product.id === product.id 
+                                                ? { ...item, quantity: item.quantity - 1 }
+                                                : item
+                                            );
+                                            setCart(updatedCart);
+                                          }
+                                        }}
                                         className="h-8 w-8 p-0"
                                       >
                                         <Minus className="h-3 w-3" />
@@ -2077,7 +2088,14 @@ export default function CustomerPortal() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
+                                        onClick={() => {
+                                          const updatedCart = cart.map(item => 
+                                            item.product.id === product.id 
+                                              ? { ...item, quantity: item.quantity + 1 }
+                                              : item
+                                          );
+                                          setCart(updatedCart);
+                                        }}
                                         className="h-8 w-8 p-0"
                                       >
                                         <Plus className="h-3 w-3" />
@@ -2086,7 +2104,7 @@ export default function CustomerPortal() {
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => addToCart(product)}
+                                      onClick={() => addToCart(product, 1)}
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
