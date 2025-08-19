@@ -353,17 +353,20 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       if (shouldCreateIntent && hasValidShipping && !clientSecret && cartValidation) {
         setIsCreatingIntent(true);
         
-        // CRITICAL FIX: Use the most up-to-date cart stats which reflect current shipping selection
-        // The cartStats are calculated from current customerData state and reflect the actual UI
-        const isDeliveryOrder = cartStats.shippingCost > 0;
-        const currentShippingOption = isDeliveryOrder ? 'delivery' : 'pickup';
-        const currentSelectedService = isDeliveryOrder ? customerData.selectedShippingService : null;
+        // CRITICAL FIX: Calculate shipping status directly from current customer data
+        // This ensures we're using the most up-to-date shipping selection
+        const hasDeliveryService = customerData.shippingOption === 'delivery' && customerData.selectedShippingService;
+        const deliveryServicePrice = hasDeliveryService ? parseFloat(customerData.selectedShippingService?.price || '0') : 0;
+        const isDeliveryOrder = customerData.shippingOption === 'delivery' && deliveryServicePrice > 0;
+        const currentShippingOption = customerData.shippingOption || 'pickup';
+        const currentSelectedService = customerData.shippingOption === 'delivery' ? customerData.selectedShippingService : null;
         
-        console.log('🚚 CART STATS SHIPPING VALIDATION:', {
-          cartStatsShippingCost: cartStats.shippingCost,
-          isDeliveryOrder,
-          calculatedShippingOption: currentShippingOption,
+        console.log('🚚 DIRECT SHIPPING VALIDATION:', {
           customerDataShippingOption: customerData.shippingOption,
+          hasDeliveryService,
+          deliveryServicePrice,
+          isDeliveryOrder,
+          finalShippingOption: currentShippingOption,
           selectedService: currentSelectedService
         });
         
