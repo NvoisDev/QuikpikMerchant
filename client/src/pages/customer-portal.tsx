@@ -23,7 +23,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -866,7 +866,8 @@ export default function CustomerPortal() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
@@ -2385,19 +2386,98 @@ export default function CustomerPortal() {
                       return viewMode === "grid" ? (
                         <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
                           <CardContent className="p-4">
-                            {/* Product Image */}
-                            <div className="relative aspect-square mb-4 bg-gray-50 rounded-lg overflow-hidden">
-                              {product.imageUrl ? (
-                                <img 
-                                  src={product.imageUrl} 
-                                  alt={product.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Package className="w-12 h-12 text-gray-300" />
-                                </div>
-                              )}
+                            {/* Product Image Gallery */}
+                            <div className="relative aspect-square mb-4 bg-white rounded-lg overflow-hidden border border-gray-100">
+                              {(() => {
+                                // Get all available images (primary imageUrl + additional images array)
+                                const allImages = [
+                                  ...(product.imageUrl ? [product.imageUrl] : []),
+                                  ...((product as any).images || [])
+                                ].filter(Boolean);
+                                
+                                const currentImageIndex = productImageIndexes[product.id] || 0;
+                                
+                                if (allImages.length === 0) {
+                                  return (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                      <Package className="w-12 h-12 text-gray-300" />
+                                    </div>
+                                  );
+                                }
+                                
+                                if (allImages.length === 1) {
+                                  return (
+                                    <img 
+                                      src={allImages[0]} 
+                                      alt={product.name}
+                                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200 p-2"
+                                    />
+                                  );
+                                }
+                                
+                                // Multiple images - show carousel with indicators
+                                return (
+                                  <div className="relative w-full h-full">
+                                    <img 
+                                      src={allImages[currentImageIndex]} 
+                                      alt={`${product.name} - Image ${currentImageIndex + 1}`}
+                                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200 p-2"
+                                    />
+                                    
+                                    {/* Image Navigation Arrows */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setProductImageIndexes(prev => ({
+                                          ...prev,
+                                          [product.id]: currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1
+                                        }));
+                                      }}
+                                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-1 transition-opacity opacity-0 group-hover:opacity-100"
+                                    >
+                                      <ArrowLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setProductImageIndexes(prev => ({
+                                          ...prev,
+                                          [product.id]: currentImageIndex === allImages.length - 1 ? 0 : currentImageIndex + 1
+                                        }));
+                                      }}
+                                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-1 transition-opacity opacity-0 group-hover:opacity-100"
+                                    >
+                                      <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                    
+                                    {/* Image Indicators */}
+                                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                                      {allImages.map((_, index) => (
+                                        <button
+                                          key={index}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setProductImageIndexes(prev => ({
+                                              ...prev,
+                                              [product.id]: index
+                                            }));
+                                          }}
+                                          className={`w-2 h-2 rounded-full transition-all ${
+                                            index === currentImageIndex 
+                                              ? 'bg-white shadow-md' 
+                                              : 'bg-white bg-opacity-50'
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Multiple Images Badge */}
+                                    <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-full">
+                                      {currentImageIndex + 1}/{allImages.length}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               
                               {/* Sale Badge */}
                               {product.promoActive && product.promoPrice && (
@@ -2536,19 +2616,77 @@ export default function CustomerPortal() {
                         <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
                           <CardContent className="p-4">
                             <div className="flex gap-4">
-                              {/* Product Image */}
-                              <div className="relative w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
-                                {product.imageUrl ? (
-                                  <img 
-                                    src={product.imageUrl} 
-                                    alt={product.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Package className="w-8 h-8 text-gray-300" />
-                                  </div>
-                                )}
+                              {/* Product Image Gallery */}
+                              <div className="relative w-24 h-24 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
+                                {(() => {
+                                  // Get all available images (primary imageUrl + additional images array)
+                                  const allImages = [
+                                    ...(product.imageUrl ? [product.imageUrl] : []),
+                                    ...((product as any).images || [])
+                                  ].filter(Boolean);
+                                  
+                                  const currentImageIndex = productImageIndexes[product.id] || 0;
+                                  
+                                  if (allImages.length === 0) {
+                                    return (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                        <Package className="w-8 h-8 text-gray-300" />
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  if (allImages.length === 1) {
+                                    return (
+                                      <img 
+                                        src={allImages[0]} 
+                                        alt={product.name}
+                                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200 p-1"
+                                      />
+                                    );
+                                  }
+                                  
+                                  // Multiple images - show carousel with indicators
+                                  return (
+                                    <div className="relative w-full h-full">
+                                      <img 
+                                        src={allImages[currentImageIndex]} 
+                                        alt={`${product.name} - Image ${currentImageIndex + 1}`}
+                                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200 p-1"
+                                      />
+                                      
+                                      {/* Small Navigation Arrows */}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setProductImageIndexes(prev => ({
+                                            ...prev,
+                                            [product.id]: currentImageIndex === 0 ? allImages.length - 1 : currentImageIndex - 1
+                                          }));
+                                        }}
+                                        className="absolute left-0.5 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-0.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                      >
+                                        <ArrowLeft className="w-2 h-2" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setProductImageIndexes(prev => ({
+                                            ...prev,
+                                            [product.id]: currentImageIndex === allImages.length - 1 ? 0 : currentImageIndex + 1
+                                          }));
+                                        }}
+                                        className="absolute right-0.5 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-0.5 transition-opacity opacity-0 group-hover:opacity-100"
+                                      >
+                                        <ArrowRight className="w-2 h-2" />
+                                      </button>
+                                      
+                                      {/* Multiple Images Badge */}
+                                      <div className="absolute top-0.5 right-0.5 bg-black bg-opacity-70 text-white text-xs px-1 py-0 rounded-full leading-none" style={{fontSize: '0.625rem'}}>
+                                        {currentImageIndex + 1}/{allImages.length}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 
                                 {/* Sale Badge */}
                                 {product.promoActive && product.promoPrice && (
