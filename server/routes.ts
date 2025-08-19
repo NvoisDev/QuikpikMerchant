@@ -10111,8 +10111,21 @@ The Quikpik Team
     }
   });
 
-  // POST endpoint for shipping quotes (used by order shipping modal)
-  app.post('/api/shipping/quotes', requireAuth, async (req: any, res) => {
+  // POST endpoint for shipping quotes (used by order shipping modal) - with auth debug
+  app.post('/api/shipping/quotes', async (req: any, res) => {
+    // Add auth debug for customer portal usage
+    console.log('🔍 Auth Debug:', {
+      sessionExists: !!req.session,
+      sessionUser: req.session?.user ? 'exists' : 'missing',
+      sessionUserId: req.session?.userId || 'missing',
+      isAuthenticated: !!(req.session?.user?.id || req.session?.userId || req.user),
+      headers: req.headers.cookie ? 'has_cookies' : 'no_cookies'
+    });
+    
+    // Allow both authenticated users and customer portal access
+    if (!req.session?.user?.id && !req.session?.userId && !req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const { collectionAddress, deliveryAddress, parcels } = req.body;
     
     try {
@@ -10213,6 +10226,83 @@ The Quikpik Team
         totalWeight,
         recommendations
       });
+    }
+  });
+
+  // Customer portal shipping quotes endpoint (no auth required)
+  app.post('/api/customer/shipping/quotes', async (req: any, res) => {
+    try {
+      const { collectionAddress, deliveryAddress, parcels, cartItems } = req.body;
+      
+      console.log("📦 CUSTOMER PORTAL: Getting shipping quotes");
+      console.log("Request data:", { collectionAddress, deliveryAddress, parcels: parcels?.length, cartItems: cartItems?.length });
+
+      // Check if we have valid addresses
+      if (!collectionAddress || !deliveryAddress || !parcels) {
+        return res.status(400).json({ 
+          error: "Missing required data", 
+          required: ["collectionAddress", "deliveryAddress", "parcels"] 
+        });
+      }
+
+      // Calculate weight-based pricing for demo quotes
+      const totalWeight = parcels.reduce((sum, parcel) => sum + (parcel.weight || 1), 0);
+      const basePrice = Math.max(3.95, totalWeight * 0.85); // Minimum £3.95, then £0.85 per kg
+      
+      const demoQuotes = [
+        {
+          serviceId: 'demo-royal-mail-48',
+          serviceName: 'Royal Mail 48',
+          carrierName: 'Royal Mail',
+          price: parseFloat((basePrice * 1.2).toFixed(2)),
+          priceExVat: parseFloat((basePrice).toFixed(2)),
+          vat: parseFloat((basePrice * 0.2).toFixed(2)),
+          transitTime: '2-3 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: `Standard delivery for ${totalWeight}kg package with tracking`
+        },
+        {
+          serviceId: 'demo-dpd-next-day',
+          serviceName: 'DPD Next Day',
+          carrierName: 'DPD',
+          price: parseFloat((basePrice * 1.8).toFixed(2)),
+          priceExVat: parseFloat((basePrice * 1.5).toFixed(2)),
+          vat: parseFloat((basePrice * 0.3).toFixed(2)),
+          transitTime: '1 business day',
+          collectionType: 'pickup',
+          deliveryType: 'express',
+          trackingAvailable: true,
+          insuranceIncluded: true,
+          description: `Next day delivery for ${totalWeight}kg package with SMS notifications`
+        },
+        {
+          serviceId: 'demo-evri-standard',
+          serviceName: 'Evri Standard',
+          carrierName: 'Evri',
+          price: parseFloat((basePrice * 0.9).toFixed(2)),
+          priceExVat: parseFloat((basePrice * 0.75).toFixed(2)),
+          vat: parseFloat((basePrice * 0.15).toFixed(2)),
+          transitTime: '3-5 business days',
+          collectionType: 'pickup',
+          deliveryType: 'standard',
+          trackingAvailable: true,
+          insuranceIncluded: false,
+          description: `Cost-effective delivery for ${totalWeight}kg package`
+        }
+      ];
+      
+      console.log(`📦 Returning customer portal demo quotes for ${totalWeight}kg package`);
+      res.json({ 
+        quotes: demoQuotes, 
+        demoMode: true, 
+        totalWeight
+      });
+    } catch (error: any) {
+      console.error("Error getting customer shipping quotes:", error.message);
+      res.status(500).json({ error: "Failed to get shipping quotes" });
     }
   });
 

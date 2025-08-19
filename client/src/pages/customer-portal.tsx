@@ -922,7 +922,7 @@ export default function CustomerPortal() {
         quantity: item.quantity
       })));
       
-      const response = await apiRequest("POST", "/api/shipping/quotes", {
+      const response = await apiRequest("POST", "/api/customer/shipping/quotes", {
         collectionAddress: {
           contactName: wholesaler?.businessName || "Business Pickup",
           property: wholesaler?.businessAddress?.split(',')[0] || "1",
