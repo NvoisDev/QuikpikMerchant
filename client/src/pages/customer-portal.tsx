@@ -919,8 +919,9 @@ export default function CustomerPortal() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
   
-  // State for unit/pallet selection
-  const [productUnitOptions, setProductUnitOptions] = useState<Record<number, 'units' | 'pallets'>>({});
+  // State for unit/pallet selection modal
+  const [showUnitSelectionModal, setShowUnitSelectionModal] = useState(false);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<ExtendedProduct | null>(null);
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
   const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
@@ -3366,50 +3367,7 @@ export default function CustomerPortal() {
                                   )}
                                 </div>
                                 
-                                {/* Unit/Pallet Selection */}
-                                {console.log(`Product ${product.name}: palletPrice=${product.palletPrice}, parsed=${product.palletPrice ? parseFloat(product.palletPrice.toString()) : 'N/A'}`)}
-                                {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) && (
-                                  <div className="mb-3">
-                                    <div className="flex items-center space-x-3 text-sm">
-                                      <span className="text-gray-600 font-medium">Purchase Option:</span>
-                                      <div className="flex items-center space-x-4">
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name={`unit-option-${product.id}`}
-                                            value="units"
-                                            checked={(productUnitOptions[product.id] || 'units') === 'units'}
-                                            onChange={() => setProductUnitOptions(prev => ({
-                                              ...prev,
-                                              [product.id]: 'units'
-                                            }))}
-                                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                                          />
-                                          <span className="text-gray-700">
-                                            Individual Units (£{parseFloat(product.price).toFixed(2)}/unit)
-                                          </span>
-                                        </label>
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name={`unit-option-${product.id}`}
-                                            value="pallets"
-                                            checked={productUnitOptions[product.id] === 'pallets'}
-                                            onChange={() => setProductUnitOptions(prev => ({
-                                              ...prev,
-                                              [product.id]: 'pallets'
-                                            }))}
-                                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                                          />
-                                          <span className="text-gray-700">
-                                            Pallets (£{parseFloat(product.palletPrice.toString()).toFixed(2)}/pallet
-                                            {product.unitsPerPallet && ` - ${product.unitsPerPallet} units`})
-                                          </span>
-                                        </label>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+
 
                                 {/* Add to Cart Controls */}
                                 <div className="flex items-center justify-between">
@@ -3581,23 +3539,20 @@ export default function CustomerPortal() {
                                       <Button
                                         size="sm"
                                         onClick={() => {
-                                          const isUsingPallets = productUnitOptions[product.id] === 'pallets';
-                                          const minQuantity = isUsingPallets ? (product.palletMoq || 1) : product.moq;
-                                          addToCart(product, minQuantity, isUsingPallets ? 'pallets' : 'units');
+                                          // Check if product has pallet pricing
+                                          if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
+                                            setSelectedProductForModal(product);
+                                            setShowUnitSelectionModal(true);
+                                          } else {
+                                            // No pallet option, add units directly
+                                            addToCart(product, product.moq, 'units');
+                                          }
                                         }}
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        title={
-                                          productUnitOptions[product.id] === 'pallets' 
-                                            ? `Add ${product.palletMoq || 1} pallet${(product.palletMoq || 1) > 1 ? 's' : ''}`
-                                            : (product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart')
-                                        }
+                                        title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
-                                        Add {
-                                          productUnitOptions[product.id] === 'pallets' 
-                                            ? (product.palletMoq || 1)
-                                            : (product.moq > 1 ? product.moq : '')
-                                        } {productUnitOptions[product.id] === 'pallets' ? 'pallet' : ''}
+                                        Add {product.moq > 1 ? product.moq : ''}
                                       </Button>
                                     )}
                                   </div>
@@ -3615,6 +3570,11 @@ export default function CustomerPortal() {
                                         isGuestMode={false}
                                         size="small"
                                       />
+                                      {cartItem.sellingType === 'pallets' && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          ({cartItem.quantity} pallet{cartItem.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units = {cartItem.quantity * (product.unitsPerPallet || 1)} total units)
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -4210,6 +4170,100 @@ export default function CustomerPortal() {
               </div>
             )}
           </>
+        )}
+
+        {/* Unit/Pallet Selection Modal */}
+        {showUnitSelectionModal && selectedProductForModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Choose Purchase Option
+                </h3>
+                <p className="text-gray-600">
+                  How would you like to purchase {selectedProductForModal.name}?
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {/* Individual Units Option */}
+                <div 
+                  className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-emerald-500 bg-emerald-50"
+                  onClick={() => {
+                    addToCart(selectedProductForModal, selectedProductForModal.moq, 'units');
+                    setShowUnitSelectionModal(false);
+                    setSelectedProductForModal(null);
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Individual Units</h4>
+                      <p className="text-sm text-gray-600">
+                        £{parseFloat(selectedProductForModal.price).toFixed(2)} per unit
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Minimum: {selectedProductForModal.moq} units
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-emerald-600">
+                        £{(parseFloat(selectedProductForModal.price) * selectedProductForModal.moq).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        for {selectedProductForModal.moq} units
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pallet Option */}
+                <div 
+                  className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-blue-500 bg-blue-50"
+                  onClick={() => {
+                    addToCart(selectedProductForModal, selectedProductForModal.palletMoq || 1, 'pallets');
+                    setShowUnitSelectionModal(false);
+                    setSelectedProductForModal(null);
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Full Pallets</h4>
+                      <p className="text-sm text-gray-600">
+                        £{parseFloat(selectedProductForModal.palletPrice?.toString() || '0').toFixed(2)} per pallet
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedProductForModal.unitsPerPallet} units per pallet
+                        {selectedProductForModal.palletMoq && selectedProductForModal.palletMoq > 1 && 
+                          ` • Minimum: ${selectedProductForModal.palletMoq} pallets`
+                        }
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-blue-600">
+                        £{(parseFloat(selectedProductForModal.palletPrice?.toString() || '0') * (selectedProductForModal.palletMoq || 1)).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        for {selectedProductForModal.palletMoq || 1} pallet{(selectedProductForModal.palletMoq || 1) > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancel Button */}
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowUnitSelectionModal(false);
+                    setSelectedProductForModal(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
