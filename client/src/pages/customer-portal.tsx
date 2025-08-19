@@ -322,32 +322,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
         
         try {
-          const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", {
+          const response = await apiRequest("POST", "/api/customer/create-payment", {
+            customerName: customerData.name,
+            customerEmail: customerData.email,
+            customerPhone: customerData.phone,
+            customerAddress: {
+              street: customerData.address,
+              city: customerData.city,
+              state: customerData.state,
+              postalCode: customerData.postalCode,
+              country: customerData.country || 'United Kingdom'
+            },
             items: cart.map(item => ({
               productId: item.product.id,
               quantity: item.quantity || 0,
               unitPrice: (() => {
-                if (item.sellingType === "pallets") {
-                  return parseFloat(item.product.palletPrice || "0") || 0;
-                } else {
-                  const basePrice = parseFloat(item.product.price) || 0;
-                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                    basePrice,
-                    item.quantity,
-                    item.product.promotionalOffers || [],
-                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                    item.product.promoActive
-                  );
-                  return pricing.effectivePrice;
-                }
-              })()
-            })),
-            customerData,
-            wholesalerId: wholesaler.id,
-            totalAmount: cart.reduce((total, item) => {
-              if (item.sellingType === "pallets") {
-                return total + (parseFloat(item.product.palletPrice || "0") * item.quantity);
-              } else {
                 const basePrice = parseFloat(item.product.price) || 0;
                 const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
                   basePrice,
@@ -356,9 +345,9 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
                   item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
                   item.product.promoActive
                 );
-                return total + pricing.totalCost;
-              }
-            }, 0), // Send ONLY product subtotal - backend will add transaction fees
+                return pricing.effectivePrice;
+              })()
+            })),
             shippingInfo: shippingDataAtCreation
           });
           
@@ -933,7 +922,7 @@ export default function CustomerPortal() {
         quantity: item.quantity
       })));
       
-      const response = await apiRequest("POST", "/api/marketplace/shipping/quotes", {
+      const response = await apiRequest("POST", "/api/shipping/quotes", {
         collectionAddress: {
           contactName: wholesaler?.businessName || "Business Pickup",
           property: wholesaler?.businessAddress?.split(',')[0] || "1",
@@ -2174,7 +2163,7 @@ export default function CustomerPortal() {
             
             {cart.length > 0 && wholesaler && (
               <div className="space-y-6">
-                {/* Order Summary */}
+                {/* Order Summary with Fee Breakdown */}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold mb-3">Order Summary</h3>
                   <div className="space-y-2">
@@ -2196,14 +2185,79 @@ export default function CustomerPortal() {
                       );
                     })}
                     <Separator />
-                    <div className="flex justify-between items-center font-semibold">
-                      <span>Total</span>
+                    
+                    {/* Breakdown of charges */}
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Product Subtotal</span>
+                        <PriceDisplay
+                          price={cartStats.totalValue}
+                          currency="GBP"
+                          isGuestMode={false}
+                          size="small"
+                        />
+                      </div>
+                      
+                      {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
+                        <div className="flex justify-between">
+                          <span>Delivery ({customerData.selectedShippingService.serviceName})</span>
+                          <PriceDisplay
+                            price={customerData.selectedShippingService.price}
+                            currency="GBP"
+                            isGuestMode={false}
+                            size="small"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between text-gray-600">
+                        <span>Transaction Fee (5.5% + £0.50)</span>
+                        <PriceDisplay
+                          price={(() => {
+                            const subtotal = cartStats.totalValue;
+                            const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+                              ? customerData.selectedShippingService.price 
+                              : 0;
+                            const beforeFees = subtotal + shipping;
+                            return (beforeFees * 0.055) + 0.50;
+                          })()}
+                          currency="GBP"
+                          isGuestMode={false}
+                          size="small"
+                        />
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    <div className="flex justify-between items-center font-semibold text-lg">
+                      <span>Total to Pay</span>
                       <PriceDisplay
-                        price={cartStats.totalValue}
+                        price={(() => {
+                          const subtotal = cartStats.totalValue;
+                          const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+                            ? customerData.selectedShippingService.price 
+                            : 0;
+                          const beforeFees = subtotal + shipping;
+                          const transactionFee = (beforeFees * 0.055) + 0.50;
+                          return beforeFees + transactionFee;
+                        })()}
                         currency="GBP"
                         isGuestMode={false}
                         size="medium"
                       />
+                    </div>
+                  </div>
+                  
+                  {/* Transaction Fee Notice */}
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start">
+                      <svg className="w-4 h-4 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium">Payment Processing Fee</p>
+                        <p>A transaction fee of 5.5% + £0.50 is applied to cover secure payment processing and platform services.</p>
+                      </div>
                     </div>
                   </div>
                 </div>
