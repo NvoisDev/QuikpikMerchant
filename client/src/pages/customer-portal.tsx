@@ -2325,13 +2325,33 @@ export default function CustomerPortal() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* View Toggle */}
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                      className="px-3 py-1.5"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === "list" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("list")}
+                      className="px-3 py-1.5"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* Products Grid */}
+              {/* Products Display */}
               <div className="space-y-4">
                 {productsLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
                     {[...Array(6)].map((_, i) => (
                       <ProductCardSkeleton key={i} />
                     ))}
@@ -2357,12 +2377,12 @@ export default function CustomerPortal() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
                     {filteredProducts.map((product) => {
                       const pricing = calculatePromotionalPricing(product, 1);
                       const cartItem = cart.find(item => item.product.id === product.id);
                       
-                      return (
+                      return viewMode === "grid" ? (
                         <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
                           <CardContent className="p-4">
                             {/* Product Image */}
@@ -2505,6 +2525,170 @@ export default function CustomerPortal() {
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add
                                     </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        // List View
+                        <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
+                          <CardContent className="p-4">
+                            <div className="flex gap-4">
+                              {/* Product Image */}
+                              <div className="relative w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                                {product.imageUrl ? (
+                                  <img 
+                                    src={product.imageUrl} 
+                                    alt={product.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package className="w-8 h-8 text-gray-300" />
+                                  </div>
+                                )}
+                                
+                                {/* Sale Badge */}
+                                {product.promoActive && product.promoPrice && (
+                                  <div className="absolute top-1 left-1">
+                                    <Badge variant="destructive" className="text-xs px-1 py-0">
+                                      SALE
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Product Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1">
+                                      {product.name}
+                                    </h3>
+                                    {product.description && (
+                                      <p className="text-sm text-gray-600 line-clamp-2">
+                                        {cleanAIDescription(product.description)}
+                                      </p>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Price */}
+                                  <div className="flex-shrink-0 ml-4">
+                                    <PriceDisplay
+                                      price={pricing.effectivePrice}
+                                      originalPrice={pricing.originalPrice}
+                                      currency="GBP"
+                                      isGuestMode={false}
+                                      size="base"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                {/* Product Details */}
+                                <div className="flex flex-wrap gap-1 text-xs text-gray-600 mb-3">
+                                  {(product as any).size && (
+                                    <span className="bg-gray-100 px-2 py-1 rounded">
+                                      Size: {(product as any).size}
+                                    </span>
+                                  )}
+                                  {product.moq && product.moq > 1 && (
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      MOQ: {product.moq}
+                                    </span>
+                                  )}
+                                  {product.stock && (
+                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                      Stock: {product.stock}
+                                    </span>
+                                  )}
+                                  {(product as any).brand && (
+                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                      {(product as any).brand}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Add to Cart Controls */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    {cartItem ? (
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            if (cartItem.quantity <= product.moq) {
+                                              setCart(cart.filter(item => item.product.id !== product.id));
+                                            } else {
+                                              const updatedCart = cart.map(item => 
+                                                item.product.id === product.id 
+                                                  ? { ...item, quantity: item.quantity - 1 }
+                                                  : item
+                                              );
+                                              setCart(updatedCart);
+                                            }
+                                          }}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <Input
+                                          type="number"
+                                          value={cartItem.quantity}
+                                          onChange={(e) => {
+                                            const newQuantity = Math.max(product.moq, parseInt(e.target.value) || product.moq);
+                                            const maxQuantity = Math.min(newQuantity, product.stock);
+                                            const updatedCart = cart.map(item => 
+                                              item.product.id === product.id 
+                                                ? { ...item, quantity: maxQuantity }
+                                                : item
+                                            );
+                                            setCart(updatedCart);
+                                          }}
+                                          min={product.moq}
+                                          max={product.stock}
+                                          className="w-16 h-8 text-center text-sm"
+                                        />
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            const updatedCart = cart.map(item => 
+                                              item.product.id === product.id 
+                                                ? { ...item, quantity: item.quantity + 1 }
+                                                : item
+                                            );
+                                            setCart(updatedCart);
+                                          }}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Plus className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => addToCart(product, product.moq)}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add
+                                      </Button>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Total for this item */}
+                                  {cartItem && (
+                                    <div className="text-sm font-medium text-gray-900">
+                                      Total: <PriceDisplay
+                                        price={pricing.effectivePrice * cartItem.quantity}
+                                        currency="GBP"
+                                        isGuestMode={false}
+                                        size="small"
+                                      />
+                                    </div>
                                   )}
                                 </div>
                               </div>
