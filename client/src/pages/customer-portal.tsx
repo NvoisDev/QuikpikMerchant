@@ -512,16 +512,33 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       stripe={stripePromise} 
       options={{ clientSecret }}
     >
-      <PaymentFormContent onSuccess={onSuccess} totalAmount={totalAmount} wholesaler={wholesaler} />
+      <PaymentFormContent 
+        onSuccess={onSuccess} 
+        totalAmount={totalAmount} 
+        wholesaler={wholesaler} 
+        cart={cart}
+        customerData={customerData}
+        calculateCartStats={calculateCartStats}
+      />
     </Elements>
   );
 };
 
 // Separate component for the actual form content
-const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: { 
+const PaymentFormContent = ({ 
+  onSuccess, 
+  totalAmount, 
+  wholesaler, 
+  cart, 
+  customerData, 
+  calculateCartStats 
+}: { 
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
+  cart: any[];
+  customerData: any;
+  calculateCartStats: (cart: any[], customerData: any, wholesaler: any) => any;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -640,14 +657,22 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             console.log('✅ Order created successfully:', orderData);
             
             // Success callback with order data for thank you page
+            // Calculate accurate values to match backend
+            const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
+            const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+              ? customerData.selectedShippingService.price 
+              : 0;
+            const beforeFees = currentCartStats.subtotal + shippingCost;
+            const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+            
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
-              cart: [], // Will be populated by parent component
-              customerData: {}, // Will be populated by parent component  
-              totalAmount: totalAmount,
-              subtotal: totalAmount * 0.85, // Approximate subtotal
-              transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-              shippingCost: 0 // Will be populated by parent component
+              cart: cart,
+              customerData: customerData,  
+              totalAmount: beforeFees + actualTransactionFee,
+              subtotal: currentCartStats.subtotal,
+              transactionFee: actualTransactionFee,
+              shippingCost: shippingCost
             });
             
             toast({
@@ -662,28 +687,44 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             });
             
             // Still call success callback even if order creation failed, payment succeeded
+            // Calculate accurate values to match backend
+            const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
+            const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+              ? customerData.selectedShippingService.price 
+              : 0;
+            const beforeFees = currentCartStats.subtotal + shippingCost;
+            const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+            
             onSuccess({
               orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-              cart: [], // Will be populated by parent component
-              customerData: {}, // Will be populated by parent component
-              totalAmount: totalAmount,
-              subtotal: totalAmount * 0.85, // Approximate subtotal
-              transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-              shippingCost: 0 // Will be populated by parent component
+              cart: cart,
+              customerData: customerData,
+              totalAmount: beforeFees + actualTransactionFee,
+              subtotal: currentCartStats.subtotal,
+              transactionFee: actualTransactionFee,
+              shippingCost: shippingCost
             });
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
           
           // Still call success callback even if order creation failed, payment succeeded
+          // Calculate accurate values to match backend
+          const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
+          const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+            ? customerData.selectedShippingService.price 
+            : 0;
+          const beforeFees = currentCartStats.subtotal + shippingCost;
+          const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+          
           onSuccess({
             orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-            cart: [], // Will be populated by parent component
-            customerData: {}, // Will be populated by parent component
-            totalAmount: totalAmount,
-            subtotal: totalAmount * 0.85, // Approximate subtotal
-            transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-            shippingCost: 0 // Will be populated by parent component
+            cart: cart,
+            customerData: customerData,
+            totalAmount: beforeFees + actualTransactionFee,
+            subtotal: currentCartStats.subtotal,
+            transactionFee: actualTransactionFee,
+            shippingCost: shippingCost
           });
           
           toast({
