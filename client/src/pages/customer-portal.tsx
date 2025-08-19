@@ -463,7 +463,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
 
 // Separate component for the actual form content
 const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: { 
-  onSuccess: () => void;
+  onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
 }) => {
@@ -602,7 +602,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           });
         }
         
-        onSuccess();
+        onSuccess({ orderNumber: orderData.orderNumber || orderData.id });
       } else {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
@@ -1608,8 +1608,8 @@ export default function CustomerPortal() {
         setCart([]);
         setCompletedOrder(null);
         setShowThankYou(false);
-        // Navigate to order history
-        setShowOrderHistory(true);
+        // Navigate to order history tab
+        setActiveTab("orders");
         setShowHomePage(true);
         setShowAllProducts(false);
       }}

@@ -548,6 +548,12 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         {getStatusIcon(order.status)}
                         <span className="ml-1 capitalize">{order.status}</span>
                       </Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}
+                      >
+                        {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
+                      </Badge>
                     </div>
                     <div className="text-xs text-gray-600 mb-2 flex items-center space-x-2">
                       <span>From</span>

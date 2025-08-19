@@ -42,7 +42,7 @@ interface ThankYouPageProps {
     phone: string;
   };
   onContinueShopping: () => void;
-  onViewOrders: () => void;
+  onViewOrders?: () => void;
 }
 
 export const ThankYouPage = ({ 
