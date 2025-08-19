@@ -359,7 +359,8 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           shippingOption: customerData.shippingOption,
           hasSelectedShippingService: !!customerData.selectedShippingService,
           selectedServicePrice: customerData.selectedShippingService?.price,
-          selectedServiceName: customerData.selectedShippingService?.serviceName
+          selectedServiceName: customerData.selectedShippingService?.serviceName,
+          fullCustomerData: customerData
         });
         
         // Force re-check: if selectedShippingService exists, it means delivery was selected
@@ -385,6 +386,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           service: currentSelectedService
         };
         setCapturedShippingData(shippingDataAtCreation);
+        
+        console.log('🚚 CRITICAL SHIPPING DATA CAPTURE:', {
+          capturedOption: shippingDataAtCreation.option,
+          capturedService: shippingDataAtCreation.service,
+          originalCustomerData: {
+            shippingOption: customerData.shippingOption,
+            selectedShippingService: customerData.selectedShippingService
+          },
+          calculatedData: {
+            hasSelectedDeliveryService,
+            actualShippingOption,
+            currentShippingOption,
+            currentSelectedService
+          }
+        });
         
         console.log('🚚 CRITICAL FIX: Payment creation shipping validation:');
         console.log('  - Current customerData.shippingOption:', currentShippingOption);
@@ -1125,11 +1141,17 @@ export default function CustomerPortal() {
   // Update customer data when authenticated customer becomes available
   useEffect(() => {
     if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone)) {
+      console.log('🚚 FRONTEND: Updating customerData from authenticatedCustomer, preserving shipping selection:', {
+        currentShippingOption: customerData.shippingOption,
+        currentSelectedService: customerData.selectedShippingService
+      });
       setCustomerData(prevData => ({
         ...prevData,
         name: authenticatedCustomer.name || 'Michael Ogunjemilua',
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
         phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'
+        // CRITICAL: DO NOT reset shippingOption or selectedShippingService here
+        // Keep existing shipping selection intact
       }));
     }
   }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone]);
@@ -1137,7 +1159,8 @@ export default function CustomerPortal() {
   // Debug: Log state changes
   useEffect(() => {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
-  }, [customerData.shippingOption]);
+    console.log('🚚 FRONTEND: customerData.selectedShippingService:', customerData.selectedShippingService);
+  }, [customerData.shippingOption, customerData.selectedShippingService]);
 
   // Personalized welcome microinteraction effect
   useEffect(() => {
@@ -4007,6 +4030,7 @@ export default function CustomerPortal() {
                                 checked={customerData.selectedShippingService?.serviceId === service.serviceId}
                                 onChange={() => setCustomerData(prev => ({
                                   ...prev,
+                                  shippingOption: 'delivery', // CRITICAL: Ensure delivery option is set when service is selected
                                   selectedShippingService: service
                                 }))}
                                 className="w-4 h-4 text-emerald-600"
