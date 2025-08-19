@@ -717,7 +717,6 @@ export default function CustomerPortal() {
     const whatsappWholesaler = urlParams.get('store');
     
     if (whatsappWholesaler) {
-      console.log('🆔 WhatsApp pre-selected wholesaler:', whatsappWholesaler);
       return whatsappWholesaler;
     }
     
@@ -726,7 +725,6 @@ export default function CustomerPortal() {
     // Decode URL encoding and remove query parameters
     const decodedId = rawId ? decodeURIComponent(rawId) : undefined;
     const cleanId = decodedId ? decodedId.split('?')[0] : undefined;
-    console.log('🆔 Wholesaler ID calculated:', { rawId, decodedId, cleanId, location, wholesalerIdParam });
     return cleanId;
   }, [wholesalerIdParam, location]);
 
@@ -781,11 +779,11 @@ export default function CustomerPortal() {
   });
   const [showHomePage, setShowHomePage] = useState(true);
   // Check if coming from CustomerLogin with auth parameter or if user wants to login
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const urlParams = useMemo(() => new URLSearchParams(location.split('?')[1] || ''), [location]);
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
   
-  const [showAuth, setShowAuth] = useState(!isPreviewMode && (!hasAuthParam || forceLoginParam));
+  const [showAuth, setShowAuth] = useState(() => !isPreviewMode && (!hasAuthParam || forceLoginParam));
   const [isGuestMode, setIsGuestMode] = useState(true);
 
   // State management
@@ -1586,16 +1584,10 @@ export default function CustomerPortal() {
     />;
   }
 
-  // Redirect authenticated users to tab-based interface
-  if (showHomePage && !showAllProducts && !isPreviewMode && isAuthenticated) {
-    console.log('🏠 Redirecting to tab-based interface');
-    // This should not happen anymore with the new tab interface
-    setActiveTab("home");
-  }
+  // This logic has been moved to useEffect to prevent re-render loops
 
   // Early loading state only for authenticated users with featured products
   if (featuredProductId && featuredLoading && isAuthenticated) {
-    console.log('📦 Loading featured product...');
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8 space-y-8">
