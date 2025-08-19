@@ -533,6 +533,7 @@ const PaymentFormContent = ({
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [paymentFailureDialog, setPaymentFailureDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -547,13 +548,14 @@ const PaymentFormContent = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
-      console.error('💳 Payment Error: Stripe or Elements not loaded');
+    if (!stripe || !elements || isProcessing || paymentSubmitted) {
+      console.error('💳 Payment Error: Stripe/Elements not loaded or payment already in progress');
       return;
     }
 
     console.log('💳 Starting payment confirmation process...');
     setIsProcessing(true);
+    setPaymentSubmitted(true); // Prevent multiple submissions
 
     try {
       console.log('💳 Calling stripe.confirmPayment...');
@@ -624,6 +626,9 @@ const PaymentFormContent = ({
           title: errorTitle,
           message: errorMessage
         });
+        
+        // Reset payment submitted on error to allow retry
+        setPaymentSubmitted(false);
 
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment succeeded - immediately create order to ensure it saves to database
@@ -769,10 +774,10 @@ const PaymentFormContent = ({
           isLoading={isProcessing}
           variant="success"
           size="lg"
-          disabled={!stripe}
+          disabled={!stripe || paymentSubmitted}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          Pay {formatCurrency(totalAmount, wholesaler?.defaultCurrency)}
+          {paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
         </ButtonLoader>
       </form>
 

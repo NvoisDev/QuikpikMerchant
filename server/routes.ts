@@ -2002,10 +2002,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Wholesaler not found" });
       }
 
-      // Create Stripe payment intent
+      // Create Stripe payment intent with idempotency to prevent duplicates
       if (!stripe) {
         return res.status(500).json({ message: "Stripe not configured" });
       }
+      
+      // Create stable idempotency key based on customer, items, and amount to prevent duplicate payments
+      // Remove timestamp to ensure identical requests get the same key within a short timeframe
+      const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
+      const amountKey = Math.round(totalCustomerPays * 100).toString();
+      const baseKey = `${customerPhone.slice(-4)}_${amountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
+      
+      console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
+      
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + transaction fee)
         currency: 'gbp',
@@ -2040,6 +2050,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } : { option: 'pickup' }),
           autoPayDelivery: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 'true' : 'false'
         }
+      }, {
+        idempotencyKey: idempotencyKey
       });
 
       res.json({ 
