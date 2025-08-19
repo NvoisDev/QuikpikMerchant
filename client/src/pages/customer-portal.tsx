@@ -1494,13 +1494,6 @@ export default function CustomerPortal() {
       setIsGuestMode(false);
       return;
     }
-
-    // If user completed local authentication but no server session yet, maintain local state
-    if (isAuthenticated && authenticatedCustomer) {
-      setShowAuth(false);
-      setIsGuestMode(false);
-      return;
-    }
     
     // No valid authentication - show authentication screen
     console.log('🔐 No valid authentication found, showing auth screen');
@@ -1508,7 +1501,7 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(null);
     setShowAuth(true);
     setIsGuestMode(true);
-  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, isAuthenticated, authenticatedCustomer, forceLoginParam]);
+  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, forceLoginParam]);
 
 
 
