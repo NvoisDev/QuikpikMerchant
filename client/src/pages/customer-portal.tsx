@@ -583,12 +583,24 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
             
+            // Clear the cart after successful order creation
+            console.log('🛒 Clearing cart after successful order placement');
+            setCart([]);
+            
+            // Close the checkout modal
+            setShowCheckout(false);
+            
             toast({
               title: "Payment Successful!",
               description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
             });
           } else {
             console.error('❌ Order creation failed:', response.status);
+            // Still clear cart since payment succeeded - order likely saved by webhook
+            console.log('🛒 Clearing cart after successful payment (order creation API failed but webhook should handle)');
+            setCart([]);
+            setShowCheckout(false);
+            
             toast({
               title: "Payment Successful!",
               description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
@@ -596,6 +608,11 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
+          // Still clear cart since payment succeeded - order likely saved by webhook
+          console.log('🛒 Clearing cart after successful payment (order creation error but webhook should handle)');
+          setCart([]);
+          setShowCheckout(false);
+          
           toast({
             title: "Payment Successful!",
             description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
