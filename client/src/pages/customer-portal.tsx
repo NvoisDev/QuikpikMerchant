@@ -870,6 +870,8 @@ export default function CustomerPortal() {
   const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
+  const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
+  const [activeQuantityInput, setActiveQuantityInput] = useState<number | null>(null);
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
@@ -1442,6 +1444,57 @@ export default function CustomerPortal() {
       description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
     });
   }, [toast, isPreviewMode]);
+
+  // Helper function to generate quantity suggestions
+  const getQuantitySuggestions = useCallback((product: ExtendedProduct, currentQuantity?: number) => {
+    const suggestions = [];
+    const moq = product.moq || 1;
+    const stock = product.stock || 100;
+    
+    // Always include MOQ
+    if (moq > 1) {
+      suggestions.push({ value: moq, label: `${moq} (minimum)`, type: 'moq' });
+    }
+    
+    // Add common bulk quantities based on MOQ
+    const bulkMultipliers = [2, 3, 5, 10];
+    bulkMultipliers.forEach(multiplier => {
+      const bulkQty = moq * multiplier;
+      if (bulkQty <= stock && bulkQty !== moq) {
+        const savings = multiplier >= 5 ? ' 💰' : multiplier >= 3 ? ' 📦' : '';
+        suggestions.push({ 
+          value: bulkQty, 
+          label: `${bulkQty}${savings}`, 
+          type: 'bulk',
+          description: multiplier >= 5 ? 'Bulk savings' : multiplier >= 3 ? 'Good quantity' : 'Double order'
+        });
+      }
+    });
+    
+    // Add stock-based suggestions
+    if (stock <= 50) {
+      suggestions.push({ value: stock, label: `${stock} (all stock)`, type: 'stock' });
+    } else if (stock > 50) {
+      const quarterStock = Math.floor(stock * 0.25);
+      const halfStock = Math.floor(stock * 0.5);
+      if (quarterStock >= moq) {
+        suggestions.push({ value: quarterStock, label: `${quarterStock} (¼ stock)`, type: 'stock' });
+      }
+      if (halfStock >= moq && halfStock !== quarterStock) {
+        suggestions.push({ value: halfStock, label: `${halfStock} (½ stock)`, type: 'stock' });
+      }
+    }
+    
+    // Remove duplicates and sort
+    const uniqueSuggestions = suggestions
+      .filter((suggestion, index, self) => 
+        index === self.findIndex(s => s.value === suggestion.value)
+      )
+      .sort((a, b) => a.value - b.value)
+      .slice(0, 6); // Limit to 6 suggestions
+    
+    return uniqueSuggestions;
+  }, []);
 
   // Function to clean up cart items that don't meet MOQ
   const cleanUpCart = useCallback(() => {
