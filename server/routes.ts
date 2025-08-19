@@ -1916,12 +1916,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pricingResult: pricing
         });
 
-        if (isNaN(pricing.totalCost) || isNaN(item.quantity)) {
-          console.error(`❌ Invalid values for ${product.name}:`, {
+        if (isNaN(pricing.totalCost) || isNaN(item.quantity) || pricing.totalCost <= 0) {
+          console.error(`❌ Invalid pricing calculation for ${product.name}:`, {
             pricingResult: pricing,
             quantity: item.quantity,
             productPrice: product.price,
-            promoPrice: product.promoPrice
+            promoPrice: product.promoPrice,
+            basePrice,
+            isNaN_totalCost: isNaN(pricing.totalCost),
+            isNaN_quantity: isNaN(item.quantity),
+            totalCost_value: pricing.totalCost
           });
           return res.status(400).json({ 
             message: `Invalid price or quantity for ${product.name}` 
@@ -1929,12 +1933,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const itemTotal = pricing.totalCost;
+        const unitPrice = pricing.effectivePrice.toFixed(2);
+        
+        // Additional validation for unit price calculation
+        const parsedUnitPrice = parseFloat(unitPrice);
+        if (isNaN(parsedUnitPrice) || parsedUnitPrice <= 0) {
+          console.error(`❌ Invalid unit price for ${product.name}:`, {
+            unitPrice,
+            parsedUnitPrice,
+            effectivePrice: pricing.effectivePrice,
+            totalCost: pricing.totalCost,
+            quantity: item.quantity
+          });
+          return res.status(400).json({ 
+            message: `Invalid pricing for ${product.name}. Please contact support.` 
+          });
+        }
+        
         productSubtotal += itemTotal;
 
         validatedItems.push({
           ...item,
           product,
-          unitPrice: pricing.effectivePrice.toFixed(2),
+          unitPrice: unitPrice,
           total: itemTotal.toFixed(2)
         });
       }
@@ -1969,8 +1990,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
-      // Validation to prevent NaN values
-      if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || totalCustomerPays <= 0) {
+      // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
+      const stripeAmount = Math.round(totalCustomerPays * 100);
+      
+      if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || 
+          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
         console.error('❌ Invalid calculation values:', {
           productSubtotal,
           deliveryCost,
@@ -1978,10 +2002,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerTransactionFee,
           totalCustomerPays,
           wholesalerPlatformFee,
-          wholesalerReceives
+          wholesalerReceives,
+          stripeAmount,
+          stripeAmountIsInteger: Number.isInteger(stripeAmount),
+          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0
         });
         return res.status(400).json({ 
-          message: "Invalid payment calculation. Please check your cart and try again." 
+          message: "Invalid payment calculation. Please check your cart and try again.",
+          debugInfo: {
+            productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal,
+            deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost,
+            totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays,
+            stripeAmount: isNaN(stripeAmount) ? 'NaN' : stripeAmount
+          }
         });
       }
 
@@ -2007,20 +2040,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Create stable idempotency key based on customer, items, and amount to prevent duplicate payments
-      // Remove timestamp to ensure identical requests get the same key within a short timeframe
+      // Create stable idempotency key based on customer, items, and CORE amount (without fees) to prevent duplicate payments
+      // Use product subtotal + delivery cost as base (before transaction fees) for more stable key generation
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
-      const amountKey = Math.round(totalCustomerPays * 100).toString();
-      const baseKey = `${customerPhone.slice(-4)}_${amountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
+      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4); // Clean phone number
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
+      console.log('💰 Final payment details before Stripe:', {
+        stripeAmount,
+        totalCustomerPays,
+        productSubtotal,
+        deliveryCost,
+        customerTransactionFee
+      });
       
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalCustomerPays * 100), // Total amount customer pays (product + transaction fee)
-        currency: 'gbp',
-        receipt_email: customerEmail,
-        automatic_payment_methods: { enabled: true },
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
+          currency: 'gbp',
+          receipt_email: customerEmail,
+          automatic_payment_methods: { enabled: true },
         metadata: {
           customerName,
           customerEmail,
@@ -2053,6 +2096,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, {
         idempotencyKey: idempotencyKey
       });
+      
+      console.log('✅ Payment intent created successfully:', paymentIntent.id);
+      
+      } catch (stripeError: any) {
+        console.error("❌ Stripe payment intent creation error:", stripeError);
+        
+        if (stripeError.code === 'parameter_invalid_integer') {
+          return res.status(400).json({ 
+            message: "Invalid payment amount calculation. Please refresh and try again.",
+            error: 'calculation_error'
+          });
+        }
+        
+        throw stripeError; // Re-throw to be caught by outer catch block
+      }
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
