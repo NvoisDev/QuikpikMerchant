@@ -5,6 +5,15 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 5 - COMPLETE PAYMENT SYSTEM & UNIT/PALLET MODAL FIX**
+- ✅ **CRITICAL FIX**: Removed global payment lock that was blocking all payments with 429 "system_busy" errors
+- ✅ **MOQ Validation Fix**: Backend now properly validates unit vs pallet quantities based on unitPrice matching
+- ✅ **Workflow Correction**: "Add" button now always shows modal first, then user selects units/pallets with correct MOQs
+- ✅ **Price Display Fix**: Cart checkout now shows "Qty: 1 pallet(s)" vs "Qty: 1 units" with accurate pricing
+- ✅ **Database Alignment**: Updated Indomie pallet price to £100.00 to match warehouse data (was £320.00)
+- ✅ **Payment Processing**: Full end-to-end payment flow working with proper Stripe integration
+- ✅ **Frontend Modal**: Unit/pallet selection modal displays correct minimum quantities and pricing for each option
+
 **VERSION CONTROL 4 - PAYMENT DUPLICATION PREVENTION SYSTEM**
 - ✅ Implemented comprehensive Stripe payment duplication prevention with backend idempotency keys
 - ✅ Added robust validation to prevent NaN and invalid payment amounts reaching Stripe API

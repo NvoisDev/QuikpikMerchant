@@ -3556,20 +3556,20 @@ export default function CustomerPortal() {
                                       <Button
                                         size="sm"
                                         onClick={() => {
-                                          // Check if product has pallet pricing
+                                          // Always show modal if product has pallet pricing option
                                           if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                             setSelectedProductForModal(product);
                                             setShowUnitSelectionModal(true);
                                           } else {
                                             // No pallet option, add units directly
-                                            addToCart(product, product.moq, 'units');
+                                            addToCart(product, product.moq || 1, 'units');
                                           }
                                         }}
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
+                                        title="Add to cart"
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
-                                        Add {product.moq > 1 ? product.moq : ''}
+                                        Add
                                       </Button>
                                     )}
                                   </div>
