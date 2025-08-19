@@ -329,7 +329,32 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
       const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
-      if (shouldCreateIntent && hasValidShipping && !clientSecret) {
+      // FRONTEND VALIDATION: Prevent payment creation if cart calculations are invalid
+      const cartValidation = cart.every(item => {
+        const hasValidQuantity = item.quantity && item.quantity > 0 && Number.isFinite(item.quantity);
+        const hasValidPrice = item.product.price && parseFloat(item.product.price) > 0;
+        return hasValidQuantity && hasValidPrice;
+      });
+      
+      if (!cartValidation) {
+        console.error('🚫 FRONTEND: Blocking payment creation - invalid cart data', {
+          cartItems: cart.map(item => ({
+            id: item.product.id,
+            quantity: item.quantity,
+            price: item.product.price,
+            hasValidQuantity: item.quantity && item.quantity > 0 && Number.isFinite(item.quantity),
+            hasValidPrice: item.product.price && parseFloat(item.product.price) > 0
+          }))
+        });
+        toast({
+          title: "Cart Error",
+          description: "Please refresh the page and re-add items to your cart",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (shouldCreateIntent && hasValidShipping && !clientSecret && cartValidation) {
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Capture shipping data at the exact moment of payment creation

@@ -2164,6 +2164,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerTransactionFee
       });
       
+      // CRITICAL: Final validation to absolutely prevent invalid amounts reaching Stripe
+      const finalValidation = {
+        isInteger: Number.isInteger(stripeAmount),
+        isPositive: stripeAmount > 0,
+        withinStripeLimit: stripeAmount >= 50 && stripeAmount <= 99999999,
+        isFinite: Number.isFinite(stripeAmount),
+        notNaN: !isNaN(stripeAmount)
+      };
+      
+      console.log('🛡️ FINAL STRIPE AMOUNT VALIDATION:', {
+        requestId,
+        stripeAmount,
+        validation: finalValidation
+      });
+      
+      if (!finalValidation.isInteger || !finalValidation.isPositive || !finalValidation.withinStripeLimit || 
+          !finalValidation.isFinite || !finalValidation.notNaN) {
+        console.error('🚫 BLOCKING PAYMENT - Final validation failed:', {
+          requestId,
+          stripeAmount,
+          validation: finalValidation
+        });
+        return res.status(400).json({ 
+          message: "Payment amount validation failed. Please refresh and try again.",
+          errorType: "stripe_amount_invalid"
+        });
+      }
+      
       let paymentIntent;
       try {
         paymentIntent = await stripe.paymentIntents.create({
