@@ -323,6 +323,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       
       // CRITICAL FIX: Create/recreate payment intent when shipping changes
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
+      
+      // CRITICAL DEBUG: Log every time this useEffect runs
+      console.log('🔄 PAYMENT INTENT useEffect TRIGGERED:', {
+        cartLength: cart.length,
+        hasWholesaler: !!wholesaler,
+        hasName: !!customerData.name,
+        hasEmail: !!customerData.email,
+        hasPhone: !!customerData.phone,
+        shippingOption: customerData.shippingOption,
+        hasSelectedService: !!customerData.selectedShippingService,
+        shouldCreateIntent,
+        hasValidShipping: customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService),
+        clientSecretExists: !!clientSecret,
+        isCreatingIntent
+      });
       const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
       // FRONTEND VALIDATION: Prevent payment creation if cart calculations are invalid
@@ -350,7 +365,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         return;
       }
       
-      if (shouldCreateIntent && hasValidShipping && !clientSecret && cartValidation) {
+      // CRITICAL FIX: Always recreate payment intent when selectedShippingService changes
+      // This ensures delivery orders get proper shipping data
+      const needsRecreation = shouldCreateIntent && hasValidShipping && cartValidation && (!clientSecret || customerData.selectedShippingService);
+      
+      console.log('🔄 PAYMENT INTENT RECREATION CHECK:', {
+        shouldCreateIntent,
+        hasValidShipping,
+        cartValidation,
+        clientSecretExists: !!clientSecret,
+        hasSelectedService: !!customerData.selectedShippingService,
+        needsRecreation,
+        reason: !clientSecret ? 'no_client_secret' : customerData.selectedShippingService ? 'shipping_service_selected' : 'other'
+      });
+      
+      if (needsRecreation) {
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Calculate shipping status directly from current customer data at payment creation time
@@ -743,15 +772,21 @@ const PaymentFormContent = ({
         console.log('✅ Payment succeeded! Order will be created by webhook automatically');
         
         // CRITICAL FIX: Invalidate orders cache to refresh order list after webhook creates order
+        // Capture values in scope before setTimeout
+        const wholesalerId = wholesaler?.id;
+        const customerPhone = customerData.phone;
+        
         // Add delay to allow webhook processing time, then force refetch
         setTimeout(() => {
           console.log('🔄 Invalidating orders cache after webhook processing delay');
-          import('@/lib/queryClient').then(({ queryClient }) => {
-            queryClient.invalidateQueries({
-              queryKey: [`/api/customer-orders/${wholesaler?.id}/${encodeURIComponent(customerData.phone)}`]
+          if (wholesalerId && customerPhone) {
+            import('@/lib/queryClient').then(({ queryClient }) => {
+              queryClient.invalidateQueries({
+                queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
+              });
+              console.log('✅ Orders cache invalidated - fresh orders will be fetched');
             });
-            console.log('✅ Orders cache invalidated - fresh orders will be fetched');
-          });
+          }
         }, 3000); // 3 second delay for webhook processing
         
         // Success callback with order data for thank you page
