@@ -296,6 +296,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     option: string;
     service?: any;
   } | null>(null);
+
+  // CRITICAL FIX: Clear clientSecret when shipping selection changes to force payment intent recreation
+  useEffect(() => {
+    if (clientSecret) {
+      console.log('🔄 Shipping selection changed, clearing payment intent to recreate with new data');
+      setClientSecret("");
+    }
+  }, [customerData.shippingOption, customerData.selectedShippingService?.serviceId]);
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
@@ -309,7 +317,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         isCreatingIntent
       });
       
-      if (cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !clientSecret && !isCreatingIntent) {
+      // CRITICAL FIX: Reset clientSecret when shipping changes so payment intent gets recreated
+      const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
+      const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
+      
+      if (shouldCreateIntent && hasValidShipping && !clientSecret) {
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
@@ -460,7 +472,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Removed selectedShippingService dependency to prevent multiple payment intent creations
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, customerData.selectedShippingService?.serviceId, totalAmount, clientSecret, isCreatingIntent]); // FIXED: Include selectedShippingService.serviceId to recreate payment intent when delivery service changes
 
   if (!clientSecret) {
     return (
