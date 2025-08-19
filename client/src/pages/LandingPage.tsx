@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import quikpikLogo from "@assets/Quikpik - Products (2)_1755616492587.png";
 import { 
   ArrowRight, 
   MessageSquare, 
@@ -490,7 +491,12 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-3 mb-8">
+            <img 
+              src={quikpikLogo} 
+              alt="Quikpik Logo" 
+              className="w-8 h-8"
+            />
             <h3 className="text-2xl font-bold">Quikpik Merchant</h3>
           </div>
           
