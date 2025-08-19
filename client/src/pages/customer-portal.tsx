@@ -1942,17 +1942,249 @@ export default function CustomerPortal() {
             </TabsList>
 
             <TabsContent value="home" className="space-y-6">
-              {/* Modern Customer Home */}
-              <ModernCustomerHome
-                wholesaler={wholesaler}
-                customerData={authenticatedCustomer}
-                onViewAllProducts={() => setActiveTab("products")}
-                onLogout={() => {
-                  // Handle logout logic
-                  localStorage.removeItem('customerAuthData');
-                  window.location.reload();
-                }}
-              />
+              {/* Welcome Section */}
+              <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-lg p-6 text-white">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold mb-2">
+                      Welcome back, {authenticatedCustomer?.firstName || authenticatedCustomer?.name}!
+                    </h1>
+                    <p className="text-emerald-100">
+                      Shopping at {wholesaler?.businessName}
+                    </p>
+                  </div>
+                  <div className="mt-4 sm:mt-0">
+                    <Button
+                      onClick={() => setActiveTab("products")}
+                      className="bg-white text-emerald-600 hover:bg-gray-50"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Browse All Products
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 border">
+                  <div className="flex items-center">
+                    <ShoppingCart className="w-8 h-8 text-emerald-600 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-600">Items in Cart</p>
+                      <p className="text-2xl font-bold">
+                        {cart.reduce((total, item) => total + item.quantity, 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border">
+                  <div className="flex items-center">
+                    <PriceDisplay
+                      price={cartStats.totalValue}
+                      currency="GBP"
+                      isGuestMode={false}
+                      size="large"
+                    />
+                    <div className="ml-3">
+                      <p className="text-sm text-gray-600">Cart Total</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border">
+                  <div className="flex items-center">
+                    <History className="w-8 h-8 text-emerald-600 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-600">Total Orders</p>
+                      <p className="text-2xl font-bold">{customerOrderStats?.totalOrders || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Selling Products */}
+              <div className="bg-white rounded-lg p-6 border">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">Top Selling Products</h2>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab("products")}
+                    className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                  >
+                    View All Products
+                  </Button>
+                </div>
+                
+                {productsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <ProductCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {products?.slice(0, 3).map((product) => {
+                      const cartItem = cart.find(item => item.product.id === product.id);
+                      const pricing = calculatePromotionalPricing(product, product.moq);
+                      
+                      return (
+                        <Card key={product.id} className="h-full hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              {/* Product Image */}
+                              <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                                {product.imageUrl ? (
+                                  <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                                {product.promoActive && (
+                                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                    SALE
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Product Info */}
+                              <div>
+                                <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
+                                {product.description && (
+                                  <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                                )}
+                              </div>
+
+                              {/* Pricing */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <PriceDisplay
+                                    price={pricing.effectivePrice}
+                                    originalPrice={product.promoActive ? parseFloat(product.price) : undefined}
+                                    currency="GBP"
+                                    isGuestMode={false}
+                                    size="medium"
+                                    showStrikethrough={true}
+                                  />
+                                  <p className="text-xs text-gray-500">MOQ: {product.moq} units</p>
+                                </div>
+                              </div>
+
+                              {/* Quick Order Controls */}
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">
+                                  Stock: {formatNumber(product.stock)}
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  {cartItem ? (
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          if (cartItem.quantity <= product.moq) {
+                                            setCart(cart.filter(item => item.product.id !== product.id));
+                                          } else {
+                                            const updatedCart = cart.map(item => 
+                                              item.product.id === product.id 
+                                                ? { ...item, quantity: item.quantity - 1 }
+                                                : item
+                                            );
+                                            setCart(updatedCart);
+                                          }
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="text-sm font-medium w-8 text-center">
+                                        {cartItem.quantity}
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const updatedCart = cart.map(item => 
+                                            item.product.id === product.id 
+                                              ? { ...item, quantity: item.quantity + 1 }
+                                              : item
+                                          );
+                                          setCart(updatedCart);
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => addToCart(product, product.moq)}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Quick Add
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white rounded-lg p-6 border">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab("products")}
+                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <Package className="w-6 h-6" />
+                    <span className="text-sm">Browse Products</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab("orders")}
+                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <History className="w-6 h-6" />
+                    <span className="text-sm">Order History</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => cart.length > 0 ? setShowCheckout(true) : setActiveTab("products")}
+                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <ShoppingCart className="w-6 h-6" />
+                    <span className="text-sm">
+                      {cart.length > 0 ? `Checkout (${cart.length})` : "Start Shopping"}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      localStorage.removeItem('customerAuthData');
+                      window.location.reload();
+                    }}
+                    className="h-20 flex flex-col items-center justify-center space-y-2"
+                  >
+                    <User className="w-6 h-6" />
+                    <span className="text-sm">Sign Out</span>
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6">
