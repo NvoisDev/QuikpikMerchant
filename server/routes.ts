@@ -7314,47 +7314,20 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     }
   });
 
-  // Create payment intent for customer portal orders (public - no auth required)
-  app.post('/api/marketplace/create-payment-intent', async (req, res) => {
+  // ✅ CONSOLIDATED: All customer portal payments now use /api/customer/create-payment
+  // This prevents duplicate payment creation paths and improves system reliability
+
+  // Marketplace product detail endpoint (public - no auth required)
+  app.get('/api/marketplace/products/:id', async (req, res) => {
     try {
-      const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
+      const { id } = req.params;
+      const productId = parseInt(id);
       
-      console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
-      console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
-      
-      console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
-      
-      // DEDUPLICATION: Check for recent incomplete payment intents with same customer email and amount
-      const fiveMinutesAgo = Math.floor((Date.now() - 5 * 60 * 1000) / 1000);
-      try {
-        const recentIntents = await stripe.paymentIntents.list({
-          limit: 10,
-          created: { gte: fiveMinutesAgo },
-        });
-        
-        const duplicateIntent = recentIntents.data.find(intent => 
-          intent.status === 'requires_payment_method' &&
-          intent.metadata.customerEmail === customerData.email &&
-          intent.metadata.wholesalerId === wholesalerId &&
-          Math.abs(intent.amount - Math.round((parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)) * 100)) < 100 // Within £1
-        );
-        
-        if (duplicateIntent) {
-          console.log(`♻️ DEDUPLICATION: Found recent incomplete payment intent ${duplicateIntent.id}, returning existing client_secret`);
-          return res.json({ 
-            clientSecret: duplicateIntent.client_secret,
-            productSubtotal: (parseFloat(totalAmount)).toFixed(2),
-            customerTransactionFee: ((parseFloat(totalAmount) * 0.055) + 0.50).toFixed(2),
-            totalCustomerPays: (parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)).toFixed(2),
-            wholesalerPlatformFee: (parseFloat(totalAmount) * 0.033).toFixed(2),
-            wholesalerReceives: (parseFloat(totalAmount) - (parseFloat(totalAmount) * 0.033)).toFixed(2)
-          });
-        }
-      } catch (error) {
-        console.log('⚠️ Error checking for duplicate payment intents, proceeding with new intent creation:', error.message);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
       }
       
-      // Validate and recalculate totalAmount to prevent NaN errors
+      const product = await storage.getProduct(productId);
       let validatedTotalAmount = 0;
       
       if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) > 0) {
