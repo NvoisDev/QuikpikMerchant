@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { formatCurrency } from "@shared/utils/currency";
+import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 // Image removed for production - using icon instead
 
 interface CartItem {
@@ -414,6 +415,9 @@ export const ThankYouPage = ({
             Back to Products
           </Button>
         </div>
+        
+        {/* Quikpik Footer */}
+        <QuikpikFooter />
       </div>
     </div>
   );

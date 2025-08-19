@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { formatCurrency } from "@shared/utils/currency";
+import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -678,6 +679,9 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           </div>
         )}
       </CardContent>
+      
+      {/* Quikpik Footer */}
+      <QuikpikFooter />
     </Card>
   );
 }

@@ -40,6 +40,7 @@ import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatNumber } from "@shared/utils/currency";
+import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -4014,6 +4015,9 @@ export default function CustomerPortal() {
             </Button>
           </div>
         )}
+        
+        {/* Quikpik Footer */}
+        <QuikpikFooter />
       </div>
     </div>
   );
