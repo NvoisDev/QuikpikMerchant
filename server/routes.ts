@@ -7553,8 +7553,26 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         }
       } else {
         // Create regular payment intent when no Connect account
+        const noConnectStripeAmount = Math.round(totalAmountWithFee * 100);
+        const requestId = `no_connect_payment_${Date.now()}`;
+        
+        console.log('🔥 NO-CONNECT PAYMENT INTENT - VALIDATION:', {
+          requestId,
+          totalAmountWithFee,
+          noConnectStripeAmount,
+          stripeAmountType: typeof noConnectStripeAmount,
+          isInteger: Number.isInteger(noConnectStripeAmount),
+          isPositive: noConnectStripeAmount > 0,
+          withinLimits: noConnectStripeAmount >= 50 && noConnectStripeAmount <= 99999999
+        });
+        
+        // BLOCK invalid amounts from reaching Stripe
+        if (!Number.isInteger(noConnectStripeAmount) || noConnectStripeAmount <= 0 || noConnectStripeAmount >= 99999999 || isNaN(noConnectStripeAmount)) {
+          throw new Error(`NO-CONNECT PAYMENT: Invalid stripe amount: ${noConnectStripeAmount} (from ${totalAmountWithFee})`);
+        }
+        
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+          amount: noConnectStripeAmount, // Customer pays product total + £6 platform fee
           currency: 'gbp', // Always use GBP for platform
           metadata: {
             orderType: 'customer_portal',
