@@ -2033,6 +2033,32 @@ export default function CustomerPortal() {
                                 )}
                               </div>
                               
+                              {/* Product Details */}
+                              <div className="space-y-2 mb-3">
+                                <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                  {product.size && (
+                                    <span className="bg-gray-100 px-2 py-1 rounded">
+                                      Size: {product.size}
+                                    </span>
+                                  )}
+                                  {product.moq && product.moq > 1 && (
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      MOQ: {product.moq}
+                                    </span>
+                                  )}
+                                  {product.stock && (
+                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                      Stock: {product.stock}
+                                    </span>
+                                  )}
+                                  {product.brand && (
+                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                      {product.brand}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
                               {/* Pricing */}
                               <div className="flex items-center justify-between">
                                 <PriceDisplay
@@ -2123,6 +2149,31 @@ export default function CustomerPortal() {
             </TabsContent>
           </Tabs>
         )}
+
+        {/* Checkout Modal Dialog */}
+        <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Checkout</DialogTitle>
+              <DialogDescription>
+                Review your order and complete your purchase
+              </DialogDescription>
+            </DialogHeader>
+            
+            {cart.length > 0 && wholesaler && (
+              <StripeCheckoutForm
+                cart={cart}
+                customerData={customerData}
+                wholesaler={wholesaler}
+                totalAmount={cartStats.totalValue}
+                onSuccess={() => {
+                  setShowCheckout(false);
+                  setShowThankYou(true);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
         {isAuthenticated && !isGuestMode && cart.length > 0 && (
