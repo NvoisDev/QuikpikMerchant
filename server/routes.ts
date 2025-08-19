@@ -1932,27 +1932,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Import promotional pricing calculator for consistency
-        const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
+        // CRITICAL FIX: Calculate pricing based on whether this is a pallet or unit order
+        let pricing;
+        let calculationPrice;
         
-        const basePrice = parseFloat(product.price);
+        if (isPalletOrder) {
+          // For pallet orders, use the sent unitPrice directly (no promotional calculations on pallets)
+          calculationPrice = parseFloat(item.unitPrice);
+          pricing = {
+            originalPrice: calculationPrice,
+            effectivePrice: calculationPrice,
+            totalCost: calculationPrice * item.quantity,
+            totalDiscount: 0,
+            discountPercentage: 0,
+            appliedOffers: [],
+            freeItems: 0,
+            totalQuantity: item.quantity
+          };
+        } else {
+          // For unit orders, apply promotional pricing
+          const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
+          calculationPrice = parseFloat(product.price);
+          
+          pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+            calculationPrice,
+            item.quantity,
+            product.promotionalOffers || [],
+            product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+            product.promoActive
+          );
+        }
         
         console.log(`🧮 CALCULATION DEBUG for product ${product.id}:`, {
           productName: product.name,
-          basePrice,
+          isUnitOrder,
+          isPalletOrder,
+          calculationPrice,
+          sentUnitPrice: item.unitPrice,
           quantity: item.quantity,
           promoPrice: product.promoPrice,
           promoActive: product.promoActive,
           promotionalOffers: product.promotionalOffers
         });
-        
-        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-          basePrice,
-          item.quantity,
-          product.promotionalOffers || [],
-          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-          product.promoActive
-        );
         
         console.log(`📊 PRICING RESULT for product ${product.id}:`, pricing);
         
@@ -1960,7 +1981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           promoActive: product.promoActive,
           promoPrice: product.promoPrice,
           regularPrice: product.price,
-          basePrice,
+          calculationPrice: calculationPrice,
           quantity: item.quantity,
           pricingResult: pricing
         });
@@ -1971,7 +1992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             quantity: item.quantity,
             productPrice: product.price,
             promoPrice: product.promoPrice,
-            basePrice,
+            calculationPrice,
             isNaN_totalCost: isNaN(pricing.totalCost),
             isNaN_quantity: isNaN(item.quantity),
             totalCost_value: pricing.totalCost

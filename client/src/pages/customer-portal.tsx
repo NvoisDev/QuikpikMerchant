@@ -383,15 +383,21 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               productId: item.product.id,
               quantity: item.quantity || 0,
               unitPrice: (() => {
-                const basePrice = parseFloat(item.product.price) || 0;
-                const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                  basePrice,
-                  item.quantity,
-                  item.product.promotionalOffers || [],
-                  item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                  item.product.promoActive
-                );
-                return pricing.effectivePrice;
+                // CRITICAL FIX: Use correct price based on selling type (units vs pallets)
+                if (item.sellingType === 'pallets') {
+                  return parseFloat((item.product as any).palletPrice || "0") || 0;
+                } else {
+                  // For units, apply promotional pricing
+                  const basePrice = parseFloat(item.product.price) || 0;
+                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                    basePrice,
+                    item.quantity,
+                    item.product.promotionalOffers || [],
+                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                    item.product.promoActive
+                  );
+                  return pricing.effectivePrice;
+                }
               })()
             })),
             shippingInfo: shippingDataAtCreation
