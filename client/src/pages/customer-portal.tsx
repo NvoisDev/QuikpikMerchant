@@ -742,6 +742,18 @@ const PaymentFormContent = ({
         // No need to call separate endpoint - webhook creates order on payment success
         console.log('✅ Payment succeeded! Order will be created by webhook automatically');
         
+        // CRITICAL FIX: Invalidate orders cache to refresh order list after webhook creates order
+        // Add delay to allow webhook processing time, then force refetch
+        setTimeout(() => {
+          console.log('🔄 Invalidating orders cache after webhook processing delay');
+          import('@/lib/queryClient').then(({ queryClient }) => {
+            queryClient.invalidateQueries({
+              queryKey: [`/api/customer-orders/${wholesaler?.id}/${encodeURIComponent(customerData.phone)}`]
+            });
+            console.log('✅ Orders cache invalidated - fresh orders will be fetched');
+          });
+        }, 3000); // 3 second delay for webhook processing
+        
         // Success callback with order data for thank you page
         // Get accurate values from payment intent metadata
         const metadata = (paymentIntent as any).metadata || {};
@@ -751,7 +763,7 @@ const PaymentFormContent = ({
         const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
         
         onSuccess({
-          orderNumber: `Order #${paymentIntent.id.slice(-8)}`, // Use payment intent ID as temp order reference
+          orderNumber: `Order #${paymentIntent.id.slice(-8)}`, // Temporary reference until webhook creates proper SF-XXX order number
           cart: [],
           customerData: {},  
           totalAmount: actualTotal,
