@@ -1334,7 +1334,15 @@ export default function CustomerPortal() {
         totalPromotionalItems += pricing.totalQuantity; // Includes free items for calculations
         subtotal += pricing.totalCost;
         
-        console.log(`Cart item ${item.product.name}: quantity=${itemQuantity}, totalItems=${totalItems}, totalPromotionalItems=${totalPromotionalItems}`);
+        console.log(`🔍 Cart item ${item.product.name}:`, {
+          quantity: itemQuantity,
+          basePrice,
+          pricingTotalCost: pricing.totalCost,
+          effectivePrice: pricing.effectivePrice,
+          runningSubtotal: subtotal,
+          totalItems,
+          totalPromotionalItems
+        });
         
         // Track applied promotions
         if (pricing.appliedOffers.length > 0) {
