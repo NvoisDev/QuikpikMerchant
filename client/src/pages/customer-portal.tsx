@@ -3007,6 +3007,17 @@ export default function CustomerPortal() {
                               {/* Product Details */}
                               <div className="space-y-2 mb-3">
                                 <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                  {/* Product Type Tags - Units or Pallets or Both */}
+                                  {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) ? (
+                                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
+                                      Units & Pallets
+                                    </span>
+                                  ) : (
+                                    <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-medium">
+                                      Individual Units
+                                    </span>
+                                  )}
+                                  
                                   {(product as any).size && (
                                     <span className="bg-gray-100 px-2 py-1 rounded">
                                       Size: {(product as any).size}
@@ -3239,7 +3250,7 @@ export default function CustomerPortal() {
                                       title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
-                                      Add {product.moq > 1 ? product.moq : ''}
+                                      Add
                                     </Button>
                                   )}
                                 </div>
@@ -3364,6 +3375,17 @@ export default function CustomerPortal() {
                                 {/* Product Details */}
                                 <div className="space-y-2 mb-3">
                                   <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                    {/* Product Type Tags - Units or Pallets or Both */}
+                                    {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) ? (
+                                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
+                                        Units & Pallets
+                                      </span>
+                                    ) : (
+                                      <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-medium">
+                                        Individual Units
+                                      </span>
+                                    )}
+                                    
                                     {(product as any).size && (
                                       <span className="bg-gray-100 px-2 py-1 rounded">
                                         Size: {(product as any).size}
