@@ -2060,29 +2060,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
-      // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
-      const stripeAmount = Math.round(totalCustomerPays * 100);
+      // Enhanced validation with proper decimal handling to prevent Stripe integer errors
+      // Fix floating point precision issues by using parseFloat and toFixed before conversion
+      const preciseTotal = parseFloat(totalCustomerPays.toFixed(2));
+      const stripeAmount = Math.round(preciseTotal * 100);
       
+      console.log('🔍 Amount validation details:', {
+        totalCustomerPays,
+        preciseTotal,
+        stripeAmount,
+        stripeAmountIsInteger: Number.isInteger(stripeAmount),
+        stripeAmountValid: stripeAmount > 0 && stripeAmount < 99999999 // Stripe limit
+      });
+      
+      // Strict validation to prevent any invalid values reaching Stripe
       if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || 
-          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
+          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || 
+          stripeAmount <= 0 || stripeAmount >= 99999999) { // Stripe max amount check
         console.error('❌ Invalid calculation values:', {
           productSubtotal,
           deliveryCost,
           amountBeforeFees,
           customerTransactionFee,
           totalCustomerPays,
+          preciseTotal,
           wholesalerPlatformFee,
           wholesalerReceives,
           stripeAmount,
           stripeAmountIsInteger: Number.isInteger(stripeAmount),
-          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0
+          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0,
+          stripeAmountInRange: stripeAmount > 0 && stripeAmount < 99999999
         });
         return res.status(400).json({ 
-          message: "Invalid payment calculation. Please check your cart and try again.",
+          message: "Invalid payment calculation. Please refresh your cart and try again.",
+          error: 'calculation_error',
           debugInfo: {
-            productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal,
-            deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost,
-            totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays,
+            productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal.toFixed(2),
+            deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost.toFixed(2),
+            totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays.toFixed(2),
             stripeAmount: isNaN(stripeAmount) ? 'NaN' : stripeAmount
           }
         });
@@ -2110,13 +2125,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Create stable idempotency key based on customer, items, and CORE amount (without fees) to prevent duplicate payments
-      // Use product subtotal + delivery cost as base (before transaction fees) for more stable key generation
-      const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
-      const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
-      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4); // Clean phone number
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
-      const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
+      // Create robust idempotency key to prevent duplicate payments
+      // Use precise calculation to avoid floating point issues in key generation
+      const preciseAmountBeforeFees = Math.round(parseFloat(amountBeforeFees.toFixed(2)) * 100);
+      const cartHash = validatedItems
+        .map(item => `${item.product.id}:${item.quantity}:${item.sellingType || 'units'}`)
+        .sort()
+        .join('-');
+      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4);
+      const timestampKey = Math.floor(Date.now() / 60000).toString(); // Changes every minute to prevent stale keys
+      
+      // Enhanced key with more specificity and better collision avoidance
+      const baseKey = `${phoneKey}_${preciseAmountBeforeFees}_${cartHash}_${timestampKey}`
+        .replace(/[^a-zA-Z0-9_-]/g, '')
+        .slice(0, 240); // Leave room for prefix
+      const idempotencyKey = `pay_${baseKey}`;
+      
+      console.log('🔑 Enhanced idempotency key generation:', {
+        phoneKey,
+        preciseAmountBeforeFees,
+        cartHash: cartHash.slice(0, 50) + '...',
+        timestampKey,
+        finalKeyLength: idempotencyKey.length,
+        idempotencyKey: idempotencyKey.slice(0, 100) + '...' // Log partial key for debugging
+      });
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
       console.log('💰 Final payment details before Stripe:', {
@@ -2173,11 +2205,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
+        console.error("🔍 Stripe error details:", {
+          code: stripeError.code,
+          message: stripeError.message,
+          param: stripeError.param,
+          type: stripeError.type,
+          stripeAmountUsed: stripeAmount,
+          calculationValues: {
+            productSubtotal: productSubtotal.toFixed(2),
+            deliveryCost: deliveryCost.toFixed(2),
+            totalCustomerPays: totalCustomerPays.toFixed(2),
+            preciseTotal: parseFloat(totalCustomerPays.toFixed(2))
+          }
+        });
         
+        // Handle specific Stripe errors
         if (stripeError.code === 'parameter_invalid_integer') {
           return res.status(400).json({ 
-            message: "Invalid payment amount calculation. Please refresh and try again.",
-            error: 'calculation_error'
+            message: "Payment amount formatting error. Please clear your cart and try again.",
+            error: 'stripe_amount_error',
+            details: `Amount: ${stripeAmount} (${totalCustomerPays.toFixed(2)} GBP)`
+          });
+        }
+        
+        if (stripeError.code === 'amount_too_large') {
+          return res.status(400).json({ 
+            message: "Order amount exceeds maximum allowed. Please reduce your order size.",
+            error: 'amount_too_large'
+          });
+        }
+        
+        if (stripeError.code === 'amount_too_small') {
+          return res.status(400).json({ 
+            message: "Order amount is too small for processing. Minimum £0.50 required.",
+            error: 'amount_too_small'
+          });
+        }
+        
+        // For idempotency key conflicts (duplicate payments)
+        if (stripeError.code === 'idempotency_key_in_use') {
+          console.log('🔄 Idempotency key conflict - payment already exists');
+          return res.status(409).json({ 
+            message: "Payment already in progress. Please wait or refresh to check status.",
+            error: 'duplicate_payment'
           });
         }
         
