@@ -1858,24 +1858,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
-      // IMMEDIATE global lock check - block ALL simultaneous payment requests
-      if ((global as any)[globalPaymentLock]) {
-        console.log('🚨 GLOBAL PAYMENT LOCK ACTIVE - Blocking all payments temporarily');
-        return res.status(429).json({ 
-          message: "Payment system is currently processing another request. Please wait 10 seconds and try again.",
-          errorType: "system_busy"
-        });
-      }
-      
-      // Activate global lock
-      (global as any)[globalPaymentLock] = true;
-      console.log('🔒 GLOBAL PAYMENT LOCK ACTIVATED');
-      
-      // Auto-release lock after 15 seconds
-      setTimeout(() => {
-        delete (global as any)[globalPaymentLock];
-        console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (timeout)');
-      }, 15000);
+      // Global payment lock disabled - allow payment processing
+      console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
       
       console.log('🔥 PAYMENT REQUEST START:', {
         timestamp: new Date().toISOString(),
@@ -1899,7 +1883,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('  - Has service selected?', !!shippingInfo?.service);
 
       if (!items || !Array.isArray(items) || items.length === 0) {
-        delete (global as any)[globalPaymentLock];
         return res.status(400).json({ message: "Order must contain at least one item" });
       }
 
@@ -2141,9 +2124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ Payment intent created successfully:', paymentIntent.id);
       
-      // Release global payment lock on success
-      delete (global as any)[globalPaymentLock];
-      console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (success)');
+      console.log('✅ Payment processing successful');
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
@@ -2171,9 +2152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating payment intent:", error);
       
-      // Release global payment lock on error
-      delete (global as any)[globalPaymentLock];
-      console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (error)');
+      console.log('❌ Payment processing error handled');
       
       res.status(500).json({ message: "Failed to create payment intent" });
     }
