@@ -918,6 +918,9 @@ export default function CustomerPortal() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
+  
+  // State for unit/pallet selection
+  const [productUnitOptions, setProductUnitOptions] = useState<Record<number, 'units' | 'pallets'>>({});
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
   const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
@@ -3311,12 +3314,23 @@ export default function CustomerPortal() {
                                   {/* Price */}
                                   <div className="flex-shrink-0 ml-4">
                                     <PriceDisplay
-                                      price={pricing.effectivePrice}
-                                      originalPrice={pricing.originalPrice}
+                                      price={
+                                        productUnitOptions[product.id] === 'pallets' && product.palletPrice
+                                          ? parseFloat(product.palletPrice.toString())
+                                          : pricing.effectivePrice
+                                      }
+                                      originalPrice={
+                                        productUnitOptions[product.id] === 'pallets' && product.palletPrice
+                                          ? undefined // No strikethrough for pallet pricing yet
+                                          : pricing.originalPrice
+                                      }
                                       currency="GBP"
                                       isGuestMode={false}
                                       size="medium"
                                     />
+                                    {productUnitOptions[product.id] === 'pallets' && (
+                                      <div className="text-xs text-gray-500 mt-1">per pallet</div>
+                                    )}
                                   </div>
                                 </div>
                                 
@@ -3352,6 +3366,50 @@ export default function CustomerPortal() {
                                   )}
                                 </div>
                                 
+                                {/* Unit/Pallet Selection */}
+                                {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) && (
+                                  <div className="mb-3">
+                                    <div className="flex items-center space-x-3 text-sm">
+                                      <span className="text-gray-600 font-medium">Purchase Option:</span>
+                                      <div className="flex items-center space-x-4">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`unit-option-${product.id}`}
+                                            value="units"
+                                            checked={(productUnitOptions[product.id] || 'units') === 'units'}
+                                            onChange={() => setProductUnitOptions(prev => ({
+                                              ...prev,
+                                              [product.id]: 'units'
+                                            }))}
+                                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                          />
+                                          <span className="text-gray-700">
+                                            Individual Units (£{parseFloat(product.price).toFixed(2)}/unit)
+                                          </span>
+                                        </label>
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`unit-option-${product.id}`}
+                                            value="pallets"
+                                            checked={productUnitOptions[product.id] === 'pallets'}
+                                            onChange={() => setProductUnitOptions(prev => ({
+                                              ...prev,
+                                              [product.id]: 'pallets'
+                                            }))}
+                                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                          />
+                                          <span className="text-gray-700">
+                                            Pallets (£{parseFloat(product.palletPrice.toString()).toFixed(2)}/pallet
+                                            {product.unitsPerPallet && ` - ${product.unitsPerPallet} units`})
+                                          </span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Add to Cart Controls */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
@@ -3521,12 +3579,24 @@ export default function CustomerPortal() {
                                     ) : (
                                       <Button
                                         size="sm"
-                                        onClick={() => addToCart(product, product.moq)}
+                                        onClick={() => {
+                                          const isUsingPallets = productUnitOptions[product.id] === 'pallets';
+                                          const minQuantity = isUsingPallets ? (product.palletMoq || 1) : product.moq;
+                                          addToCart(product, minQuantity, isUsingPallets ? 'pallets' : 'units');
+                                        }}
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
+                                        title={
+                                          productUnitOptions[product.id] === 'pallets' 
+                                            ? `Add ${product.palletMoq || 1} pallet${(product.palletMoq || 1) > 1 ? 's' : ''}`
+                                            : (product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart')
+                                        }
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
-                                        Add {product.moq > 1 ? product.moq : ''}
+                                        Add {
+                                          productUnitOptions[product.id] === 'pallets' 
+                                            ? (product.palletMoq || 1)
+                                            : (product.moq > 1 ? product.moq : '')
+                                        } {productUnitOptions[product.id] === 'pallets' ? 'pallet' : ''}
                                       </Button>
                                     )}
                                   </div>
@@ -3535,7 +3605,11 @@ export default function CustomerPortal() {
                                   {cartItem && (
                                     <div className="text-sm font-medium text-gray-900">
                                       Total: <PriceDisplay
-                                        price={pricing.effectivePrice * cartItem.quantity}
+                                        price={
+                                          cartItem.sellingType === 'pallets' 
+                                            ? parseFloat(product.palletPrice?.toString() || '0') * cartItem.quantity
+                                            : pricing.effectivePrice * cartItem.quantity
+                                        }
                                         currency="GBP"
                                         isGuestMode={false}
                                         size="small"

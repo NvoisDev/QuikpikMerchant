@@ -1852,10 +1852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NEW: Customer payment endpoint with correct fee structure
   // Customer pays: Product total + Transaction Fee (5.5% + £0.50)
   // Wholesaler pays: Platform Fee (3.3% of product total)
-  // Global payment processing lock to prevent ANY payment requests from overlapping
-  const globalPaymentLock = 'global_payment_processing';
-  
   app.post('/api/customer/create-payment', async (req, res) => {
+    // Global payment processing lock to prevent ANY payment requests from overlapping
+    const globalPaymentLock = 'global_payment_processing';
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
