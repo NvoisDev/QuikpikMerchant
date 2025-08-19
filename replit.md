@@ -5,6 +5,16 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 2 - REGISTRATION-AWARE SELLER SWITCHING**
+- ✅ Implemented secure customer-wholesaler registration verification system
+- ✅ Added `/api/customer-accessible-wholesalers/:phoneNumber` endpoint for filtered access
+- ✅ Created `getWholesalersForCustomer()` storage method with phone-based registration checks
+- ✅ Updated customer portal to show only accessible sellers for authenticated users
+- ✅ Enhanced modal experience with "My Sellers" vs "Find Other Sellers" context
+- ✅ Improved empty states with registration-aware messaging and guidance
+- ✅ Maintained backward compatibility for guest browsing experience
+- ✅ Fixed all authentication variable references and TypeScript compilation errors
+
 **VERSION CONTROL 1 - COMPREHENSIVE BRANDING & UI ENHANCEMENT**
 - ✅ Added official Quikpik branding footer across entire platform
 - ✅ Implemented "Powered by Quikpik" footer with authentic logo on all customer-facing pages
