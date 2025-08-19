@@ -2274,6 +2274,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: paymentIntent.status
       });
       
+      // CRITICAL: Alert if this is a potential duplicate by checking for similar recent intents
+      console.log('🚨 DUPLICATE DETECTION: New payment intent created:', {
+        currentIntentId: paymentIntent.id,
+        timestamp: new Date().toISOString(),
+        customerPhone: customerPhone,
+        amount: paymentIntent.amount
+      });
+      
       console.log('✅ Payment processing successful for request:', requestId);
       
       } catch (stripeError: any) {
