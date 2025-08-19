@@ -27,7 +27,6 @@ import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, M
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
-import { CustomerHome } from "@/components/customer/CustomerHome";
 import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { ThankYouPage } from "@/components/customer/ThankYouPage";
@@ -1105,7 +1104,7 @@ export default function CustomerPortal() {
       
       const data = await response.json();
       console.log(`✅ Products received: ${data.length} items`);
-      console.log(`📦 Product sample:`, data.slice(0, 2).map(p => ({ id: p.id, name: p.name, status: p.status })));
+      console.log(`📦 Product sample:`, data.slice(0, 2).map((p: any) => ({ id: p.id, name: p.name, status: p.status })));
       return data;
     },
     enabled: !!wholesalerId,
@@ -1594,18 +1593,11 @@ export default function CustomerPortal() {
     />;
   }
 
-  // Show home page
+  // Redirect authenticated users to tab-based interface
   if (showHomePage && !showAllProducts && !isPreviewMode && isAuthenticated) {
-    console.log('🏠 Showing customer home page');
-    return <CustomerHome 
-      wholesaler={wholesaler}
-      featuredProduct={featuredProduct}
-      onViewAllProducts={handleViewAllProducts}
-      onViewFeaturedProduct={handleViewFeaturedProduct}
-      customerData={authenticatedCustomer}
-      onLogout={handleLogout}
-
-    />;
+    console.log('🏠 Redirecting to tab-based interface');
+    // This should not happen anymore with the new tab interface
+    setActiveTab("home");
   }
 
   // Early loading state only for authenticated users with featured products
@@ -1718,43 +1710,15 @@ export default function CustomerPortal() {
 
               {/* Home and Logout buttons for authenticated customers */}
               {isAuthenticated && !isPreviewMode && (
-                <>
-                  <Button
-                    onClick={() => {
-                      // Smart back navigation based on current view state
-                      if (featuredProductId) {
-                        // If viewing a featured product, go back to home page
-                        setFeaturedProductId(null);
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                      } else if (showAllProducts) {
-                        // If viewing all products, go back to home page
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                      } else {
-                        // Already on home page, just ensure state is correct
-                        setShowHomePage(true);
-                        setShowAllProducts(false);
-                        setFeaturedProductId(null);
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs sm:text-sm"
-                  >
-                    <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                    {featuredProductId ? 'Back' : (showAllProducts ? 'Home' : 'Home')}
-                  </Button>
-                  <Button
-                    onClick={handleLogout}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                  >
-                    <span className="hidden sm:inline">Log out</span>
-                    <span className="sm:hidden">Logout</span>
-                  </Button>
-                </>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                >
+                  <span className="hidden sm:inline">Log out</span>
+                  <span className="sm:hidden">Logout</span>
+                </Button>
               )}
 
               {/* Find Seller button for authenticated customers */}
@@ -1996,33 +1960,4 @@ export default function CustomerPortal() {
       </div>
     </div>
   );
-
-  // Guest mode or authentication flow return
-  if (!isAuthenticated || isGuestMode) {
-    if (showCartCheckout) {
-      return (
-        <div className="min-h-screen bg-gray-50">
-          <div className="container mx-auto px-4 py-8">
-            <div className="max-w-4xl mx-auto">
-              {/* Cart checkout content */}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Show guest product browse or authentication
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            {/* Guest view content */}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Default return - should never reach here due to early return above
-  return null;
 }
