@@ -868,6 +868,8 @@ export default function CustomerPortal() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [productImageIndexes, setProductImageIndexes] = useState<Record<number, number>>({});
+  const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
+  const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
@@ -2511,8 +2513,8 @@ export default function CustomerPortal() {
                                     </span>
                                   )}
                                   {product.moq && product.moq > 1 && (
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                      MOQ: {product.moq}
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
+                                      Min: {product.moq} units
                                     </span>
                                   )}
                                   {product.stock && (
@@ -2526,6 +2528,12 @@ export default function CustomerPortal() {
                                     </span>
                                   )}
                                 </div>
+                                {/* MOQ Helper Message */}
+                                {product.moq && product.moq > 1 && (
+                                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                                    💡 Minimum order: {product.moq} units required to add to cart
+                                  </div>
+                                )}
                               </div>
                               
                               {/* Pricing */}
@@ -2601,9 +2609,10 @@ export default function CustomerPortal() {
                                       size="sm"
                                       onClick={() => addToCart(product, product.moq)}
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                      title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
-                                      Add
+                                      Add {product.moq > 1 ? product.moq : ''}
                                     </Button>
                                   )}
                                 </div>
@@ -2725,26 +2734,34 @@ export default function CustomerPortal() {
                                 </div>
                                 
                                 {/* Product Details */}
-                                <div className="flex flex-wrap gap-1 text-xs text-gray-600 mb-3">
-                                  {(product as any).size && (
-                                    <span className="bg-gray-100 px-2 py-1 rounded">
-                                      Size: {(product as any).size}
-                                    </span>
-                                  )}
+                                <div className="space-y-2 mb-3">
+                                  <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                    {(product as any).size && (
+                                      <span className="bg-gray-100 px-2 py-1 rounded">
+                                        Size: {(product as any).size}
+                                      </span>
+                                    )}
+                                    {product.moq && product.moq > 1 && (
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
+                                        Min: {product.moq} units
+                                      </span>
+                                    )}
+                                    {product.stock && (
+                                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                        Stock: {product.stock}
+                                      </span>
+                                    )}
+                                    {(product as any).brand && (
+                                      <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                        {(product as any).brand}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {/* MOQ Helper Message for List View */}
                                   {product.moq && product.moq > 1 && (
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                      MOQ: {product.moq}
-                                    </span>
-                                  )}
-                                  {product.stock && (
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                                      Stock: {product.stock}
-                                    </span>
-                                  )}
-                                  {(product as any).brand && (
-                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                      {(product as any).brand}
-                                    </span>
+                                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                                      💡 Minimum {product.moq} units required
+                                    </div>
                                   )}
                                 </div>
                                 
@@ -2810,9 +2827,10 @@ export default function CustomerPortal() {
                                         size="sm"
                                         onClick={() => addToCart(product, product.moq)}
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
-                                        Add
+                                        Add {product.moq > 1 ? product.moq : ''}
                                       </Button>
                                     )}
                                   </div>
