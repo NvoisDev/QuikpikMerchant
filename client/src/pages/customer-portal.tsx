@@ -382,6 +382,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             items: cart.map(item => ({
               productId: item.product.id,
               quantity: item.quantity || 0,
+              sellingType: item.sellingType, // Add selling type for better idempotency key uniqueness
               unitPrice: (() => {
                 // CRITICAL FIX: Use correct price based on selling type (units vs pallets)
                 if (item.sellingType === 'pallets') {

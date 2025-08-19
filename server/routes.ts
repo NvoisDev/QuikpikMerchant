@@ -1853,15 +1853,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer pays: Product total + Transaction Fee (5.5% + £0.50)
   // Wholesaler pays: Platform Fee (3.3% of product total)
   app.post('/api/customer/create-payment', async (req, res) => {
-    // Global payment processing lock to prevent ANY payment requests from overlapping
-    const globalPaymentLock = 'global_payment_processing';
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
-      // Global payment lock disabled - allow payment processing
-      console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
-      
+      // Enhanced logging to track duplicate payment prevention
+      const requestId = `payment_${customerPhone}_${Date.now()}`;
       console.log('🔥 PAYMENT REQUEST START:', {
+        requestId,
         timestamp: new Date().toISOString(),
         customerPhone,
         customerName,
@@ -2142,6 +2140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const idempotencyKey = `pay_${baseKey}`;
       
       console.log('🔑 Enhanced idempotency key generation:', {
+        requestId,
         phoneKey,
         preciseAmountBeforeFees,
         cartHash: cartHash.slice(0, 50) + '...',
@@ -2150,8 +2149,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idempotencyKey: idempotencyKey.slice(0, 100) + '...' // Log partial key for debugging
       });
       
-      console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
+      console.log('🔑 Creating payment with idempotency key:', {
+        requestId,
+        idempotencyKey: idempotencyKey.slice(0, 100) + '...',
+        fullKeyLength: idempotencyKey.length
+      });
+      
       console.log('💰 Final payment details before Stripe:', {
+        requestId,
         stripeAmount,
         totalCustomerPays,
         productSubtotal,
@@ -2199,9 +2204,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idempotencyKey: idempotencyKey
       });
       
-      console.log('✅ Payment intent created successfully:', paymentIntent.id);
+      console.log('✅ Payment intent created successfully:', {
+        requestId,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        status: paymentIntent.status
+      });
       
-      console.log('✅ Payment processing successful');
+      console.log('✅ Payment processing successful for request:', requestId);
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
