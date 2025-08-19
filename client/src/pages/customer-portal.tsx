@@ -515,10 +515,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       <PaymentFormContent 
         onSuccess={onSuccess} 
         totalAmount={totalAmount} 
-        wholesaler={wholesaler} 
-        cart={cart}
-        customerData={customerData}
-        calculateCartStats={calculateCartStats}
+        wholesaler={wholesaler}
       />
     </Elements>
   );
@@ -528,17 +525,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
 const PaymentFormContent = ({ 
   onSuccess, 
   totalAmount, 
-  wholesaler, 
-  cart, 
-  customerData, 
-  calculateCartStats 
+  wholesaler
 }: { 
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
-  cart: any[];
-  customerData: any;
-  calculateCartStats: (cart: any[], customerData: any, wholesaler: any) => any;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -657,22 +648,21 @@ const PaymentFormContent = ({
             console.log('✅ Order created successfully:', orderData);
             
             // Success callback with order data for thank you page
-            // Calculate accurate values to match backend
-            const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
-            const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-              ? customerData.selectedShippingService.price 
-              : 0;
-            const beforeFees = currentCartStats.subtotal + shippingCost;
-            const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+            // Get accurate values from payment intent metadata
+            const metadata = (paymentIntent as any).metadata || {};
+            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+            const actualShipping = parseFloat(metadata.shippingCost || '0');
+            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
             
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
-              cart: cart,
-              customerData: customerData,  
-              totalAmount: beforeFees + actualTransactionFee,
-              subtotal: currentCartStats.subtotal,
+              cart: [],
+              customerData: {},  
+              totalAmount: actualTotal,
+              subtotal: actualSubtotal,
               transactionFee: actualTransactionFee,
-              shippingCost: shippingCost
+              shippingCost: actualShipping
             });
             
             toast({
@@ -687,44 +677,42 @@ const PaymentFormContent = ({
             });
             
             // Still call success callback even if order creation failed, payment succeeded
-            // Calculate accurate values to match backend
-            const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
-            const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-              ? customerData.selectedShippingService.price 
-              : 0;
-            const beforeFees = currentCartStats.subtotal + shippingCost;
-            const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+            // Get accurate values from payment intent metadata
+            const metadata = (paymentIntent as any).metadata || {};
+            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+            const actualShipping = parseFloat(metadata.shippingCost || '0');
+            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
             
             onSuccess({
               orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-              cart: cart,
-              customerData: customerData,
-              totalAmount: beforeFees + actualTransactionFee,
-              subtotal: currentCartStats.subtotal,
+              cart: [],
+              customerData: {},
+              totalAmount: actualTotal,
+              subtotal: actualSubtotal,
               transactionFee: actualTransactionFee,
-              shippingCost: shippingCost
+              shippingCost: actualShipping
             });
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
           
           // Still call success callback even if order creation failed, payment succeeded
-          // Calculate accurate values to match backend
-          const currentCartStats = calculateCartStats(cart, customerData, wholesaler);
-          const shippingCost = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-            ? customerData.selectedShippingService.price 
-            : 0;
-          const beforeFees = currentCartStats.subtotal + shippingCost;
-          const actualTransactionFee = (beforeFees * 0.055) + 0.50;
+          // Get accurate values from payment intent metadata
+          const metadata = (paymentIntent as any).metadata || {};
+          const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+          const actualShipping = parseFloat(metadata.shippingCost || '0');
+          const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+          const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
           
           onSuccess({
             orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-            cart: cart,
-            customerData: customerData,
-            totalAmount: beforeFees + actualTransactionFee,
-            subtotal: currentCartStats.subtotal,
+            cart: [],
+            customerData: {},
+            totalAmount: actualTotal,
+            subtotal: actualSubtotal,
             transactionFee: actualTransactionFee,
-            shippingCost: shippingCost
+            shippingCost: actualShipping
           });
           
           toast({
