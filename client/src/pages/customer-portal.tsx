@@ -1390,9 +1390,9 @@ export default function CustomerPortal() {
     return { 
       totalItems: isNaN(totalItems) ? 0 : totalItems, // Display count - user selections only
       totalPromotionalItems: isNaN(totalPromotionalItems) ? 0 : totalPromotionalItems, // Calculation count - includes free items
-      subtotal: isNaN(subtotal) ? 0 : subtotal,
+      subtotal: isNaN(subtotal) ? 0 : subtotal, // PURE product subtotal (no shipping)
       shippingCost: isNaN(shippingCost) ? 0 : shippingCost,
-      totalValue: isNaN(totalValue) ? 0 : totalValue,
+      totalValue: isNaN(totalValue) ? 0 : totalValue, // Total including shipping
       appliedPromotions,
       freeShippingApplied,
       bogoffDetails
@@ -3335,7 +3335,7 @@ export default function CustomerPortal() {
                       <div className="flex justify-between">
                         <span>Product Subtotal</span>
                         <PriceDisplay
-                          price={cartStats.totalValue}
+                          price={cartStats.subtotal}
                           currency="GBP"
                           isGuestMode={false}
                           size="small"
@@ -3580,7 +3580,7 @@ export default function CustomerPortal() {
                     customerData={customerData}
                     wholesaler={wholesaler}
                     totalAmount={(() => {
-                      const subtotal = cartStats.totalValue;
+                      const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
                       const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
                         ? customerData.selectedShippingService.price 
                         : 0;
