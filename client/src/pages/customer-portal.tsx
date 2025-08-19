@@ -714,7 +714,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         variant: "destructive",
       });
     } finally {
-      setIsProcessingPayment(false);
+      setIsProcessing(false);
     }
   };
 
