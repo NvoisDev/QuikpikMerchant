@@ -1786,7 +1786,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
-      console.log('🚚 PAYMENT CREATION DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
+      console.log('🚚 CRITICAL DEBUG: Full request body received from frontend:');
+      console.log('  - customerName:', customerName);
+      console.log('  - items count:', items?.length);
+      console.log('  - shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
+      console.log('  - shippingInfo.option:', shippingInfo?.option);
+      console.log('  - shippingInfo.service:', shippingInfo?.service ? {
+          serviceName: shippingInfo.service.serviceName,
+          price: shippingInfo.service.price,
+          serviceId: shippingInfo.service.serviceId
+        } : 'NULL');
+      console.log('  - Is delivery order?', shippingInfo?.option === 'delivery');
+      console.log('  - Has service selected?', !!shippingInfo?.service);
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
