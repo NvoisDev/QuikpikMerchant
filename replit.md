@@ -5,6 +5,14 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 7 - COMPLETE FREE-TYPE INPUT WITH MOQ GUIDANCE**
+- ✅ **Full Free-Type Capability**: Users can type any quantity including decimals (0.3, 1, 5.5, etc.)
+- ✅ **Clear MOQ Guidance**: Always-visible minimum order information with real-time status feedback
+- ✅ **Smart Status Messages**: Dynamic warnings "Below minimum - will be adjusted" vs "✅ Meets minimum requirement"
+- ✅ **Flexible Input**: Step size 0.1 allows precise decimal quantities while maintaining user freedom
+- ✅ **Clean Button Design**: Removed quantity from "Add" buttons, added clear unit/pallet product tags
+- ✅ **Informative Tags**: "Units & Pallets" (orange) vs "Individual Units" (green) for product type clarity
+
 **VERSION CONTROL 6 - ENHANCED MODAL WITH FREE-TYPE QUANTITY INPUT**
 - ✅ **Enhanced Quantity Selection**: Upgraded modal to two-step process with free-type quantity input
 - ✅ **Flexible Input**: Users can type any quantity directly or use +/- buttons for incremental changes

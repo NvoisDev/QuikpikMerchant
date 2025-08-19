@@ -4409,33 +4409,47 @@ export default function CustomerPortal() {
                         <Input
                           id="quantity-input"
                           type="number"
+                          step="0.1"
                           value={modalQuantity}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value) || 0;
-                            const minQuantity = selectedModalType === 'units' 
-                              ? (selectedProductForModal.moq || 1)
-                              : ((selectedProductForModal as any).palletMoq || 1);
-                            
-                            // Allow any positive number, but show validation message if below minimum
-                            if (value >= 0) {
-                              setModalQuantity(Math.max(value, minQuantity));
+                            const value = parseFloat(e.target.value) || 0;
+                            // Allow any positive number - no automatic enforcement
+                            if (value >= 0 || e.target.value === '') {
+                              setModalQuantity(value);
                             }
                           }}
-                          min={selectedModalType === 'units' 
-                            ? (selectedProductForModal.moq || 1)
-                            : ((selectedProductForModal as any).palletMoq || 1)}
                           className="text-center text-xl font-bold max-w-[120px] mx-auto"
                           placeholder="Enter quantity"
                         />
-                        {modalQuantity < (selectedModalType === 'units' 
-                          ? (selectedProductForModal.moq || 1)
-                          : ((selectedProductForModal as any).palletMoq || 1)) && (
-                          <p className="text-xs text-amber-600">
-                            Minimum: {selectedModalType === 'units' 
-                              ? `${selectedProductForModal.moq} units`
+                        
+                        {/* MOQ Information - Always visible */}
+                        <div className="text-xs text-center space-y-1">
+                          <p className="text-gray-600 font-medium">
+                            Minimum Order: {selectedModalType === 'units' 
+                              ? `${selectedProductForModal.moq || 1} units`
                               : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
                           </p>
-                        )}
+                          
+                          {/* Warning if below MOQ */}
+                          {modalQuantity > 0 && modalQuantity < (selectedModalType === 'units' 
+                            ? (selectedProductForModal.moq || 1)
+                            : ((selectedProductForModal as any).palletMoq || 1)) && (
+                            <p className="text-amber-600 font-medium">
+                              ⚠️ Below minimum - will be adjusted to {selectedModalType === 'units' 
+                                ? `${selectedProductForModal.moq} units`
+                                : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
+                            </p>
+                          )}
+                          
+                          {/* Confirmation if at or above MOQ */}
+                          {modalQuantity >= (selectedModalType === 'units' 
+                            ? (selectedProductForModal.moq || 1)
+                            : ((selectedProductForModal as any).palletMoq || 1)) && (
+                            <p className="text-green-600 font-medium">
+                              ✅ Meets minimum requirement
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -4469,8 +4483,8 @@ export default function CustomerPortal() {
                           ? (selectedProductForModal.moq || 1)
                           : ((selectedProductForModal as any).palletMoq || 1);
                         
-                        // Ensure quantity meets minimum requirement before adding to cart
-                        const finalQuantity = Math.max(modalQuantity, minQuantity);
+                        // Always enforce minimum requirement when adding to cart
+                        const finalQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
                         
                         addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
                         setShowUnitSelectionModal(false);
@@ -4480,7 +4494,6 @@ export default function CustomerPortal() {
                         setModalQuantity(1);
                       }}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                      disabled={modalQuantity <= 0}
                     >
                       Add to Cart
                     </Button>
