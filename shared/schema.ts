@@ -478,6 +478,26 @@ export const broadcasts = pgTable("broadcasts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Customer registration requests (for wholesaler approval)
+export const customerRegistrationRequests = pgTable("customer_registration_requests", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  customerPhone: varchar("customer_phone", { length: 20 }).notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  customerEmail: varchar("customer_email", { length: 255 }),
+  requestMessage: text("request_message"),
+  status: varchar("status").$type<'pending' | 'approved' | 'rejected'>().notNull().default('pending'),
+  requestedAt: timestamp("requested_at").notNull().defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  respondedBy: varchar("responded_by").references(() => users.id), // wholesaler user ID who approved/rejected
+  responseMessage: text("response_message"),
+}, (table) => ({
+  wholesalerIdIdx: index("registration_requests_wholesaler_id_idx").on(table.wholesalerId),
+  customerPhoneIdx: index("registration_requests_customer_phone_idx").on(table.customerPhone),
+  statusIdx: index("registration_requests_status_idx").on(table.status),
+  requestedAtIdx: index("registration_requests_requested_at_idx").on(table.requestedAt),
+}));
+
 // Message Templates for multi-product campaigns
 export const messageTemplates = pgTable("message_templates", {
   id: serial("id").primaryKey(),

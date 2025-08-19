@@ -934,8 +934,44 @@ export default function CustomerPortal() {
   const handleRequestAccess = async (wholesaler: any) => {
     if (!authenticatedCustomer?.phone) return;
     
-    // TODO: Implement full request access system with backend API
-    alert(`Request access to ${wholesaler.businessName}\n\nThis will send a notification to the wholesaler for approval and allow you to browse their products once approved.`);
+    try {
+      const response = await fetch('/api/customer/request-wholesaler-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          wholesalerId: wholesaler.id,
+          customerPhone: authenticatedCustomer.phone,
+          customerName: authenticatedCustomer.name,
+          customerEmail: authenticatedCustomer.email,
+          requestMessage: `I would like to access your wholesale products. Customer: ${authenticatedCustomer.name}`
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Request Sent Successfully",
+          description: `Your access request has been sent to ${wholesaler.businessName}. You'll be notified once they approve your request.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Request Failed",
+          description: data.error || "Failed to send access request",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Request Failed", 
+        description: "Network error - please try again",
+        variant: "destructive"
+      });
+    }
   };
   
   // Fetch available wholesalers for search - registration-aware for authenticated customers

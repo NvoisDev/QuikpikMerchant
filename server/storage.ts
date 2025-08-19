@@ -14,6 +14,7 @@ import {
   stockUpdateNotifications,
   stockMovements,
   stockAlerts,
+  customerRegistrationRequests,
   userBadges,
   onboardingMilestones,
   smsVerificationCodes,
@@ -3887,6 +3888,68 @@ export class DatabaseStorage implements IStorage {
         totalSpent: parseFloat(customer.total_spent) || 0
       }))
     };
+  }
+
+  // Customer Registration Request operations
+  async createCustomerRegistrationRequest(request: {
+    wholesalerId: string;
+    customerPhone: string;
+    customerName: string;
+    customerEmail?: string;
+    requestMessage?: string;
+  }) {
+    const [newRequest] = await db
+      .insert(customerRegistrationRequests)
+      .values(request)
+      .returning();
+    return newRequest;
+  }
+
+  async getCustomerRegistrationRequest(wholesalerId: string, customerPhone: string) {
+    const [request] = await db
+      .select()
+      .from(customerRegistrationRequests)
+      .where(
+        and(
+          eq(customerRegistrationRequests.wholesalerId, wholesalerId),
+          eq(customerRegistrationRequests.customerPhone, customerPhone),
+          eq(customerRegistrationRequests.status, 'pending')
+        )
+      )
+      .limit(1);
+    return request;
+  }
+
+  async getPendingRegistrationRequests(wholesalerId: string) {
+    return await db
+      .select()
+      .from(customerRegistrationRequests)
+      .where(
+        and(
+          eq(customerRegistrationRequests.wholesalerId, wholesalerId),
+          eq(customerRegistrationRequests.status, 'pending')
+        )
+      )
+      .orderBy(desc(customerRegistrationRequests.requestedAt));
+  }
+
+  async updateRegistrationRequestStatus(
+    requestId: number, 
+    status: 'approved' | 'rejected', 
+    respondedBy: string, 
+    responseMessage?: string
+  ) {
+    const [updated] = await db
+      .update(customerRegistrationRequests)
+      .set({
+        status,
+        respondedAt: new Date(),
+        respondedBy,
+        responseMessage,
+      })
+      .where(eq(customerRegistrationRequests.id, requestId))
+      .returning();
+    return updated;
   }
 
 

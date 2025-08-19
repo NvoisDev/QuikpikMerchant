@@ -1067,6 +1067,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Submit customer registration request to wholesaler
+  app.post("/api/customer/request-wholesaler-access", async (req, res) => {
+    try {
+      const { wholesalerId, customerPhone, customerName, customerEmail, requestMessage } = req.body;
+      
+      console.log("🔍 Customer registration request:", { wholesalerId, customerPhone: customerPhone?.slice(-4) + "****", customerName });
+      
+      // Validate required fields
+      if (!wholesalerId || !customerPhone || !customerName) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Check if customer already has access
+      const lastFourDigits = customerPhone.slice(-4);
+      const existingAccess = await storage.getWholesalersForCustomer(lastFourDigits);
+      if (existingAccess.some(w => w.id === wholesalerId)) {
+        return res.status(400).json({ error: "You already have access to this wholesaler" });
+      }
+      
+      // Check for existing pending request
+      const existingRequest = await storage.getCustomerRegistrationRequest(wholesalerId, customerPhone);
+      if (existingRequest && existingRequest.status === 'pending') {
+        return res.status(400).json({ error: "You already have a pending request with this wholesaler" });
+      }
+      
+      // Create the registration request
+      const request = await storage.createCustomerRegistrationRequest({
+        wholesalerId,
+        customerPhone,
+        customerName,
+        customerEmail,
+        requestMessage
+      });
+      
+      console.log("✅ Registration request created with ID:", request.id);
+      
+      // TODO: Send notification to wholesaler (email/SMS)
+      
+      res.json({ 
+        success: true, 
+        requestId: request.id,
+        message: "Your access request has been sent to the wholesaler. You'll be notified once they approve your request."
+      });
+    } catch (error) {
+      console.error("❌ Error creating registration request:", error);
+      res.status(500).json({ error: "Failed to submit registration request" });
+    }
+  });
+
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId, phoneNumber } = req.params;

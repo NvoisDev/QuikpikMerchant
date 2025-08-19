@@ -5,6 +5,15 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 3 - CUSTOMER REGISTRATION REQUEST SYSTEM**
+- ✅ Added `customerRegistrationRequests` database table with comprehensive schema
+- ✅ Implemented storage methods: `createCustomerRegistrationRequest()`, `getCustomerRegistrationRequest()`, `getPendingRegistrationRequests()`, `updateRegistrationRequestStatus()`
+- ✅ Created `/api/customer/request-wholesaler-access` POST endpoint for registration requests
+- ✅ Enhanced customer portal with functional "Request Access" button and proper toast notifications
+- ✅ Added validation to prevent duplicate requests and existing access conflicts
+- ✅ Implemented security checks with phone number verification and wholesaler access validation
+- ✅ Built foundation for wholesaler approval workflow and notification system
+
 **VERSION CONTROL 2 - REGISTRATION-AWARE SELLER SWITCHING**
 - ✅ Implemented secure customer-wholesaler registration verification system
 - ✅ Added `/api/customer-accessible-wholesalers/:phoneNumber` endpoint for filtered access
