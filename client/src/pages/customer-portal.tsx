@@ -2790,7 +2790,15 @@ export default function CustomerPortal() {
                     cart={cart}
                     customerData={customerData}
                     wholesaler={wholesaler}
-                    totalAmount={cartStats.totalValue}
+                    totalAmount={(() => {
+                      const subtotal = cartStats.totalValue;
+                      const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+                        ? customerData.selectedShippingService.price 
+                        : 0;
+                      const beforeFees = subtotal + shipping;
+                      const transactionFee = (beforeFees * 0.055) + 0.50;
+                      return beforeFees + transactionFee;
+                    })()}
                     onSuccess={(orderData) => {
                       console.log('🛒 Payment successful, received order data:', orderData);
                       
