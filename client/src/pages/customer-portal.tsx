@@ -3584,15 +3584,24 @@ export default function CustomerPortal() {
                       console.log('🛒 Payment successful, received order data:', orderData);
                       
                       // Set completed order data for thank you page with current cart state
+                      const subtotal = cartStats.subtotal;
+                      const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+                        ? customerData.selectedShippingService.price 
+                        : 0;
+                      const beforeFees = subtotal + shipping;
+                      const transactionFee = (beforeFees * 0.055) + 0.50;
+                      const totalAmount = beforeFees + transactionFee;
+                      
                       const orderDataWithCart = {
                         ...orderData,
                         cart: cart,
                         customerData: customerData,
                         wholesaler: wholesaler,
-                        // Include actual shipping cost from selected service
-                        shippingCost: customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-                          ? customerData.selectedShippingService.price 
-                          : 0
+                        // Financial breakdown for ThankYouPage
+                        subtotal: subtotal,
+                        transactionFee: transactionFee,
+                        shippingCost: shipping,
+                        totalAmount: totalAmount
                       };
                       setCompletedOrder(orderDataWithCart);
                       
