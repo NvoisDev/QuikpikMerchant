@@ -28,6 +28,7 @@ interface Order {
   total: string;
   platformFee: string;
   subtotal: string;
+  transactionFee?: string;
   items: OrderItem[];
   wholesaler: {
     businessName: string;
@@ -121,11 +122,11 @@ const formatCurrency = (amount: string | number) => {
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {
-  // Calculate customer payment details
-  const subtotal = parseFloat(order.subtotal);
-  const transactionFee = subtotal * 0.055 + 0.50; // 5.5% + £0.50 transaction fee paid by customer
-  const deliveryCost = parseFloat(order.shippingTotal || '0');
-  const totalPaid = parseFloat(order.total);
+  // Use stored values from order data
+  const subtotal = parseFloat(order.subtotal || '0');
+  const transactionFee = parseFloat(order.transactionFee || (subtotal * 0.055 + 0.50).toFixed(2)); // Use stored transaction fee or calculate
+  const deliveryCost = parseFloat(order.deliveryCost || '0'); // Use stored delivery cost
+  const totalPaid = parseFloat(order.total || '0');
   
   // Calculate what the total should be for verification
   const calculatedTotal = subtotal + transactionFee + deliveryCost;
@@ -573,16 +574,16 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                         <span>Subtotal:</span>
                         <span>{formatCurrency(order.subtotal)}</span>
                       </div>
+                      {parseFloat(order.deliveryCost || '0') > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span>Delivery Cost:</span>
+                          <span>{formatCurrency(order.deliveryCost || '0')}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xs">
                         <span>Transaction Fee:</span>
                         <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
                       </div>
-                      {parseFloat(order.shippingTotal || '0') > 0 && (
-                        <div className="flex justify-between text-xs">
-                          <span>Delivery Cost:</span>
-                          <span>{formatCurrency(order.shippingTotal)}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
                         <span>Total Paid:</span>
                         <span className="text-green-700">{formatCurrency(order.total)}</span>
