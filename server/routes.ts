@@ -2213,6 +2213,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let paymentIntent;
       try {
+        // ANTI-DUPLICATE: Check for existing payment intents from the same customer
+        // to prevent duplicate payment intents during shipping selection process
+        if (stripe) {
+          try {
+            const existingIntents = await stripe.paymentIntents.list({
+              limit: 5
+            });
+            
+            const recentIntents = existingIntents.data.filter(intent => {
+              const intentPhone = intent.metadata.customerPhone;
+              const intentStatus = intent.status;
+              const intentAge = Date.now() - (intent.created * 1000);
+              const isRecentIntent = intentAge < 10 * 60 * 1000; // 10 minutes
+              const isIncomplete = intentStatus === 'requires_payment_method' || intentStatus === 'requires_confirmation';
+              
+              return intentPhone === customerPhone && isRecentIntent && isIncomplete;
+            });
+            
+            if (recentIntents.length > 0) {
+              const existingIntent = recentIntents[0];
+              console.log('🔄 DUPLICATE PREVENTION: Found existing incomplete payment intent:', {
+                requestId,
+                existingIntentId: existingIntent.id,
+                existingAmount: existingIntent.amount,
+                newAmount: stripeAmount,
+                ageDiff: Date.now() - (existingIntent.created * 1000)
+              });
+              
+              // If amounts match, return existing payment intent instead of creating new one
+              if (existingIntent.amount === stripeAmount) {
+                console.log('✅ DUPLICATE PREVENTION: Reusing existing payment intent with matching amount');
+                return res.json({ 
+                  clientSecret: existingIntent.client_secret,
+                  productSubtotal: productSubtotal.toFixed(2),
+                  shippingCost: deliveryCost.toString(),
+                  customerTransactionFee: customerTransactionFee.toFixed(2),
+                  totalCustomerPays: totalCustomerPays.toFixed(2),
+                  wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+                  wholesalerReceives: wholesalerReceives.toFixed(2),
+                  reusedExistingIntent: true
+                });
+              }
+            }
+          } catch (duplicateCheckError) {
+            console.log('⚠️ Duplicate check failed, proceeding with new payment intent creation:', duplicateCheckError.message);
+          }
+        }
+
         // CRITICAL DEBUG: Log the exact values being sent to Stripe
         console.log('🔥 STRIPE API CALL - EXACT VALUES BEING SENT:', {
           requestId,
