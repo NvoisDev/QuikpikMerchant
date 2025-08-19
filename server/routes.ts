@@ -2058,10 +2058,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
-      // Enhanced validation with proper decimal handling to prevent Stripe integer errors
+      // CRITICAL: Enhanced validation with comprehensive debugging to prevent Stripe integer errors
+      console.log('🔍 PRE-CONVERSION DEBUG:', {
+        requestId,
+        totalCustomerPays: totalCustomerPays,
+        totalCustomerPaysType: typeof totalCustomerPays,
+        totalCustomerPaysIsNaN: isNaN(totalCustomerPays),
+        totalCustomerPaysIsFinite: Number.isFinite(totalCustomerPays),
+        totalCustomerPaysFixed: totalCustomerPays.toFixed(2)
+      });
+      
       // Fix floating point precision issues by using parseFloat and toFixed before conversion
       const preciseTotal = parseFloat(totalCustomerPays.toFixed(2));
       const stripeAmount = Math.round(preciseTotal * 100);
+      
+      console.log('🔍 POST-CONVERSION DEBUG:', {
+        requestId,
+        preciseTotal,
+        preciseTotalType: typeof preciseTotal,
+        stripePrecalc: preciseTotal * 100,
+        stripeAmount,
+        stripeAmountType: typeof stripeAmount,
+        isInteger: Number.isInteger(stripeAmount)
+      });
       
       console.log('🔍 Amount validation details:', {
         totalCustomerPays,
@@ -2194,6 +2213,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let paymentIntent;
       try {
+        // CRITICAL DEBUG: Log the exact values being sent to Stripe
+        console.log('🔥 STRIPE API CALL - EXACT VALUES BEING SENT:', {
+          requestId,
+          amount: stripeAmount,
+          amountType: typeof stripeAmount,
+          amountString: String(stripeAmount),
+          amountIsInteger: Number.isInteger(stripeAmount),
+          amountValue: stripeAmount
+        });
+        
+        // ABSOLUTE FINAL CHECK: Ensure stripeAmount is a valid integer
+        if (typeof stripeAmount !== 'number' || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
+          throw new Error(`CRITICAL: Invalid stripeAmount detected: ${stripeAmount} (type: ${typeof stripeAmount})`);
+        }
+        
         paymentIntent = await stripe.paymentIntents.create({
           amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
           currency: 'gbp',
