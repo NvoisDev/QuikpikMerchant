@@ -911,6 +911,10 @@ export default function CustomerPortal() {
   // Welcome microinteraction states
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   const [personalizedMessage, setPersonalizedMessage] = useState("");
+  
+  // Quick action floating sidebar states
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [quickActionExpanded, setQuickActionExpanded] = useState(false);
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -1056,6 +1060,32 @@ export default function CustomerPortal() {
       return () => clearTimeout(timer);
     }
   }, [authenticatedCustomer, customerOrderStats, isAuthenticated]);
+
+  // Auto-hide quick actions panel after 10 seconds of inactivity
+  useEffect(() => {
+    if (quickActionExpanded) {
+      const timer = setTimeout(() => {
+        setQuickActionExpanded(false);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [quickActionExpanded]);
+
+  // Click outside handler for quick actions
+  useEffect(() => {
+    if (quickActionExpanded) {
+      const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as Element;
+        if (!target.closest('.quick-action-button') && !target.closest('.quick-actions-enter')) {
+          setQuickActionExpanded(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [quickActionExpanded]);
 
   // Fetch shipping quotes for customer delivery
   const fetchShippingQuotes = async () => {
@@ -3830,12 +3860,138 @@ export default function CustomerPortal() {
           </DialogContent>
         </Dialog>
 
+        {/* Quick Action Floating Sidebar */}
+        {isAuthenticated && !isGuestMode && (
+          <>
+            {/* Quick Action Toggle Button */}
+            <div className="fixed bottom-6 left-6 z-50">
+              <Button
+                onClick={() => setQuickActionExpanded(!quickActionExpanded)}
+                className="quick-action-button rounded-full shadow-lg h-12 w-12 p-0 quick-action-pulse"
+                style={{background: 'var(--theme-primary)', color: 'white'}}
+              >
+                {quickActionExpanded ? (
+                  <ArrowLeft className="h-5 w-5" />
+                ) : (
+                  <MoreHorizontal className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+
+            {/* Floating Quick Actions Panel */}
+            {quickActionExpanded && (
+              <div className="fixed left-20 bottom-6 z-40 quick-actions-enter">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700 min-w-[280px]">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    ⚡ Quick Actions
+                    <Badge variant="secondary" className="text-xs">
+                      {cart.length} in cart
+                    </Badge>
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    {/* Quick Checkout */}
+                    <Button
+                      onClick={() => {
+                        setShowCheckout(true);
+                        setQuickActionExpanded(false);
+                      }}
+                      className="w-full justify-start h-10 text-left"
+                      disabled={cart.length === 0}
+                      style={{background: cart.length > 0 ? 'var(--theme-primary)' : undefined, color: cart.length > 0 ? 'white' : undefined}}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Checkout ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
+                      <span className="ml-auto text-xs opacity-80">
+                        £{cartStats.totalValue.toFixed(2)}
+                      </span>
+                    </Button>
+
+                    {/* Browse Products */}
+                    <Button
+                      onClick={() => {
+                        setActiveTab("products");
+                        setQuickActionExpanded(false);
+                      }}
+                      variant="outline"
+                      className="w-full justify-start h-10"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Browse All Products
+                      <span className="ml-auto text-xs opacity-60">
+                        {products?.length || 0} available
+                      </span>
+                    </Button>
+
+                    {/* Order History */}
+                    <Button
+                      onClick={() => {
+                        setActiveTab("orders");
+                        setQuickActionExpanded(false);
+                      }}
+                      variant="outline"
+                      className="w-full justify-start h-10"
+                    >
+                      <History className="h-4 w-4 mr-2" />
+                      Order History
+                      <span className="ml-auto text-xs opacity-60">
+                        {customerOrderStats?.totalOrders || 0} orders
+                      </span>
+                    </Button>
+
+                    {/* Account Settings */}
+                    <Button
+                      onClick={() => {
+                        setActiveTab("account");
+                        setQuickActionExpanded(false);
+                      }}
+                      variant="outline"
+                      className="w-full justify-start h-10"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      My Account
+                      <span className="ml-auto text-xs opacity-60">
+                        {authenticatedCustomer?.name?.split(' ')[0]}
+                      </span>
+                    </Button>
+
+                    {/* Find Other Sellers */}
+                    <Button
+                      onClick={() => {
+                        setShowWholesalerSearch(true);
+                        setQuickActionExpanded(false);
+                      }}
+                      variant="outline"
+                      className="w-full justify-start h-10"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Find Other Sellers
+                    </Button>
+
+                    {/* Theme Toggle */}
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Theme</span>
+                        <ThemeSwitcher 
+                          currentTheme={theme}
+                          onThemeChange={changeTheme}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
         {isAuthenticated && !isGuestMode && cart.length > 0 && (
           <div className="fixed bottom-6 right-6 z-50">
             <Button
               onClick={() => setShowCheckout(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg h-14 w-14 p-0 relative"
+              className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse"
+              style={{background: 'var(--theme-primary)', color: 'white'}}
             >
               <ShoppingCart className="h-6 w-6" />
               {cart.length > 0 && (

@@ -502,3 +502,59 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
+
+/* Quick Action Floating Sidebar */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes quick-action-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0.1);
+  }
+}
+
+.quick-actions-enter {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+.quick-actions-exit {
+  animation: slide-out-right 0.3s ease-in forwards;
+}
+
+.quick-action-pulse {
+  animation: quick-action-pulse 2s ease-in-out infinite;
+}
+
+.quick-action-button {
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.quick-action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
