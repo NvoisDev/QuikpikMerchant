@@ -313,13 +313,38 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         setIsCreatingIntent(true);
         
         // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
+        // CRITICAL FIX: Always capture the absolute latest shipping state
+        const currentShippingOption = customerData.shippingOption;
+        const currentSelectedService = customerData.selectedShippingService;
+        
         const shippingDataAtCreation = {
-          option: customerData.shippingOption,
-          service: customerData.selectedShippingService
+          option: currentShippingOption,
+          service: currentSelectedService
         };
         setCapturedShippingData(shippingDataAtCreation);
         
-        console.log('🚚 CRITICAL: Captured shipping data at payment creation:', shippingDataAtCreation);
+        console.log('🚚 CRITICAL FIX: Payment creation shipping validation:');
+        console.log('  - Current customerData.shippingOption:', currentShippingOption);
+        console.log('  - Current customerData.selectedShippingService:', currentSelectedService);
+        console.log('  - Will send to backend:', shippingDataAtCreation);
+        console.log('  - Is delivery order?', currentShippingOption === 'delivery');
+        console.log('  - Has shipping service?', !!currentSelectedService);
+        console.log('  - Service details:', currentSelectedService ? {
+            serviceName: currentSelectedService.serviceName,
+            price: currentSelectedService.price,
+            serviceId: currentSelectedService.serviceId
+          } : 'NO SERVICE SELECTED');
+        
+        // CRITICAL: Validation check - prevent payment creation if delivery selected but no service
+        if (currentShippingOption === 'delivery' && !currentSelectedService) {
+          toast({
+            title: "Shipping Service Required",
+            description: "Please select a delivery service before placing your order",
+            variant: "destructive"
+          });
+          setIsProcessingPayment(false);
+          return;
+        }
         
         try {
           const response = await apiRequest("POST", "/api/customer/create-payment", {
