@@ -392,18 +392,22 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           fullCustomerData: customerData
         });
         
-        // CRITICAL ALERT: Show what we're working with
+        // Debug shipping service selection (console only, no popups)
         if (customerData.selectedShippingService) {
-          alert('SHIPPING DEBUG: We have selectedShippingService: ' + customerData.selectedShippingService.serviceName + ' at £' + customerData.selectedShippingService.price + ', but shippingOption is: ' + customerData.shippingOption);
+          console.log('🚚 Shipping Service Selected:', {
+            serviceName: customerData.selectedShippingService.serviceName,
+            price: customerData.selectedShippingService.price,
+            shippingOption: customerData.shippingOption
+          });
         }
         
         // Force re-check: if selectedShippingService exists, it means delivery was selected
         const hasSelectedDeliveryService = !!customerData.selectedShippingService;
         const actualShippingOption = hasSelectedDeliveryService ? 'delivery' : (customerData.shippingOption || 'pickup');
         
-        // EMERGENCY DEBUG: Alert if we have a service but still defaulting to pickup
+        // Debug shipping option logic (console only, no popups)
         if (hasSelectedDeliveryService && actualShippingOption === 'pickup') {
-          alert('EMERGENCY BUG: selectedShippingService exists but actualShippingOption is pickup!');
+          console.error('🚨 Shipping Logic Error: selectedShippingService exists but actualShippingOption is pickup!');
         }
         const deliveryServicePrice = hasSelectedDeliveryService ? parseFloat(customerData.selectedShippingService?.price || '0') : 0;
         const isDeliveryOrder = actualShippingOption === 'delivery' && deliveryServicePrice > 0;
