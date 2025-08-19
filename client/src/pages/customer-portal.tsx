@@ -23,7 +23,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock, Palette, TrendingUp, Building } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -493,8 +493,9 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
-                className="w-2 h-7 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-bounce"
+                className="w-2 h-7 rounded-full animate-bounce"
                 style={{
+                  background: 'var(--theme-primary)',
                   animationDelay: `${i * 0.2}s`,
                   animationDuration: '1.2s'
                 }}
@@ -1924,7 +1925,14 @@ export default function CustomerPortal() {
                   onClick={() => setShowWholesalerSearch(true)}
                   variant="outline"
                   size="sm"
-                  className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-medium"
+                  className="border text-xs sm:text-sm font-medium"
+                  style={{
+                    borderColor: 'var(--theme-primary)',
+                    color: 'var(--theme-primary)',
+                    '--hover-bg': 'var(--theme-secondary)'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 >
                   <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Find Seller</span>
@@ -3282,7 +3290,115 @@ export default function CustomerPortal() {
             </TabsContent>
 
             <TabsContent value="account" className="space-y-6">
-              {/* Account content will be here */}
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Account Settings</h2>
+                
+                {/* User Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Profile Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Name</Label>
+                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                          {customerData.name || 'Not provided'}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Email</Label>
+                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                          {customerData.email || 'Not provided'}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Phone</Label>
+                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                          {customerData.phone || 'Not provided'}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Business</Label>
+                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                          {wholesaler?.businessName || 'Not provided'}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Theme Preferences */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      Theme Preferences
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">
+                      Customize your shopping experience with different color themes
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <ThemeSwitcher />
+                  </CardContent>
+                </Card>
+
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Your Shopping Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>{customerStats?.totalOrders || 0}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Orders</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
+                          £{(customerStats?.totalSpent || 0).toFixed(2)}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Spent</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>{cart.length}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Items in Cart</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Support Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <HelpCircle className="h-5 w-5" />
+                      Need Help?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">Email: {wholesaler?.email || 'hello@quikpik.co'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">Phone: {wholesaler?.businessPhone || wholesaler?.phone || '+44750765955'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Building className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">Business: {wholesaler?.businessName || 'Surulere Foods Wholesale'}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         )}
