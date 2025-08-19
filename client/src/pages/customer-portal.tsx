@@ -430,11 +430,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           if (error.message && error.message.includes("payment setup incomplete")) {
             errorTitle = "Store Payment Setup Required";
             errorMessage = "This store hasn't completed their payment setup yet. Please contact the business owner to complete their Stripe payment configuration before placing orders.";
-          } else if (error.response?.status === 409) {
+          } else if (error.response?.status === 409 || error.response?.status === 429) {
             // Handle duplicate request error
             try {
               const errorData = await error.response.json();
-              if (errorData.errorType === "duplicate_request") {
+              if (errorData.errorType === "duplicate_request" || errorData.errorType === "system_busy") {
                 errorTitle = "Payment In Progress";
                 errorMessage = "A payment request is already being processed. Please wait a moment before trying again.";
               } else {

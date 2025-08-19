@@ -1852,9 +1852,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NEW: Customer payment endpoint with correct fee structure
   // Customer pays: Product total + Transaction Fee (5.5% + £0.50)
   // Wholesaler pays: Platform Fee (3.3% of product total)
+  // Global payment processing lock to prevent ANY payment requests from overlapping
+  const globalPaymentLock = 'global_payment_processing';
+  
   app.post('/api/customer/create-payment', async (req, res) => {
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
+      
+      // IMMEDIATE global lock check - block ALL simultaneous payment requests
+      if ((global as any)[globalPaymentLock]) {
+        console.log('🚨 GLOBAL PAYMENT LOCK ACTIVE - Blocking all payments temporarily');
+        return res.status(429).json({ 
+          message: "Payment system is currently processing another request. Please wait 10 seconds and try again.",
+          errorType: "system_busy"
+        });
+      }
+      
+      // Activate global lock
+      (global as any)[globalPaymentLock] = true;
+      console.log('🔒 GLOBAL PAYMENT LOCK ACTIVATED');
+      
+      // Auto-release lock after 15 seconds
+      setTimeout(() => {
+        delete (global as any)[globalPaymentLock];
+        console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (timeout)');
+      }, 15000);
       
       console.log('🔥 PAYMENT REQUEST START:', {
         timestamp: new Date().toISOString(),
@@ -1878,30 +1900,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('  - Has service selected?', !!shippingInfo?.service);
 
       if (!items || !Array.isArray(items) || items.length === 0) {
+        delete (global as any)[globalPaymentLock];
         return res.status(400).json({ message: "Order must contain at least one item" });
       }
-
-      // Server-side request deduplication to prevent multiple identical payments
-      const requestSignature = `${customerPhone}_${JSON.stringify(items.map(i => ({id: i.productId, qty: i.quantity})).sort())}_${JSON.stringify(shippingInfo)}`;
-      const requestHash = Buffer.from(requestSignature).toString('base64').slice(0, 50);
-      
-      // Check if this exact request is already being processed (simple in-memory check)
-      const processingKey = `payment_processing_${requestHash}`;
-      if ((global as any)[processingKey]) {
-        console.log('⚠️ Duplicate payment request detected and blocked:', requestHash);
-        return res.status(409).json({ 
-          message: "Payment request already in progress. Please wait a moment and try again if needed.",
-          errorType: "duplicate_request"
-        });
-      }
-      
-      // Mark this request as being processed
-      (global as any)[processingKey] = true;
-      
-      // Clean up the processing flag after 30 seconds
-      setTimeout(() => {
-        delete (global as any)[processingKey];
-      }, 30000);
 
       // Calculate product subtotal
       let productSubtotal = 0;
@@ -1929,6 +1930,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
         
         const basePrice = parseFloat(product.price);
+        
+        console.log(`🧮 CALCULATION DEBUG for product ${product.id}:`, {
+          productName: product.name,
+          basePrice,
+          quantity: item.quantity,
+          promoPrice: product.promoPrice,
+          promoActive: product.promoActive,
+          promotionalOffers: product.promotionalOffers
+        });
+        
         const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
           basePrice,
           item.quantity,
@@ -1936,6 +1947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           product.promoPrice ? parseFloat(product.promoPrice) : undefined,
           product.promoActive
         );
+        
+        console.log(`📊 PRICING RESULT for product ${product.id}:`, pricing);
         
         console.log(`🔍 Item calculation for ${product.name}:`, {
           promoActive: product.promoActive,
@@ -2129,9 +2142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ Payment intent created successfully:', paymentIntent.id);
       
-      // Clean up processing flag on success
-      const processingKey = `payment_processing_${requestHash}`;
-      delete (global as any)[processingKey];
+      // Release global payment lock on success
+      delete (global as any)[globalPaymentLock];
+      console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (success)');
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
@@ -2159,11 +2172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating payment intent:", error);
       
-      // Clean up processing flag on error
-      const requestSignature = `${customerPhone}_${JSON.stringify(items.map(i => ({id: i.productId, qty: i.quantity})).sort())}_${JSON.stringify(shippingInfo)}`;
-      const requestHash = Buffer.from(requestSignature).toString('base64').slice(0, 50);
-      const processingKey = `payment_processing_${requestHash}`;
-      delete (global as any)[processingKey];
+      // Release global payment lock on error
+      delete (global as any)[globalPaymentLock];
+      console.log('🔓 GLOBAL PAYMENT LOCK RELEASED (error)');
       
       res.status(500).json({ message: "Failed to create payment intent" });
     }
