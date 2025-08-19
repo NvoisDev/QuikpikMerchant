@@ -286,7 +286,15 @@ interface StripeCheckoutFormProps {
   customerData: CustomerData;
   wholesaler: any;
   totalAmount: number;
-  onSuccess: () => void;
+  onSuccess: (orderData: {
+    orderNumber: string;
+    cart: CartItem[];
+    customerData: any;
+    totalAmount: number;
+    subtotal: number;
+    transactionFee: number;
+    shippingCost: number;
+  }) => void;
 }
 
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
@@ -629,6 +637,17 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
             
+            // Success callback with order data for thank you page
+            onSuccess({
+              orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
+              cart: cart,
+              customerData: customerData,
+              totalAmount: totalAmount,
+              subtotal: totalAmount * 0.85, // Approximate subtotal
+              transactionFee: totalAmount * 0.15, // Approximate fees and shipping
+              shippingCost: customerData.selectedShippingService?.price || 0
+            });
+            
             toast({
               title: "Payment Successful!",
               description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
@@ -639,9 +658,32 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
               title: "Payment Successful!",
               description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
             });
+            
+            // Still call success callback even if order creation failed, payment succeeded
+            onSuccess({
+              orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+              cart: cart,
+              customerData: customerData,
+              totalAmount: totalAmount,
+              subtotal: totalAmount * 0.85, // Approximate subtotal
+              transactionFee: totalAmount * 0.15, // Approximate fees and shipping
+              shippingCost: customerData.selectedShippingService?.price || 0
+            });
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
+          
+          // Still call success callback even if order creation failed, payment succeeded
+          onSuccess({
+            orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+            cart: cart,
+            customerData: customerData,
+            totalAmount: totalAmount,
+            subtotal: totalAmount * 0.85, // Approximate subtotal
+            transactionFee: totalAmount * 0.15, // Approximate fees and shipping
+            shippingCost: customerData.selectedShippingService?.price || 0
+          });
+          
           toast({
             title: "Payment Successful!",
             description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
@@ -2746,9 +2788,13 @@ export default function CustomerPortal() {
                     customerData={customerData}
                     wholesaler={wholesaler}
                     totalAmount={cartStats.totalValue}
-                    onSuccess={() => {
+                    onSuccess={(orderData) => {
+                      console.log('🛒 Payment successful, received order data:', orderData);
+                      
+                      // Set completed order data for thank you page
+                      setCompletedOrder(orderData);
+                      
                       // Clear the cart after successful payment
-                      console.log('🛒 Clearing cart after successful payment');
                       setCart([]);
                       
                       // Close checkout modal and show thank you page
