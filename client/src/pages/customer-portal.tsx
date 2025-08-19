@@ -23,7 +23,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, History, User, Settings } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -34,6 +34,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
+import { format } from "date-fns";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
@@ -735,6 +736,23 @@ export default function CustomerPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
 
+  // Customer order statistics query
+  const { data: customerOrderStats } = useQuery({
+    queryKey: ["/api/customer-orders/stats", wholesalerId, authenticatedCustomer?.phone],
+    queryFn: async () => {
+      if (!wholesalerId || !authenticatedCustomer?.phone) return null;
+      
+      const response = await fetch(`/api/customer-orders/stats/${wholesalerId}/${encodeURIComponent(authenticatedCustomer.phone)}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!wholesalerId && !!authenticatedCustomer?.phone && isAuthenticated,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Check for existing customer session on load
   const { data: sessionData, isLoading: sessionLoading, refetch: refetchSession } = useQuery({
     queryKey: ["/api/customer-auth/check", wholesalerId],
@@ -785,7 +803,7 @@ export default function CustomerPortal() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   
   // Tab state for modern interface
-  const [activeTab, setActiveTab] = useState("products");
+  const [activeTab, setActiveTab] = useState("home");
   
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
@@ -1922,7 +1940,11 @@ export default function CustomerPortal() {
         {/* Modern Tab Navigation - Only for authenticated users */}
         {isAuthenticated && !isGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsTrigger value="home" className="flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </TabsTrigger>
               <TabsTrigger value="products" className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
                 Products
@@ -1936,6 +1958,198 @@ export default function CustomerPortal() {
                 Account
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="home" className="space-y-6">
+              {/* Customer Dashboard Home */}
+              <div className="space-y-6">
+                {/* Welcome Header */}
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg p-6 text-white">
+                  <h1 className="text-2xl font-bold mb-2">
+                    Welcome back, {authenticatedCustomer?.name || 'Valued Customer'}!
+                  </h1>
+                  <p className="text-green-100">
+                    {wholesaler?.storeTagline || 'Premium wholesale products with exceptional service'}
+                  </p>
+                </div>
+
+                {/* Quick Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Total Orders */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {customerOrderStats?.totalOrders || 0}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">All time</p>
+                        </div>
+                        <ShoppingBag className="w-8 h-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Total Spent */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {getCurrencySymbol(wholesaler?.defaultCurrency)}{customerOrderStats?.totalSpent?.toFixed(2) || '0.00'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">All time</p>
+                        </div>
+                        <CreditCard className="w-8 h-8 text-blue-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Activity */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Last Order</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {customerOrderStats?.daysSinceLastOrder !== undefined 
+                              ? `${customerOrderStats.daysSinceLastOrder} days`
+                              : 'Never'
+                            }
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Days ago</p>
+                        </div>
+                        <Clock className="w-8 h-8 text-orange-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Quick Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Button 
+                        onClick={() => setActiveTab("products")}
+                        className="bg-green-600 hover:bg-green-700 h-auto p-4 justify-start"
+                      >
+                        <Package className="w-5 h-5 mr-3" />
+                        <div className="text-left">
+                          <div className="font-medium">Browse Products</div>
+                          <div className="text-sm text-green-100">Explore our complete range</div>
+                        </div>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => setActiveTab("orders")}
+                        variant="outline"
+                        className="h-auto p-4 justify-start border-gray-300 hover:border-gray-400"
+                      >
+                        <History className="w-5 h-5 mr-3" />
+                        <div className="text-left">
+                          <div className="font-medium">View Order History</div>
+                          <div className="text-sm text-gray-500">Track your purchases</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Orders Preview */}
+                {customerOrderStats?.recentOrders && customerOrderStats.recentOrders.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Recent Orders</CardTitle>
+                        <Button 
+                          onClick={() => setActiveTab("orders")}
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          View All
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {customerOrderStats.recentOrders.slice(0, 3).map((order: any) => (
+                          <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <Package className="w-5 h-5 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{order.orderNumber}</p>
+                                <p className="text-sm text-gray-500">
+                                  {format(new Date(order.date), 'MMM d, yyyy')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-gray-900">
+                                {getCurrencySymbol(wholesaler?.defaultCurrency)}{parseFloat(order.total).toFixed(2)}
+                              </p>
+                              <Badge variant={
+                                order.status === 'fulfilled' ? 'default' : 
+                                order.status === 'pending' ? 'secondary' : 'destructive'
+                              }>
+                                {order.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Supplier Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">About Your Supplier</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-start space-x-4">
+                      {wholesaler?.logoUrl ? (
+                        <img 
+                          src={wholesaler.logoUrl} 
+                          alt={wholesaler.businessName || "Business logo"} 
+                          className="w-16 h-16 rounded-lg object-contain"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-emerald-600 flex items-center justify-center">
+                          <span className="text-xl font-bold text-white">
+                            {wholesaler?.businessName ? (
+                              wholesaler.businessName.charAt(0).toUpperCase() + 
+                              (wholesaler.businessName.split(' ')[1]?.charAt(0).toUpperCase() || wholesaler.businessName.charAt(1).toUpperCase())
+                            ) : 'WS'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          {wholesaler?.businessName || 'Wholesale Supplier'}
+                        </h3>
+                        <p className="text-gray-600 mb-3">
+                          {wholesaler?.businessDescription || 'Your trusted wholesale partner providing quality products and excellent service.'}
+                        </p>
+                        {wholesaler?.businessPhone && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Phone className="w-4 h-4 mr-2" />
+                            {wholesaler.businessPhone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
             <TabsContent value="products" className="space-y-6">
         

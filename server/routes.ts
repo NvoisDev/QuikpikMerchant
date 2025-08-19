@@ -1045,6 +1045,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer order statistics endpoint for dashboard
+  app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber } = req.params;
+      
+      if (!wholesalerId || !phoneNumber) {
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      }
+      
+      // Find customer using same logic as order history
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      
+      if (!customer) {
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler"
+        });
+      }
+
+      // Get order statistics
+      const orderResults = await db
+        .select()
+        .from(orders)
+        .where(and(
+          or(
+            eq(orders.retailerId, customer.id),
+            eq(orders.retailerId, wholesalerId),
+            eq(orders.customerPhone, customer.phone)
+          ),
+          eq(orders.wholesalerId, wholesalerId)
+        ))
+        .orderBy(desc(orders.createdAt));
+
+      const totalOrders = orderResults.length;
+      const totalSpent = orderResults.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
+      
+      // Calculate days since last order
+      let daysSinceLastOrder = undefined;
+      if (orderResults.length > 0) {
+        const lastOrderDate = new Date(orderResults[0].createdAt);
+        const now = new Date();
+        daysSinceLastOrder = Math.floor((now.getTime() - lastOrderDate.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      // Get recent orders (last 5)
+      const recentOrders = orderResults.slice(0, 5).map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        date: order.createdAt,
+        status: order.status,
+        total: order.total
+      }));
+
+      const stats = {
+        totalOrders,
+        totalSpent,
+        daysSinceLastOrder,
+        recentOrders
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching customer order statistics:", error);
+      res.status(500).json({ message: "Failed to fetch customer order statistics" });
+    }
+  });
+
   // Auth middleware - setup session handling after customer routes
   // Set up unified session middleware 
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
