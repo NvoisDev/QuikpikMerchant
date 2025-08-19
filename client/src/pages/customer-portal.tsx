@@ -1255,7 +1255,7 @@ export default function CustomerPortal() {
           },
           quantity: item.quantity,
           sellingType: item.sellingType,
-          unitPrice: item.sellingType === "pallets" ? item.product.palletPrice : item.product.price
+          unitPrice: item.sellingType === "pallets" ? (item.product as any).palletPrice : item.product.price
         })),
         // Fallback parcels for backward compatibility
         parcels: [{
@@ -1488,7 +1488,7 @@ export default function CustomerPortal() {
       const itemQuantity = Number(item.quantity) || 0; // Ensure numeric
       
       if (item.sellingType === "pallets") {
-        itemPrice = parseFloat(item.product.palletPrice || "0") || 0;
+        itemPrice = parseFloat((item.product as any).palletPrice || "0") || 0;
         totalItems += itemQuantity;
         totalPromotionalItems += itemQuantity;
         subtotal += itemPrice * itemQuantity;
@@ -2717,8 +2717,14 @@ export default function CustomerPortal() {
                                       }}
                                       className="text-white"
                                       style={{background: 'var(--theme-primary)'}}
-                                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
-                                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--theme-primary)'}
+                                      onMouseEnter={(e) => {
+                                        const target = e.target as HTMLElement;
+                                        target.style.backgroundColor = 'var(--theme-secondary)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        const target = e.target as HTMLElement;  
+                                        target.style.backgroundColor = 'var(--theme-primary)';
+                                      }}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Quick Add
@@ -3173,9 +3179,6 @@ export default function CustomerPortal() {
                                                   }`}
                                                   title={suggestion.description}
                                                 >
-                                                  style={suggestion.type === 'bulk' ? {
-                                                    backgroundColor: 'var(--theme-primary)'
-                                                  } : {}}
                                                   {suggestion.label}
                                                 </button>
                                               ))}
@@ -3216,8 +3219,14 @@ export default function CustomerPortal() {
                                       }}
                                       className="text-white"
                                       style={{background: 'var(--theme-primary)'}}
-                                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
-                                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--theme-primary)'}
+                                      onMouseEnter={(e) => {
+                                        const target = e.target as HTMLElement;
+                                        target.style.backgroundColor = 'var(--theme-secondary)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        const target = e.target as HTMLElement;  
+                                        target.style.backgroundColor = 'var(--theme-primary)';
+                                      }}
                                       title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
@@ -3333,23 +3342,13 @@ export default function CustomerPortal() {
                                   {/* Price */}
                                   <div className="flex-shrink-0 ml-4">
                                     <PriceDisplay
-                                      price={
-                                        productUnitOptions[product.id] === 'pallets' && product.palletPrice
-                                          ? parseFloat(product.palletPrice.toString())
-                                          : pricing.effectivePrice
-                                      }
-                                      originalPrice={
-                                        productUnitOptions[product.id] === 'pallets' && product.palletPrice
-                                          ? undefined // No strikethrough for pallet pricing yet
-                                          : pricing.originalPrice
-                                      }
+                                      price={pricing.effectivePrice}
+                                      originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                       currency="GBP"
                                       isGuestMode={false}
                                       size="medium"
                                     />
-                                    {productUnitOptions[product.id] === 'pallets' && (
-                                      <div className="text-xs text-gray-500 mt-1">per pallet</div>
-                                    )}
+
                                   </div>
                                 </div>
                                 
@@ -3581,7 +3580,7 @@ export default function CustomerPortal() {
                                       Total: <PriceDisplay
                                         price={
                                           cartItem.sellingType === 'pallets' 
-                                            ? parseFloat(product.palletPrice?.toString() || '0') * cartItem.quantity
+                                            ? parseFloat((product as any).palletPrice?.toString() || '0') * cartItem.quantity
                                             : pricing.effectivePrice * cartItem.quantity
                                         }
                                         currency="GBP"
@@ -3590,7 +3589,7 @@ export default function CustomerPortal() {
                                       />
                                       {cartItem.sellingType === 'pallets' && (
                                         <div className="text-xs text-gray-500 mt-1">
-                                          ({cartItem.quantity} pallet{cartItem.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units = {cartItem.quantity * (product.unitsPerPallet || 1)} total units)
+                                          ({cartItem.quantity} pallet{cartItem.quantity > 1 ? 's' : ''} × {(product as any).unitsPerPallet} units = {cartItem.quantity * ((product as any).unitsPerPallet || 1)} total units)
                                         </div>
                                       )}
                                     </div>
@@ -4208,7 +4207,7 @@ export default function CustomerPortal() {
                 <div 
                   className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-emerald-500 bg-emerald-50"
                   onClick={() => {
-                    addToCart(selectedProductForModal, selectedProductForModal.moq, 'units');
+                    addToCart(selectedProductForModal, selectedProductForModal.moq || 1, 'units');
                     setShowUnitSelectionModal(false);
                     setSelectedProductForModal(null);
                   }}
@@ -4238,7 +4237,7 @@ export default function CustomerPortal() {
                 <div 
                   className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-blue-500 bg-blue-50"
                   onClick={() => {
-                    addToCart(selectedProductForModal, selectedProductForModal.palletMoq || 1, 'pallets');
+                    addToCart(selectedProductForModal, (selectedProductForModal as any).palletMoq || 1, 'pallets');
                     setShowUnitSelectionModal(false);
                     setSelectedProductForModal(null);
                   }}
