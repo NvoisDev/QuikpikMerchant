@@ -1621,7 +1621,7 @@ export default function CustomerPortal() {
     }
     
     // Validate quantity meets MOQ requirements
-    const minQuantity = sellingType === "pallets" ? (product.palletMoq || 1) : product.moq;
+    const minQuantity = sellingType === "pallets" ? ((product as any).palletMoq || 1) : (product.moq || 1);
     if (quantity < minQuantity) {
       toast({
         title: "Minimum Order Required",
@@ -4246,21 +4246,21 @@ export default function CustomerPortal() {
                     <div>
                       <h4 className="font-medium text-gray-900">Full Pallets</h4>
                       <p className="text-sm text-gray-600">
-                        £{parseFloat(selectedProductForModal.palletPrice?.toString() || '0').toFixed(2)} per pallet
+                        £{parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0').toFixed(2)} per pallet
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {selectedProductForModal.unitsPerPallet} units per pallet
-                        {selectedProductForModal.palletMoq && selectedProductForModal.palletMoq > 1 && 
-                          ` • Minimum: ${selectedProductForModal.palletMoq} pallets`
+                        {(selectedProductForModal as any).unitsPerPallet} units per pallet
+                        {(selectedProductForModal as any).palletMoq && (selectedProductForModal as any).palletMoq > 1 && 
+                          ` • Minimum: ${(selectedProductForModal as any).palletMoq} pallets`
                         }
                       </p>
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-blue-600">
-                        £{(parseFloat(selectedProductForModal.palletPrice?.toString() || '0') * (selectedProductForModal.palletMoq || 1)).toFixed(2)}
+                        £{(parseFloat((selectedProductForModal as any).palletPrice?.toString() || '0') * ((selectedProductForModal as any).palletMoq || 1)).toFixed(2)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        for {selectedProductForModal.palletMoq || 1} pallet{(selectedProductForModal.palletMoq || 1) > 1 ? 's' : ''}
+                        for {(selectedProductForModal as any).palletMoq || 1} pallet{((selectedProductForModal as any).palletMoq || 1) > 1 ? 's' : ''}
                       </div>
                     </div>
                   </div>
