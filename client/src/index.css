@@ -2,13 +2,83 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme Variables */
-:root {
-  --theme-primary: hsl(210, 100%, 50%);
-  --theme-secondary: hsl(280, 100%, 70%);
+/* Customer Theme System */
+/* Default Green Theme (Emerald) */
+:root, [data-customer-theme="emerald"] {
+  --theme-primary: hsl(151, 77%, 36%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(151, 30%, 95%);
+  --theme-secondary-foreground: hsl(151, 77%, 20%);
+  --theme-accent: hsl(151, 77%, 36%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
   --theme-background: #ffffff;
   --theme-card: #ffffff;
-  --theme-accent: hsl(151, 77%, 36%);
+  --theme-name: "Fresh Emerald";
+}
+
+/* Blue Ocean Theme */
+[data-customer-theme="ocean"] {
+  --theme-primary: hsl(212, 100%, 50%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(212, 30%, 95%);
+  --theme-secondary-foreground: hsl(212, 100%, 20%);
+  --theme-accent: hsl(212, 100%, 50%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
+  --theme-background: #ffffff;
+  --theme-card: #ffffff;
+  --theme-name: "Ocean Blue";
+}
+
+/* Purple Grape Theme */
+[data-customer-theme="grape"] {
+  --theme-primary: hsl(262, 83%, 58%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(262, 30%, 95%);
+  --theme-secondary-foreground: hsl(262, 83%, 20%);
+  --theme-accent: hsl(262, 83%, 58%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
+  --theme-background: #ffffff;
+  --theme-card: #ffffff;
+  --theme-name: "Royal Grape";
+}
+
+/* Orange Sunset Theme */
+[data-customer-theme="sunset"] {
+  --theme-primary: hsl(24, 95%, 53%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(24, 30%, 95%);
+  --theme-secondary-foreground: hsl(24, 95%, 20%);
+  --theme-accent: hsl(24, 95%, 53%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
+  --theme-background: #ffffff;
+  --theme-card: #ffffff;
+  --theme-name: "Warm Sunset";
+}
+
+/* Rose Pink Theme */
+[data-customer-theme="rose"] {
+  --theme-primary: hsl(330, 81%, 60%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(330, 30%, 95%);
+  --theme-secondary-foreground: hsl(330, 81%, 20%);
+  --theme-accent: hsl(330, 81%, 60%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
+  --theme-background: #ffffff;
+  --theme-card: #ffffff;
+  --theme-name: "Elegant Rose";
+}
+
+/* Midnight Dark Theme */
+[data-customer-theme="midnight"] {
+  --theme-primary: hsl(200, 98%, 39%);
+  --theme-primary-foreground: hsl(0, 0%, 100%);
+  --theme-secondary: hsl(200, 15%, 15%);
+  --theme-secondary-foreground: hsl(200, 98%, 70%);
+  --theme-accent: hsl(200, 98%, 39%);
+  --theme-accent-foreground: hsl(0, 0%, 100%);
+  --theme-background: hsl(200, 15%, 8%);
+  --theme-card: hsl(200, 15%, 12%);
+  --theme-name: "Midnight Dark";
 }
 
 :root {
@@ -36,14 +106,86 @@
   --warning-foreground: hsl(48, 96%, 89%);
 }
 
-/* Custom gradient for brand colors */
-.gradient-primary {
-  background: linear-gradient(135deg, hsl(151, 77%, 36%) 0%, hsl(151, 77%, 30%) 100%);
+/* Theme-aware utility classes */
+.btn-theme-primary {
+  background: var(--theme-primary);
+  color: var(--theme-primary-foreground);
+  transition: all 0.2s ease;
 }
 
-/* Brand shadow for elevated elements */
-.shadow-brand {
-  box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.2);
+.btn-theme-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.text-theme-primary {
+  color: var(--theme-primary);
+}
+
+.bg-theme-primary {
+  background-color: var(--theme-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--theme-secondary);
+}
+
+.border-theme-primary {
+  border-color: var(--theme-primary);
+}
+
+.gradient-theme-primary {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent) 100%);
+}
+
+.shadow-theme {
+  box-shadow: 0 4px 14px 0 hsla(var(--theme-primary-hsl), 0.2);
+}
+
+/* Theme transition animations */
+.theme-transition {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark theme text adjustments */
+[data-customer-theme="midnight"] {
+  color-scheme: dark;
+}
+
+[data-customer-theme="midnight"] .text-gray-900 {
+  color: hsl(0, 0%, 95%) !important;
+}
+
+[data-customer-theme="midnight"] .text-gray-800 {
+  color: hsl(0, 0%, 90%) !important;
+}
+
+[data-customer-theme="midnight"] .text-gray-700 {
+  color: hsl(0, 0%, 80%) !important;
+}
+
+[data-customer-theme="midnight"] .text-gray-600 {
+  color: hsl(0, 0%, 70%) !important;
+}
+
+[data-customer-theme="midnight"] .bg-white {
+  background-color: var(--theme-card) !important;
+}
+
+[data-customer-theme="midnight"] .bg-gray-50 {
+  background-color: hsl(200, 15%, 15%) !important;
+}
+
+[data-customer-theme="midnight"] .bg-gray-100 {
+  background-color: hsl(200, 15%, 18%) !important;
+}
+
+[data-customer-theme="midnight"] .border-gray-200 {
+  border-color: hsl(200, 15%, 25%) !important;
+}
+
+[data-customer-theme="midnight"] .border-gray-300 {
+  border-color: hsl(200, 15%, 30%) !important;
 }
 
 /* Guest price blur effect */

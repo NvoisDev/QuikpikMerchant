@@ -30,6 +30,7 @@ import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { ThankYouPage } from "@/components/customer/ThankYouPage";
+import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
@@ -767,6 +768,9 @@ export default function CustomerPortal() {
   const { id: wholesalerIdParam } = useParams<{ id: string }>();
   const [location] = useLocation();
   const { toast } = useToast();
+  
+  // Theme system
+  const { theme, changeTheme } = useCustomerTheme();
 
   // Detect if this is preview mode (accessed via /preview-store)
   const isPreviewMode = location === '/preview-store';
@@ -1804,7 +1808,7 @@ export default function CustomerPortal() {
                   className="h-8 w-8 rounded-lg object-contain flex-shrink-0"
                 />
               ) : wholesaler?.logoType === "business" && wholesaler?.businessName ? (
-                <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-theme-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-white">
                     {wholesaler.businessName
                       .split(' ')
@@ -1814,7 +1818,7 @@ export default function CustomerPortal() {
                   </span>
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-theme-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-white">
                     {wholesaler?.businessName ? (
                       wholesaler.businessName.charAt(0).toUpperCase() + 
@@ -1899,12 +1903,17 @@ export default function CustomerPortal() {
                 </Button>
               )}
               
+              {/* Theme Switcher */}
+              <ThemeSwitcher 
+                currentTheme={theme}
+                onThemeChange={changeTheme}
+              />
 
               {!isPreviewMode && (
                 <Button
                   onClick={() => setShowCheckout(true)}
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 relative text-xs sm:text-sm"
+                  className="btn-theme-primary relative text-xs sm:text-sm"
                   disabled={cart.length === 0}
                 >
                   <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
