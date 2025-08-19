@@ -1829,6 +1829,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? parseFloat(product.promoPrice) 
           : parseFloat(product.price);
         
+        console.log(`🔍 Item calculation for ${product.name}:`, {
+          promoActive: product.promoActive,
+          promoPrice: product.promoPrice,
+          regularPrice: product.price,
+          effectivePrice,
+          quantity: item.quantity,
+          isNaN_effectivePrice: isNaN(effectivePrice),
+          isNaN_quantity: isNaN(item.quantity)
+        });
+
+        if (isNaN(effectivePrice) || isNaN(item.quantity)) {
+          console.error(`❌ Invalid values for ${product.name}:`, {
+            effectivePrice,
+            quantity: item.quantity,
+            productPrice: product.price,
+            promoPrice: product.promoPrice
+          });
+          return res.status(400).json({ 
+            message: `Invalid price or quantity for ${product.name}` 
+          });
+        }
+        
         const itemTotal = effectivePrice * item.quantity;
         productSubtotal += itemTotal;
 
@@ -1841,8 +1863,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Include delivery cost in fee calculation
+      console.log('🚚 Shipping cost debug:', {
+        hasShippingInfo: !!shippingInfo,
+        hasService: !!shippingInfo?.service,
+        servicePriceRaw: shippingInfo?.service?.price,
+        servicePriceType: typeof shippingInfo?.service?.price
+      });
+
       const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
+      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
+      
       const amountBeforeFees = productSubtotal + deliveryCost;
+      console.log('💰 Subtotal calculation:', {
+        productSubtotal,
+        deliveryCost,
+        amountBeforeFees,
+        isNaN_productSubtotal: isNaN(productSubtotal),
+        isNaN_deliveryCost: isNaN(deliveryCost),
+        isNaN_amountBeforeFees: isNaN(amountBeforeFees)
+      });
       
       // NEW FEE STRUCTURE:
       // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
