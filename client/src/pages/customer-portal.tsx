@@ -2526,9 +2526,12 @@ export default function CustomerPortal() {
                                                   }}
                                                   className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
                                                     suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                    suggestion.type === 'bulk' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
+                                                    suggestion.type === 'bulk' ? 'text-white border-0' :
                                                     'border-gray-300 text-gray-700'
                                                   }`}
+                                                  style={suggestion.type === 'bulk' ? {
+                                                    backgroundColor: 'var(--theme-primary)'
+                                                  } : {}}
                                                   title={suggestion.description}
                                                 >
                                                   {suggestion.label}
@@ -2559,7 +2562,10 @@ export default function CustomerPortal() {
                                     <Button
                                       size="sm"
                                       onClick={() => addToCart(product, product.moq)}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                      className="text-white"
+                                      style={{background: 'var(--theme-primary)'}}
+                                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
+                                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--theme-primary)'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Quick Add
@@ -3009,11 +3015,14 @@ export default function CustomerPortal() {
                                                   }}
                                                   className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
                                                     suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                    suggestion.type === 'bulk' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
+                                                    suggestion.type === 'bulk' ? 'text-white border-0' :
                                                     'border-gray-300 text-gray-700'
                                                   }`}
                                                   title={suggestion.description}
                                                 >
+                                                  style={suggestion.type === 'bulk' ? {
+                                                    backgroundColor: 'var(--theme-primary)'
+                                                  } : {}}
                                                   {suggestion.label}
                                                 </button>
                                               ))}
@@ -3043,7 +3052,10 @@ export default function CustomerPortal() {
                                     <Button
                                       size="sm"
                                       onClick={() => addToCart(product, product.moq)}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                      className="text-white"
+                                      style={{background: 'var(--theme-primary)'}}
+                                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
+                                      onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--theme-primary)'}
                                       title={product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
@@ -3334,11 +3346,14 @@ export default function CustomerPortal() {
                                                     }}
                                                     className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
                                                       suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                                      suggestion.type === 'bulk' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
+                                                      suggestion.type === 'bulk' ? 'text-white border-0' :
                                                       'border-gray-300 text-gray-700'
                                                     }`}
                                                     title={suggestion.description}
                                                   >
+                                                    style={suggestion.type === 'bulk' ? {
+                                                      backgroundColor: 'var(--theme-primary)'
+                                                    } : {}}
                                                     {suggestion.label}
                                                   </button>
                                                 ))}
