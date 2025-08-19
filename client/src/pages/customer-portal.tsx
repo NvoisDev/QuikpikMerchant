@@ -2164,25 +2164,231 @@ export default function CustomerPortal() {
 
         {/* Checkout Modal Dialog */}
         <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Checkout</DialogTitle>
+              <DialogTitle className="text-xl font-semibold">Complete Your Order</DialogTitle>
               <DialogDescription>
-                Review your order and complete your purchase
+                Review your items and complete your purchase
               </DialogDescription>
             </DialogHeader>
             
             {cart.length > 0 && wholesaler && (
-              <StripeCheckoutForm
-                cart={cart}
-                customerData={customerData}
-                wholesaler={wholesaler}
-                totalAmount={cartStats.totalValue}
-                onSuccess={() => {
-                  setShowCheckout(false);
-                  setShowThankYou(true);
-                }}
-              />
+              <div className="space-y-6">
+                {/* Order Summary */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3">Order Summary</h3>
+                  <div className="space-y-2">
+                    {cart.map((item, index) => {
+                      const pricing = calculatePromotionalPricing(item.product, item.quantity);
+                      return (
+                        <div key={index} className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.product.name}</p>
+                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                          </div>
+                          <PriceDisplay
+                            price={pricing.totalCost}
+                            currency="GBP"
+                            isGuestMode={false}
+                            size="small"
+                          />
+                        </div>
+                      );
+                    })}
+                    <Separator />
+                    <div className="flex justify-between items-center font-semibold">
+                      <span>Total</span>
+                      <PriceDisplay
+                        price={cartStats.totalValue}
+                        currency="GBP"
+                        isGuestMode={false}
+                        size="medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Information Form */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Customer Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="customer-name">Full Name</Label>
+                      <Input
+                        id="customer-name"
+                        value={customerData.name}
+                        onChange={(e) => setCustomerData(prev => ({...prev, name: e.target.value}))}
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-email">Email</Label>
+                      <Input
+                        id="customer-email"
+                        type="email"
+                        value={customerData.email}
+                        onChange={(e) => setCustomerData(prev => ({...prev, email: e.target.value}))}
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-phone">Phone</Label>
+                      <Input
+                        id="customer-phone"
+                        value={customerData.phone}
+                        onChange={(e) => setCustomerData(prev => ({...prev, phone: e.target.value}))}
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shipping Options */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Delivery Options</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="pickup"
+                        name="shipping"
+                        checked={customerData.shippingOption === 'pickup'}
+                        onChange={() => setCustomerData(prev => ({...prev, shippingOption: 'pickup'}))}
+                        className="w-4 h-4 text-emerald-600"
+                      />
+                      <Label htmlFor="pickup" className="flex-1 cursor-pointer">
+                        <div className="flex justify-between">
+                          <span>Pickup from store</span>
+                          <span className="text-green-600 font-medium">FREE</span>
+                        </div>
+                        <p className="text-sm text-gray-600">Collect your order from our location</p>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="delivery"
+                        name="shipping"
+                        checked={customerData.shippingOption === 'delivery'}
+                        onChange={() => setCustomerData(prev => ({...prev, shippingOption: 'delivery'}))}
+                        className="w-4 h-4 text-emerald-600"
+                      />
+                      <Label htmlFor="delivery" className="flex-1 cursor-pointer">
+                        <div className="flex justify-between">
+                          <span>Home delivery</span>
+                          <span className="text-gray-600">Calculated at checkout</span>
+                        </div>
+                        <p className="text-sm text-gray-600">We'll deliver to your address</p>
+                      </Label>
+                    </div>
+                  </div>
+
+                  {/* Delivery Address Form */}
+                  {customerData.shippingOption === 'delivery' && (
+                    <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium">Delivery Address</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <Label htmlFor="address">Street Address</Label>
+                          <Input
+                            id="address"
+                            value={customerData.address}
+                            onChange={(e) => setCustomerData(prev => ({...prev, address: e.target.value}))}
+                            placeholder="Enter your street address"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={customerData.city}
+                            onChange={(e) => setCustomerData(prev => ({...prev, city: e.target.value}))}
+                            placeholder="Enter your city"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="postalCode">Postal Code</Label>
+                          <Input
+                            id="postalCode"
+                            value={customerData.postalCode}
+                            onChange={(e) => setCustomerData(prev => ({...prev, postalCode: e.target.value}))}
+                            placeholder="Enter postal code"
+                          />
+                        </div>
+                      </div>
+                      
+                      {customerData.address && customerData.city && customerData.postalCode && (
+                        <Button
+                          onClick={fetchShippingQuotes}
+                          disabled={loadingShippingQuotes}
+                          className="w-full"
+                        >
+                          {loadingShippingQuotes ? "Getting shipping quotes..." : "Get Shipping Quotes"}
+                        </Button>
+                      )}
+                      
+                      {availableShippingServices.length > 0 && (
+                        <div className="space-y-2">
+                          <Label>Choose Shipping Service</Label>
+                          {availableShippingServices.map((service, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id={`service-${index}`}
+                                name="shippingService"
+                                checked={customerData.selectedShippingService?.serviceId === service.serviceId}
+                                onChange={() => setCustomerData(prev => ({
+                                  ...prev,
+                                  selectedShippingService: service
+                                }))}
+                                className="w-4 h-4 text-emerald-600"
+                              />
+                              <Label htmlFor={`service-${index}`} className="flex-1 cursor-pointer">
+                                <div className="flex justify-between">
+                                  <span>{service.serviceName}</span>
+                                  <PriceDisplay
+                                    price={service.price}
+                                    currency="GBP"
+                                    isGuestMode={false}
+                                    size="small"
+                                  />
+                                </div>
+                                <p className="text-sm text-gray-600">{service.description}</p>
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Order Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Order Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={customerData.notes}
+                    onChange={(e) => setCustomerData(prev => ({...prev, notes: e.target.value}))}
+                    placeholder="Add any special instructions for your order"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Payment Form */}
+                <div className="border-t pt-6">
+                  <StripeCheckoutForm
+                    cart={cart}
+                    customerData={customerData}
+                    wholesaler={wholesaler}
+                    totalAmount={cartStats.totalValue}
+                    onSuccess={() => {
+                      setShowCheckout(false);
+                      setShowThankYou(true);
+                    }}
+                  />
+                </div>
+              </div>
             )}
           </DialogContent>
         </Dialog>
