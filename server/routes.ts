@@ -1896,9 +1896,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: `Product ${item.productId} not found` });
         }
 
-        if (item.quantity < product.moq) {
+        // Determine if this is a pallet or unit order based on unit price
+        const isUnitOrder = parseFloat(item.unitPrice) === parseFloat(product.price);
+        const isPalletOrder = product.palletPrice && parseFloat(item.unitPrice) === parseFloat(product.palletPrice);
+        
+        console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
+          itemQuantity: item.quantity,
+          itemUnitPrice: item.unitPrice,
+          productPrice: product.price,
+          productPalletPrice: product.palletPrice,
+          productMoq: product.moq,
+          productPalletMoq: product.palletMoq,
+          isUnitOrder,
+          isPalletOrder
+        });
+        
+        // Validate against appropriate MOQ
+        if (isUnitOrder && item.quantity < product.moq) {
           return res.status(400).json({ 
-            message: `Minimum order quantity for ${product.name} is ${product.moq}` 
+            message: `Minimum order quantity for ${product.name} is ${product.moq} units` 
+          });
+        } else if (isPalletOrder && product.palletMoq && item.quantity < product.palletMoq) {
+          return res.status(400).json({ 
+            message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
+          });
+        } else if (!isUnitOrder && !isPalletOrder) {
+          return res.status(400).json({ 
+            message: `Invalid unit price for ${product.name}` 
           });
         }
 

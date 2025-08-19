@@ -3749,15 +3749,27 @@ export default function CustomerPortal() {
                   <h3 className="font-semibold mb-3">Order Summary</h3>
                   <div className="space-y-2">
                     {cart.map((item, index) => {
-                      const pricing = calculatePromotionalPricing(item.product, item.quantity);
+                      // Use correct pricing based on selling type
+                      const itemPrice = item.sellingType === 'pallets' 
+                        ? parseFloat((item.product as any).palletPrice?.toString() || '0') 
+                        : parseFloat(item.product.price);
+                      const totalCost = itemPrice * item.quantity;
+                      
                       return (
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex-1">
                             <p className="font-medium">{item.product.name}</p>
-                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                            <p className="text-sm text-gray-600">
+                              Qty: {item.quantity} {item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}
+                            </p>
+                            {item.sellingType === 'pallets' && (
+                              <p className="text-xs text-gray-500">
+                                ({item.quantity * ((item.product as any).unitsPerPallet || 1)} total units)
+                              </p>
+                            )}
                           </div>
                           <PriceDisplay
-                            price={pricing.totalCost}
+                            price={totalCost}
                             currency="GBP"
                             isGuestMode={false}
                             size="small"
