@@ -2452,6 +2452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id, // Include for order fallback
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toString(),
         customerTransactionFee: customerTransactionFee.toFixed(2),
@@ -2471,6 +2472,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CLEAN: Payment processing consolidated
   // Single working endpoint: /api/customer/create-payment
+
+  // Backup order creation endpoint for when webhooks fail
+  app.post('/api/customer/create-order-fallback', async (req, res) => {
+    try {
+      const { paymentIntentId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: 'Payment intent ID required' });
+      }
+
+      console.log(`🔄 FALLBACK: Attempting to create order for payment intent: ${paymentIntentId}`);
+
+      // Check if order already exists
+      const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
+      if (existingOrder) {
+        console.log(`✅ FALLBACK: Order already exists: ${existingOrder.orderNumber}`);
+        return res.json({
+          success: true,
+          orderExists: true,
+          orderNumber: existingOrder.orderNumber,
+          orderId: existingOrder.id
+        });
+      }
+
+      // Retrieve payment intent from Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ 
+          message: 'Payment not completed', 
+          status: paymentIntent.status 
+        });
+      }
+
+      // Check if this is a customer portal order
+      if (paymentIntent.metadata?.orderType !== 'customer_portal') {
+        return res.status(400).json({ 
+          message: 'Not a customer portal order' 
+        });
+      }
+
+      console.log(`💰 FALLBACK: Payment confirmed succeeded, creating order...`);
+
+      // Create order using existing order processor
+      const { processCustomerPortalOrder } = await import('./order-processor');
+      const order = await processCustomerPortalOrder(paymentIntent);
+
+      console.log(`✅ FALLBACK: Order created successfully: ${order.orderNumber}`);
+
+      res.json({
+        success: true,
+        orderCreated: true,
+        orderNumber: order.orderNumber,
+        orderId: order.id
+      });
+
+    } catch (error: any) {
+      console.error('❌ FALLBACK: Order creation failed:', error);
+      res.status(500).json({ 
+        message: 'Failed to create fallback order',
+        error: error.message 
+      });
+    }
+  });
 
   // Test endpoint to send wholesaler notification email
   app.post('/api/test-wholesaler-email', requireAuth, async (req, res) => {

@@ -767,27 +767,71 @@ const PaymentFormContent = ({
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
         console.log('💾 Creating order immediately to ensure it saves to database');
         
-        // FIXED: Order creation now handled by Stripe webhook automatically
-        // No need to call separate endpoint - webhook creates order on payment success
-        console.log('✅ Payment succeeded! Order will be created by webhook automatically');
+        // ENHANCED: Primary webhook processing with fallback order creation
+        console.log('✅ Payment succeeded! Webhook should create order automatically');
         
-        // CRITICAL FIX: Invalidate orders cache to refresh order list after webhook creates order
         // Capture values in scope before setTimeout
         const wholesalerId = wholesaler?.id;
         const customerPhone = customerData.phone;
+        const currentPaymentIntentId = paymentIntent.id;
         
-        // Add delay to allow webhook processing time, then force refetch
-        setTimeout(() => {
-          console.log('🔄 Invalidating orders cache after webhook processing delay');
+        // Step 1: Wait for webhook processing (3 seconds)
+        setTimeout(async () => {
+          console.log('🔄 Checking if webhook created order...');
+          
           if (wholesalerId && customerPhone) {
-            import('@/lib/queryClient').then(({ queryClient }) => {
-              queryClient.invalidateQueries({
-                queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
-              });
-              console.log('✅ Orders cache invalidated - fresh orders will be fetched');
+            // Import query client and API utilities
+            const { queryClient } = await import('@/lib/queryClient');
+            const { apiRequest } = await import('@/lib/queryClient');
+            
+            // Invalidate cache to get latest orders
+            await queryClient.invalidateQueries({
+              queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
             });
+            
+            // Step 2: Check if order exists after webhook delay
+            setTimeout(async () => {
+              try {
+                console.log('🔍 Checking for new orders after webhook delay...');
+                
+                // Refetch orders to see if webhook created one
+                const ordersResponse = await fetch(`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`);
+                const orders = await ordersResponse.json();
+                
+                // Look for order with this payment intent ID or recent orders
+                const recentOrders = orders.filter((order: any) => 
+                  order.stripePaymentIntentId === currentPaymentIntentId ||
+                  new Date(order.createdAt) > new Date(Date.now() - 60000) // Last minute
+                );
+                
+                if (recentOrders.length > 0) {
+                  console.log('✅ Webhook created order successfully:', recentOrders[0].orderNumber);
+                } else {
+                  console.log('⚠️ No order found from webhook, attempting fallback creation...');
+                  
+                  // Fallback: Create order manually
+                  const fallbackResponse = await apiRequest('/api/customer/create-order-fallback', {
+                    method: 'POST',
+                    body: JSON.stringify({ paymentIntentId: currentPaymentIntentId }),
+                  });
+                  
+                  if (fallbackResponse.success) {
+                    console.log('✅ Fallback order creation successful:', fallbackResponse.orderNumber);
+                    
+                    // Invalidate cache again to show new order
+                    await queryClient.invalidateQueries({
+                      queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
+                    });
+                  } else {
+                    console.error('❌ Fallback order creation failed:', fallbackResponse);
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Error in fallback order creation:', error);
+              }
+            }, 2000); // Additional 2 second delay for order checking
           }
-        }, 3000); // 3 second delay for webhook processing
+        }, 3000); // Initial 3 second delay for webhook processing
         
         // Success callback with order data for thank you page
         // Get accurate values from payment intent metadata
