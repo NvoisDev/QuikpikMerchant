@@ -1856,6 +1856,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
+      console.log('🔥 PAYMENT REQUEST START:', {
+        timestamp: new Date().toISOString(),
+        customerPhone,
+        customerName,
+        itemsCount: items?.length,
+        requestId: `${customerPhone}_${Date.now()}`
+      });
+      
       console.log('🚚 CRITICAL DEBUG: Full request body received from frontend:');
       console.log('  - customerName:', customerName);
       console.log('  - items count:', items?.length);
@@ -1872,6 +1880,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "Order must contain at least one item" });
       }
+
+      // Server-side request deduplication to prevent multiple identical payments
+      const requestSignature = `${customerPhone}_${JSON.stringify(items.map(i => ({id: i.productId, qty: i.quantity})).sort())}_${JSON.stringify(shippingInfo)}`;
+      const requestHash = Buffer.from(requestSignature).toString('base64').slice(0, 50);
+      
+      // Check if this exact request is already being processed (simple in-memory check)
+      const processingKey = `payment_processing_${requestHash}`;
+      if ((global as any)[processingKey]) {
+        console.log('⚠️ Duplicate payment request detected and blocked:', requestHash);
+        return res.status(409).json({ 
+          message: "Payment request already in progress. Please wait a moment and try again if needed.",
+          errorType: "duplicate_request"
+        });
+      }
+      
+      // Mark this request as being processed
+      (global as any)[processingKey] = true;
+      
+      // Clean up the processing flag after 30 seconds
+      setTimeout(() => {
+        delete (global as any)[processingKey];
+      }, 30000);
 
       // Calculate product subtotal
       let productSubtotal = 0;
@@ -2099,6 +2129,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ Payment intent created successfully:', paymentIntent.id);
       
+      // Clean up processing flag on success
+      const processingKey = `payment_processing_${requestHash}`;
+      delete (global as any)[processingKey];
+      
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
         
@@ -2124,6 +2158,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error creating payment intent:", error);
+      
+      // Clean up processing flag on error
+      const requestSignature = `${customerPhone}_${JSON.stringify(items.map(i => ({id: i.productId, qty: i.quantity})).sort())}_${JSON.stringify(shippingInfo)}`;
+      const requestHash = Buffer.from(requestSignature).toString('base64').slice(0, 50);
+      const processingKey = `payment_processing_${requestHash}`;
+      delete (global as any)[processingKey];
+      
       res.status(500).json({ message: "Failed to create payment intent" });
     }
   });
