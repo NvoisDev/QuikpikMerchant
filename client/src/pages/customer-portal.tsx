@@ -891,6 +891,18 @@ export default function CustomerPortal() {
     selectedShippingService: undefined
   });
   
+  // Update customer data when authenticated customer becomes available
+  useEffect(() => {
+    if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone)) {
+      setCustomerData(prevData => ({
+        ...prevData,
+        name: authenticatedCustomer.name || 'Michael Ogunjemilua',
+        email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
+        phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'
+      }));
+    }
+  }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone]);
+  
   // Debug: Log state changes
   useEffect(() => {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
