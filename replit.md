@@ -3,6 +3,16 @@
 ## Overview
 Quikpik is a comprehensive B2B wholesale platform designed to empower businesses in managing products, customers, orders, and marketing campaigns, primarily through WhatsApp integration. It aims to streamline wholesale operations, enhance communication with customers, and provide robust tools for business growth and market expansion. The platform focuses on providing an ecommerce-style order viewing experience for customers and robust backend management for wholesalers, including multi-wholesaler data isolation and a reliable webhook system for order processing.
 
+## Recent Changes (August 19, 2025)
+**CRITICAL PAYMENT CALCULATION FIX COMPLETED**
+- ✅ Resolved major frontend-backend calculation discrepancy where frontend showed £106.60 vs backend £16.60
+- ✅ Fixed cart statistics to properly separate product subtotal from shipping costs
+- ✅ Corrected transaction fee calculations in checkout display to match backend exactly
+- ✅ Fixed ThankYouPage showing £0.00 by ensuring complete financial breakdown is passed
+- ✅ All payment flows now show consistent amounts: Product Subtotal £16.60, Delivery £4.74, Transaction Fee £1.67, Total £23.01
+- ✅ Both pickup and delivery options working with accurate calculations
+- ✅ Payment processing and order creation functioning perfectly
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
