@@ -1825,23 +1825,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const effectivePrice = product.promoActive && product.promoPrice 
-          ? parseFloat(product.promoPrice) 
-          : parseFloat(product.price);
+        // Import promotional pricing calculator for consistency
+        const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
+        
+        const basePrice = parseFloat(product.price);
+        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          basePrice,
+          item.quantity,
+          product.promotionalOffers || [],
+          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+          product.promoActive
+        );
         
         console.log(`🔍 Item calculation for ${product.name}:`, {
           promoActive: product.promoActive,
           promoPrice: product.promoPrice,
           regularPrice: product.price,
-          effectivePrice,
+          basePrice,
           quantity: item.quantity,
-          isNaN_effectivePrice: isNaN(effectivePrice),
-          isNaN_quantity: isNaN(item.quantity)
+          pricingResult: pricing
         });
 
-        if (isNaN(effectivePrice) || isNaN(item.quantity)) {
+        if (isNaN(pricing.totalCost) || isNaN(item.quantity)) {
           console.error(`❌ Invalid values for ${product.name}:`, {
-            effectivePrice,
+            pricingResult: pricing,
             quantity: item.quantity,
             productPrice: product.price,
             promoPrice: product.promoPrice
@@ -1851,13 +1858,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        const itemTotal = effectivePrice * item.quantity;
+        const itemTotal = pricing.totalCost;
         productSubtotal += itemTotal;
 
         validatedItems.push({
           ...item,
           product,
-          unitPrice: effectivePrice.toFixed(2),
+          unitPrice: pricing.effectivePrice.toFixed(2),
           total: itemTotal.toFixed(2)
         });
       }
