@@ -300,6 +300,7 @@ interface StripeCheckoutFormProps {
 const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [capturedShippingData, setCapturedShippingData] = useState<{
     option: string;
     service?: any;
@@ -338,7 +339,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         const currentSelectedService = customerData.selectedShippingService;
         
         const shippingDataAtCreation = {
-          option: currentShippingOption,
+          option: currentShippingOption || 'pickup',
           service: currentSelectedService
         };
         setCapturedShippingData(shippingDataAtCreation);
@@ -689,8 +690,6 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
           });
         }
-        
-        onSuccess({ orderNumber: orderData.orderNumber || orderData.id });
       } else {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
@@ -715,7 +714,7 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1681,7 +1680,11 @@ export default function CustomerPortal() {
       subtotal={completedOrder.subtotal}
       transactionFee={completedOrder.transactionFee}
       shippingCost={completedOrder.shippingCost}
-      wholesaler={wholesaler}
+      wholesaler={{
+        businessName: wholesaler?.businessName || 'Business',
+        email: wholesaler?.email || 'hello@business.com',
+        phone: wholesaler?.businessPhone || wholesaler?.phone || '+44000000000'
+      }}
       onContinueShopping={() => {
         // Clear cart and order data
         setCart([]);
