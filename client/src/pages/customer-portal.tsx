@@ -3195,7 +3195,16 @@ export default function CustomerPortal() {
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => addToCart(product, product.moq)}
+                                      onClick={() => {
+                                        // Check if product has pallet pricing
+                                        if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
+                                          setSelectedProductForModal(product);
+                                          setShowUnitSelectionModal(true);
+                                        } else {
+                                          // No pallet option, add units directly
+                                          addToCart(product, product.moq, 'units');
+                                        }
+                                      }}
                                       className="text-white"
                                       style={{background: 'var(--theme-primary)'}}
                                       onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
