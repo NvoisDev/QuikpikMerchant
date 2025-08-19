@@ -2336,7 +2336,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderId: order.id,
           orderNumber: order.orderNumber || wholesaleRef, // Include actual order number
           platformFeeCollected: connectAccountUsed === 'true',
-          message: 'Order created successfully'
+          message: 'Order created successfully',
+          // Include financial details for ThankYouPage
+          totalAmount: parseFloat(totalCustomerPays || correctTotal || '0'),
+          subtotal: parseFloat(productSubtotal || '0'),
+          transactionFee: parseFloat(customerTransactionFee || '0'),
+          shippingCost: shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service 
+            ? parseFloat(shippingInfo.service.price.toString())
+            : 0
         });
       } else {
         res.status(400).json({ message: 'Invalid order type' });
