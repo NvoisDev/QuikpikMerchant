@@ -641,12 +641,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             // Success callback with order data for thank you page
             onSuccess({
               orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
-              cart: cart,
-              customerData: customerData,
+              cart: [], // Will be populated by parent component
+              customerData: {}, // Will be populated by parent component  
               totalAmount: totalAmount,
               subtotal: totalAmount * 0.85, // Approximate subtotal
               transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-              shippingCost: customerData.selectedShippingService?.price || 0
+              shippingCost: 0 // Will be populated by parent component
             });
             
             toast({
@@ -663,12 +663,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             // Still call success callback even if order creation failed, payment succeeded
             onSuccess({
               orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-              cart: cart,
-              customerData: customerData,
+              cart: [], // Will be populated by parent component
+              customerData: {}, // Will be populated by parent component
               totalAmount: totalAmount,
               subtotal: totalAmount * 0.85, // Approximate subtotal
               transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-              shippingCost: customerData.selectedShippingService?.price || 0
+              shippingCost: 0 // Will be populated by parent component
             });
           }
         } catch (orderError) {
@@ -677,12 +677,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           // Still call success callback even if order creation failed, payment succeeded
           onSuccess({
             orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-            cart: cart,
-            customerData: customerData,
+            cart: [], // Will be populated by parent component
+            customerData: {}, // Will be populated by parent component
             totalAmount: totalAmount,
             subtotal: totalAmount * 0.85, // Approximate subtotal
             transactionFee: totalAmount * 0.15, // Approximate fees and shipping
-            shippingCost: customerData.selectedShippingService?.price || 0
+            shippingCost: 0 // Will be populated by parent component
           });
           
           toast({
@@ -2802,8 +2802,14 @@ export default function CustomerPortal() {
                     onSuccess={(orderData) => {
                       console.log('🛒 Payment successful, received order data:', orderData);
                       
-                      // Set completed order data for thank you page
-                      setCompletedOrder(orderData);
+                      // Set completed order data for thank you page with current cart state
+                      const orderDataWithCart = {
+                        ...orderData,
+                        cart: cart,
+                        customerData: customerData,
+                        wholesaler: wholesaler
+                      };
+                      setCompletedOrder(orderDataWithCart);
                       
                       // Clear the cart after successful payment
                       setCart([]);
