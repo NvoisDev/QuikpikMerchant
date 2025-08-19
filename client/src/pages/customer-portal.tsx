@@ -353,13 +353,22 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
       if (shouldCreateIntent && hasValidShipping && !clientSecret && cartValidation) {
         setIsCreatingIntent(true);
         
-        // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
-        // CRITICAL FIX: Always capture the absolute latest shipping state
-        const currentShippingOption = customerData.shippingOption;
-        const currentSelectedService = customerData.selectedShippingService;
+        // CRITICAL FIX: Use the most up-to-date cart stats which reflect current shipping selection
+        // The cartStats are calculated from current customerData state and reflect the actual UI
+        const isDeliveryOrder = cartStats.shippingCost > 0;
+        const currentShippingOption = isDeliveryOrder ? 'delivery' : 'pickup';
+        const currentSelectedService = isDeliveryOrder ? customerData.selectedShippingService : null;
+        
+        console.log('🚚 CART STATS SHIPPING VALIDATION:', {
+          cartStatsShippingCost: cartStats.shippingCost,
+          isDeliveryOrder,
+          calculatedShippingOption: currentShippingOption,
+          customerDataShippingOption: customerData.shippingOption,
+          selectedService: currentSelectedService
+        });
         
         const shippingDataAtCreation = {
-          option: currentShippingOption || 'pickup',
+          option: currentShippingOption,
           service: currentSelectedService
         };
         setCapturedShippingData(shippingDataAtCreation);

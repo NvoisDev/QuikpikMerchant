@@ -2264,47 +2264,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let paymentIntent;
       try {
-        // ANTI-DUPLICATE: Check for existing payment intents from the same customer
+        // ENHANCED ANTI-DUPLICATE: Check for existing payment intents with stricter matching
         // to prevent duplicate payment intents during shipping selection process
         if (stripe) {
           try {
             const existingIntents = await stripe.paymentIntents.list({
-              limit: 5
+              limit: 10,
+              created: {
+                gte: Math.floor((Date.now() - (15 * 60 * 1000)) / 1000) // Last 15 minutes
+              }
             });
             
-            const recentIntents = existingIntents.data.filter(intent => {
+            const matchingIntents = existingIntents.data.filter(intent => {
               const intentPhone = intent.metadata.customerPhone;
               const intentStatus = intent.status;
               const intentAge = Date.now() - (intent.created * 1000);
-              const isRecentIntent = intentAge < 10 * 60 * 1000; // 10 minutes
+              const isRecentIntent = intentAge < 15 * 60 * 1000; // 15 minutes window
               const isIncomplete = intentStatus === 'requires_payment_method' || intentStatus === 'requires_confirmation';
+              const phoneMatches = intentPhone === customerPhone;
               
-              return intentPhone === customerPhone && isRecentIntent && isIncomplete;
+              return phoneMatches && isRecentIntent && isIncomplete;
             });
             
-            if (recentIntents.length > 0) {
-              const existingIntent = recentIntents[0];
-              console.log('🔄 DUPLICATE PREVENTION: Found existing incomplete payment intent:', {
-                requestId,
-                existingIntentId: existingIntent.id,
-                existingAmount: existingIntent.amount,
-                newAmount: stripeAmount,
-                ageDiff: Date.now() - (existingIntent.created * 1000)
-              });
+            console.log('🔍 DUPLICATE DETECTION: Found existing intents:', {
+              requestId,
+              totalExistingIntents: matchingIntents.length,
+              matchingIntentsIds: matchingIntents.map(i => ({ id: i.id, amount: i.amount, status: i.status }))
+            });
+            
+            if (matchingIntents.length > 0) {
+              // Find exact amount match first
+              const exactMatch = matchingIntents.find(intent => intent.amount === stripeAmount);
               
-              // If amounts match, return existing payment intent instead of creating new one
-              if (existingIntent.amount === stripeAmount) {
-                console.log('✅ DUPLICATE PREVENTION: Reusing existing payment intent with matching amount');
+              if (exactMatch) {
+                console.log('✅ EXACT MATCH FOUND: Reusing existing payment intent');
                 return res.json({ 
-                  clientSecret: existingIntent.client_secret,
+                  clientSecret: exactMatch.client_secret,
                   productSubtotal: productSubtotal.toFixed(2),
                   shippingCost: deliveryCost.toString(),
                   customerTransactionFee: customerTransactionFee.toFixed(2),
                   totalCustomerPays: totalCustomerPays.toFixed(2),
                   wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
                   wholesalerReceives: wholesalerReceives.toFixed(2),
-                  reusedExistingIntent: true
+                  reusedExistingIntent: true,
+                  reuseReason: 'exact_amount_match'
                 });
+              }
+              
+              // Cancel old mismatched intents to prevent confusion
+              for (const oldIntent of matchingIntents) {
+                if (oldIntent.amount !== stripeAmount && oldIntent.status === 'requires_payment_method') {
+                  try {
+                    await stripe.paymentIntents.cancel(oldIntent.id);
+                    console.log('🗑️ CLEANUP: Cancelled old mismatched payment intent:', oldIntent.id);
+                  } catch (cancelError) {
+                    console.log('⚠️ Failed to cancel old intent:', oldIntent.id, cancelError.message);
+                  }
+                }
               }
             }
           } catch (duplicateCheckError) {
