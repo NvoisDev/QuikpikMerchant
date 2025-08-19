@@ -363,9 +363,19 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           fullCustomerData: customerData
         });
         
+        // CRITICAL ALERT: Show what we're working with
+        if (customerData.selectedShippingService) {
+          alert('SHIPPING DEBUG: We have selectedShippingService: ' + customerData.selectedShippingService.serviceName + ' at £' + customerData.selectedShippingService.price + ', but shippingOption is: ' + customerData.shippingOption);
+        }
+        
         // Force re-check: if selectedShippingService exists, it means delivery was selected
         const hasSelectedDeliveryService = !!customerData.selectedShippingService;
         const actualShippingOption = hasSelectedDeliveryService ? 'delivery' : (customerData.shippingOption || 'pickup');
+        
+        // EMERGENCY DEBUG: Alert if we have a service but still defaulting to pickup
+        if (hasSelectedDeliveryService && actualShippingOption === 'pickup') {
+          alert('EMERGENCY BUG: selectedShippingService exists but actualShippingOption is pickup!');
+        }
         const deliveryServicePrice = hasSelectedDeliveryService ? parseFloat(customerData.selectedShippingService?.price || '0') : 0;
         const isDeliveryOrder = actualShippingOption === 'delivery' && deliveryServicePrice > 0;
         const currentShippingOption = actualShippingOption;
@@ -477,6 +487,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
           console.log('  - Payload shippingInfo service:', requestPayload.shippingInfo?.service);
           console.log('  - Full payload:', JSON.stringify(requestPayload, null, 2));
+          
+          // CRITICAL DEBUG: Alert to ensure this is visible
+          if (requestPayload.shippingInfo?.option === 'pickup' && customerData.selectedShippingService) {
+            alert('CRITICAL BUG: Sending pickup but selectedShippingService exists: ' + JSON.stringify(customerData.selectedShippingService));
+          }
           
           const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
           
