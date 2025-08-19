@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2 } from "lucide-react";
+import { Star, Package, ArrowRight, Phone, Mail, MapPin, Edit2, X, Search, Building2, ShoppingCart, Plus, TrendingUp, Clock, CheckCircle, Zap } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,156 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CustomerOrderHistory } from "./CustomerOrderHistory";
+import { Separator } from "@/components/ui/separator";
+
+// Quick Order Component
+function QuickOrder({ wholesalerId, onOrderComplete }: { wholesalerId: string; onOrderComplete?: () => void }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cart, setCart] = useState<any[]>([]);
+  const { toast } = useToast();
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: [`/api/customer-products`, wholesalerId],
+    queryFn: async () => {
+      const response = await fetch(`/api/customer-products/${wholesalerId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!wholesalerId,
+  });
+
+  const filteredProducts = products.filter((product: any) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const addToCart = (product: any) => {
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, { ...product, quantity: 1 }]);
+    }
+    toast({ title: "Added to cart", description: `${product.name} added to your quick order` });
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCart(cart.filter(item => item.id !== productId));
+  };
+
+  const updateQuantity = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(cart.map(item => 
+      item.id === productId 
+        ? { ...item, quantity }
+        : item
+    ));
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Zap className="h-5 w-5 text-blue-600" />
+          <span>Quick Order</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search products for quick order..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Quick Product List */}
+        {searchTerm && (
+          <div className="max-h-40 overflow-y-auto space-y-2">
+            {filteredProducts.slice(0, 5).map((product: any) => (
+              <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{product.name}</div>
+                  <div className="text-xs text-gray-600">£{product.price}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addToCart(product)}
+                  className="h-8 px-2"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Cart Summary */}
+        {cart.length > 0 && (
+          <div className="border-t pt-4">
+            <h4 className="font-medium text-sm mb-2">Quick Order Cart</h4>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {cart.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span className="flex-1 truncate">{item.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="h-6 w-6 p-0"
+                    >
+                      -
+                    </Button>
+                    <span className="w-8 text-center">{item.quantity}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="h-6 w-6 p-0"
+                    >
+                      +
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => removeFromCart(item.id)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mt-3 pt-2 border-t">
+              <span className="font-medium">Total: £{cartTotal.toFixed(2)}</span>
+              <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                <ShoppingCart className="h-3 w-3 mr-1" />
+                Place Order
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // Customer Statistics Component
 function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; customerPhone: string }) {
@@ -33,6 +183,8 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
 
   const totalOrders = orders.length;
   const totalSpent = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total || '0'), 0);
+  const recentOrders = orders.slice(0, 3);
+  const pendingOrders = orders.filter((order: any) => order.status === 'pending').length;
 
   // Format currency with commas for amounts over 1,000
   const formatCurrency = (amount: number) => {
@@ -40,16 +192,45 @@ function CustomerStats({ wholesalerId, customerPhone }: { wholesalerId: string; 
   };
 
   return (
-    <div className="flex items-center space-x-4 text-sm">
-      <div className="flex items-center space-x-1">
-        <Package className="w-4 h-4 text-blue-600" />
-        <span className="text-gray-600">{totalOrders} order{totalOrders !== 1 ? 's' : ''}</span>
-      </div>
-      <div className="flex items-center space-x-1">
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          {formatCurrency(totalSpent)} total
-        </Badge>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Total Orders */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Orders</p>
+              <p className="text-2xl font-bold text-blue-600">{totalOrders}</p>
+            </div>
+            <Package className="h-8 w-8 text-blue-600" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Total Spent */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Spent</p>
+              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalSpent)}</p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-green-600" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pending Orders */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Pending Orders</p>
+              <p className="text-2xl font-bold text-orange-600">{pendingOrders}</p>
+            </div>
+            <Clock className="h-8 w-8 text-orange-600" />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
