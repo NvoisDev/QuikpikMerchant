@@ -23,7 +23,7 @@ import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import PageLoader from "@/components/ui/page-loader";
 import ButtonLoader from "@/components/ui/button-loader";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock, Palette, TrendingUp, Building } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock, Palette, TrendingUp, Building, CheckCircle } from "lucide-react";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
@@ -930,6 +930,14 @@ export default function CustomerPortal() {
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
+  // Request access handler for new wholesalers
+  const handleRequestAccess = async (wholesaler: any) => {
+    if (!authenticatedCustomer?.phone) return;
+    
+    // TODO: Implement full request access system with backend API
+    alert(`Request access to ${wholesaler.businessName}\n\nThis will send a notification to the wholesaler for approval and allow you to browse their products once approved.`);
+  };
+  
   // Fetch available wholesalers for search - registration-aware for authenticated customers
   const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
     queryKey: [
@@ -940,21 +948,41 @@ export default function CustomerPortal() {
     queryFn: async () => {
       let response;
       
-      // For authenticated customers, fetch only accessible wholesalers
+      // For authenticated customers, fetch both accessible and discoverable wholesalers
       if (authenticatedCustomer?.phone) {
+        // First get accessible wholesalers
         const phoneNumber = encodeURIComponent(authenticatedCustomer.phone);
-        response = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
+        const accessibleResponse = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
           credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch accessible wholesalers");
-        const accessibleWholesalers = await response.json();
+        if (!accessibleResponse.ok) throw new Error("Failed to fetch accessible wholesalers");
+        const accessibleWholesalers = await accessibleResponse.json();
+        const accessibleIds = accessibleWholesalers.map((w: any) => w.id);
         
-        // Apply search filter on the frontend if query exists
-        return wholesalerSearchQuery 
-          ? accessibleWholesalers.filter((w: any) => 
-              w.businessName?.toLowerCase().includes(wholesalerSearchQuery.toLowerCase())
-            )
-          : accessibleWholesalers;
+        // Then get all marketplace wholesalers for discovery
+        const params = new URLSearchParams();
+        if (wholesalerSearchQuery) params.append("search", wholesalerSearchQuery);
+        const marketplaceResponse = await fetch(`/api/marketplace/wholesalers?${params}`, {
+          credentials: "include",
+        });
+        if (!marketplaceResponse.ok) throw new Error("Failed to fetch marketplace wholesalers");
+        const allWholesalers = await marketplaceResponse.json();
+        
+        // Combine and mark accessibility status
+        const combinedWholesalers = allWholesalers.map((wholesaler: any) => ({
+          ...wholesaler,
+          isAccessible: accessibleIds.includes(wholesaler.id),
+          canRequestAccess: !accessibleIds.includes(wholesaler.id)
+        }));
+        
+        // Sort: accessible first, then by business name
+        combinedWholesalers.sort((a: any, b: any) => {
+          if (a.isAccessible && !b.isAccessible) return -1;
+          if (!a.isAccessible && b.isAccessible) return 1;
+          return (a.businessName || '').localeCompare(b.businessName || '');
+        });
+        
+        return combinedWholesalers;
       } else {
         // For guests, use the general marketplace API
         const params = new URLSearchParams();
@@ -964,7 +992,8 @@ export default function CustomerPortal() {
           credentials: "include",
         });
         if (!response.ok) throw new Error("Failed to fetch wholesalers");
-        return response.json();
+        const wholesalers = await response.json();
+        return wholesalers.map((w: any) => ({ ...w, isAccessible: false, canRequestAccess: false }));
       }
     },
     enabled: showWholesalerSearch, // Only fetch when search is open
@@ -2061,7 +2090,7 @@ export default function CustomerPortal() {
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {authenticatedCustomer?.phone ? "My Sellers" : "Find Other Sellers"}
+                  {authenticatedCustomer?.phone ? "Browse Sellers" : "Find Other Sellers"}
                 </h3>
                 <Button
                   onClick={() => setShowWholesalerSearch(false)}
@@ -2097,17 +2126,17 @@ export default function CustomerPortal() {
               ) : availableWholesalers.length > 0 ? (
                 <div className="p-2">
                   {availableWholesalers.map((wholesalerItem: any) => (
-                    <button
+                    <div
                       key={wholesalerItem.id}
-                      onClick={() => {
-                        // Close the search modal first
+                      className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                        wholesalerItem.isAccessible 
+                          ? 'hover:bg-gray-50 cursor-pointer' 
+                          : 'bg-gray-50 border-2 border-dashed border-gray-300'
+                      }`}
+                      onClick={wholesalerItem.isAccessible ? () => {
                         setShowWholesalerSearch(false);
-                        
-                        // Navigate to the selected wholesaler's store
-                        // This will trigger the SMS verification flow if not authenticated
                         window.location.href = `/store/${wholesalerItem.id}`;
-                      }}
-                      className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                      } : undefined}
                     >
                       {/* Wholesaler Logo */}
                       {wholesalerItem.logoUrl ? (
@@ -2148,9 +2177,29 @@ export default function CustomerPortal() {
                             <span className="text-sm text-gray-600 ml-1">{wholesalerItem.rating}</span>
                           </div>
                         )}
-                        <Building2 className="w-4 h-4 text-gray-400" />
+                        
+                        {wholesalerItem.canRequestAccess ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestAccess(wholesalerItem);
+                            }}
+                          >
+                            Request Access
+                          </Button>
+                        ) : wholesalerItem.isAccessible ? (
+                          <div className="flex items-center text-green-600">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <span className="text-xs">Access</span>
+                          </div>
+                        ) : (
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                        )}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -2159,8 +2208,8 @@ export default function CustomerPortal() {
                   <p className="text-gray-500">
                     {authenticatedCustomer?.phone 
                       ? (wholesalerSearchQuery 
-                          ? "No registered sellers found matching your search." 
-                          : "You don't have access to any other sellers yet.")
+                          ? "No sellers found matching your search. Try different keywords." 
+                          : "Search to discover new sellers and request access to expand your supplier network.")
                       : (wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores")
                     }
                   </p>
