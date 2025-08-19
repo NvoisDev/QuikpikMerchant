@@ -1609,7 +1609,7 @@ export default function CustomerPortal() {
     setShowNegotiation(true);
   }, [isPreviewMode, toast]);
 
-  const addToCart = useCallback((product: Product, quantity: number, sellingType: "units" | "pallets" = "units") => {
+  const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
     if (isPreviewMode) {
       toast({
         title: "Preview Mode",
@@ -3367,6 +3367,7 @@ export default function CustomerPortal() {
                                 </div>
                                 
                                 {/* Unit/Pallet Selection */}
+                                {console.log(`Product ${product.name}: palletPrice=${product.palletPrice}, parsed=${product.palletPrice ? parseFloat(product.palletPrice.toString()) : 'N/A'}`)}
                                 {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) && (
                                   <div className="mb-3">
                                     <div className="flex items-center space-x-3 text-sm">
