@@ -933,16 +933,16 @@ export default function CustomerPortal() {
   // Fetch available wholesalers for search - registration-aware for authenticated customers
   const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
     queryKey: [
-      customerSession?.phone ? "/api/customer-accessible-wholesalers" : "/api/marketplace/wholesalers", 
-      customerSession?.phone, 
+      authenticatedCustomer?.phone ? "/api/customer-accessible-wholesalers" : "/api/marketplace/wholesalers", 
+      authenticatedCustomer?.phone, 
       wholesalerSearchQuery
     ],
     queryFn: async () => {
       let response;
       
       // For authenticated customers, fetch only accessible wholesalers
-      if (customerSession?.phone) {
-        const phoneNumber = encodeURIComponent(customerSession.phone);
+      if (authenticatedCustomer?.phone) {
+        const phoneNumber = encodeURIComponent(authenticatedCustomer.phone);
         response = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
           credentials: "include",
         });
@@ -2015,10 +2015,10 @@ export default function CustomerPortal() {
                   style={{
                     borderColor: 'var(--theme-primary)',
                     color: 'var(--theme-primary)',
-                    '--hover-bg': 'var(--theme-secondary)'
+
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--theme-secondary)'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                  onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'var(--theme-secondary)'}
+                  onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                 >
                   <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Find Seller</span>
@@ -2061,7 +2061,7 @@ export default function CustomerPortal() {
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {customerSession?.phone ? "My Sellers" : "Find Other Sellers"}
+                  {authenticatedCustomer?.phone ? "My Sellers" : "Find Other Sellers"}
                 </h3>
                 <Button
                   onClick={() => setShowWholesalerSearch(false)}
@@ -2157,14 +2157,14 @@ export default function CustomerPortal() {
                 <div className="p-6 text-center">
                   <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">
-                    {customerSession?.phone 
+                    {authenticatedCustomer?.phone 
                       ? (wholesalerSearchQuery 
                           ? "No registered sellers found matching your search." 
                           : "You don't have access to any other sellers yet.")
                       : (wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores")
                     }
                   </p>
-                  {customerSession?.phone && !wholesalerSearchQuery && (
+                  {authenticatedCustomer?.phone && !wholesalerSearchQuery && (
                     <p className="text-sm text-gray-400 mt-2">
                       Contact a seller to get registered with their store.
                     </p>
@@ -3212,7 +3212,7 @@ export default function CustomerPortal() {
                                       originalPrice={pricing.originalPrice}
                                       currency="GBP"
                                       isGuestMode={false}
-                                      size="base"
+                                      size="medium"
                                     />
                                   </div>
                                 </div>
