@@ -1046,6 +1046,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer order statistics endpoint for dashboard
+  // Get wholesalers that a customer is registered with
+  app.get('/api/customer-accessible-wholesalers/:phoneNumber', async (req, res) => {
+    try {
+      const phoneNumber = req.params.phoneNumber;
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+
+      console.log('🔍 Finding accessible wholesalers for customer with last 4 digits:', lastFourDigits);
+
+      // Get all wholesalers where this customer is registered
+      const accessibleWholesalers = await storage.getWholesalersForCustomer(lastFourDigits);
+      
+      console.log(`✅ Found ${accessibleWholesalers.length} accessible wholesalers for customer`);
+      
+      res.json(accessibleWholesalers);
+    } catch (error) {
+      console.error("Error fetching accessible wholesalers:", error);
+      res.status(500).json({ message: "Failed to fetch accessible wholesalers" });
+    }
+  });
+
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId, phoneNumber } = req.params;

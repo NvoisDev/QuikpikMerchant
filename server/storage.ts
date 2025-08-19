@@ -129,6 +129,7 @@ export interface IStorage {
   deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
   findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any>;
+  getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; storeTagline?: string; location?: string; rating?: number }[]>;
   
   // Customer address book operations
   getAllCustomers(wholesalerId: string): Promise<(User & { 
@@ -1285,6 +1286,51 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error finding customer by last 4 digits:", error);
       return null;
+    }
+  }
+
+  async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; storeTagline?: string; location?: string; rating?: number }[]> {
+    try {
+      console.log(`Finding accessible wholesalers for customer with last 4 digits: ${lastFourDigits}`);
+      
+      // Find all wholesalers where this customer is registered
+      const accessibleWholesalers = await db.execute(sql`
+        SELECT DISTINCT
+          u.id,
+          u.business_name,
+          u.profile_image_url as logoUrl,
+          u.business_description as storeTagline,
+          u.business_address as location,
+          5.0 as rating
+        FROM users u
+        JOIN customer_groups cg ON u.id = cg.wholesaler_id
+        JOIN customer_group_members cgm ON cg.id = cgm.group_id
+        JOIN users customer ON cgm.customer_id = customer.id
+        WHERE u.role = 'wholesaler'
+          AND u.business_name IS NOT NULL
+          AND u.business_name != ''
+          AND (
+            (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
+            OR 
+            (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
+          )
+        ORDER BY u.business_name
+      `);
+
+      const result = accessibleWholesalers.rows.map((row: any) => ({
+        id: row.id,
+        businessName: row.business_name || 'Business',
+        logoUrl: row.logoUrl,
+        storeTagline: row.storeTagline,
+        location: row.location,
+        rating: parseFloat(row.rating) || 5.0
+      }));
+
+      console.log(`✅ Found ${result.length} accessible wholesalers for customer`);
+      return result;
+    } catch (error) {
+      console.error('Error finding accessible wholesalers:', error);
+      throw error;
     }
   }
 

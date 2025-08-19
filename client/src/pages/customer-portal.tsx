@@ -930,18 +930,42 @@ export default function CustomerPortal() {
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
-  // Fetch available wholesalers for search
+  // Fetch available wholesalers for search - registration-aware for authenticated customers
   const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery({
-    queryKey: ["/api/marketplace/wholesalers", wholesalerSearchQuery],
+    queryKey: [
+      customerSession?.phone ? "/api/customer-accessible-wholesalers" : "/api/marketplace/wholesalers", 
+      customerSession?.phone, 
+      wholesalerSearchQuery
+    ],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (wholesalerSearchQuery) params.append("search", wholesalerSearchQuery);
+      let response;
       
-      const response = await fetch(`/api/marketplace/wholesalers?${params}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch wholesalers");
-      return response.json();
+      // For authenticated customers, fetch only accessible wholesalers
+      if (customerSession?.phone) {
+        const phoneNumber = encodeURIComponent(customerSession.phone);
+        response = await fetch(`/api/customer-accessible-wholesalers/${phoneNumber}`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch accessible wholesalers");
+        const accessibleWholesalers = await response.json();
+        
+        // Apply search filter on the frontend if query exists
+        return wholesalerSearchQuery 
+          ? accessibleWholesalers.filter((w: any) => 
+              w.businessName?.toLowerCase().includes(wholesalerSearchQuery.toLowerCase())
+            )
+          : accessibleWholesalers;
+      } else {
+        // For guests, use the general marketplace API
+        const params = new URLSearchParams();
+        if (wholesalerSearchQuery) params.append("search", wholesalerSearchQuery);
+        
+        response = await fetch(`/api/marketplace/wholesalers?${params}`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch wholesalers");
+        return response.json();
+      }
     },
     enabled: showWholesalerSearch, // Only fetch when search is open
   });
@@ -2036,7 +2060,9 @@ export default function CustomerPortal() {
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-96 overflow-hidden">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Find Other Sellers</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {customerSession?.phone ? "My Sellers" : "Find Other Sellers"}
+                </h3>
                 <Button
                   onClick={() => setShowWholesalerSearch(false)}
                   variant="ghost"
@@ -2131,8 +2157,18 @@ export default function CustomerPortal() {
                 <div className="p-6 text-center">
                   <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">
-                    {wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores"}
+                    {customerSession?.phone 
+                      ? (wholesalerSearchQuery 
+                          ? "No registered sellers found matching your search." 
+                          : "You don't have access to any other sellers yet.")
+                      : (wholesalerSearchQuery ? "No stores found matching your search" : "Start typing to search for stores")
+                    }
                   </p>
+                  {customerSession?.phone && !wholesalerSearchQuery && (
+                    <p className="text-sm text-gray-400 mt-2">
+                      Contact a seller to get registered with their store.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
