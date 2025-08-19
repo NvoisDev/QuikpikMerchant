@@ -5,6 +5,14 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 19, 2025)
 
+**VERSION CONTROL 8 - STRIPE CONNECT PAYMENT SYSTEM COMPLETELY REBUILT**
+- ✅ **CRITICAL FIX**: Eliminated all `parameter_invalid_integer` Stripe errors by removing duplicate payment endpoints
+- ✅ **Payment Consolidation**: Reduced from 3 problematic payment endpoints to 1 clean endpoint `/api/customer/create-payment`
+- ✅ **Orphaned Code Removal**: Completely removed all marketplace order creation code that was causing invalid amounts
+- ✅ **Stripe Connect Working**: Proper fee structure with 3.3% platform fee and 5.5% + £0.50 customer transaction fee
+- ✅ **Payment Validation**: Multi-layer amount validation prevents invalid values reaching Stripe API
+- ✅ **Order Processing**: Clean webhook-based order creation after successful payment completion
+
 **VERSION CONTROL 7 - COMPLETE FREE-TYPE INPUT WITH MOQ GUIDANCE**
 - ✅ **Full Free-Type Capability**: Users can type any quantity including decimals (0.3, 1, 5.5, etc.)
 - ✅ **Clear MOQ Guidance**: Always-visible minimum order information with real-time status feedback
