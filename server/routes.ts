@@ -2029,15 +2029,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Include delivery cost in fee calculation
-      console.log('🚚 Shipping cost debug:', {
+      console.log('🚚 CRITICAL SHIPPING DEBUG - Full shipping info received:', {
+        requestId,
         hasShippingInfo: !!shippingInfo,
+        shippingInfoOption: shippingInfo?.option,
         hasService: !!shippingInfo?.service,
-        servicePriceRaw: shippingInfo?.service?.price,
-        servicePriceType: typeof shippingInfo?.service?.price
+        fullShippingInfo: JSON.stringify(shippingInfo, null, 2)
       });
 
-      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
-      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
+      // Enhanced delivery cost parsing with multiple fallbacks
+      let deliveryCost = 0;
+      
+      if (shippingInfo?.option === 'delivery' && shippingInfo?.service) {
+        // Try multiple ways to extract the price
+        const service = shippingInfo.service;
+        const priceAttempts = [
+          service?.price,
+          service?.cost,
+          service?.value,
+          parseFloat(String(service?.price || '0')),
+          parseFloat(String(service?.cost || '0')),
+          parseFloat(String(service?.value || '0'))
+        ];
+        
+        console.log('🚚 PRICE EXTRACTION ATTEMPTS:', {
+          requestId,
+          servicePriceRaw: service?.price,
+          servicePriceType: typeof service?.price,
+          serviceCostRaw: service?.cost,
+          allPriceAttempts: priceAttempts.map((p, i) => ({ attempt: i, value: p, type: typeof p, isValid: !isNaN(parseFloat(String(p || '0'))) }))
+        });
+        
+        for (const attempt of priceAttempts) {
+          const parsed = parseFloat(String(attempt || '0'));
+          if (!isNaN(parsed) && parsed > 0) {
+            deliveryCost = parsed;
+            console.log('🚚 SUCCESS: Found valid delivery cost:', {
+              requestId,
+              deliveryCost,
+              sourceValue: attempt,
+              sourceType: typeof attempt
+            });
+            break;
+          }
+        }
+        
+        if (deliveryCost === 0) {
+          console.error('🚚 ERROR: Failed to extract valid delivery cost from service:', {
+            requestId,
+            serviceObject: service,
+            allAttempts: priceAttempts
+          });
+        }
+      }
+
+      console.log('🚚 FINAL DELIVERY COST RESULT:', {
+        requestId,
+        deliveryCost,
+        isValidCost: !isNaN(deliveryCost) && deliveryCost >= 0,
+        shippingOption: shippingInfo?.option
+      });
       
       const amountBeforeFees = productSubtotal + deliveryCost;
       console.log('💰 Subtotal calculation:', {
