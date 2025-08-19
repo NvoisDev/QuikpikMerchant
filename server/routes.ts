@@ -1841,7 +1841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Include delivery cost in fee calculation
-      const deliveryCost = shippingInfo?.service?.price || 0;
+      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
       const amountBeforeFees = productSubtotal + deliveryCost;
       
       // NEW FEE STRUCTURE:
@@ -1852,6 +1852,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Wholesaler Platform Fee: 3.3% of product total (deducted from what they receive)
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
+
+      // Validation to prevent NaN values
+      if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || totalCustomerPays <= 0) {
+        console.error('❌ Invalid calculation values:', {
+          productSubtotal,
+          deliveryCost,
+          amountBeforeFees,
+          customerTransactionFee,
+          totalCustomerPays,
+          wholesalerPlatformFee,
+          wholesalerReceives
+        });
+        return res.status(400).json({ 
+          message: "Invalid payment calculation. Please check your cart and try again." 
+        });
+      }
+
+      console.log('💰 Payment calculation:', {
+        productSubtotal: productSubtotal.toFixed(2),
+        deliveryCost: deliveryCost.toFixed(2),
+        amountBeforeFees: amountBeforeFees.toFixed(2),
+        customerTransactionFee: customerTransactionFee.toFixed(2),
+        totalCustomerPays: totalCustomerPays.toFixed(2),
+        stripeAmount: Math.round(totalCustomerPays * 100)
+      });
 
       // Get wholesaler for payment processing
       const firstProduct = validatedItems[0].product;

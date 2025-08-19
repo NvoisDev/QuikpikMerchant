@@ -285,7 +285,7 @@ export const ThankYouPage = ({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Transaction Fee (5.5% + £0.50):</span>
-                    <span>£{(subtotal * 0.055 + 0.50).toFixed(2)}</span>
+                    <span>£{transactionFee.toFixed(2)}</span>
                   </div>
                   {shippingCost > 0 && (
                     <div className="flex justify-between text-sm">
