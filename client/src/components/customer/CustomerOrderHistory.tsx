@@ -7,6 +7,7 @@ import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRigh
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
+import { formatCurrency } from "@shared/utils/currency";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -111,14 +112,6 @@ const getStatusIcon = (status: string) => {
     default:
       return <Clock className="h-3 w-3" />;
   }
-};
-
-const formatCurrency = (amount: string | number) => {
-  if (!amount || amount === "0" || isNaN(Number(amount))) {
-    return "£0.00";
-  }
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return `£${numAmount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const OrderDetailsModal = ({ order }: { order: Order }) => {

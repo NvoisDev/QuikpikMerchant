@@ -13,6 +13,12 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 - ✅ Both pickup and delivery options working with accurate calculations
 - ✅ Payment processing and order creation functioning perfectly
 
+**CURRENCY FORMATTING ENHANCEMENT**
+- ✅ Added centralized currency formatting utility with comma separators for amounts over 1000
+- ✅ Updated all price displays throughout customer portal to use proper formatting (e.g., £1,250.00 instead of £1250.00)
+- ✅ Enhanced PriceDisplay component, quick actions sidebar, welcome messages, and ThankYouPage
+- ✅ Improved user experience with professional currency display using UK locale formatting
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **CRITICAL REQUIREMENT**: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.

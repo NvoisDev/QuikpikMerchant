@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
+import { formatCurrency } from "@shared/utils/currency";
 // Image removed for production - using icon instead
 
 interface CartItem {
@@ -254,9 +255,9 @@ export const ThankYouPage = ({
                       </div>
                       <div className="text-right">
                         <p className="font-medium">
-                          £{(() => {
+{(() => {
                             if (item.sellingType === "pallets") {
-                              return (parseFloat(item.product.palletPrice || "0") * item.quantity).toFixed(2);
+                              return formatCurrency(parseFloat(item.product.palletPrice || "0") * item.quantity);
                             } else {
                               // CRITICAL FIX: Use promotional pricing calculation for accurate display
                               const basePrice = parseFloat(item.product.price) || 0;
@@ -267,7 +268,7 @@ export const ThankYouPage = ({
                                 item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
                                 item.product.promoActive
                               );
-                              return pricing.totalCost.toFixed(2);
+                              return formatCurrency(pricing.totalCost);
                             }
                           })()}
                         </p>
@@ -281,21 +282,21 @@ export const ThankYouPage = ({
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>£{subtotal.toFixed(2)}</span>
+                    <span>{formatCurrency(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Transaction Fee (5.5% + £0.50):</span>
-                    <span>£{transactionFee.toFixed(2)}</span>
+                    <span>{formatCurrency(transactionFee)}</span>
                   </div>
                   {shippingCost > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Delivery Cost:</span>
-                      <span>£{shippingCost.toFixed(2)}</span>
+                      <span>{formatCurrency(shippingCost)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>Total Paid:</span>
-                    <span>£{totalAmount.toFixed(2)}</span>
+                    <span>{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
 

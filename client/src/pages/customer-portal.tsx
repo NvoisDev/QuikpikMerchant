@@ -39,6 +39,7 @@ import { format } from "date-fns";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
+import { formatCurrency, formatNumber } from "@shared/utils/currency";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -85,10 +86,6 @@ if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 // Utility functions
-const formatNumber = (num: number | string): string => {
-  const number = typeof num === 'string' ? parseInt(num) : num;
-  return number.toLocaleString();
-};
 
 const getCurrencySymbol = (currency = 'GBP'): string => {
   switch (currency?.toUpperCase()) {
@@ -127,14 +124,14 @@ const PriceDisplay = ({
             size === 'small' ? 'text-sm' : 
             size === 'large' ? 'text-xl' : 'text-base'
           }`}>
-            {currencySymbol}{price.toFixed(2)}
+{formatCurrency(price, currency)}
           </span>
           {hasDiscount && showStrikethrough && (
             <span className={`line-through text-gray-500 ml-2 ${
               size === 'small' ? 'text-xs' : 
               size === 'large' ? 'text-lg' : 'text-sm'
             }`}>
-              {currencySymbol}{originalPrice.toFixed(2)}
+{formatCurrency(originalPrice, currency)}
             </span>
           )}
         </div>
@@ -164,14 +161,14 @@ const PriceDisplay = ({
         size === 'small' ? 'text-sm' : 
         size === 'large' ? 'text-xl' : 'text-base'
       }`}>
-        {currencySymbol}{price.toFixed(2)}
+{formatCurrency(price, currency)}
       </span>
       {hasDiscount && showStrikethrough && (
         <span className={`line-through text-gray-500 ${
           size === 'small' ? 'text-xs' : 
           size === 'large' ? 'text-lg' : 'text-sm'
         }`}>
-          {currencySymbol}{originalPrice.toFixed(2)}
+{formatCurrency(originalPrice, currency)}
         </span>
       )}
     </div>
@@ -774,7 +771,7 @@ const PaymentFormContent = ({
           disabled={!stripe}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          Pay {getCurrencySymbol(wholesaler?.defaultCurrency)}{totalAmount.toFixed(2)}
+          Pay {formatCurrency(totalAmount, wholesaler?.defaultCurrency)}
         </ButtonLoader>
       </form>
 
@@ -1045,7 +1042,7 @@ export default function CustomerPortal() {
         } else if (orders < 10) {
           return `Welcome back, valued customer! ${orders} orders and counting ⭐`;
         } else {
-          return `Welcome back, loyal customer! £${spent.toFixed(2)} in total spending 🏆`;
+          return `Welcome back, loyal customer! ${formatCurrency(spent)} in total spending 🏆`;
         }
       };
       
@@ -2022,7 +2019,7 @@ export default function CustomerPortal() {
                   <span className="sm:hidden">({cartStats.totalItems})</span>
                   {cartStats.totalItems > 0 && (
                     <Badge className="ml-1 sm:ml-2 bg-green-800 text-xs">
-                      {getCurrencySymbol(wholesaler?.defaultCurrency)}{cartStats.totalValue.toFixed(2)}
+                      {formatCurrency(cartStats.totalValue, wholesaler?.defaultCurrency)}
                     </Badge>
                   )}
                 </Button>
@@ -2231,7 +2228,7 @@ export default function CustomerPortal() {
                     {customerOrderStats && customerOrderStats.totalOrders > 0 && (
                       <div className="mt-2 animate-fade-in-delayed-2">
                         <p className="text-sm opacity-80">
-                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 £{(customerOrderStats.totalSpent || 0).toFixed(2)} total spent
+                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 {formatCurrency(customerOrderStats.totalSpent || 0)} total spent
                         </p>
                         {customerOrderStats.totalOrders >= 10 && (
                           <p className="text-xs opacity-70 mt-1">⭐ Loyal customer since your first order!</p>
@@ -3488,7 +3485,7 @@ export default function CustomerPortal() {
                       </div>
                       <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
-                          £{(customerOrderStats?.totalSpent || 0).toFixed(2)}
+                          {formatCurrency(customerOrderStats?.totalSpent || 0)}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Total Spent</div>
                       </div>
@@ -3903,7 +3900,7 @@ export default function CustomerPortal() {
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Checkout ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
                       <span className="ml-auto text-xs opacity-80">
-                        £{cartStats.totalValue.toFixed(2)}
+{formatCurrency(cartStats.totalValue)}
                       </span>
                     </Button>
 
