@@ -1334,15 +1334,7 @@ export default function CustomerPortal() {
         totalPromotionalItems += pricing.totalQuantity; // Includes free items for calculations
         subtotal += pricing.totalCost;
         
-        console.log(`🔍 Cart item ${item.product.name}:`, {
-          quantity: itemQuantity,
-          basePrice,
-          pricingTotalCost: pricing.totalCost,
-          effectivePrice: pricing.effectivePrice,
-          runningSubtotal: subtotal,
-          totalItems,
-          totalPromotionalItems
-        });
+
         
         // Track applied promotions
         if (pricing.appliedOffers.length > 0) {
@@ -3358,7 +3350,7 @@ export default function CustomerPortal() {
                         <span>Transaction Fee (5.5% + £0.50)</span>
                         <PriceDisplay
                           price={(() => {
-                            const subtotal = cartStats.totalValue;
+                            const subtotal = cartStats.subtotal; // Use pure product subtotal
                             const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
                               ? customerData.selectedShippingService.price 
                               : 0;
@@ -3377,7 +3369,7 @@ export default function CustomerPortal() {
                       <span>Total to Pay</span>
                       <PriceDisplay
                         price={(() => {
-                          const subtotal = cartStats.totalValue;
+                          const subtotal = cartStats.subtotal; // Use pure product subtotal
                           const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
                             ? customerData.selectedShippingService.price 
                             : 0;
