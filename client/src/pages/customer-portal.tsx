@@ -907,6 +907,10 @@ export default function CustomerPortal() {
   const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
   const [activeQuantityInput, setActiveQuantityInput] = useState<number | null>(null);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  
+  // Welcome microinteraction states
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
+  const [personalizedMessage, setPersonalizedMessage] = useState("");
   const [featuredProductId, setFeaturedProductId] = useState<number | null>(() => {
     // Initialize from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -1022,6 +1026,36 @@ export default function CustomerPortal() {
   useEffect(() => {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
   }, [customerData.shippingOption]);
+
+  // Personalized welcome microinteraction effect
+  useEffect(() => {
+    if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
+      const generatePersonalizedMessage = () => {
+        const orders = customerOrderStats.totalOrders || 0;
+        const spent = customerOrderStats.totalSpent || 0;
+        
+        if (orders === 0) {
+          return "Welcome to your first shopping experience! 🎉";
+        } else if (orders < 5) {
+          return `Great to see you back! Order #${orders + 1} coming up 🛍️`;
+        } else if (orders < 10) {
+          return `Welcome back, valued customer! ${orders} orders and counting ⭐`;
+        } else {
+          return `Welcome back, loyal customer! £${spent.toFixed(2)} in total spending 🏆`;
+        }
+      };
+      
+      setPersonalizedMessage(generatePersonalizedMessage());
+      setShowWelcomeAnimation(true);
+      
+      // Hide animation after 4 seconds
+      const timer = setTimeout(() => {
+        setShowWelcomeAnimation(false);
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [authenticatedCustomer, customerOrderStats, isAuthenticated]);
 
   // Fetch shipping quotes for customer delivery
   const fetchShippingQuotes = async () => {
@@ -2135,21 +2169,51 @@ export default function CustomerPortal() {
             </TabsList>
 
             <TabsContent value="home" className="space-y-6">
-              {/* Welcome Section */}
-              <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-lg p-6 text-white">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold mb-2">
+              {/* Welcome Section with Microinteractions */}
+              <div className="rounded-lg p-6 text-white relative overflow-hidden animate-fade-in" style={{background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%)'}}>
+                {/* Animated background particles */}
+                <div className="absolute inset-0 opacity-10">
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute rounded-full bg-white animate-float"
+                      style={{
+                        width: `${Math.random() * 15 + 8}px`,
+                        height: `${Math.random() * 15 + 8}px`,
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        animationDelay: `${i * 0.7}s`,
+                        animationDuration: `${4 + Math.random() * 3}s`
+                      }}
+                    />
+                  ))}
+                </div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative z-10">
+                  <div className="animate-slide-up">
+                    <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                      <span className="animate-wave">👋</span>
                       Welcome back, {authenticatedCustomer?.firstName || authenticatedCustomer?.name}!
                     </h1>
-                    <p className="text-emerald-100">
+                    <p className="opacity-90 animate-fade-in-delayed">
                       Shopping at {wholesaler?.businessName}
                     </p>
+                    {customerOrderStats && customerOrderStats.totalOrders > 0 && (
+                      <div className="mt-2 animate-fade-in-delayed-2">
+                        <p className="text-sm opacity-80">
+                          🛍️ {customerOrderStats.totalOrders} orders placed • 💰 £{(customerOrderStats.totalSpent || 0).toFixed(2)} total spent
+                        </p>
+                        {customerOrderStats.totalOrders >= 10 && (
+                          <p className="text-xs opacity-70 mt-1">⭐ Loyal customer since your first order!</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-4 sm:mt-0">
                     <Button
                       onClick={() => setActiveTab("products")}
-                      className="bg-white text-emerald-600 hover:bg-gray-50"
+                      className="bg-white hover:bg-gray-100 border-0 animate-bounce-subtle hover:animate-none transform hover:scale-105 transition-all duration-200"
+                      style={{color: 'var(--theme-primary)'}}
                     >
                       <Package className="w-4 h-4 mr-2" />
                       Browse All Products
@@ -2158,38 +2222,52 @@ export default function CustomerPortal() {
                 </div>
               </div>
 
-              {/* Quick Stats */}
+              {/* Quick Stats with Microinteractions */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-4 border">
+                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed cursor-pointer" 
+                     onClick={() => !isPreviewMode && setShowCheckout(true)}>
                   <div className="flex items-center">
-                    <ShoppingCart className="w-8 h-8 text-emerald-600 mr-3" />
+                    <ShoppingCart className="w-8 h-8 mr-3 animate-pulse-glow" style={{color: 'var(--theme-primary)'}} />
                     <div>
                       <p className="text-sm text-gray-600">Items in Cart</p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold animate-stats-counter" style={{color: 'var(--theme-primary)'}}>
                         {cart.reduce((total, item) => total + item.quantity, 0)}
                       </p>
+                      {cart.length > 0 && (
+                        <p className="text-xs text-gray-500 animate-fade-in-delayed-2">Click to checkout</p>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-4 border">
+                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed">
                   <div className="flex items-center">
-                    <PriceDisplay
-                      price={cartStats.totalValue}
-                      currency="GBP"
-                      isGuestMode={false}
-                      size="large"
-                    />
+                    <div className="animate-stats-counter">
+                      <PriceDisplay
+                        price={cartStats.totalValue}
+                        currency="GBP"
+                        isGuestMode={false}
+                        size="large"
+                      />
+                    </div>
                     <div className="ml-3">
                       <p className="text-sm text-gray-600">Cart Total</p>
+                      {cartStats.totalValue > 0 && (
+                        <p className="text-xs opacity-70 animate-fade-in-delayed-2">💳 Ready to pay</p>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-4 border">
+                <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed">
                   <div className="flex items-center">
-                    <History className="w-8 h-8 text-emerald-600 mr-3" />
+                    <History className="w-8 h-8 mr-3" style={{color: 'var(--theme-primary)'}} />
                     <div>
                       <p className="text-sm text-gray-600">Total Orders</p>
-                      <p className="text-2xl font-bold">{customerOrderStats?.totalOrders || 0}</p>
+                      <p className="text-2xl font-bold animate-stats-counter" style={{color: 'var(--theme-primary)'}}>
+                        {customerOrderStats?.totalOrders || 0}
+                      </p>
+                      {(customerOrderStats?.totalOrders || 0) > 5 && (
+                        <p className="text-xs opacity-70 animate-fade-in-delayed-2">🏆 Frequent shopper</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2221,34 +2299,49 @@ export default function CustomerPortal() {
                       const pricing = calculatePromotionalPricing(product, product.moq);
                       
                       return (
-                        <Card key={product.id} className="h-full hover:shadow-md transition-shadow">
+                        <Card key={product.id} className="h-full personalized-card animate-fade-in group cursor-pointer" 
+                              style={{animationDelay: `${Math.random() * 0.3}s`}}>
                           <CardContent className="p-4">
                             <div className="space-y-3">
-                              {/* Product Image */}
-                              <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                              {/* Product Image with Microinteractions */}
+                              <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden group-hover:shadow-lg transition-all duration-300">
                                 {product.imageUrl ? (
                                   <img
                                     src={product.imageUrl}
                                     alt={product.name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
-                                    <Package className="w-8 h-8 text-gray-400" />
+                                    <Package className="w-8 h-8 text-gray-400 group-hover:scale-110 transition-transform duration-300" />
                                   </div>
                                 )}
                                 {product.promoActive && (
-                                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
-                                    SALE
+                                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold animate-bounce-subtle">
+                                    🔥 SALE
                                   </div>
                                 )}
+                                {/* Hover overlay for interaction hint */}
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-xs font-medium">
+                                    Quick View
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Product Info */}
-                              <div>
-                                <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
+                              {/* Product Info with Animation */}
+                              <div className="animate-fade-in-delayed">
+                                <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-theme-primary transition-colors duration-300">
+                                  {product.name}
+                                </h3>
                                 {product.description && (
                                   <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                                )}
+                                {/* Personalized product hints */}
+                                {customerOrderStats && customerOrderStats.totalOrders > 0 && (
+                                  <p className="text-xs opacity-70 mt-1 animate-fade-in-delayed-2">
+                                    ⭐ Popular with regular customers
+                                  </p>
                                 )}
                               </div>
 
