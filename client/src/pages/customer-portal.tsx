@@ -347,7 +347,8 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         }
         
         try {
-          const response = await apiRequest("POST", "/api/customer/create-payment", {
+          // CRITICAL DEBUG: Log the exact data being sent to backend
+          const requestPayload = {
             customerName: customerData.name,
             customerEmail: customerData.email,
             customerPhone: customerData.phone,
@@ -374,7 +375,15 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
               })()
             })),
             shippingInfo: shippingDataAtCreation
-          });
+          };
+          
+          console.log('🚚 FRONTEND FINAL CHECK: About to send this exact payload to backend:');
+          console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
+          console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
+          console.log('  - Payload shippingInfo service:', requestPayload.shippingInfo?.service);
+          console.log('  - Full payload:', JSON.stringify(requestPayload, null, 2));
+          
+          const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
           
           console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
           console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
