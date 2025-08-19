@@ -2249,23 +2249,130 @@ export default function CustomerPortal() {
                                       >
                                         <Minus className="h-3 w-3" />
                                       </Button>
-                                      <Input
-                                        type="number"
-                                        value={cartItem.quantity}
-                                        onChange={(e) => {
-                                          const newQuantity = Math.max(product.moq, parseInt(e.target.value) || product.moq);
-                                          const maxQuantity = Math.min(newQuantity, product.stock);
-                                          const updatedCart = cart.map(item => 
-                                            item.product.id === product.id 
-                                              ? { ...item, quantity: maxQuantity }
-                                              : item
-                                          );
-                                          setCart(updatedCart);
-                                        }}
-                                        min={product.moq}
-                                        max={product.stock}
-                                        className="w-16 h-8 text-center text-sm"
-                                      />
+                                      {/* Adaptive Cart Input - Home Page */}
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          value={quantityInputValues[product.id] !== undefined ? quantityInputValues[product.id] : cartItem.quantity}
+                                          onChange={(e) => {
+                                            const inputValue = e.target.value;
+                                            setQuantityInputValues(prev => ({
+                                              ...prev,
+                                              [product.id]: inputValue
+                                            }));
+                                            
+                                            const parsedValue = parseInt(inputValue) || 0;
+                                            
+                                            if (parsedValue > 0 && parsedValue < product.moq) {
+                                              setShowMOQWarnings(prev => ({
+                                                ...prev,
+                                                [product.id]: true
+                                              }));
+                                            } else {
+                                              setShowMOQWarnings(prev => ({
+                                                ...prev,
+                                                [product.id]: false
+                                              }));
+                                            }
+                                          }}
+                                          onFocus={() => {
+                                            setActiveQuantityInput(product.id);
+                                            setShowQuantityHints(prev => ({
+                                              ...prev,
+                                              [product.id]: true
+                                            }));
+                                          }}
+                                          onBlur={() => {
+                                            const inputValue = quantityInputValues[product.id];
+                                            const parsedValue = parseInt(inputValue) || 0;
+                                            
+                                            if (parsedValue === 0) {
+                                              setCart(cart.filter(item => item.product.id !== product.id));
+                                            } else {
+                                              const validQuantity = Math.max(product.moq, parsedValue);
+                                              const maxQuantity = Math.min(validQuantity, product.stock);
+                                              
+                                              const updatedCart = cart.map(item => 
+                                                item.product.id === product.id 
+                                                  ? { ...item, quantity: maxQuantity }
+                                                  : item
+                                              );
+                                              setCart(updatedCart);
+                                            }
+                                            
+                                            setQuantityInputValues(prev => {
+                                              const newState = { ...prev };
+                                              delete newState[product.id];
+                                              return newState;
+                                            });
+                                            setShowMOQWarnings(prev => ({
+                                              ...prev,
+                                              [product.id]: false
+                                            }));
+                                            setShowQuantityHints(prev => ({
+                                              ...prev,
+                                              [product.id]: false
+                                            }));
+                                            setActiveQuantityInput(null);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.currentTarget.blur();
+                                            }
+                                          }}
+                                          min={0}
+                                          max={product.stock}
+                                          className={`w-16 h-8 text-center text-sm ${
+                                            showMOQWarnings[product.id] ? 'border-amber-400 bg-amber-50' : 
+                                            activeQuantityInput === product.id ? 'border-blue-400 bg-blue-50' : ''
+                                          }`}
+                                          placeholder={product.moq.toString()}
+                                        />
+                                        
+                                        {showMOQWarnings[product.id] && (
+                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
+                                            Min: {product.moq} units
+                                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
+                                          </div>
+                                        )}
+                                        
+                                        {showQuantityHints[product.id] && activeQuantityInput === product.id && (
+                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-white border border-gray-200 rounded-md shadow-lg p-2 min-w-[200px]">
+                                            <div className="text-xs text-gray-600 mb-2 font-medium">Quick Add:</div>
+                                            <div className="grid grid-cols-3 gap-1">
+                                              {getQuantitySuggestions(product, cartItem.quantity).map((suggestion, index) => (
+                                                <button
+                                                  key={index}
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const updatedCart = cart.map(item => 
+                                                      item.product.id === product.id 
+                                                        ? { ...item, quantity: suggestion.value }
+                                                        : item
+                                                    );
+                                                    setCart(updatedCart);
+                                                    setShowQuantityHints(prev => ({
+                                                      ...prev,
+                                                      [product.id]: false
+                                                    }));
+                                                    setActiveQuantityInput(null);
+                                                  }}
+                                                  className={`text-xs px-2 py-1 rounded border text-center hover:bg-gray-50 ${
+                                                    suggestion.type === 'moq' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                                                    suggestion.type === 'bulk' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
+                                                    'border-gray-300 text-gray-700'
+                                                  }`}
+                                                  title={suggestion.description}
+                                                >
+                                                  {suggestion.label}
+                                                </button>
+                                              ))}
+                                            </div>
+                                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white border-l border-t border-gray-200 rotate-45"></div>
+                                          </div>
+                                        )}
+                                      </div>
                                       <Button
                                         size="sm"
                                         variant="outline"
