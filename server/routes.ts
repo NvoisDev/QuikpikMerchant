@@ -7424,9 +7424,28 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Try creating payment intent with Stripe Connect if available
       if (wholesaler.stripeAccountId) {
         try {
+          // CRITICAL: Validate amount before creating payment intent
+          const stripeAmount = Math.round(totalAmountWithFee * 100);
+          const requestId = `marketplace_payment_${Date.now()}`;
+          
+          console.log('🔥 MARKETPLACE PAYMENT INTENT - VALIDATION:', {
+            requestId,
+            totalAmountWithFee,
+            stripeAmount,
+            stripeAmountType: typeof stripeAmount,
+            isInteger: Number.isInteger(stripeAmount),
+            isPositive: stripeAmount > 0,
+            withinLimits: stripeAmount >= 50 && stripeAmount <= 99999999
+          });
+          
+          // BLOCK invalid amounts from reaching Stripe
+          if (!Number.isInteger(stripeAmount) || stripeAmount <= 0 || stripeAmount >= 99999999 || isNaN(stripeAmount)) {
+            throw new Error(`MARKETPLACE: Invalid stripe amount: ${stripeAmount} (from ${totalAmountWithFee})`);
+          }
+          
           // Create payment intent with Stripe Connect and 3.3% platform fee
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+            amount: stripeAmount, // Customer pays product total + transaction fee
             currency: 'gbp', // Always use GBP for platform
             application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
             transfer_data: {
@@ -7475,8 +7494,23 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           console.log('Connect payment failed, falling back to regular payment:', connectError.message);
           
           // Fallback to regular payment intent for demo/test purposes
+          const fallbackStripeAmount = Math.round(totalAmountWithFee * 100);
+          
+          console.log('🔥 MARKETPLACE FALLBACK PAYMENT - VALIDATION:', {
+            requestId,
+            totalAmountWithFee,
+            fallbackStripeAmount,
+            isInteger: Number.isInteger(fallbackStripeAmount),
+            isPositive: fallbackStripeAmount > 0
+          });
+          
+          // BLOCK invalid amounts in fallback too
+          if (!Number.isInteger(fallbackStripeAmount) || fallbackStripeAmount <= 0 || fallbackStripeAmount >= 99999999 || isNaN(fallbackStripeAmount)) {
+            throw new Error(`MARKETPLACE FALLBACK: Invalid stripe amount: ${fallbackStripeAmount}`);
+          }
+          
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+            amount: fallbackStripeAmount, // Customer pays product total + £6 platform fee
             currency: 'gbp', // Always use GBP for platform
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
