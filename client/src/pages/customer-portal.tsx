@@ -321,7 +321,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         isCreatingIntent
       });
       
-      // FIXED: Only create payment intent once when all required data is present
+      // CRITICAL FIX: Create/recreate payment intent when shipping changes
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
       const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
@@ -583,7 +583,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // FIXED: Removed selectedShippingService dependency to prevent duplicate payment intents
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, !!customerData.selectedShippingService, totalAmount, clientSecret, isCreatingIntent]); // CRITICAL FIX: Re-added selectedShippingService dependency so payment intent updates when delivery service is selected
 
   if (!clientSecret) {
     return (
