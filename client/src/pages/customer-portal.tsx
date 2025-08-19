@@ -2193,9 +2193,23 @@ export default function CustomerPortal() {
                                       >
                                         <Minus className="h-3 w-3" />
                                       </Button>
-                                      <span className="text-sm font-medium w-8 text-center">
-                                        {cartItem.quantity}
-                                      </span>
+                                      <Input
+                                        type="number"
+                                        value={cartItem.quantity}
+                                        onChange={(e) => {
+                                          const newQuantity = Math.max(product.moq, parseInt(e.target.value) || product.moq);
+                                          const maxQuantity = Math.min(newQuantity, product.stock);
+                                          const updatedCart = cart.map(item => 
+                                            item.product.id === product.id 
+                                              ? { ...item, quantity: maxQuantity }
+                                              : item
+                                          );
+                                          setCart(updatedCart);
+                                        }}
+                                        min={product.moq}
+                                        max={product.stock}
+                                        className="w-16 h-8 text-center text-sm"
+                                      />
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -2449,9 +2463,23 @@ export default function CustomerPortal() {
                                       >
                                         <Minus className="h-3 w-3" />
                                       </Button>
-                                      <span className="text-sm font-medium w-8 text-center">
-                                        {cartItem.quantity}
-                                      </span>
+                                      <Input
+                                        type="number"
+                                        value={cartItem.quantity}
+                                        onChange={(e) => {
+                                          const newQuantity = Math.max(product.moq, parseInt(e.target.value) || product.moq);
+                                          const maxQuantity = Math.min(newQuantity, product.stock);
+                                          const updatedCart = cart.map(item => 
+                                            item.product.id === product.id 
+                                              ? { ...item, quantity: maxQuantity }
+                                              : item
+                                          );
+                                          setCart(updatedCart);
+                                        }}
+                                        min={product.moq}
+                                        max={product.stock}
+                                        className="w-16 h-8 text-center text-sm"
+                                      />
                                       <Button
                                         size="sm"
                                         variant="outline"
