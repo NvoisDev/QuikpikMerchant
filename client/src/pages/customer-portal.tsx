@@ -2807,7 +2807,11 @@ export default function CustomerPortal() {
                         ...orderData,
                         cart: cart,
                         customerData: customerData,
-                        wholesaler: wholesaler
+                        wholesaler: wholesaler,
+                        // Include actual shipping cost from selected service
+                        shippingCost: customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
+                          ? customerData.selectedShippingService.price 
+                          : 0
                       };
                       setCompletedOrder(orderDataWithCart);
                       
