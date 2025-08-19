@@ -3358,12 +3358,14 @@ export default function CustomerPortal() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>{customerStats?.totalOrders || 0}</div>
+                        <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
+                          {orderHistory?.length || 0}
+                        </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Total Orders</div>
                       </div>
                       <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
-                          £{(customerStats?.totalSpent || 0).toFixed(2)}
+                          £{orderHistory?.reduce((sum, order) => sum + (order.totalPaid || 0), 0).toFixed(2) || '0.00'}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Total Spent</div>
                       </div>
