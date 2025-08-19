@@ -680,95 +680,32 @@ const PaymentFormContent = ({
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
         console.log('💾 Creating order immediately to ensure it saves to database');
         
-        try {
-          // Call the order creation endpoint directly to ensure order is saved
-          const response = await fetch("/api/marketplace/create-order", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              paymentIntentId: paymentIntent.id
-            })
-          });
-          
-          if (response.ok) {
-            const orderData = await response.json();
-            console.log('✅ Order created successfully:', orderData);
-            
-            // Success callback with order data for thank you page
-            // Get accurate values from payment intent metadata
-            const metadata = (paymentIntent as any).metadata || {};
-            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-            const actualShipping = parseFloat(metadata.shippingCost || '0');
-            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
-            
-            onSuccess({
-              orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
-              cart: [],
-              customerData: {},  
-              totalAmount: actualTotal,
-              subtotal: actualSubtotal,
-              transactionFee: actualTransactionFee,
-              shippingCost: actualShipping
-            });
-            
-            toast({
-              title: "Payment Successful!",
-              description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
-            });
-          } else {
-            console.error('❌ Order creation failed:', response.status);
-            toast({
-              title: "Payment Successful!",
-              description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
-            });
-            
-            // Still call success callback even if order creation failed, payment succeeded
-            // Get accurate values from payment intent metadata
-            const metadata = (paymentIntent as any).metadata || {};
-            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-            const actualShipping = parseFloat(metadata.shippingCost || '0');
-            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
-            
-            onSuccess({
-              orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-              cart: [],
-              customerData: {},
-              totalAmount: actualTotal,
-              subtotal: actualSubtotal,
-              transactionFee: actualTransactionFee,
-              shippingCost: actualShipping
-            });
-          }
-        } catch (orderError) {
-          console.error('❌ Error creating order:', orderError);
-          
-          // Still call success callback even if order creation failed, payment succeeded
-          // Get accurate values from payment intent metadata
-          const metadata = (paymentIntent as any).metadata || {};
-          const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-          const actualShipping = parseFloat(metadata.shippingCost || '0');
-          const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-          const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
-          
-          onSuccess({
-            orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
-            cart: [],
-            customerData: {},
-            totalAmount: actualTotal,
-            subtotal: actualSubtotal,
-            transactionFee: actualTransactionFee,
-            shippingCost: actualShipping
-          });
-          
-          toast({
-            title: "Payment Successful!",
-            description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
-          });
-        }
+        // FIXED: Order creation now handled by Stripe webhook automatically
+        // No need to call separate endpoint - webhook creates order on payment success
+        console.log('✅ Payment succeeded! Order will be created by webhook automatically');
+        
+        // Success callback with order data for thank you page
+        // Get accurate values from payment intent metadata
+        const metadata = (paymentIntent as any).metadata || {};
+        const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+        const actualShipping = parseFloat(metadata.shippingCost || '0');
+        const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+        const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
+        
+        onSuccess({
+          orderNumber: `Order #${paymentIntent.id.slice(-8)}`, // Use payment intent ID as temp order reference
+          cart: [],
+          customerData: {},  
+          totalAmount: actualTotal,
+          subtotal: actualSubtotal,
+          transactionFee: actualTransactionFee,
+          shippingCost: actualShipping
+        });
+        
+        toast({
+          title: "Payment Successful!",
+          description: "Payment processed successfully. You'll receive a confirmation email shortly.",
+        });
       } else {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
