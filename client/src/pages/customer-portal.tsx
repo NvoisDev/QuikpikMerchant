@@ -583,24 +583,12 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
             
-            // Clear the cart after successful order creation
-            console.log('🛒 Clearing cart after successful order placement');
-            setCart([]);
-            
-            // Close the checkout modal
-            setShowCheckout(false);
-            
             toast({
               title: "Payment Successful!",
               description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
             });
           } else {
             console.error('❌ Order creation failed:', response.status);
-            // Still clear cart since payment succeeded - order likely saved by webhook
-            console.log('🛒 Clearing cart after successful payment (order creation API failed but webhook should handle)');
-            setCart([]);
-            setShowCheckout(false);
-            
             toast({
               title: "Payment Successful!",
               description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
@@ -608,11 +596,6 @@ const PaymentFormContent = ({ onSuccess, totalAmount, wholesaler }: {
           }
         } catch (orderError) {
           console.error('❌ Error creating order:', orderError);
-          // Still clear cart since payment succeeded - order likely saved by webhook
-          console.log('🛒 Clearing cart after successful payment (order creation error but webhook should handle)');
-          setCart([]);
-          setShowCheckout(false);
-          
           toast({
             title: "Payment Successful!",
             description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
@@ -2230,7 +2213,7 @@ export default function CustomerPortal() {
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
                         {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
+                          <SelectItem key={category} value={category || ''}>
                             {category}
                           </SelectItem>
                         ))}
@@ -2317,9 +2300,9 @@ export default function CustomerPortal() {
                               {/* Product Details */}
                               <div className="space-y-2 mb-3">
                                 <div className="flex flex-wrap gap-1 text-xs text-gray-600">
-                                  {product.size && (
+                                  {(product as any).size && (
                                     <span className="bg-gray-100 px-2 py-1 rounded">
-                                      Size: {product.size}
+                                      Size: {(product as any).size}
                                     </span>
                                   )}
                                   {product.moq && product.moq > 1 && (
@@ -2332,9 +2315,9 @@ export default function CustomerPortal() {
                                       Stock: {product.stock}
                                     </span>
                                   )}
-                                  {product.brand && (
+                                  {(product as any).brand && (
                                     <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                      {product.brand}
+                                      {(product as any).brand}
                                     </span>
                                   )}
                                 </div>
@@ -2718,6 +2701,11 @@ export default function CustomerPortal() {
                     wholesaler={wholesaler}
                     totalAmount={cartStats.totalValue}
                     onSuccess={() => {
+                      // Clear the cart after successful payment
+                      console.log('🛒 Clearing cart after successful payment');
+                      setCart([]);
+                      
+                      // Close checkout modal and show thank you page
                       setShowCheckout(false);
                       setShowThankYou(true);
                     }}
