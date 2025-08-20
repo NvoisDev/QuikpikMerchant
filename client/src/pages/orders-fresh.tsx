@@ -166,16 +166,16 @@ export default function OrdersFresh() {
   };
 
   // Calculate amounts after platform fee using actual database platform fees
-  const calculateNetAmount = (total: string, platformFee?: string) => {
-    const totalAmount = parseFloat(total || '0');
-    const actualPlatformFee = parseFloat(platformFee || '0');
-    // Use the actual platform fee from database if available, otherwise calculate 3.3%
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : totalAmount * 0.033;
-    return totalAmount - feeToDeduct;
+  const calculateNetAmount = (order: Order) => {
+    const subtotal = parseFloat(order.subtotal || order.total || '0');
+    const actualPlatformFee = parseFloat(order.platformFee || '0');
+    // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : subtotal * 0.033;
+    return subtotal - feeToDeduct;
   };
 
   const displayedOrders = orders.length;
-  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order.total, order.platformFee), 0);
+  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order), 0);
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
@@ -523,16 +523,16 @@ export default function OrdersFresh() {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>Customer Paid:</span>
-                    <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
+                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total) + parseFloat(selectedOrder.deliveryCost || '0'))}</span>
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.total) * 0.033)}</span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total) * 0.033)}</span>
                   </div>
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-medium text-green-600">
                       <span>Your Net Amount:</span>
-                      <span>{formatCurrency(calculateNetAmount(selectedOrder.total))}</span>
+                      <span>{formatCurrency(calculateNetAmount(selectedOrder))}</span>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
