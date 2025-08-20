@@ -25,6 +25,7 @@ interface Order {
   customerEmail?: string;
   customerPhone?: string;
   total: string;
+  platformFee?: string;
   status: string;
   createdAt: string;
   fulfillmentType?: string;
@@ -164,15 +165,17 @@ export default function OrdersFresh() {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  // Calculate amounts after platform fee (3.3% for wholesaler)
-  const calculateNetAmount = (total: string) => {
+  // Calculate amounts after platform fee using actual database platform fees
+  const calculateNetAmount = (total: string, platformFee?: string) => {
     const totalAmount = parseFloat(total || '0');
-    const platformFee = totalAmount * 0.033; // 3.3% platform fee
-    return totalAmount - platformFee;
+    const actualPlatformFee = parseFloat(platformFee || '0');
+    // Use the actual platform fee from database if available, otherwise calculate 3.3%
+    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : totalAmount * 0.033;
+    return totalAmount - feeToDeduct;
   };
 
   const displayedOrders = orders.length;
-  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order.total), 0);
+  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order.total, order.platformFee), 0);
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
@@ -358,7 +361,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="font-medium text-xs">
                         <div>
-                          <div>{formatCurrency(calculateNetAmount(order.total))}</div>
+                          <div>{formatCurrency(calculateNetAmount(order.total, order.platformFee))}</div>
                           <div className="text-xs text-gray-500">After platform fee</div>
                         </div>
                       </TableCell>
