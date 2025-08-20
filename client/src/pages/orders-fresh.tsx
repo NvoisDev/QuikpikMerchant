@@ -523,7 +523,7 @@ export default function OrdersFresh() {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>Order Total:</span>
-                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0'))}</span>
+                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || '0'))}</span>
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
