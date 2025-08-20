@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Package, DollarSign, Clock, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin } from "lucide-react";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {
@@ -20,16 +22,30 @@ interface Order {
   orderNumber?: string;
   customerName?: string;
   customerEmail?: string;
+  customerPhone?: string;
   total: string;
   status: string;
   createdAt: string;
   fulfillmentType?: string;
+  deliveryAddress?: string;
+  subtotal?: string;
+  deliveryCost?: string;
+  items?: OrderItem[];
+}
+
+interface OrderItem {
+  productName: string;
+  quantity: number;
+  unitPrice: string;
+  total: string;
 }
 
 export default function OrdersFresh() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -57,6 +73,45 @@ export default function OrdersFresh() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  // Load detailed order information for modal
+  const loadOrderDetails = async (orderId: number) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      if (response.ok) {
+        const orderDetails = await response.json();
+        setSelectedOrder(orderDetails);
+      }
+    } catch (error) {
+      console.error('Failed to load order details:', error);
+    }
+  };
+
+  // Update order status to fulfilled
+  const markAsFulfilled = async (orderId: number) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'fulfilled' })
+      });
+      
+      if (response.ok) {
+        // Update local state
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: 'fulfilled' } : order
+        ));
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: 'fulfilled' });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -173,13 +228,13 @@ export default function OrdersFresh() {
                     <TableHead>Customer</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Actions</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orders.slice(0, 50).map((order) => (
-                    <TableRow key={order.id}>
+                    <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order.id)}>
                       <TableCell className="font-medium">
                         {order.orderNumber || `#${order.id}`}
                       </TableCell>
@@ -193,14 +248,40 @@ export default function OrdersFresh() {
                         {formatCurrency(parseFloat(order.total || '0'))}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                        </Badge>
+                        <div className="flex gap-1">
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                          </Badge>
+                          {order.fulfillmentType && (
+                            <Badge variant="outline" className="text-xs">
+                              {order.fulfillmentType === 'delivery' ? (
+                                <><Truck className="w-3 h-3 mr-1" />Delivery</>
+                              ) : (
+                                <><MapPin className="w-3 h-3 mr-1" />Collection</>
+                              )}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {order.fulfillmentType || 'Standard'}
-                        </Badge>
+                        {order.status !== 'fulfilled' ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            disabled={updatingOrderId === order.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsFulfilled(order.id);
+                            }}
+                          >
+                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
+                          </Button>
+                        ) : (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Fulfilled
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString()}
@@ -213,6 +294,187 @@ export default function OrdersFresh() {
           )}
         </CardContent>
       </Card>
+
+      {/* Order Details Modal */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Status & Fulfillment */}
+              <div>
+                <h3 className="font-semibold mb-3">Status & Fulfillment</h3>
+                <div className="flex gap-2">
+                  <Badge className="bg-green-100 text-green-800">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Paid
+                  </Badge>
+                  <Badge variant="outline">
+                    {selectedOrder.fulfillmentType === 'delivery' ? (
+                      <><Truck className="w-3 h-3 mr-1" />Delivery</>
+                    ) : (
+                      <><MapPin className="w-3 h-3 mr-1" />Collection</>
+                    )}
+                  </Badge>
+                  {selectedOrder.status === 'fulfilled' && (
+                    <Badge className="bg-blue-100 text-blue-800">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Fulfilled
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Customer Information */}
+              <div>
+                <h3 className="font-semibold mb-3">Your Information</h3>
+                <div className="space-y-1 text-sm">
+                  <div><strong>Name:</strong> {selectedOrder.customerName}</div>
+                  <div><strong>Email:</strong> {selectedOrder.customerEmail}</div>
+                  {selectedOrder.customerPhone && (
+                    <div><strong>Phone:</strong> {selectedOrder.customerPhone}</div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Order Items */}
+              <div>
+                <h3 className="font-semibold mb-3">Items ({selectedOrder.items?.length || 0})</h3>
+                <div className="space-y-3">
+                  {selectedOrder.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{item.productName}</div>
+                        <div className="text-sm text-gray-500">
+                          Quantity: {item.quantity} units × {formatCurrency(parseFloat(item.unitPrice))}
+                        </div>
+                      </div>
+                      <div className="font-medium">
+                        {formatCurrency(parseFloat(item.total))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Payment Summary */}
+              <div>
+                <h3 className="font-semibold mb-3">Payment Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total))}</span>
+                  </div>
+                  {selectedOrder.deliveryCost && parseFloat(selectedOrder.deliveryCost) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Delivery Cost:</span>
+                      <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost))}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total Paid:</span>
+                    <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Order Timeline */}
+              <div>
+                <h3 className="font-semibold mb-3">Order Timeline</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <div className="text-sm font-medium">Payment processed successfully</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <div className="text-sm font-medium">Order confirmation sent to you</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <div className="text-sm font-medium">Wholesaler notified of your order</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedOrder.status !== 'fulfilled' && (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <div>
+                          <div className="text-sm text-gray-500">Awaiting wholesaler confirmation</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <div>
+                          <div className="text-sm text-gray-500">Order preparation pending</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <div>
+                          <div className="text-sm text-gray-500">Fulfillment pending</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {selectedOrder.status === 'fulfilled' && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <div className="text-sm font-medium">Order fulfilled</div>
+                        <div className="text-xs text-gray-500">Ready for collection/delivered</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {selectedOrder.status !== 'fulfilled' && (
+                <div className="flex justify-end pt-4">
+                  <Button 
+                    onClick={() => markAsFulfilled(selectedOrder.id)}
+                    disabled={updatingOrderId === selectedOrder.id}
+                  >
+                    {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1717,6 +1717,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual order details
+  app.get('/api/orders/:id', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: 'Invalid order ID' });
+      }
+
+      const wholesalerId = '104871691614680693123';
+      console.log(`📦 Fetching order details for order ${orderId}`);
+
+      // Get order with full details including items
+      const orders = await storage.getOrders(wholesalerId, undefined, undefined);
+      const order = orders.find(o => o.id === orderId);
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("❌ Error fetching order details:", error);
+      res.status(500).json({ error: "Failed to fetch order details" });
+    }
+  });
+
+  // Update order status
+  app.patch('/api/orders/:id/status', async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: 'Invalid order ID' });
+      }
+
+      if (!status) {
+        return res.status(400).json({ error: 'Status is required' });
+      }
+
+      console.log(`📦 Updating order ${orderId} status to: ${status}`);
+
+      // Update order status in database
+      const updatedOrder = await db
+        .update(orders)
+        .set({ 
+          status: status,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(orders.id, orderId))
+        .returning();
+
+      if (updatedOrder.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      console.log(`✅ Order ${orderId} status updated to ${status}`);
+      res.json({ success: true, order: updatedOrder[0] });
+    } catch (error) {
+      console.error("❌ Error updating order status:", error);
+      res.status(500).json({ error: "Failed to update order status" });
+    }
+  });
+
   app.get('/api/orders', async (req: any, res) => {
     try {
       const search = req.query.search; // search term
