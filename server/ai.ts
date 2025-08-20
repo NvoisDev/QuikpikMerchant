@@ -27,21 +27,21 @@ export async function generateProductDescription(productName: string, category?:
   try {
     const prompt = `Write a compelling product description for a wholesale product called "${productName}"${
       category ? ` in the ${category} category` : ""
-    }. Focus on key features, benefits, and selling points that would appeal to retailers. Keep it professional and concise, around 2-3 sentences. Do NOT include formatting markers like **Product Name:** or **Category:** - just write a clean description.`;
+    }. Focus on key features, benefits, and selling points that would appeal to retailers. Keep it professional and concise, maximum 200 characters. Write a short, punchy summary. Do NOT include formatting markers like **Product Name:** or **Category:** - just write a clean description.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers. Never include formatting markers like **Product Name:** or **Category:** - only write clean, professional description text.",
+          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers. Keep descriptions under 200 characters - short, punchy summaries only. Never include formatting markers like **Product Name:** or **Category:** - only write clean, professional description text.",
         },
         {
           role: "user",
           content: prompt,
         },
       ],
-      max_tokens: 200,
+      max_tokens: 100,
       temperature: 0.7,
     });
 

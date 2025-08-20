@@ -1550,9 +1550,9 @@ export default function ProductManagement() {
                               <FormLabel>Description</FormLabel>
                               <ButtonLoader
                                 isLoading={isGeneratingDescription}
-                                variant="processing"
+                                variant="outline"
                                 size="sm"
-                                className="h-8"
+                                className="h-8 bg-green-600 text-white hover:bg-green-700 border-green-600 hover:border-green-700 relative z-10"
                                 onClick={generateDescription}
                               >
                                 <Sparkles className="h-4 w-4 mr-1" />
@@ -1560,8 +1560,16 @@ export default function ProductManagement() {
                               </ButtonLoader>
                             </div>
                             <FormControl>
-                              <Textarea placeholder="Enter product description" {...field} />
+                              <Textarea 
+                                placeholder="Short punchy summary (max 200 characters)" 
+                                maxLength={200}
+                                {...field} 
+                              />
                             </FormControl>
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                              <span>Short punchy summary</span>
+                              <span>{field.value?.length || 0}/200</span>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
