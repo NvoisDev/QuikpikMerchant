@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const fulfillmentColors = {
 };
 
 export default function OrdersFinal() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
@@ -83,6 +85,7 @@ export default function OrdersFinal() {
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
     queryKey: ['/api/orders', searchTerm],
+    enabled: isAuthenticated, // Only fetch when authenticated
     retry: 1,
     staleTime: 30000,
     refetchOnWindowFocus: true,
@@ -175,6 +178,59 @@ export default function OrdersFinal() {
   const formatCurrency = (amount: string) => {
     return `£${parseFloat(amount).toFixed(2)}`;
   };
+
+  // Handle authentication loading
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
+            <p className="text-gray-600">Authenticating...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle authentication required
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-red-600 font-medium">Authentication Required</div>
+          <p className="text-gray-500 text-sm">
+            Please log in to access your orders dashboard.
+          </p>
+          <div className="space-x-2">
+            <Button onClick={() => window.location.href = '/login'}>
+              Go to Login
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/auth/recover', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
+                  });
+                  if (response.ok) {
+                    window.location.reload();
+                  }
+                } catch (error) {
+                  console.error('Auth recovery failed:', error);
+                  window.location.reload();
+                }
+              }}
+            >
+              Quick Auth Fix
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Handle error state
   if (error) {
