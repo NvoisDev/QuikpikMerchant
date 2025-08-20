@@ -136,12 +136,7 @@ export default function OrdersFinal() {
     }
   }, [searchTerm, statusFilter]);
 
-  useEffect(() => {
-    if (searchTerm !== "" || statusFilter !== "all") {
-      const timer = setTimeout(establishSessionAndFetch, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [searchTerm, statusFilter]);
+
 
   const getStatusBadge = (status: string) => {
     const colors = {
