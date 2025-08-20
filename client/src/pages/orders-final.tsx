@@ -48,88 +48,54 @@ export default function OrdersFinal() {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching orders using simplified approach...');
+      console.log('🔄 Direct fetch from orders endpoint...');
       
-      // Check if we're in production vs development
-      const isProduction = window.location.hostname !== 'localhost';
-      
-      // Simplified approach - main orders endpoint no longer requires auth
-      const endpoints = [
-        // Primary endpoint (no authentication required)
-        {
-          url: `/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
+      // Try main endpoint first
+      try {
+        const response = await fetch(`/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        },
-        // Backup public endpoint
-        {
-          url: `/api/public-orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      ];
-      
-      for (let i = 0; i < endpoints.length; i++) {
-        const endpoint = endpoints[i];
-        console.log(`Trying endpoint ${i + 1}/${endpoints.length}: ${endpoint.url}`);
+        });
         
-        try {
-          // No authentication required anymore
-          
-          const response = await fetch(endpoint.url, {
-            method: endpoint.method,
-            headers: endpoint.headers
-          });
-          
-          console.log(`Response status: ${response.status}`);
-          
-          if (response.ok) {
-            const responseData = await response.json();
-            console.log('✅ Orders loaded successfully:', {
-              endpoint: endpoint.url,
-              dataType: typeof responseData,
-              hasOrders: responseData.orders ? 'yes' : 'no',
-              directArray: Array.isArray(responseData) ? 'yes' : 'no',
-              length: Array.isArray(responseData) ? responseData.length : (responseData.orders ? responseData.orders.length : 0)
-            });
-            
-            // Handle different response formats
-            let ordersData;
-            if (responseData.orders && Array.isArray(responseData.orders)) {
-              // Public endpoint format: { orders: [...] }
-              ordersData = responseData.orders;
-            } else if (Array.isArray(responseData)) {
-              // Direct array format
-              ordersData = responseData;
-            } else {
-              ordersData = [];
-            }
-            
-            console.log(`Processed ${ordersData.length} orders`);
-            setOrders(ordersData);
-            return; // Success!
-          } else if (response.status === 401) {
-            console.log('Auth required, trying next endpoint...');
-            continue;
-          }
-        } catch (fetchError) {
-          console.error(`❌ Endpoint ${i + 1} failed:`, fetchError);
-          console.error(`❌ Error details:`, {
-            message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-            endpoint: endpoint.url,
-            method: endpoint.method
-          });
-          if (i === endpoints.length - 1) {
-            throw fetchError;
-          }
+        console.log(`Main endpoint response: ${response.status}`);
+        
+        if (response.ok) {
+          const ordersData = await response.json();
+          console.log(`✅ Main endpoint success: ${ordersData.length} orders`);
+          setOrders(Array.isArray(ordersData) ? ordersData : []);
+          setLoading(false);
+          return;
         }
+      } catch (mainError) {
+        console.log('Main endpoint failed, trying backup...');
       }
       
-      throw new Error('All endpoints failed to load orders');
+      // Try public endpoint as backup
+      try {
+        const response = await fetch(`/api/public-orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        console.log(`Public endpoint response: ${response.status}`);
+        
+        if (response.ok) {
+          const responseData = await response.json();
+          const ordersData = Array.isArray(responseData) ? responseData : (responseData.orders || []);
+          console.log(`✅ Public endpoint success: ${ordersData.length} orders`);
+          setOrders(ordersData);
+          setLoading(false);
+          return;
+        }
+      } catch (publicError) {
+        console.error('Public endpoint also failed:', publicError);
+      }
+      
+      throw new Error('Both endpoints failed');
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
+      console.error('❌ All endpoints failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load orders');
       setLoading(false);
     }
   };
