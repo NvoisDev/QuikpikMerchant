@@ -335,7 +335,8 @@ export default function OrdersFresh() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
                 <Table>
                 <TableHeader>
                   <TableRow>
@@ -408,7 +409,62 @@ export default function OrdersFresh() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
+              
+              {/* Mobile Cards */}
+              <div className="lg:hidden space-y-3">
+                {orders.slice(0, 50).map((order) => (
+                  <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order.id)}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-medium text-sm">{order.orderNumber || `#${order.id}`}</div>
+                          <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium text-sm">{formatCurrency(calculateNetAmount(order))}</div>
+                          <div className="text-xs text-gray-500">After platform fee</div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <div className="font-medium text-xs">{order.customerName || 'Unknown'}</div>
+                        <div className="text-xs text-gray-500">{order.customerEmail}</div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge className={getStatusColor(order.status) + " text-xs"}>
+                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                        </Badge>
+                        {order.fulfillmentType && (
+                          <Badge variant="outline" className="text-xs">
+                            {order.fulfillmentType === 'delivery' ? (
+                              <><Truck className="w-2 h-2 mr-1" />Delivery</>
+                            ) : (
+                              <><MapPin className="w-2 h-2 mr-1" />Collection</>
+                            )}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {order.status !== 'fulfilled' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          disabled={updatingOrderId === order.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsFulfilled(order.id);
+                          }}
+                          className="text-xs w-full"
+                        >
+                          {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
               
               {/* Pagination Controls */}

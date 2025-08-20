@@ -2829,23 +2829,25 @@ export default function CustomerPortal() {
                     </Select>
                   </div>
 
-                  {/* View Toggle */}
+                  {/* View Toggle - Mobile Responsive */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <Button
                       variant={viewMode === "grid" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => setViewMode("grid")}
-                      className="px-3 py-1.5"
+                      className="px-2 sm:px-3 py-1.5"
                     >
                       <Grid className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">Grid</span>
                     </Button>
                     <Button
                       variant={viewMode === "list" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => setViewMode("list")}
-                      className="px-3 py-1.5"
+                      className="px-2 sm:px-3 py-1.5"
                     >
                       <List className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">List</span>
                     </Button>
                   </div>
                 </div>
@@ -2854,7 +2856,7 @@ export default function CustomerPortal() {
               {/* Products Display */}
               <div className="space-y-4">
                 {productsLoading ? (
-                  <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+                  <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" : "space-y-4"}>
                     {[...Array(6)].map((_, i) => (
                       <ProductCardSkeleton key={i} />
                     ))}
@@ -2880,7 +2882,7 @@ export default function CustomerPortal() {
                     </p>
                   </div>
                 ) : (
-                  <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+                  <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" : "space-y-4"}>
                     {filteredProducts.map((product) => {
                       const pricing = calculatePromotionalPricing(product, 1);
                       const cartItem = cart.find(item => item.product.id === product.id);
@@ -3064,7 +3066,7 @@ export default function CustomerPortal() {
                               </div>
                               
                               {/* Pricing */}
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                                 <PriceDisplay
                                   price={pricing.effectivePrice}
                                   originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
@@ -3075,7 +3077,7 @@ export default function CustomerPortal() {
                                 />
                                 
                                 {/* Add to Cart Controls */}
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 self-end sm:self-auto">
                                   {cartItem ? (
                                     <div className="flex items-center space-x-2">
                                       <Button
@@ -3277,10 +3279,10 @@ export default function CustomerPortal() {
                       ) : (
                         // List View
                         <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-200">
-                          <CardContent className="p-4">
-                            <div className="flex gap-4">
+                          <CardContent className="p-3 sm:p-4">
+                            <div className="flex gap-3 sm:gap-4">
                               {/* Product Image Gallery */}
-                              <div className="relative w-24 h-24 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
+                              <div className="relative w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                                 {(() => {
                                   // Get all available images (primary imageUrl + additional images array)
                                   const allImages = [
@@ -3363,20 +3365,20 @@ export default function CustomerPortal() {
                               
                               {/* Product Info */}
                               <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 space-y-1 sm:space-y-0">
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1 text-sm sm:text-base">
                                       {product.name}
                                     </h3>
                                     {product.description && (
-                                      <p className="text-sm text-gray-600 line-clamp-2">
+                                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
                                         {cleanAIDescription(product.description)}
                                       </p>
                                     )}
                                   </div>
                                   
                                   {/* Price */}
-                                  <div className="flex-shrink-0 ml-4">
+                                  <div className="flex-shrink-0 sm:ml-4">
                                     <PriceDisplay
                                       price={pricing.effectivePrice}
                                       originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
@@ -3450,8 +3452,8 @@ export default function CustomerPortal() {
 
 
                                 {/* Add to Cart Controls */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                                  <div className="flex items-center space-x-2 self-end sm:self-auto">
                                     {cartItem ? (
                                       <div className="flex items-center space-x-2">
                                         <Button
