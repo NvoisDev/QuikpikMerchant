@@ -69,8 +69,8 @@ const productCategories = [
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional().refine(
-    (val) => !val || val.length <= 200,
-    { message: "Description must be 200 characters or less" }
+    (val) => !val || val.length <= 104,
+    { message: "Description must be 104 characters or less" }
   ),
   price: z.string().min(1, "Price is required"),
   currency: z.string().min(1, "Currency is required"),
@@ -444,16 +444,16 @@ export default function ProductManagement() {
         form.setValue("description", generatedDescription);
         
         // Validate character count and provide feedback
-        if (generatedDescription.length > 200) {
+        if (generatedDescription.length > 104) {
           toast({
             title: "Description Generated (Warning)",
-            description: `Generated description is ${generatedDescription.length} characters. Please trim to 200 characters max.`,
+            description: `Generated description is ${generatedDescription.length} characters. Please trim to 104 characters max.`,
             variant: "destructive",
           });
-        } else if (generatedDescription.length > 180) {
+        } else if (generatedDescription.length > 90) {
           toast({
             title: "Description Generated",
-            description: `Generated ${generatedDescription.length} characters. Consider keeping under 180 for best results.`,
+            description: `Generated ${generatedDescription.length} characters. Consider keeping under 90 for best results.`,
           });
         } else {
           toast({
@@ -1585,22 +1585,22 @@ export default function ProductManagement() {
                             </div>
                             <FormControl>
                               <Textarea 
-                                placeholder="Short punchy summary (max 200 characters)" 
-                                maxLength={200}
+                                placeholder="Short punchy summary (max 104 characters)" 
+                                maxLength={104}
                                 {...field} 
                               />
                             </FormControl>
                             <div className="flex justify-between text-xs mt-1">
                               <span className="text-gray-500">Short punchy summary</span>
                               <span className={
-                                (field.value?.length || 0) > 200 
+                                (field.value?.length || 0) > 104 
                                   ? "text-red-600 font-medium" 
-                                  : (field.value?.length || 0) > 180
+                                  : (field.value?.length || 0) > 90
                                     ? "text-amber-600 font-medium"
                                     : "text-gray-500"
                               }>
-                                {field.value?.length || 0}/200
-                                {(field.value?.length || 0) > 200 && (
+                                {field.value?.length || 0}/104
+                                {(field.value?.length || 0) > 104 && (
                                   <span className="ml-1 text-red-600">⚠️ Exceeds limit</span>
                                 )}
                               </span>
