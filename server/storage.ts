@@ -1783,9 +1783,10 @@ export class DatabaseStorage implements IStorage {
     previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
     
     // Get total revenue and order count (include confirmed, paid, processing, shipped, fulfilled orders)
+    // Calculate net revenue by subtracting platform fees from total
     const [revenueStats] = await db
       .select({
-        totalRevenue: sum(orders.total),
+        totalRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         ordersCount: count(orders.id)
       })
       .from(orders)
@@ -1797,7 +1798,7 @@ export class DatabaseStorage implements IStorage {
     // Get current month stats
     const [currentMonthStats] = await db
       .select({
-        currentRevenue: sum(orders.total),
+        currentRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         currentOrders: count(orders.id)
       })
       .from(orders)
@@ -1810,7 +1811,7 @@ export class DatabaseStorage implements IStorage {
     // Get previous month stats
     const [previousMonthStats] = await db
       .select({
-        previousRevenue: sum(orders.total),
+        previousRevenue: sql<number>`SUM(CAST(${orders.total} AS NUMERIC) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0))`,
         previousOrders: count(orders.id)
       })
       .from(orders)

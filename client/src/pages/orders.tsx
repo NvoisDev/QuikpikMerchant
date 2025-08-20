@@ -283,9 +283,12 @@ export default function Orders() {
   });
   
   const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
+  // Calculate net revenue (total - platform fees) for paid orders
   const totalRevenue = paidOrders.reduce((sum: number, order: any) => {
-    const amount = parseFloat(order.total || '0');
-    return sum + (isNaN(amount) ? 0 : amount);
+    const total = parseFloat(order.total || '0');
+    const platformFee = parseFloat(order.platformFee || '0');
+    const netAmount = total - platformFee;
+    return sum + (isNaN(netAmount) ? 0 : netAmount);
   }, 0);
   
   const orderStats = {
@@ -597,7 +600,8 @@ export default function Orders() {
                     <p className="text-2xl font-bold">
                       {formatCurrency(orderStats.totalRevenue || 0, 'GBP')}
                     </p>
-                    <p className="text-sm text-muted-foreground">Paid Revenue</p>
+                    <p className="text-sm text-muted-foreground">Net Revenue</p>
+                    <p className="text-xs text-muted-foreground">After platform fees</p>
                   </div>
                 </div>
               </CardContent>
