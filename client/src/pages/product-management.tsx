@@ -68,7 +68,10 @@ const productCategories = [
 
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
-  description: z.string().optional(),
+  description: z.string().optional().refine(
+    (val) => !val || val.length <= 200,
+    { message: "Description must be 200 characters or less" }
+  ),
   price: z.string().min(1, "Price is required"),
   currency: z.string().min(1, "Currency is required"),
   moq: z.string().min(1, "MOQ is required"),
@@ -435,11 +438,32 @@ export default function ProductManagement() {
 
       if (response.ok) {
         const data = await response.json();
-        form.setValue("description", data.description);
-        toast({
-          title: "Description Generated",
-          description: "AI-powered product description has been created",
-        });
+        const generatedDescription = data.description;
+        
+        // Set the description value
+        form.setValue("description", generatedDescription);
+        
+        // Validate character count and provide feedback
+        if (generatedDescription.length > 200) {
+          toast({
+            title: "Description Generated (Warning)",
+            description: `Generated description is ${generatedDescription.length} characters. Please trim to 200 characters max.`,
+            variant: "destructive",
+          });
+        } else if (generatedDescription.length > 180) {
+          toast({
+            title: "Description Generated",
+            description: `Generated ${generatedDescription.length} characters. Consider keeping under 180 for best results.`,
+          });
+        } else {
+          toast({
+            title: "Description Generated",
+            description: `Perfect! Generated ${generatedDescription.length} characters within optimal range.`,
+          });
+        }
+        
+        // Trigger form validation to show any errors
+        form.trigger("description");
       } else {
         const error = await response.json();
         toast({
@@ -1566,9 +1590,20 @@ export default function ProductManagement() {
                                 {...field} 
                               />
                             </FormControl>
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                              <span>Short punchy summary</span>
-                              <span>{field.value?.length || 0}/200</span>
+                            <div className="flex justify-between text-xs mt-1">
+                              <span className="text-gray-500">Short punchy summary</span>
+                              <span className={
+                                (field.value?.length || 0) > 200 
+                                  ? "text-red-600 font-medium" 
+                                  : (field.value?.length || 0) > 180
+                                    ? "text-amber-600 font-medium"
+                                    : "text-gray-500"
+                              }>
+                                {field.value?.length || 0}/200
+                                {(field.value?.length || 0) > 200 && (
+                                  <span className="ml-1 text-red-600">⚠️ Exceeds limit</span>
+                                )}
+                              </span>
                             </div>
                             <FormMessage />
                           </FormItem>
