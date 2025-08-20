@@ -1857,6 +1857,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Orders statistics endpoint (no authentication required for ecommerce-style access)
+  app.get('/api/orders/stats', async (req: any, res) => {
+    try {
+      const wholesalerId = '104871691614680693123';
+      console.log(`📊 Fetching order statistics for wholesaler: ${wholesalerId}`);
+
+      // Get all orders to calculate overall statistics
+      const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
+      console.log(`📊 Found ${allOrders.length} total orders for statistics`);
+
+      // Calculate overall statistics
+      const paidOrders = allOrders.filter(order => 
+        order.status === 'paid' || 
+        order.status === 'fulfilled' || 
+        order.status === 'completed' ||
+        order.status === 'processing' ||
+        order.status === 'shipped'
+      );
+
+      const pendingOrders = allOrders.filter(order => 
+        order.status === 'pending' || 
+        order.status === 'confirmed'
+      );
+
+      // Calculate net revenue (total - platform fees) for paid orders
+      const totalRevenue = paidOrders.reduce((sum, order) => {
+        const total = parseFloat(order.total || '0');
+        const platformFee = parseFloat(order.platformFee || '0');
+        const netAmount = total - platformFee;
+        return sum + (isNaN(netAmount) ? 0 : netAmount);
+      }, 0);
+
+      const stats = {
+        ordersCount: allOrders.length,
+        totalRevenue: totalRevenue,
+        paidOrdersCount: paidOrders.length,
+        pendingOrdersCount: pendingOrders.length,
+        avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0
+      };
+
+      console.log(`📊 Calculated stats:`, stats);
+      res.json(stats);
+    } catch (error) {
+      console.error("❌ Error fetching order statistics:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch order statistics",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
   // Debug orders endpoint for development (temporary)
   app.get('/api/orders-debug', async (req: any, res) => {
     if (process.env.NODE_ENV !== 'development') {

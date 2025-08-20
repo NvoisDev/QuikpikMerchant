@@ -209,6 +209,16 @@ export default function Orders() {
     },
   });
 
+  // Fetch overall order statistics separately to avoid pagination limits
+  const { data: overallStats } = useQuery({
+    queryKey: ["/api/orders/stats"],
+    queryFn: async () => {
+      const response = await fetch(`/api/orders/stats`);
+      if (!response.ok) return null;
+      return response.json();
+    }
+  });
+
   // Fetch orders without authentication (ecommerce-style)
   const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ["/api/orders", searchTerm],
@@ -275,32 +285,21 @@ export default function Orders() {
     country: 'United Kingdom'
   };
 
-  // Calculate order statistics with debugging
-  console.log('📊 Order Statistics Debug:', {
-    ordersLength: orders.length,
-    ordersArray: Array.isArray(orders),
-    firstOrderSample: orders[0] || 'No orders'
-  });
-  
-  const paidOrders = orders.filter((o: any) => o.status === 'paid' || o.status === 'fulfilled');
-  // Calculate net revenue (total - platform fees) for paid orders
-  const totalRevenue = paidOrders.reduce((sum: number, order: any) => {
-    const total = parseFloat(order.total || '0');
-    const platformFee = parseFloat(order.platformFee || '0');
-    const netAmount = total - platformFee;
-    return sum + (isNaN(netAmount) ? 0 : netAmount);
-  }, 0);
-  
+  // Use overall statistics from backend API instead of calculating from paginated data
   const orderStats = {
-    total: orders.length,
-    pending: orders.filter((o: any) => o.status === 'pending' || o.status === 'confirmed').length,
-    paid: orders.filter((o: any) => o.status === 'paid').length,
-    fulfilled: orders.filter((o: any) => o.status === 'fulfilled').length,
-    totalRevenue: totalRevenue,
-    avgOrderValue: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0
+    total: overallStats?.ordersCount || 0,
+    pending: overallStats?.pendingOrdersCount || 0, // Use overall pending count
+    paid: overallStats?.paidOrdersCount || 0, // Use overall paid count
+    fulfilled: orders.filter((o: any) => o.status === 'fulfilled').length, // Current page fulfilled count for visual reference
+    totalRevenue: overallStats?.totalRevenue || 0, // Use overall net revenue from backend
+    avgOrderValue: overallStats?.avgOrderValue || 0 // Use pre-calculated average from backend
   };
   
-  console.log('📊 Calculated Order Stats:', orderStats);
+  console.log('📊 Order Statistics Using Overall Stats:', {
+    overallStatsFromAPI: overallStats,
+    calculatedStats: orderStats,
+    currentPageOrdersLength: orders.length
+  });
 
   // Enhanced filtering
   const filteredOrders = orders.filter((order: any) => {
