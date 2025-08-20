@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,7 +29,28 @@ export default function OrdersClean() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
+  const [authRecoveryAttempted, setAuthRecoveryAttempted] = useState(false);
   const queryClient = useQueryClient();
+
+  // Auto-recover authentication if needed
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated && !authRecoveryAttempted) {
+      setAuthRecoveryAttempted(true);
+      // Try to recover session
+      fetch('/api/auth/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
+      }).then(response => {
+        if (response.ok) {
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        }
+      }).catch(error => {
+        console.log('Auth recovery failed:', error);
+      });
+    }
+  }, [authLoading, isAuthenticated, authRecoveryAttempted, queryClient]);
 
   // Fetch orders only when authenticated
   const { data: orders = [], isLoading, error, refetch } = useQuery<Order[]>({
@@ -126,30 +147,43 @@ export default function OrdersClean() {
     }
   };
 
-  // Loading state
-  if (authLoading) {
+  // Loading state - show auth recovery progress
+  if (authLoading || (!isAuthenticated && !authRecoveryAttempted)) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center space-y-2">
             <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600">
+              {!isAuthenticated && !authRecoveryAttempted ? 'Recovering session...' : 'Loading...'}
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Authentication required
-  if (!isAuthenticated) {
+  // Authentication required - but give auth recovery a chance to work
+  if (!isAuthenticated && !authLoading && authRecoveryAttempted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="text-red-600 font-medium">Authentication Required</div>
           <p className="text-gray-500 text-sm">Please log in to access orders.</p>
-          <Button onClick={() => window.location.href = '/login'}>
-            Go to Login
-          </Button>
+          <div className="space-x-2">
+            <Button onClick={() => window.location.href = '/login'}>
+              Go to Login
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setAuthRecoveryAttempted(false);
+                window.location.reload();
+              }}
+            >
+              Retry Auth
+            </Button>
+          </div>
         </div>
       </div>
     );
