@@ -167,7 +167,7 @@ export default function OrdersFresh() {
 
   // Calculate amounts after platform fee using actual database platform fees
   const calculateNetAmount = (order: Order) => {
-    const subtotal = parseFloat(order.subtotal || order.total || '0');
+    const subtotal = parseFloat(order.subtotal || '0');
     const actualPlatformFee = parseFloat(order.platformFee || '0');
     // Use the actual platform fee from database if available, otherwise calculate 3.3% of subtotal
     const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : subtotal * 0.033;
@@ -523,11 +523,11 @@ export default function OrdersFresh() {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>Customer Paid:</span>
-                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total) + parseFloat(selectedOrder.deliveryCost || '0'))}</span>
+                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || '0') + parseFloat(selectedOrder.deliveryCost || '0'))}</span>
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total) * 0.033)}</span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.subtotal || '0') * 0.033)}</span>
                   </div>
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-medium text-green-600">
