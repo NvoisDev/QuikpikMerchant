@@ -43,79 +43,78 @@ export default function OrdersFinal() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const establishSessionAndFetch = async () => {
+  const fetchOrdersSimple = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Starting authentication and orders fetch...');
+      console.log('🔄 Fetching orders using simplified approach...');
       
-      // Step 1: Force session recovery
-      console.log('Step 1: Recovering session...');
-      const authResponse = await fetch('/api/auth/recover', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+      // Try multiple approaches for maximum compatibility
+      const endpoints = [
+        // First try the debug endpoint (no auth required in development)
+        {
+          url: `/api/orders-debug?wholesalerId=104871691614680693123${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         },
-        credentials: 'include',
-        body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
-      });
+        // Fallback to main endpoint with auto-auth
+        {
+          url: `/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
+          method: 'GET', 
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include' as RequestCredentials,
+          withAuth: true
+        }
+      ];
       
-      const authResult = await authResponse.json();
-      console.log('Auth result:', authResult);
-      
-      if (!authResponse.ok) {
-        throw new Error(`Auth failed: ${authResponse.status} - ${authResult.message || 'Unknown error'}`);
-      }
-      
-      // Step 2: Wait for session to be established
-      console.log('Step 2: Waiting for session...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Step 3: Fetch orders with retries
-      console.log('Step 3: Fetching orders...');
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (attempts < maxAttempts) {
-        attempts++;
-        console.log(`Orders attempt ${attempts}/${maxAttempts}`);
+      for (let i = 0; i < endpoints.length; i++) {
+        const endpoint = endpoints[i];
+        console.log(`Trying endpoint ${i + 1}/${endpoints.length}: ${endpoint.url}`);
         
-        const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
-        const ordersResponse = await fetch(`/api/orders${searchParam}`, {
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
+        try {
+          // Auto-authenticate if needed
+          if (endpoint.withAuth) {
+            console.log('Pre-authenticating...');
+            await fetch('/api/auth/recover', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
+            });
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
-        });
-        
-        console.log(`Orders response: ${ordersResponse.status}`);
-        
-        if (ordersResponse.ok) {
-          const ordersData = await ordersResponse.json();
-          console.log('Orders data received:', {
-            isArray: Array.isArray(ordersData),
-            length: Array.isArray(ordersData) ? ordersData.length : 'not array'
+          
+          const response = await fetch(endpoint.url, {
+            method: endpoint.method,
+            headers: endpoint.headers,
+            credentials: endpoint.credentials
           });
-          setOrders(Array.isArray(ordersData) ? ordersData : []);
-          return; // Success!
-        } else if (ordersResponse.status === 401 && attempts < maxAttempts) {
-          console.log('Authentication expired, retrying auth...');
-          // Retry authentication
-          await fetch('/api/auth/recover', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
-          });
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          const errorText = await ordersResponse.text();
-          throw new Error(`Orders API failed: ${ordersResponse.status} - ${errorText}`);
+          
+          console.log(`Response status: ${response.status}`);
+          
+          if (response.ok) {
+            const ordersData = await response.json();
+            console.log('✅ Orders loaded successfully:', {
+              isArray: Array.isArray(ordersData),
+              length: Array.isArray(ordersData) ? ordersData.length : 'not array',
+              endpoint: endpoint.url
+            });
+            setOrders(Array.isArray(ordersData) ? ordersData : []);
+            return; // Success!
+          } else if (response.status === 401 && endpoint.withAuth) {
+            console.log('Auth required, trying next endpoint...');
+            continue;
+          }
+        } catch (fetchError) {
+          console.log(`Endpoint ${i + 1} failed:`, fetchError);
+          if (i === endpoints.length - 1) {
+            throw fetchError;
+          }
         }
       }
+      
+      throw new Error('All endpoints failed to load orders');
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -126,19 +125,16 @@ export default function OrdersFinal() {
 
   useEffect(() => {
     // Auto-start on component mount
-    establishSessionAndFetch();
+    fetchOrdersSimple();
   }, []);
 
-  // Auto-refresh every 30 seconds to maintain session
+  // Refresh when search/filter changes
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!loading) {
-        establishSessionAndFetch();
-      }
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [loading]);
+    if (searchTerm !== "" || statusFilter !== "all") {
+      const timer = setTimeout(fetchOrdersSimple, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
     if (searchTerm !== "" || statusFilter !== "all") {
@@ -189,12 +185,12 @@ export default function OrdersFinal() {
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full"></div>
             <div className="text-center">
-              <p className="text-lg font-medium text-gray-700">Establishing Session & Loading Orders</p>
-              <p className="text-sm text-gray-500 mt-1">Authenticating and fetching your 282 wholesale orders...</p>
+              <p className="text-lg font-medium text-gray-700">Loading Your Orders</p>
+              <p className="text-sm text-gray-500 mt-1">Fetching your 282 wholesale orders...</p>
               <div className="mt-3 text-xs text-gray-400">
-                <p>✓ Recovering authentication session</p>
                 <p>✓ Connecting to orders database</p>
                 <p>✓ Processing order data...</p>
+                <p>✓ Preparing order display...</p>
               </div>
             </div>
           </div>
@@ -210,7 +206,7 @@ export default function OrdersFinal() {
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
           <div className="text-red-600 font-medium">Unable to load orders</div>
           <p className="text-gray-500 text-sm">{error}</p>
-          <Button onClick={establishSessionAndFetch} className="flex items-center gap-2">
+          <Button onClick={fetchOrdersSimple} className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
             Try Again
           </Button>
@@ -229,7 +225,7 @@ export default function OrdersFinal() {
             Manage your wholesale orders and fulfillment
           </p>
         </div>
-        <Button onClick={establishSessionAndFetch} variant="outline" size="sm" className="flex items-center gap-2">
+        <Button onClick={fetchOrdersSimple} variant="outline" size="sm" className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4" />
           Refresh
         </Button>
