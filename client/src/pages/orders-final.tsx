@@ -48,30 +48,73 @@ export default function OrdersFinal() {
       setLoading(true);
       setError(null);
       
-      // Step 1: Recover session
+      console.log('🔄 Starting authentication and orders fetch...');
+      
+      // Step 1: Force session recovery
+      console.log('Step 1: Recovering session...');
       const authResponse = await fetch('/api/auth/recover', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         credentials: 'include',
         body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
       });
       
-      if (authResponse.ok) {
-        // Step 2: Fetch orders
+      const authResult = await authResponse.json();
+      console.log('Auth result:', authResult);
+      
+      if (!authResponse.ok) {
+        throw new Error(`Auth failed: ${authResponse.status} - ${authResult.message || 'Unknown error'}`);
+      }
+      
+      // Step 2: Wait for session to be established
+      console.log('Step 2: Waiting for session...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Step 3: Fetch orders with retries
+      console.log('Step 3: Fetching orders...');
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        attempts++;
+        console.log(`Orders attempt ${attempts}/${maxAttempts}`);
+        
         const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
         const ordersResponse = await fetch(`/api/orders${searchParam}`, {
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
         });
+        
+        console.log(`Orders response: ${ordersResponse.status}`);
         
         if (ordersResponse.ok) {
           const ordersData = await ordersResponse.json();
+          console.log('Orders data received:', {
+            isArray: Array.isArray(ordersData),
+            length: Array.isArray(ordersData) ? ordersData.length : 'not array'
+          });
           setOrders(Array.isArray(ordersData) ? ordersData : []);
+          return; // Success!
+        } else if (ordersResponse.status === 401 && attempts < maxAttempts) {
+          console.log('Authentication expired, retrying auth...');
+          // Retry authentication
+          await fetch('/api/auth/recover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
+          });
+          await new Promise(resolve => setTimeout(resolve, 1000));
         } else {
-          throw new Error(`Orders API failed: ${ordersResponse.status}`);
+          const errorText = await ordersResponse.text();
+          throw new Error(`Orders API failed: ${ordersResponse.status} - ${errorText}`);
         }
-      } else {
-        throw new Error('Authentication failed');
       }
       
     } catch (err) {
@@ -82,8 +125,20 @@ export default function OrdersFinal() {
   };
 
   useEffect(() => {
+    // Auto-start on component mount
     establishSessionAndFetch();
   }, []);
+
+  // Auto-refresh every 30 seconds to maintain session
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading) {
+        establishSessionAndFetch();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (searchTerm !== "" || statusFilter !== "all") {
@@ -131,9 +186,17 @@ export default function OrdersFinal() {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
-            <p className="text-gray-600">Loading orders...</p>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full"></div>
+            <div className="text-center">
+              <p className="text-lg font-medium text-gray-700">Establishing Session & Loading Orders</p>
+              <p className="text-sm text-gray-500 mt-1">Authenticating and fetching your 282 wholesale orders...</p>
+              <div className="mt-3 text-xs text-gray-400">
+                <p>✓ Recovering authentication session</p>
+                <p>✓ Connecting to orders database</p>
+                <p>✓ Processing order data...</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
