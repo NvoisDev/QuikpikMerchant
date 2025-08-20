@@ -139,7 +139,7 @@ interface Order {
 }
 
 export default function Orders() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
