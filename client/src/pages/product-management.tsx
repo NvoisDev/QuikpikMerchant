@@ -1550,13 +1550,13 @@ export default function ProductManagement() {
                               <FormLabel>Description</FormLabel>
                               <ButtonLoader
                                 isLoading={isGeneratingDescription}
-                                variant="outline"
+                                variant="default"
                                 size="sm"
-                                className="h-8 bg-green-600 text-white hover:bg-green-700 border-green-600 hover:border-green-700 relative z-10"
+                                className="h-9 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 font-medium relative z-10"
                                 onClick={generateDescription}
                               >
-                                <Sparkles className="h-4 w-4 mr-1" />
-                                AI Generate
+                                <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+                                ✨ AI Generate
                               </ButtonLoader>
                             </div>
                             <FormControl>
