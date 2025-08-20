@@ -53,19 +53,32 @@ export default function OrdersFresh() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const ordersPerPage = 20;
 
-  const loadOrders = async () => {
+  const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('📦 Loading orders from lightweight endpoint...');
-      const response = await fetch('/api/orders-light');
+      console.log(`📦 Loading orders page ${page} with search: "${search}"`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: ordersPerPage.toString(),
+        ...(search && { search })
+      });
+      const response = await fetch(`/api/orders-paginated?${params}`);
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`✅ Loaded ${data.length} orders successfully`);
-        setOrders(data);
+        console.log(`✅ Loaded ${data.orders.length} orders successfully (page ${page} of ${data.totalPages})`);
+        setOrders(data.orders);
+        setTotalOrders(data.total);
+        setTotalPages(data.totalPages);
+        setCurrentPage(page);
       } else {
         throw new Error(`Server responded with ${response.status}`);
       }
@@ -78,8 +91,18 @@ export default function OrdersFresh() {
   };
 
   useEffect(() => {
-    loadOrders();
+    loadOrders(1, searchQuery);
   }, []);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    loadOrders(1, query);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    loadOrders(newPage, searchQuery);
+  };
 
   // Load detailed order information for modal
   const loadOrderDetails = async (orderId: number) => {
@@ -137,7 +160,7 @@ export default function OrdersFresh() {
     return totalAmount - platformFee;
   };
 
-  const totalOrders = orders.length;
+  const displayedOrders = orders.length;
   const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order.total), 0);
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
@@ -162,7 +185,7 @@ export default function OrdersFresh() {
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={loadOrders}>Try Again</Button>
+              <Button onClick={() => loadOrders()}>Try Again</Button>
             </div>
           </CardContent>
         </Card>
@@ -173,10 +196,37 @@ export default function OrdersFresh() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Orders</h1>
-        <Button onClick={loadOrders} variant="outline">
-          Refresh
-        </Button>
+        <h1 className="text-2xl font-bold">Orders</h1>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            Showing {displayedOrders} of {totalOrders} orders
+          </div>
+          <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline">
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Search orders by customer name, phone, or order number..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSearch('')}
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -235,8 +285,9 @@ export default function OrdersFresh() {
               <p className="text-gray-500">No orders found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Order #</TableHead>
@@ -308,7 +359,35 @@ export default function OrdersFresh() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    Page {currentPage} of {totalPages} • {totalOrders} total orders
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

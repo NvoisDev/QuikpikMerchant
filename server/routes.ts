@@ -1795,6 +1795,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Paginated orders endpoint
+  app.get('/api/orders-paginated', async (req: any, res) => {
+    try {
+      const page = parseInt(req.query.page || '1');
+      const limit = parseInt(req.query.limit || '20');
+      const search = req.query.search;
+      const wholesalerId = '104871691614680693123';
+      
+      console.log(`📦 Fetching paginated orders - page: ${page}, limit: ${limit}, search: ${search || 'none'}`);
+      
+      // Get total count first
+      const totalCountQuery = await db
+        .select({ count: count() })
+        .from(orders)
+        .where(eq(orders.wholesalerId, wholesalerId));
+      const totalOrders = totalCountQuery[0].count;
+      const totalPages = Math.ceil(totalOrders / limit);
+      
+      // Get paginated orders
+      let orderQuery = db
+        .select()
+        .from(orders)
+        .where(eq(orders.wholesalerId, wholesalerId));
+      
+      // Apply search filter
+      if (search && search.trim()) {
+        const searchValue = `%${search.trim()}%`;
+        orderQuery = orderQuery.where(and(
+          eq(orders.wholesalerId, wholesalerId),
+          or(
+            sql`${orders.orderNumber} ILIKE ${searchValue}`,
+            sql`${orders.customerName} ILIKE ${searchValue}`,
+            sql`${orders.customerEmail} ILIKE ${searchValue}`,
+            sql`${orders.customerPhone} ILIKE ${searchValue}`
+          )
+        ));
+      }
+      
+      const ordersResult = await orderQuery
+        .orderBy(desc(orders.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit);
+
+      console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
+      
+      res.json({
+        orders: ordersResult,
+        currentPage: page,
+        totalPages,
+        total: totalOrders,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      });
+    } catch (error) {
+      console.error("❌ Error fetching paginated orders:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch orders",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
   // Debug orders endpoint for development (temporary)
   app.get('/api/orders-debug', async (req: any, res) => {
     if (process.env.NODE_ENV !== 'development') {
