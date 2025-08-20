@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
-import { useToast } from "@/hooks/use-toast";
 
 interface OrderItem {
   id: number;
@@ -36,22 +35,20 @@ interface Order {
   items?: OrderItem[];
 }
 
-export default function OrdersUnified() {
+export default function OrdersFinal() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const { toast } = useToast();
 
-  // Auto-authenticate and fetch orders
-  const fetchOrders = async () => {
+  const establishSessionAndFetch = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Step 1: Ensure authentication
+      // Step 1: Recover session
       const authResponse = await fetch('/api/auth/recover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,7 +57,7 @@ export default function OrdersUnified() {
       });
       
       if (authResponse.ok) {
-        // Step 2: Fetch orders with filters
+        // Step 2: Fetch orders
         const searchParam = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
         const ordersResponse = await fetch(`/api/orders${searchParam}`, {
           credentials: 'include',
@@ -78,7 +75,6 @@ export default function OrdersUnified() {
       }
       
     } catch (err) {
-      console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -86,12 +82,12 @@ export default function OrdersUnified() {
   };
 
   useEffect(() => {
-    fetchOrders();
+    establishSessionAndFetch();
   }, []);
 
   useEffect(() => {
     if (searchTerm !== "" || statusFilter !== "all") {
-      const timer = setTimeout(fetchOrders, 500);
+      const timer = setTimeout(establishSessionAndFetch, 500);
       return () => clearTimeout(timer);
     }
   }, [searchTerm, statusFilter]);
@@ -111,7 +107,7 @@ export default function OrdersUnified() {
     );
   };
 
-  // Filter orders based on search and status
+  // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesSearch = !searchTerm || 
       order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,7 +119,7 @@ export default function OrdersUnified() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate stats
+  // Stats
   const stats = {
     total: filteredOrders.length,
     paid: filteredOrders.filter(o => o.status === 'paid').length,
@@ -151,7 +147,7 @@ export default function OrdersUnified() {
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
           <div className="text-red-600 font-medium">Unable to load orders</div>
           <p className="text-gray-500 text-sm">{error}</p>
-          <Button onClick={fetchOrders} className="flex items-center gap-2">
+          <Button onClick={establishSessionAndFetch} className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
             Try Again
           </Button>
@@ -170,7 +166,7 @@ export default function OrdersUnified() {
             Manage your wholesale orders and fulfillment
           </p>
         </div>
-        <Button onClick={fetchOrders} variant="outline" size="sm" className="flex items-center gap-2">
+        <Button onClick={establishSessionAndFetch} variant="outline" size="sm" className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4" />
           Refresh
         </Button>
@@ -182,7 +178,7 @@ export default function OrdersUnified() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search orders..."
+              placeholder="Search orders, customers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -204,7 +200,7 @@ export default function OrdersUnified() {
         </Select>
       </div>
 
-      {/* Summary Stats */}
+      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -213,27 +209,27 @@ export default function OrdersUnified() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Showing filtered results</p>
+            <p className="text-xs text-muted-foreground">Filtered results</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.revenue)}</div>
-            <p className="text-xs text-muted-foreground">From filtered orders</p>
+            <p className="text-xs text-muted-foreground">Total earnings</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Paid</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.paid}</div>
-            <p className="text-xs text-muted-foreground">Successfully paid</p>
+            <p className="text-xs text-muted-foreground">Paid orders</p>
           </CardContent>
         </Card>
         <Card>
@@ -243,7 +239,7 @@ export default function OrdersUnified() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.fulfilled}</div>
-            <p className="text-xs text-muted-foreground">Orders completed</p>
+            <p className="text-xs text-muted-foreground">Completed</p>
           </CardContent>
         </Card>
       </div>
@@ -252,7 +248,6 @@ export default function OrdersUnified() {
       <Card>
         <CardHeader>
           <CardTitle>Orders ({filteredOrders.length})</CardTitle>
-          <CardDescription>Your wholesale orders with filtering and search</CardDescription>
         </CardHeader>
         <CardContent>
           {filteredOrders.length === 0 ? (
@@ -261,7 +256,7 @@ export default function OrdersUnified() {
               <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
               <p className="mt-1 text-sm text-gray-500">
                 {searchTerm || statusFilter !== "all" 
-                  ? "Try adjusting your search or filter criteria" 
+                  ? "Try adjusting your search or filter" 
                   : "Orders will appear here once customers place them"}
               </p>
             </div>
@@ -280,7 +275,7 @@ export default function OrdersUnified() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.slice(0, 20).map((order) => (
+                  {filteredOrders.slice(0, 25).map((order) => (
                     <tr key={order.id} className="border-b hover:bg-gray-50">
                       <td className="p-4">
                         <div className="font-medium text-blue-600">
@@ -318,9 +313,9 @@ export default function OrdersUnified() {
                   ))}
                 </tbody>
               </table>
-              {filteredOrders.length > 20 && (
+              {filteredOrders.length > 25 && (
                 <div className="text-center p-4 text-sm text-gray-500">
-                  Showing first 20 of {filteredOrders.length} orders
+                  Showing first 25 of {filteredOrders.length} orders
                 </div>
               )}
             </div>
