@@ -50,15 +50,23 @@ export default function OrdersFinal() {
       
       console.log('🔄 Fetching orders using simplified approach...');
       
-      // Try multiple approaches for maximum compatibility
+      // Check if we're in production vs development
+      const isProduction = window.location.hostname !== 'localhost';
+      
       const endpoints = [
-        // First try the debug endpoint (no auth required in development)
+        // Try public endpoint first (works in both dev and production)
         {
-          url: `/api/orders-debug?wholesalerId=104871691614680693123${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`,
+          url: `/api/public-orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         },
-        // Fallback to main endpoint with auto-auth
+        // In development, also try debug endpoint
+        ...(!isProduction ? [{
+          url: `/api/orders-debug?wholesalerId=104871691614680693123${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }] : []),
+        // Fallback to authenticated endpoint
         {
           url: `/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
           method: 'GET', 
@@ -76,13 +84,24 @@ export default function OrdersFinal() {
           // Auto-authenticate if needed
           if (endpoint.withAuth) {
             console.log('Pre-authenticating...');
-            await fetch('/api/auth/recover', {
+            const authResponse = await fetch('/api/auth/recover', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
               body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
             });
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            if (!authResponse.ok) {
+              console.log('Auth failed, trying alternative approach...');
+              // Try with the original email format
+              await fetch('/api/auth/recover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: 'hello@quikpik.co' })
+              });
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
           const response = await fetch(endpoint.url, {
@@ -94,13 +113,27 @@ export default function OrdersFinal() {
           console.log(`Response status: ${response.status}`);
           
           if (response.ok) {
-            const ordersData = await response.json();
+            const responseData = await response.json();
             console.log('✅ Orders loaded successfully:', {
-              isArray: Array.isArray(ordersData),
-              length: Array.isArray(ordersData) ? ordersData.length : 'not array',
-              endpoint: endpoint.url
+              endpoint: endpoint.url,
+              dataType: typeof responseData,
+              hasOrders: responseData.orders ? 'yes' : 'no'
             });
-            setOrders(Array.isArray(ordersData) ? ordersData : []);
+            
+            // Handle different response formats
+            let ordersData;
+            if (responseData.orders && Array.isArray(responseData.orders)) {
+              // Public endpoint format: { orders: [...] }
+              ordersData = responseData.orders;
+            } else if (Array.isArray(responseData)) {
+              // Direct array format
+              ordersData = responseData;
+            } else {
+              ordersData = [];
+            }
+            
+            console.log(`Processed ${ordersData.length} orders`);
+            setOrders(ordersData);
             return; // Success!
           } else if (response.status === 401 && endpoint.withAuth) {
             console.log('Auth required, trying next endpoint...');
