@@ -438,11 +438,31 @@ export default function Orders() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => window.location.reload()}
+                  onClick={async () => {
+                    // Try authentication recovery first
+                    try {
+                      const response = await fetch('/api/auth/recover', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
+                      });
+                      if (response.ok) {
+                        window.location.reload();
+                      } else {
+                        throw new Error('Recovery failed');
+                      }
+                    } catch (error) {
+                      console.error('Auth recovery failed:', error);
+                      window.location.reload();
+                    }
+                  }}
                 >
-                  Retry
+                  Quick Auth Fix
                 </Button>
               </div>
+              <p className="text-xs text-gray-400 mt-3">
+                If the issue persists, try logging out completely and signing in again with Google.
+              </p>
             </>
           ) : (
             <>
