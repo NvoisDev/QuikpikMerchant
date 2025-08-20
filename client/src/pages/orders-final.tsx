@@ -113,7 +113,12 @@ export default function OrdersFinal() {
             continue;
           }
         } catch (fetchError) {
-          console.log(`Endpoint ${i + 1} failed:`, fetchError);
+          console.error(`❌ Endpoint ${i + 1} failed:`, fetchError);
+          console.error(`❌ Error details:`, {
+            message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+            endpoint: endpoint.url,
+            method: endpoint.method
+          });
           if (i === endpoints.length - 1) {
             throw fetchError;
           }
