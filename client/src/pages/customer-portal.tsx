@@ -3007,6 +3007,22 @@ export default function CustomerPortal() {
                               {/* Product Details */}
                               <div className="space-y-2 mb-3">
                                 <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                  {/* Product Weight/Size Tag */}
+                                  {(() => {
+                                    const packQuantity = (product as any).packQuantity || 1;
+                                    const unitSize = (product as any).unitSize;
+                                    const unitOfMeasure = (product as any).unitOfMeasure;
+                                    
+                                    if (unitSize && unitOfMeasure) {
+                                      return (
+                                        <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
+                                          {packQuantity} x {unitSize}{unitOfMeasure}
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  
                                   {/* Product Type Tags - Units or Pallets or Both */}
                                   {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) ? (
                                     <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
@@ -3375,6 +3391,22 @@ export default function CustomerPortal() {
                                 {/* Product Details */}
                                 <div className="space-y-2 mb-3">
                                   <div className="flex flex-wrap gap-1 text-xs text-gray-600">
+                                    {/* Product Weight/Size Tag */}
+                                    {(() => {
+                                      const packQuantity = (product as any).packQuantity || 1;
+                                      const unitSize = (product as any).unitSize;
+                                      const unitOfMeasure = (product as any).unitOfMeasure;
+                                      
+                                      if (unitSize && unitOfMeasure) {
+                                        return (
+                                          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
+                                            {packQuantity} x {unitSize}{unitOfMeasure}
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    
                                     {/* Product Type Tags - Units or Pallets or Both */}
                                     {(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) ? (
                                       <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">
