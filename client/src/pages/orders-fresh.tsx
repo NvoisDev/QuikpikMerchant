@@ -609,14 +609,8 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between pt-2 border-t">
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`https://quikpik.app/customer-portal?phone=${selectedOrder.customerPhone}`, '_blank')}
-                >
-                  View Customer Portal
-                </Button>
+              <div className="flex justify-end pt-2 border-t">
+
                 {selectedOrder.status !== 'fulfilled' && (
                   <Button 
                     size="sm"
