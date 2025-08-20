@@ -80,11 +80,8 @@ interface ExtendedProduct {
   moq?: number;
 }
 
-// Initialize Stripe
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+// Initialize Stripe with fallback key
+const stripePromise = loadStripe('pk_test_51GnHB8BLkKweDa5PCp5YEEfexdRc9VM2R7kfF7Xzdt3p0unYEDyItpEY4d9XParTDGYGuS57HJNcopH7RCSTjqH003aeJmgp');
 
 // Utility functions
 
