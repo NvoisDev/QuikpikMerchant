@@ -34,10 +34,17 @@ interface Order {
 }
 
 interface OrderItem {
-  productName: string;
+  id: number;
+  productId: number;
   quantity: number;
   unitPrice: string;
   total: string;
+  product: {
+    id: number;
+    name: string;
+    imageUrl?: string;
+    moq?: number;
+  };
 }
 
 export default function OrdersFresh() {
@@ -367,7 +374,7 @@ export default function OrdersFresh() {
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="flex justify-between items-center">
                       <div>
-                        <div className="font-medium">{item.productName}</div>
+                        <div className="font-medium">{item.product?.name || 'Unknown Product'}</div>
                         <div className="text-sm text-gray-500">
                           Quantity: {item.quantity} units × {formatCurrency(parseFloat(item.unitPrice))}
                         </div>
