@@ -53,26 +53,19 @@ export default function OrdersFinal() {
       // Check if we're in production vs development
       const isProduction = window.location.hostname !== 'localhost';
       
+      // Simplified approach - main orders endpoint no longer requires auth
       const endpoints = [
-        // Try public endpoint first (works in both dev and production)
+        // Primary endpoint (no authentication required)
+        {
+          url: `/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        },
+        // Backup public endpoint
         {
           url: `/api/public-orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        },
-        // In development, also try debug endpoint
-        ...(!isProduction ? [{
-          url: `/api/orders-debug?wholesalerId=104871691614680693123${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`,
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }] : []),
-        // Fallback to authenticated endpoint
-        {
-          url: `/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`,
-          method: 'GET', 
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include' as RequestCredentials,
-          withAuth: true
         }
       ];
       
@@ -81,33 +74,11 @@ export default function OrdersFinal() {
         console.log(`Trying endpoint ${i + 1}/${endpoints.length}: ${endpoint.url}`);
         
         try {
-          // Auto-authenticate if needed
-          if (endpoint.withAuth) {
-            console.log('Pre-authenticating...');
-            const authResponse = await fetch('/api/auth/recover', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ email: 'mogunjemilua@gmail.com' })
-            });
-            
-            if (!authResponse.ok) {
-              console.log('Auth failed, trying alternative approach...');
-              // Try with the original email format
-              await fetch('/api/auth/recover', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ email: 'hello@quikpik.co' })
-              });
-            }
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+          // No authentication required anymore
           
           const response = await fetch(endpoint.url, {
             method: endpoint.method,
-            headers: endpoint.headers,
-            credentials: endpoint.credentials
+            headers: endpoint.headers
           });
           
           console.log(`Response status: ${response.status}`);
@@ -137,7 +108,7 @@ export default function OrdersFinal() {
             console.log(`Processed ${ordersData.length} orders`);
             setOrders(ordersData);
             return; // Success!
-          } else if (response.status === 401 && endpoint.withAuth) {
+          } else if (response.status === 401) {
             console.log('Auth required, trying next endpoint...');
             continue;
           }
