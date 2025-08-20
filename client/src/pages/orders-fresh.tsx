@@ -356,7 +356,7 @@ export default function OrdersFresh() {
 
               {/* Customer Information */}
               <div>
-                <h3 className="font-medium mb-2 text-sm">Your Information</h3>
+                <h3 className="font-medium mb-2 text-sm">Customer Information</h3>
                 <div className="space-y-1 text-xs">
                   <div><span className="font-medium">Name:</span> {selectedOrder.customerName}</div>
                   <div><span className="font-medium">Email:</span> {selectedOrder.customerEmail}</div>
@@ -418,7 +418,7 @@ export default function OrdersFresh() {
                   <div className="flex items-start gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-xs font-medium">Payment processed successfully</div>
+                      <div className="text-xs font-medium">Customer payment received</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
@@ -427,7 +427,7 @@ export default function OrdersFresh() {
                   <div className="flex items-start gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-xs font-medium">Order confirmation sent to you</div>
+                      <div className="text-xs font-medium">Order notification received</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
@@ -436,7 +436,7 @@ export default function OrdersFresh() {
                   <div className="flex items-start gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-xs font-medium">Wholesaler notified of your order</div>
+                      <div className="text-xs font-medium">Customer confirmation sent</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
@@ -447,19 +447,19 @@ export default function OrdersFresh() {
                       <div className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-xs text-gray-500">Awaiting wholesaler confirmation</div>
+                          <div className="text-xs text-gray-500">Prepare order items</div>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-xs text-gray-500">Order preparation pending</div>
+                          <div className="text-xs text-gray-500">Package for {selectedOrder.fulfillmentType === 'delivery' ? 'delivery' : 'collection'}</div>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-xs text-gray-500">Fulfillment pending</div>
+                          <div className="text-xs text-gray-500">Mark as fulfilled when ready</div>
                         </div>
                       </div>
                     </>
@@ -468,8 +468,10 @@ export default function OrdersFresh() {
                     <div className="flex items-start gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
                       <div>
-                        <div className="text-xs font-medium">Order fulfilled</div>
-                        <div className="text-xs text-gray-500">Ready for collection/delivered</div>
+                        <div className="text-xs font-medium">Order fulfilled by you</div>
+                        <div className="text-xs text-gray-500">
+                          {selectedOrder.fulfillmentType === 'delivery' ? 'Ready for delivery' : 'Ready for customer collection'}
+                        </div>
                       </div>
                     </div>
                   )}
