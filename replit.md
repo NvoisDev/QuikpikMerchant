@@ -5,6 +5,14 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 
 ## Recent Changes (August 20, 2025)
 
+**PRODUCT SIZE TAGS IMPLEMENTED - COMPLETE SELLING FORMAT INDICATION**
+- ✅ **Visual Product Tags**: Added clear visual indicators for how products are sold
+- ✅ **"Individual Units"** (green): Products sold only as individual units
+- ✅ **"Units & Pallets"** (orange): Products available in both unit and pallet formats
+- ✅ **Smart Logic**: Tags determined by palletPrice availability (>£0 = both formats)
+- ✅ **Consistent Display**: Tags appear in both grid and list view modes
+- ✅ **Professional Design**: Color-coded tags with proper spacing and typography
+
 **PLATFORM AUDIT & CODE CLEANUP - CRITICAL FIXES IMPLEMENTED**
 - ✅ **Order Component Consolidation**: Identified and resolved 7 redundant order implementations causing confusion
 - ✅ **Backend TypeScript Fixes**: Fixed critical Stripe API version mismatch (2025-06-30 → 2025-07-30.basil) 
