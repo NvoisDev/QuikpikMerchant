@@ -756,7 +756,7 @@ export default function WholesalerDashboard() {
                           tick={{ fontSize: 12, fill: '#6b7280' }}
                           axisLine={false}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: any) => [value, 'Orders']}
                           labelStyle={{ color: '#374151' }}
                           contentStyle={{ 
