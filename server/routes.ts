@@ -1764,7 +1764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📦 Public orders request - found ${orders.length} orders for Surulere Foods`);
       
-      // Clean the response and limit items to prevent massive response
+      // Return complete orders for the Orders tab (no authentication required)
       const cleanOrders = orders.map(order => ({
         id: order.id,
         orderNumber: order.orderNumber,
@@ -1778,6 +1778,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deliveryAddress: order.deliveryAddress,
         fulfillmentType: order.fulfillmentType,
         createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: order.items || [],
         updatedAt: order.updatedAt,
         // Limit items to first 3 to prevent massive response
         items: order.items?.slice(0, 3).map(item => ({

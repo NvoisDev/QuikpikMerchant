@@ -117,7 +117,9 @@ export default function OrdersFinal() {
             console.log('✅ Orders loaded successfully:', {
               endpoint: endpoint.url,
               dataType: typeof responseData,
-              hasOrders: responseData.orders ? 'yes' : 'no'
+              hasOrders: responseData.orders ? 'yes' : 'no',
+              directArray: Array.isArray(responseData) ? 'yes' : 'no',
+              length: Array.isArray(responseData) ? responseData.length : (responseData.orders ? responseData.orders.length : 0)
             });
             
             // Handle different response formats
