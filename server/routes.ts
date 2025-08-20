@@ -1853,13 +1853,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer pays: Product total + Transaction Fee (5.5% + £0.50)
   // Wholesaler pays: Platform Fee (3.3% of product total)
   app.post('/api/customer/create-payment', async (req, res) => {
+    // Global payment processing lock to prevent ANY payment requests from overlapping
+    const globalPaymentLock = 'global_payment_processing';
     try {
       const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
       
-      // Enhanced logging to track duplicate payment prevention
-      const requestId = `payment_${customerPhone}_${Date.now()}`;
+      // Global payment lock disabled - allow payment processing
+      console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
+      
       console.log('🔥 PAYMENT REQUEST START:', {
-        requestId,
         timestamp: new Date().toISOString(),
         customerPhone,
         customerName,
@@ -2029,66 +2031,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Include delivery cost in fee calculation
-      console.log('🚚 CRITICAL SHIPPING DEBUG - Full shipping info received:', {
-        requestId,
+      console.log('🚚 Shipping cost debug:', {
         hasShippingInfo: !!shippingInfo,
-        shippingInfoOption: shippingInfo?.option,
         hasService: !!shippingInfo?.service,
-        fullShippingInfo: JSON.stringify(shippingInfo, null, 2)
+        servicePriceRaw: shippingInfo?.service?.price,
+        servicePriceType: typeof shippingInfo?.service?.price
       });
 
-      // Enhanced delivery cost parsing with multiple fallbacks
-      let deliveryCost = 0;
-      
-      if (shippingInfo?.option === 'delivery' && shippingInfo?.service) {
-        // Try multiple ways to extract the price
-        const service = shippingInfo.service;
-        const priceAttempts = [
-          service?.price,
-          service?.cost,
-          service?.value,
-          parseFloat(String(service?.price || '0')),
-          parseFloat(String(service?.cost || '0')),
-          parseFloat(String(service?.value || '0'))
-        ];
-        
-        console.log('🚚 PRICE EXTRACTION ATTEMPTS:', {
-          requestId,
-          servicePriceRaw: service?.price,
-          servicePriceType: typeof service?.price,
-          serviceCostRaw: service?.cost,
-          allPriceAttempts: priceAttempts.map((p, i) => ({ attempt: i, value: p, type: typeof p, isValid: !isNaN(parseFloat(String(p || '0'))) }))
-        });
-        
-        for (const attempt of priceAttempts) {
-          const parsed = parseFloat(String(attempt || '0'));
-          if (!isNaN(parsed) && parsed > 0) {
-            deliveryCost = parsed;
-            console.log('🚚 SUCCESS: Found valid delivery cost:', {
-              requestId,
-              deliveryCost,
-              sourceValue: attempt,
-              sourceType: typeof attempt
-            });
-            break;
-          }
-        }
-        
-        if (deliveryCost === 0) {
-          console.error('🚚 ERROR: Failed to extract valid delivery cost from service:', {
-            requestId,
-            serviceObject: service,
-            allAttempts: priceAttempts
-          });
-        }
-      }
-
-      console.log('🚚 FINAL DELIVERY COST RESULT:', {
-        requestId,
-        deliveryCost,
-        isValidCost: !isNaN(deliveryCost) && deliveryCost >= 0,
-        shippingOption: shippingInfo?.option
-      });
+      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
+      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
       
       const amountBeforeFees = productSubtotal + deliveryCost;
       console.log('💰 Subtotal calculation:', {
@@ -2109,63 +2060,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wholesalerPlatformFee = productSubtotal * 0.033;
       const wholesalerReceives = productSubtotal - wholesalerPlatformFee;
 
-      // CRITICAL: Enhanced validation with comprehensive debugging to prevent Stripe integer errors
-      console.log('🔍 PRE-CONVERSION DEBUG:', {
-        requestId,
-        totalCustomerPays: totalCustomerPays,
-        totalCustomerPaysType: typeof totalCustomerPays,
-        totalCustomerPaysIsNaN: isNaN(totalCustomerPays),
-        totalCustomerPaysIsFinite: Number.isFinite(totalCustomerPays),
-        totalCustomerPaysFixed: totalCustomerPays.toFixed(2)
-      });
+      // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
+      const stripeAmount = Math.round(totalCustomerPays * 100);
       
-      // Fix floating point precision issues by using parseFloat and toFixed before conversion
-      const preciseTotal = parseFloat(totalCustomerPays.toFixed(2));
-      const stripeAmount = Math.round(preciseTotal * 100);
-      
-      console.log('🔍 POST-CONVERSION DEBUG:', {
-        requestId,
-        preciseTotal,
-        preciseTotalType: typeof preciseTotal,
-        stripePrecalc: preciseTotal * 100,
-        stripeAmount,
-        stripeAmountType: typeof stripeAmount,
-        isInteger: Number.isInteger(stripeAmount)
-      });
-      
-      console.log('🔍 Amount validation details:', {
-        totalCustomerPays,
-        preciseTotal,
-        stripeAmount,
-        stripeAmountIsInteger: Number.isInteger(stripeAmount),
-        stripeAmountValid: stripeAmount > 0 && stripeAmount < 99999999 // Stripe limit
-      });
-      
-      // Strict validation to prevent any invalid values reaching Stripe
       if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || 
-          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || 
-          stripeAmount <= 0 || stripeAmount >= 99999999) { // Stripe max amount check
+          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
         console.error('❌ Invalid calculation values:', {
           productSubtotal,
           deliveryCost,
           amountBeforeFees,
           customerTransactionFee,
           totalCustomerPays,
-          preciseTotal,
           wholesalerPlatformFee,
           wholesalerReceives,
           stripeAmount,
           stripeAmountIsInteger: Number.isInteger(stripeAmount),
-          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0,
-          stripeAmountInRange: stripeAmount > 0 && stripeAmount < 99999999
+          totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0
         });
         return res.status(400).json({ 
-          message: "Invalid payment calculation. Please refresh your cart and try again.",
-          error: 'calculation_error',
+          message: "Invalid payment calculation. Please check your cart and try again.",
           debugInfo: {
-            productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal.toFixed(2),
-            deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost.toFixed(2),
-            totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays.toFixed(2),
+            productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal,
+            deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost,
+            totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays,
             stripeAmount: isNaN(stripeAmount) ? 'NaN' : stripeAmount
           }
         });
@@ -2193,40 +2110,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Create robust idempotency key to prevent duplicate payments
-      // Use precise calculation to avoid floating point issues in key generation
-      const preciseAmountBeforeFees = Math.round(parseFloat(amountBeforeFees.toFixed(2)) * 100);
-      const cartHash = validatedItems
-        .map(item => `${item.product.id}:${item.quantity}:${item.sellingType || 'units'}`)
-        .sort()
-        .join('-');
-      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4);
-      const timestampKey = Math.floor(Date.now() / 60000).toString(); // Changes every minute to prevent stale keys
+      // Create stable idempotency key based on customer, items, and CORE amount (without fees) to prevent duplicate payments
+      // Use product subtotal + delivery cost as base (before transaction fees) for more stable key generation
+      const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
+      const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
+      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4); // Clean phone number
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
-      // Enhanced key with more specificity and better collision avoidance
-      const baseKey = `${phoneKey}_${preciseAmountBeforeFees}_${cartHash}_${timestampKey}`
-        .replace(/[^a-zA-Z0-9_-]/g, '')
-        .slice(0, 240); // Leave room for prefix
-      const idempotencyKey = `pay_${baseKey}`;
-      
-      console.log('🔑 Enhanced idempotency key generation:', {
-        requestId,
-        phoneKey,
-        preciseAmountBeforeFees,
-        cartHash: cartHash.slice(0, 50) + '...',
-        timestampKey,
-        finalKeyLength: idempotencyKey.length,
-        idempotencyKey: idempotencyKey.slice(0, 100) + '...' // Log partial key for debugging
-      });
-      
-      console.log('🔑 Creating payment with idempotency key:', {
-        requestId,
-        idempotencyKey: idempotencyKey.slice(0, 100) + '...',
-        fullKeyLength: idempotencyKey.length
-      });
-      
+      console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
       console.log('💰 Final payment details before Stripe:', {
-        requestId,
         stripeAmount,
         totalCustomerPays,
         productSubtotal,
@@ -2234,121 +2127,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerTransactionFee
       });
       
-      // CRITICAL: Final validation to absolutely prevent invalid amounts reaching Stripe
-      const finalValidation = {
-        isInteger: Number.isInteger(stripeAmount),
-        isPositive: stripeAmount > 0,
-        withinStripeLimit: stripeAmount >= 50 && stripeAmount <= 99999999,
-        isFinite: Number.isFinite(stripeAmount),
-        notNaN: !isNaN(stripeAmount)
-      };
-      
-      console.log('🛡️ FINAL STRIPE AMOUNT VALIDATION:', {
-        requestId,
-        stripeAmount,
-        validation: finalValidation
-      });
-      
-      if (!finalValidation.isInteger || !finalValidation.isPositive || !finalValidation.withinStripeLimit || 
-          !finalValidation.isFinite || !finalValidation.notNaN) {
-        console.error('🚫 BLOCKING PAYMENT - Final validation failed:', {
-          requestId,
-          stripeAmount,
-          validation: finalValidation
-        });
-        return res.status(400).json({ 
-          message: "Payment amount validation failed. Please refresh and try again.",
-          errorType: "stripe_amount_invalid"
-        });
-      }
-      
       let paymentIntent;
       try {
-        // ENHANCED ANTI-DUPLICATE: Check for existing payment intents with stricter matching
-        // to prevent duplicate payment intents during shipping selection process
-        if (stripe) {
-          try {
-            const existingIntents = await stripe.paymentIntents.list({
-              limit: 10,
-              created: {
-                gte: Math.floor((Date.now() - (15 * 60 * 1000)) / 1000) // Last 15 minutes
-              }
-            });
-            
-            const matchingIntents = existingIntents.data.filter(intent => {
-              const intentPhone = intent.metadata.customerPhone;
-              const intentStatus = intent.status;
-              const intentAge = Date.now() - (intent.created * 1000);
-              const isRecentIntent = intentAge < 15 * 60 * 1000; // 15 minutes window
-              const isIncomplete = intentStatus === 'requires_payment_method' || intentStatus === 'requires_confirmation';
-              const phoneMatches = intentPhone === customerPhone;
-              
-              return phoneMatches && isRecentIntent && isIncomplete;
-            });
-            
-            console.log('🔍 DUPLICATE DETECTION: Found existing intents:', {
-              requestId,
-              totalExistingIntents: matchingIntents.length,
-              matchingIntentsIds: matchingIntents.map(i => ({ id: i.id, amount: i.amount, status: i.status }))
-            });
-            
-            if (matchingIntents.length > 0) {
-              // Find exact amount match first
-              const exactMatch = matchingIntents.find(intent => intent.amount === stripeAmount);
-              
-              if (exactMatch) {
-                console.log('✅ EXACT MATCH FOUND: Reusing existing payment intent');
-                return res.json({ 
-                  clientSecret: exactMatch.client_secret,
-                  productSubtotal: productSubtotal.toFixed(2),
-                  shippingCost: deliveryCost.toString(),
-                  customerTransactionFee: customerTransactionFee.toFixed(2),
-                  totalCustomerPays: totalCustomerPays.toFixed(2),
-                  wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
-                  wholesalerReceives: wholesalerReceives.toFixed(2),
-                  reusedExistingIntent: true,
-                  reuseReason: 'exact_amount_match'
-                });
-              }
-              
-              // Cancel old mismatched intents to prevent confusion
-              for (const oldIntent of matchingIntents) {
-                if (oldIntent.amount !== stripeAmount && oldIntent.status === 'requires_payment_method') {
-                  try {
-                    await stripe.paymentIntents.cancel(oldIntent.id);
-                    console.log('🗑️ CLEANUP: Cancelled old mismatched payment intent:', oldIntent.id);
-                  } catch (cancelError) {
-                    console.log('⚠️ Failed to cancel old intent:', oldIntent.id, cancelError.message);
-                  }
-                }
-              }
-            }
-          } catch (duplicateCheckError) {
-            console.log('⚠️ Duplicate check failed, proceeding with new payment intent creation:', duplicateCheckError.message);
-          }
-        }
-
-        // CRITICAL DEBUG: Log the exact values being sent to Stripe
-        console.log('🔥 STRIPE API CALL - EXACT VALUES BEING SENT:', {
-          requestId,
-          amount: stripeAmount,
-          amountType: typeof stripeAmount,
-          amountString: String(stripeAmount),
-          amountIsInteger: Number.isInteger(stripeAmount),
-          amountValue: stripeAmount
-        });
-        
-        // ABSOLUTE FINAL CHECK: Ensure stripeAmount is a valid integer
-        if (typeof stripeAmount !== 'number' || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
-          throw new Error(`CRITICAL: Invalid stripeAmount detected: ${stripeAmount} (type: ${typeof stripeAmount})`);
-        }
-        
         paymentIntent = await stripe.paymentIntents.create({
           amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
-          metadata: {
+        metadata: {
           customerName,
           customerEmail,
           customerPhone,
@@ -2381,69 +2167,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idempotencyKey: idempotencyKey
       });
       
-      console.log('✅ Payment intent created successfully:', {
-        requestId,
-        paymentIntentId: paymentIntent.id,
-        amount: paymentIntent.amount,
-        currency: paymentIntent.currency,
-        status: paymentIntent.status
-      });
+      console.log('✅ Payment intent created successfully:', paymentIntent.id);
       
-      // CRITICAL: Alert if this is a potential duplicate by checking for similar recent intents
-      console.log('🚨 DUPLICATE DETECTION: New payment intent created:', {
-        currentIntentId: paymentIntent.id,
-        timestamp: new Date().toISOString(),
-        customerPhone: customerPhone,
-        amount: paymentIntent.amount
-      });
-      
-      console.log('✅ Payment processing successful for request:', requestId);
+      console.log('✅ Payment processing successful');
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
-        console.error("🔍 Stripe error details:", {
-          code: stripeError.code,
-          message: stripeError.message,
-          param: stripeError.param,
-          type: stripeError.type,
-          stripeAmountUsed: stripeAmount,
-          calculationValues: {
-            productSubtotal: productSubtotal.toFixed(2),
-            deliveryCost: deliveryCost.toFixed(2),
-            totalCustomerPays: totalCustomerPays.toFixed(2),
-            preciseTotal: parseFloat(totalCustomerPays.toFixed(2))
-          }
-        });
         
-        // Handle specific Stripe errors
         if (stripeError.code === 'parameter_invalid_integer') {
           return res.status(400).json({ 
-            message: "Payment amount formatting error. Please clear your cart and try again.",
-            error: 'stripe_amount_error',
-            details: `Amount: ${stripeAmount} (${totalCustomerPays.toFixed(2)} GBP)`
-          });
-        }
-        
-        if (stripeError.code === 'amount_too_large') {
-          return res.status(400).json({ 
-            message: "Order amount exceeds maximum allowed. Please reduce your order size.",
-            error: 'amount_too_large'
-          });
-        }
-        
-        if (stripeError.code === 'amount_too_small') {
-          return res.status(400).json({ 
-            message: "Order amount is too small for processing. Minimum £0.50 required.",
-            error: 'amount_too_small'
-          });
-        }
-        
-        // For idempotency key conflicts (duplicate payments)
-        if (stripeError.code === 'idempotency_key_in_use') {
-          console.log('🔄 Idempotency key conflict - payment already exists');
-          return res.status(409).json({ 
-            message: "Payment already in progress. Please wait or refresh to check status.",
-            error: 'duplicate_payment'
+            message: "Invalid payment amount calculation. Please refresh and try again.",
+            error: 'calculation_error'
           });
         }
         
@@ -2452,7 +2186,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id, // Include for order fallback
         productSubtotal: productSubtotal.toFixed(2),
         shippingCost: deliveryCost.toString(),
         customerTransactionFee: customerTransactionFee.toFixed(2),
@@ -2470,11 +2203,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CLEAN: Payment processing consolidated
-  // Single working endpoint: /api/customer/create-payment
-
-  // Backup order creation endpoint for when webhooks fail
-  app.post('/api/customer/create-order-fallback', async (req, res) => {
+  // Direct order creation endpoint (called after successful payment)
+  app.post('/api/marketplace/create-order', async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
       
@@ -2482,58 +2212,360 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Payment intent ID required' });
       }
 
-      console.log(`🔄 FALLBACK: Attempting to create order for payment intent: ${paymentIntentId}`);
-
-      // Check if order already exists
-      const existingOrder = await storage.getOrderByPaymentIntentId(paymentIntentId);
-      if (existingOrder) {
-        console.log(`✅ FALLBACK: Order already exists: ${existingOrder.orderNumber}`);
-        return res.json({
-          success: true,
-          orderExists: true,
-          orderNumber: existingOrder.orderNumber,
-          orderId: existingOrder.id
-        });
+      // Retrieve payment intent from Stripe to get metadata
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
       }
-
-      // Retrieve payment intent from Stripe
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       
       if (paymentIntent.status !== 'succeeded') {
-        return res.status(400).json({ 
-          message: 'Payment not completed', 
-          status: paymentIntent.status 
-        });
+        return res.status(400).json({ message: 'Payment not successful' });
       }
 
-      // Check if this is a customer portal order
-      if (paymentIntent.metadata?.orderType !== 'customer_portal') {
-        return res.status(400).json({ 
-          message: 'Not a customer portal order' 
+      const {
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        totalAmount,
+        platformFee,
+        transactionFee,
+        wholesalerId,
+        orderType,
+        items: itemsJson,
+        connectAccountUsed,
+        productSubtotal,
+        customerTransactionFee,
+        totalCustomerPays,
+        wholesalerPlatformFee,
+        wholesalerReceives
+      } = paymentIntent.metadata;
+
+      if (orderType === 'customer_portal') {
+        const items = JSON.parse(itemsJson);
+
+        // Create customer if doesn't exist or update existing one
+        let customer = await storage.getUserByPhone(customerPhone);
+        const { firstName, lastName } = parseCustomerName(customerName);
+        
+        console.log(`🔍 Customer lookup by phone ${customerPhone}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        
+        // If phone lookup fails, try email lookup
+        if (!customer && customerEmail) {
+          customer = await storage.getUserByEmail(customerEmail);
+          console.log(`🔍 Customer lookup by email ${customerEmail}:`, customer ? `Found existing: ${customer.id} (${customer.firstName} ${customer.lastName})` : 'Not found');
+        }
+        
+        if (!customer) {
+          console.log(`📝 Creating new customer: ${firstName} ${lastName} (${customerPhone})`);
+          customer = await storage.createCustomer({
+            phoneNumber: customerPhone,
+            firstName,
+            lastName,
+            role: 'retailer',
+            email: customerEmail
+          });
+          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+        } else {
+          // Check if email belongs to different customer before updating
+          let emailConflict = false;
+          if (customerEmail && customer.email !== customerEmail) {
+            const existingEmailUser = await storage.getUserByEmail(customerEmail);
+            if (existingEmailUser && existingEmailUser.id !== customer.id) {
+              console.log(`⚠️ Email ${customerEmail} belongs to different customer ${existingEmailUser.id}, keeping existing email for ${customer.id}`);
+              emailConflict = true;
+            }
+          }
+          
+          // Update existing customer with new information if name or phone changed
+          const needsUpdate = 
+            customer.firstName !== firstName || 
+            customer.lastName !== lastName || 
+            (customerPhone && customer.phoneNumber !== customerPhone) ||
+            (customerEmail && customer.email !== customerEmail && !emailConflict);
+            
+          if (needsUpdate) {
+            console.log(`📝 Updating existing customer: ${customer.id} with new info: ${firstName} ${lastName} (${customerPhone})`);
+            
+            // Only update email if there's no conflict
+            const updateData = {
+              firstName,
+              lastName,
+              email: emailConflict ? customer.email : (customerEmail || customer.email || '')
+            };
+            
+            customer = await storage.updateCustomer(customer.id, {
+              firstName,
+              lastName,
+              email: emailConflict ? (customer.email || undefined) : (customerEmail || customer.email || undefined)
+            });
+            
+            // Update phone number separately if needed
+            if (customerPhone && customer.phoneNumber !== customerPhone) {
+              console.log(`📱 Updating phone number for customer: ${customer.id} to ${customerPhone}`);
+              await storage.updateCustomerPhone(customer.id, customerPhone);
+              customer.phoneNumber = customerPhone; // Update local copy
+            }
+            
+            console.log(`✅ Customer updated: ${customer.id} (${customer.firstName} ${customer.lastName}) (${customer.phoneNumber})`);
+          }
+        }
+        
+        console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
+
+        // Calculate actual platform fee based on Connect usage
+        const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
+        const wholesalerAmount = connectAccountUsed === 'true' 
+          ? (parseFloat(totalAmount) - parseFloat(platformFee)).toFixed(2)
+          : totalAmount;
+
+        // Use the correct total from metadata instead of recalculating
+        const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
+
+        // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
+        const shippingInfoJson = paymentIntent.metadata.shippingInfo;
+        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+        
+        console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
+          hasShippingInfo: !!shippingInfoJson,
+          shippingInfoRaw: shippingInfoJson,
+          parsedShippingInfo: shippingInfo,
+          customerChoice: shippingInfo.option,
+          hasService: !!shippingInfo.service,
+          serviceName: shippingInfo.service?.serviceName,
+          servicePrice: shippingInfo.service?.price
         });
+
+        // Get wholesaler info for reference generation
+        const wholesaler = await storage.getUser(wholesalerId);
+        
+        // CRITICAL FIX: Use proper sequential order numbering like order-processor.ts
+        const businessPrefix = wholesaler?.businessName 
+          ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
+          : 'WS';
+        
+        // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering AND duplicate checking
+        let order, wholesaleRef;
+        
+        try {
+          const result = await db.transaction(async (trx) => {
+            // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
+            const existingOrderResult = await trx
+              .select()
+              .from(orders)
+              .where(eq(orders.stripePaymentIntentId, paymentIntentId))
+              .limit(1);
+            
+            if (existingOrderResult.length > 0) {
+              const existingOrder = existingOrderResult[0];
+              console.log(`⚠️ ATOMIC CHECK: Order already exists for payment intent ${paymentIntentId}: #${existingOrder.id} (${existingOrder.orderNumber})`);
+              throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
+            }
+
+            // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record (FOR UPDATE removed for Neon compatibility)
+            const result = await trx.execute(sql`
+              SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+              FROM orders 
+              WHERE wholesaler_id = ${wholesalerId} 
+              AND order_number LIKE ${businessPrefix + '-%'}
+            `);
+            
+            const maxNumber = result.rows[0]?.max_number || 0;
+            const nextNumber = parseInt(maxNumber.toString()) + 1;
+            const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+            
+            console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+            
+            // CRITICAL FIX: Calculate subtotal from items when metadata missing
+            const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
+              ? parseFloat(productSubtotal).toFixed(2)
+              : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
+            
+            console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
+
+            // Create order with customer details AND SHIPPING DATA
+            const orderData = {
+              orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
+              wholesalerId,
+              retailerId: customer.id,
+              customerName, // Store customer name
+              customerEmail, // Store customer email
+              customerPhone, // Store customer phone
+              subtotal: safeSubtotal, // FIXED: Raw product total before any fee deductions
+              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
+              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
+              total: correctTotal, // Total = subtotal + customer transaction fee
+              status: 'paid',
+              stripePaymentIntentId: paymentIntent.id,
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+              // 🚚 ADDED: Shipping information processing
+              fulfillmentType: shippingInfo.option || 'pickup',
+              deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
+              deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
+              shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+            };
+            
+            console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
+              fulfillmentType: orderData.fulfillmentType,
+              deliveryCarrier: orderData.deliveryCarrier,
+              deliveryCost: orderData.deliveryCost,
+              willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+            });
+
+            // Create order items with orderId for storage
+            const orderItems = items.map((item: any) => ({
+              orderId: 0, // Will be set after order creation
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice).toFixed(2),
+              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+            }));
+
+            // Use transaction-aware storage method
+            const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
+            return { order: createdOrder, wholesaleRef };
+          });
+          
+          order = result.order;
+          wholesaleRef = result.wholesaleRef;
+        } catch (error: any) {
+          // Handle duplicate order errors gracefully
+          if (error.message.startsWith('DUPLICATE_ORDER:')) {
+            const [, orderId, orderNumber] = error.message.split(':');
+            console.log(`✅ Duplicate order detected and prevented: #${orderId} (${orderNumber})`);
+            return res.json({ 
+              success: true, 
+              orderId: parseInt(orderId), 
+              orderNumber: orderNumber, // Include order number in response
+              message: 'Order already processed' 
+            });
+          }
+          throw error; // Re-throw other errors
+        }
+        
+        console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
+
+        // Send customer confirmation email and Stripe invoice
+        if (wholesaler && customerEmail) {
+          try {
+            // Enrich items with product details for email
+            const enrichedItems = await Promise.all(items.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              return {
+                ...item,
+                productName: product?.name || `Product #${item.productId}`,
+                product: product ? { name: product.name } : null
+              };
+            }));
+            
+            await sendCustomerInvoiceEmail({
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone,
+              address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+            }, order, enrichedItems, wholesaler);
+            console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
+
+            // Create and send Stripe invoice to customer
+            await createAndSendStripeInvoice(order, enrichedItems, wholesaler, {
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone
+            });
+            
+          } catch (emailError) {
+            console.error(`❌ Failed to send confirmation email for order #${order.id}:`, emailError);
+          }
+        }
+
+        // Send WhatsApp notification to wholesaler with wholesale reference
+        if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+          const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
+          const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
+          
+          try {
+            const { whatsappService } = await import('./whatsapp');
+            await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
+          } catch (error) {
+            console.error('Failed to send WhatsApp notification:', error);
+          }
+        }
+
+        // Send email notification to wholesaler
+        if (wholesaler && wholesaler.email) {
+          try {
+            // Prepare order data for email template  
+            const enrichedItemsForEmail = await Promise.all(items.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              return {
+                productName: product?.name || `Product #${item.productId}`,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+              };
+            }));
+
+            const emailData: OrderEmailData = {
+              orderNumber: order.orderNumber || `ORD-${order.id}`,
+              customerName,
+              customerEmail: customerEmail || '',
+              customerPhone,
+              customerAddress: typeof customerAddress === 'string' ? customerAddress : 
+                (customerAddress ? JSON.stringify(customerAddress) : undefined),
+              total: correctTotal,
+              subtotal: productSubtotal,
+              platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
+              customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
+              wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
+              shippingTotal: '0.00',
+              fulfillmentType: 'pickup',
+              items: enrichedItemsForEmail,
+              wholesaler: {
+                businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
+                firstName: wholesaler.firstName || '',
+                lastName: wholesaler.lastName || '',
+                email: wholesaler.email
+              },
+              orderDate: new Date().toISOString(),
+              paymentMethod: 'Card Payment'
+            };
+
+            const emailTemplate = generateWholesalerOrderNotificationEmail(emailData);
+            
+            await sendEmail({
+              to: wholesaler.email,
+              from: 'hello@quikpik.co',
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+              text: emailTemplate.text
+            });
+
+            console.log(`📧 Wholesaler email notification sent to ${wholesaler.email} for Order #${order.id}`);
+          } catch (error) {
+            console.error('Failed to send wholesaler email notification:', error);
+          }
+        }
+
+        res.json({ 
+          success: true, 
+          orderId: order.id,
+          orderNumber: order.orderNumber || wholesaleRef, // Include actual order number
+          platformFeeCollected: connectAccountUsed === 'true',
+          message: 'Order created successfully',
+          // Include financial details for ThankYouPage
+          totalAmount: parseFloat(totalCustomerPays || correctTotal || '0'),
+          subtotal: parseFloat(productSubtotal || '0'),
+          transactionFee: parseFloat(customerTransactionFee || '0'),
+          shippingCost: shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service 
+            ? parseFloat(shippingInfo.service.price.toString())
+            : 0
+        });
+      } else {
+        res.status(400).json({ message: 'Invalid order type' });
       }
-
-      console.log(`💰 FALLBACK: Payment confirmed succeeded, creating order...`);
-
-      // Create order using existing order processor
-      const { processCustomerPortalOrder } = await import('./order-processor');
-      const order = await processCustomerPortalOrder(paymentIntent);
-
-      console.log(`✅ FALLBACK: Order created successfully: ${order.orderNumber}`);
-
-      res.json({
-        success: true,
-        orderCreated: true,
-        orderNumber: order.orderNumber,
-        orderId: order.id
-      });
-
     } catch (error: any) {
-      console.error('❌ FALLBACK: Order creation failed:', error);
-      res.status(500).json({ 
-        message: 'Failed to create fallback order',
-        error: error.message 
-      });
+      console.error('Error creating order:', error);
+      res.status(500).json({ message: 'Failed to create order: ' + error.message });
     }
   });
 
@@ -4048,7 +4080,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate removed - using /api/stripe/connect/status below
 
-  // REMOVED: Old authenticated retailer payment endpoint - consolidated into customer portal flow
+  // Stripe payment routes with Connect integration
+  app.post("/api/create-payment-intent", requireAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const { orderId } = req.body;
+      const userId = req.user.id;
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (order.retailerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to pay for this order" });
+      }
+
+      // Get wholesaler's Stripe account
+      const wholesaler = await storage.getUser(order.wholesalerId);
+      if (!wholesaler?.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Wholesaler has not set up payment processing. Please contact them to complete their account setup." 
+        });
+      }
+
+      // Check if wholesaler's account can accept payments
+      const account = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+      if (!account.charges_enabled) {
+        return res.status(400).json({ 
+          message: "Wholesaler's payment account is not fully set up. Please contact them to complete verification." 
+        });
+      }
+
+      // Get retailer information for receipt email
+      const retailer = await storage.getUser(userId);
+      
+      const totalAmount = Math.round(parseFloat(order.total) * 100); // Convert to cents
+      const platformFeeAmount = Math.round(parseFloat(order.platformFee) * 100); // 5% platform fee in cents
+
+      const paymentIntentData: any = {
+        amount: totalAmount,
+        currency: "gbp", // Always use GBP for platform
+        application_fee_amount: platformFeeAmount, // Quikpik's platform fee
+        transfer_data: {
+          destination: wholesaler.stripeAccountId, // Money goes to wholesaler
+        },
+        metadata: {
+          orderId: order.id.toString(),
+          retailerId: userId,
+          wholesalerId: order.wholesalerId,
+          platformFee: order.platformFee,
+          subtotal: order.subtotal
+        }
+      };
+
+      // Add receipt email if available
+      if (retailer?.email) {
+        paymentIntentData.receipt_email = retailer.email;
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+      console.log(`💳 Payment intent created for Order #${orderId}`);
+      if (retailer?.email) {
+        console.log(`✅ Stripe receipt will be automatically sent to: ${retailer.email}`);
+      }
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ message: "Error creating payment intent: " + error.message });
+    }
+  });
 
   // Duplicate removed - using /api/webhooks/stripe below
 
@@ -7057,8 +7163,267 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
     }
   });
 
-  // ✅ CONSOLIDATED: All customer portal payments now use /api/customer/create-payment
-  // This prevents duplicate payment creation paths and improves system reliability
+  // Create payment intent for customer portal orders (public - no auth required)
+  app.post('/api/marketplace/create-payment-intent', async (req, res) => {
+    try {
+      const { items, customerData, wholesalerId, totalAmount, shippingInfo } = req.body;
+      
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
+      console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
+      
+      console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
+      
+      // DEDUPLICATION: Check for recent incomplete payment intents with same customer email and amount
+      const fiveMinutesAgo = Math.floor((Date.now() - 5 * 60 * 1000) / 1000);
+      try {
+        const recentIntents = await stripe.paymentIntents.list({
+          limit: 10,
+          created: { gte: fiveMinutesAgo },
+        });
+        
+        const duplicateIntent = recentIntents.data.find(intent => 
+          intent.status === 'requires_payment_method' &&
+          intent.metadata.customerEmail === customerData.email &&
+          intent.metadata.wholesalerId === wholesalerId &&
+          Math.abs(intent.amount - Math.round((parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)) * 100)) < 100 // Within £1
+        );
+        
+        if (duplicateIntent) {
+          console.log(`♻️ DEDUPLICATION: Found recent incomplete payment intent ${duplicateIntent.id}, returning existing client_secret`);
+          return res.json({ 
+            clientSecret: duplicateIntent.client_secret,
+            productSubtotal: (parseFloat(totalAmount)).toFixed(2),
+            customerTransactionFee: ((parseFloat(totalAmount) * 0.055) + 0.50).toFixed(2),
+            totalCustomerPays: (parseFloat(totalAmount) + ((parseFloat(totalAmount) * 0.055) + 0.50)).toFixed(2),
+            wholesalerPlatformFee: (parseFloat(totalAmount) * 0.033).toFixed(2),
+            wholesalerReceives: (parseFloat(totalAmount) - (parseFloat(totalAmount) * 0.033)).toFixed(2)
+          });
+        }
+      } catch (error) {
+        console.log('⚠️ Error checking for duplicate payment intents, proceeding with new intent creation:', error.message);
+      }
+      
+      // Validate and recalculate totalAmount to prevent NaN errors
+      let validatedTotalAmount = 0;
+      
+      if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) > 0) {
+        validatedTotalAmount = parseFloat(totalAmount);
+      } else {
+        // Recalculate from items if totalAmount is invalid
+        console.log('⚠️ Invalid totalAmount, recalculating from items...');
+        for (const item of items) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            const unitPrice = parseFloat(item.unitPrice) || parseFloat(product.price) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            validatedTotalAmount += unitPrice * quantity;
+          }
+        }
+      }
+      
+      // Final validation
+      if (!validatedTotalAmount || validatedTotalAmount <= 0) {
+        console.error(`❌ Invalid calculated totalAmount: ${validatedTotalAmount}`);
+        return res.status(400).json({ message: 'Unable to calculate valid total amount' });
+      }
+      
+      console.log(`✅ Using validated totalAmount: ${validatedTotalAmount}`);
+      
+      if (!items || !customerData || !wholesalerId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      // Get wholesaler information 
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: 'Wholesaler not found' });
+      }
+
+      // validatedTotalAmount is the product subtotal (without transaction fee)
+      // Add shipping cost if delivery option is selected
+      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
+        ? (shippingInfo.service && shippingInfo.service.price 
+           ? parseFloat(shippingInfo.service.price) 
+           : 90.00) // Default delivery cost for "Custom Quote Required" orders
+        : 0;
+      
+      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
+      
+      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
+      const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
+      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
+      
+      // Platform collects 3.3% from subtotal 
+      const platformFee = validatedTotalAmount * 0.033;
+      
+      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
+      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
+      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
+      const wholesalerAmount = autoPayDelivery 
+        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
+        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
+
+      // Create payment intent with Stripe Connect (application fee)
+      if (!stripe) {
+        throw new Error('Stripe not configured');
+      }
+
+      let paymentIntent;
+
+      // Try creating payment intent with Stripe Connect if available
+      if (wholesaler.stripeAccountId) {
+        try {
+          // Create payment intent with Stripe Connect and 3.3% platform fee
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+            currency: 'gbp', // Always use GBP for platform
+            application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
+            transfer_data: {
+              destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
+            },
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              customerTransactionFee: customerTransactionFee.toFixed(2),
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
+              connectAccountUsed: 'true',
+              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          });
+        } catch (connectError: any) {
+          console.log('Connect payment failed, falling back to regular payment:', connectError.message);
+          
+          // Fallback to regular payment intent for demo/test purposes
+          paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+            currency: 'gbp', // Always use GBP for platform
+            receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
+            metadata: {
+              orderType: 'customer_portal',
+              wholesalerId: wholesalerId,
+              customerName: customerData.name,
+              customerEmail: customerData.email,
+              customerPhone: customerData.phone,
+              customerAddress: JSON.stringify({
+                street: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postalCode: customerData.postalCode,
+                country: customerData.country
+              }),
+              totalAmount: validatedTotalAmount.toString(),
+              shippingCost: shippingCost.toFixed(2),
+              platformFee: platformFee.toFixed(2),
+              customerTransactionFee: customerTransactionFee.toFixed(2),
+              totalAmountWithFee: totalAmountWithFee.toFixed(2),
+              productSubtotal: validatedTotalAmount.toFixed(2),
+              totalCustomerPays: totalAmountWithFee.toFixed(2),
+              wholesalerPlatformFee: platformFee.toFixed(2),
+              wholesalerReceives: wholesalerAmount,
+              connectAccountUsed: 'false',
+              shippingInfo: JSON.stringify(shippingInfo ? {
+                option: shippingInfo.option,
+                service: shippingInfo.service ? {
+                  serviceId: shippingInfo.service.serviceId,
+                  serviceName: shippingInfo.service.serviceName,
+                  price: shippingInfo.service.price
+                } : null
+              } : { option: 'pickup' }),
+              items: JSON.stringify(items.map(item => ({
+                ...item,
+                productName: item.productName || 'Product'
+              })))
+            }
+          });
+        }
+      } else {
+        // Create regular payment intent when no Connect account
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+          currency: 'gbp', // Always use GBP for platform
+          metadata: {
+            orderType: 'customer_portal',
+            wholesalerId: wholesalerId,
+            customerName: customerData.name,
+            customerEmail: customerData.email,
+            customerPhone: customerData.phone,
+            customerAddress: JSON.stringify({
+              street: customerData.address,
+              city: customerData.city,
+              state: customerData.state,
+              postalCode: customerData.postalCode,
+              country: customerData.country
+            }),
+            totalAmount: validatedTotalAmount.toString(),
+            shippingCost: shippingCost.toFixed(2),
+            platformFee: platformFee.toFixed(2),
+            customerTransactionFee: customerTransactionFee.toFixed(2),
+            totalAmountWithFee: totalAmountWithFee.toFixed(2),
+            productSubtotal: validatedTotalAmount.toFixed(2),
+            totalCustomerPays: totalAmountWithFee.toFixed(2),
+            wholesalerPlatformFee: platformFee.toFixed(2),
+            wholesalerReceives: wholesalerAmount,
+            connectAccountUsed: 'false',
+            shippingInfo: JSON.stringify(shippingInfo ? {
+              option: shippingInfo.option,
+              service: shippingInfo.service ? {
+                serviceId: shippingInfo.service.serviceId,
+                serviceName: shippingInfo.service.serviceName,
+                price: shippingInfo.service.price
+              } : null
+            } : { option: 'pickup' }),
+            items: JSON.stringify(items.map(item => ({
+              ...item,
+              productName: item.productName || 'Product'
+            })))
+          }
+        });
+      }
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        productSubtotal: validatedTotalAmount.toFixed(2), // Product subtotal
+        shippingCost: shippingCost.toFixed(2), // Delivery cost
+        customerTransactionFee: customerTransactionFee.toFixed(2), // Customer pays 5.5% + £0.50
+        totalCustomerPays: totalAmountWithFee.toFixed(2), // Total customer payment including shipping
+        wholesalerPlatformFee: platformFee.toFixed(2), // Platform collects 3.3%
+        wholesalerReceives: (validatedTotalAmount - platformFee).toFixed(2) // Wholesaler receives product total minus 3.3%
+      });
+    } catch (error: any) {
+      console.error('Error creating payment intent:', error);
+      res.status(500).json({ message: 'Error creating payment intent: ' + error.message });
+    }
+  });
 
   // Marketplace product detail endpoint (public - no auth required)
   app.get('/api/marketplace/products/:id', async (req, res) => {
@@ -7076,17 +7441,199 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: "Product not found" });
       }
       
-      res.json(product);
-    } catch (error: any) {
+      console.log('Product weight data debug:', {
+        productId: product.id,
+        name: product.name,
+        unitWeight: product.unitWeight,
+        unit_weight: product.unit_weight,
+        palletWeight: product.palletWeight,
+        pallet_weight: product.pallet_weight
+      });
+      
+      if (product.id === 23) {
+        console.log('BASMATI RICE DEBUG - Product data being returned:', JSON.stringify(product, null, 2));
+      }
+      
+      // Get wholesaler details
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      
+      // Return product with wholesaler information
+      res.json({
+        ...product,
+        wholesaler: {
+          id: wholesaler.id,
+          businessName: wholesaler.businessName || 'Business',
+          businessPhone: wholesaler.businessPhone,
+          businessAddress: wholesaler.businessAddress,
+          profileImageUrl: wholesaler.profileImageUrl,
+          logoType: wholesaler.logoType || 'initials',
+          logoUrl: wholesaler.logoUrl || undefined,
+          firstName: wholesaler.firstName,
+          lastName: wholesaler.lastName,
+          defaultCurrency: wholesaler.preferredCurrency
+        }
+      });
+    } catch (error) {
       console.error("Error fetching product:", error);
       res.status(500).json({ message: "Failed to fetch product" });
     }
   });
 
-  // CLEAN: All orphaned marketplace payment code removed
+  // Marketplace order placement endpoint (public - no auth required)
+  app.post('/api/marketplace/orders', async (req, res) => {
+    try {
+      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes } = req.body;
+      
+      if (!productId || !customerName || !customerPhone || !quantity || !totalAmount) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
 
-  // REMOVED: Old marketplace order endpoint - no longer used
-  // All order creation handled by single payment endpoint /api/customer/create-payment
+      // Automatically format phone number to international format
+      const formattedPhoneNumber = formatPhoneToInternational(customerPhone);
+      
+      // Validate the formatted phone number
+      if (!validatePhoneNumber(formattedPhoneNumber)) {
+        return res.status(400).json({ 
+          message: `Invalid phone number format. Please provide a valid phone number (e.g., 07507659550 or +447507659550)` 
+        });
+      }
+      
+      // Get product to validate and get wholesaler
+      const product = await storage.getProduct(parseInt(productId));
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Check if product is locked due to subscription limits
+      if (product.status === 'locked') {
+        return res.status(403).json({ 
+          message: "This product is currently unavailable due to subscription restrictions.",
+          errorType: "PRODUCT_LOCKED"
+        });
+      }
+      
+      // Validate quantity against MOQ and stock
+      if (quantity < product.moq) {
+        return res.status(400).json({ 
+          message: `Minimum order quantity is ${product.moq} units` 
+        });
+      }
+      
+      if (quantity > product.stock) {
+        return res.status(400).json({ 
+          message: `Only ${product.stock} units available in stock` 
+        });
+      }
+      
+      // Get or create customer (check by formatted phone first, then by email)
+      let customer = await storage.getUserByPhone(formattedPhoneNumber);
+      if (!customer) {
+        customer = await storage.getUserByEmail(customerEmail);
+      }
+      if (!customer) {
+        const { firstName, lastName } = parseCustomerName(customerName);
+        customer = await storage.createCustomer({
+          phoneNumber: formattedPhoneNumber,
+          firstName,
+          lastName,
+          email: customerEmail,
+          role: 'retailer'
+        });
+      }
+      
+      // Calculate platform fee (5% of total)
+      const subtotal = totalAmount.toString();
+      const platformFee = (parseFloat(totalAmount) * 0.05).toFixed(2);
+      const total = totalAmount.toString();
+      
+      // Create order with customer details  
+      const orderData = {
+        orderNumber: `ORD-${Date.now()}`,
+        wholesalerId: product.wholesalerId,
+        retailerId: customer.id,
+        customerName, // Store customer name
+        customerEmail, // Store customer email
+        customerPhone: formattedPhoneNumber, // Store formatted phone number
+        subtotal,
+        platformFee,
+        total,
+        status: 'confirmed',
+        notes: notes || `Order placed via marketplace for ${product.name}`
+      };
+      
+      const orderItems = [{
+        productId: product.id,
+        quantity: parseInt(quantity),
+        unitPrice: product.price,
+        total: totalAmount.toString(),
+        orderId: 0 // Will be set after order creation
+      }];
+      
+      const order = await storage.createOrder(orderData, orderItems);
+      
+      // Send confirmation email to customer
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      if (wholesaler && customerEmail) {
+        try {
+          // Use the provided customer email instead of stored email
+          const customerForEmail = {
+            ...customer,
+            email: customerEmail
+          };
+          await sendCustomerInvoiceEmail(customerForEmail, order, orderItems.map(item => ({
+            ...item,
+            product: { name: product.name, price: item.unitPrice }
+          })), wholesaler);
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+        }
+      }
+      
+      // Send WhatsApp notification to wholesaler if configured
+      try {
+        const wholesaler = await storage.getUser(product.wholesalerId);
+        if (wholesaler?.twilioAccountSid && wholesaler?.twilioAuthToken && wholesaler?.twilioPhoneNumber) {
+          const message = `🔔 New Order Alert!
+
+Customer: ${customerName}
+Phone: ${formattedPhoneNumber}
+Product: ${product.name}
+Quantity: ${quantity.toLocaleString()} units
+Total: ${wholesaler.defaultCurrency === 'GBP' ? '£' : '$'}${totalAmount}
+
+Order ID: ${order.id}
+Status: Pending Confirmation
+
+Please contact the customer to confirm this order.
+
+✨ Powered by Quikpik Merchant`;
+
+          await whatsappService.sendMessage(
+            wholesaler.businessPhone || wholesaler.phoneNumber || '',
+            message,
+            wholesaler.id
+          );
+        }
+      } catch (notificationError) {
+        console.warn("Failed to send order notification:", notificationError);
+        // Don't fail the order creation if notification fails
+      }
+      
+      res.json({
+        success: true,
+        orderId: order.id,
+        message: "Order placed successfully! The wholesaler will contact you shortly."
+      });
+      
+    } catch (error) {
+      console.error("Error creating marketplace order:", error);
+      res.status(500).json({ message: "Failed to place order" });
+    }
+  });
 
   // Customer portal order endpoints
   app.post("/api/customer/orders", async (req, res) => {

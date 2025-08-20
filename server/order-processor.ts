@@ -50,7 +50,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     transactionFee,
     wholesalerId,
     orderType,
-    items: itemsJson, // This is the correct field name from payment creation
+    items: itemsJson,
     connectAccountUsed,
     productSubtotal,
     customerTransactionFee,
@@ -59,21 +59,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     wholesalerReceives
   } = paymentIntent.metadata;
 
-  console.log('🔍 WEBHOOK DEBUG - Payment metadata received:', {
-    orderType,
-    hasItems: !!itemsJson,
-    itemsRaw: itemsJson,
-    customerName,
-    customerPhone,
-    wholesalerId
-  });
-
   if (orderType !== 'customer_portal') {
     throw new Error('Invalid order type for customer portal processing');
-  }
-
-  if (!itemsJson) {
-    throw new Error('Missing items data in payment metadata');
   }
 
   const items = JSON.parse(itemsJson);

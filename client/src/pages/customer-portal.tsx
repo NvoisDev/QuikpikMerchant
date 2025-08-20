@@ -80,8 +80,11 @@ interface ExtendedProduct {
   moq?: number;
 }
 
-// Initialize Stripe with fallback key
-const stripePromise = loadStripe('pk_test_51GnHB8BLkKweDa5PCp5YEEfexdRc9VM2R7kfF7Xzdt3p0unYEDyItpEY4d9XParTDGYGuS57HJNcopH7RCSTjqH003aeJmgp');
+// Initialize Stripe
+if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
+  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+}
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 // Utility functions
 
@@ -302,9 +305,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     service?: any;
   } | null>(null);
 
-  // FIXED: Don't clear clientSecret on shipping changes - instead update existing payment intent
-  // Removing this useEffect eliminates duplicate payment intent creation
-  // Payment intent will be created once and updated if needed
+  // CRITICAL FIX: Clear clientSecret when shipping selection changes to force payment intent recreation
+  useEffect(() => {
+    if (clientSecret) {
+      console.log('🔄 Shipping selection changed, clearing payment intent to recreate with new data');
+      setClientSecret("");
+    }
+  }, [customerData.shippingOption, customerData.selectedShippingService?.serviceId]);
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
@@ -318,129 +325,23 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         isCreatingIntent
       });
       
-      // CRITICAL FIX: Create/recreate payment intent when shipping changes
+      // CRITICAL FIX: Reset clientSecret when shipping changes so payment intent gets recreated
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
-      
-      // CRITICAL DEBUG: Log every time this useEffect runs
-      console.log('🔄 PAYMENT INTENT useEffect TRIGGERED:', {
-        cartLength: cart.length,
-        hasWholesaler: !!wholesaler,
-        hasName: !!customerData.name,
-        hasEmail: !!customerData.email,
-        hasPhone: !!customerData.phone,
-        shippingOption: customerData.shippingOption,
-        hasSelectedService: !!customerData.selectedShippingService,
-        shouldCreateIntent,
-        hasValidShipping: customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService),
-        clientSecretExists: !!clientSecret,
-        isCreatingIntent
-      });
       const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
-      // FRONTEND VALIDATION: Prevent payment creation if cart calculations are invalid
-      const cartValidation = cart.every(item => {
-        const hasValidQuantity = item.quantity && item.quantity > 0 && Number.isFinite(item.quantity);
-        const hasValidPrice = item.product.price && parseFloat(item.product.price) > 0;
-        return hasValidQuantity && hasValidPrice;
-      });
-      
-      if (!cartValidation) {
-        console.error('🚫 FRONTEND: Blocking payment creation - invalid cart data', {
-          cartItems: cart.map(item => ({
-            id: item.product.id,
-            quantity: item.quantity,
-            price: item.product.price,
-            hasValidQuantity: item.quantity && item.quantity > 0 && Number.isFinite(item.quantity),
-            hasValidPrice: item.product.price && parseFloat(item.product.price) > 0
-          }))
-        });
-        toast({
-          title: "Cart Error",
-          description: "Please refresh the page and re-add items to your cart",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // CRITICAL FIX: Always recreate payment intent when selectedShippingService changes
-      // This ensures delivery orders get proper shipping data
-      const needsRecreation = shouldCreateIntent && hasValidShipping && cartValidation && (!clientSecret || customerData.selectedShippingService);
-      
-      console.log('🔄 PAYMENT INTENT RECREATION CHECK:', {
-        shouldCreateIntent,
-        hasValidShipping,
-        cartValidation,
-        clientSecretExists: !!clientSecret,
-        hasSelectedService: !!customerData.selectedShippingService,
-        needsRecreation,
-        reason: !clientSecret ? 'no_client_secret' : customerData.selectedShippingService ? 'shipping_service_selected' : 'other'
-      });
-      
-      if (needsRecreation) {
+      if (shouldCreateIntent && hasValidShipping && !clientSecret) {
         setIsCreatingIntent(true);
         
-        // CRITICAL FIX: Calculate shipping status directly from current customer data at payment creation time
-        // This ensures we capture the absolute latest shipping selection
-        console.log('🚚 PAYMENT CREATION TIMING - Current customerData snapshot:', {
-          shippingOption: customerData.shippingOption,
-          hasSelectedShippingService: !!customerData.selectedShippingService,
-          selectedServicePrice: customerData.selectedShippingService?.price,
-          selectedServiceName: customerData.selectedShippingService?.serviceName,
-          fullCustomerData: customerData
-        });
-        
-        // Debug shipping service selection (console only, no popups)
-        if (customerData.selectedShippingService) {
-          console.log('🚚 Shipping Service Selected:', {
-            serviceName: customerData.selectedShippingService.serviceName,
-            price: customerData.selectedShippingService.price,
-            shippingOption: customerData.shippingOption
-          });
-        }
-        
-        // Force re-check: if selectedShippingService exists, it means delivery was selected
-        const hasSelectedDeliveryService = !!customerData.selectedShippingService;
-        const actualShippingOption = hasSelectedDeliveryService ? 'delivery' : (customerData.shippingOption || 'pickup');
-        
-        // Debug shipping option logic (console only, no popups)
-        if (hasSelectedDeliveryService && actualShippingOption === 'pickup') {
-          console.error('🚨 Shipping Logic Error: selectedShippingService exists but actualShippingOption is pickup!');
-        }
-        const deliveryServicePrice = hasSelectedDeliveryService ? parseFloat(customerData.selectedShippingService?.price || '0') : 0;
-        const isDeliveryOrder = actualShippingOption === 'delivery' && deliveryServicePrice > 0;
-        const currentShippingOption = actualShippingOption;
-        const currentSelectedService = hasSelectedDeliveryService ? customerData.selectedShippingService : null;
-        
-        console.log('🚚 FINAL SHIPPING VALIDATION AFTER RECALCULATION:', {
-          originalShippingOption: customerData.shippingOption,
-          hasSelectedDeliveryService,
-          actualShippingOption,
-          deliveryServicePrice,
-          isDeliveryOrder,
-          finalShippingOption: currentShippingOption,
-          selectedService: currentSelectedService
-        });
+        // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
+        // CRITICAL FIX: Always capture the absolute latest shipping state
+        const currentShippingOption = customerData.shippingOption;
+        const currentSelectedService = customerData.selectedShippingService;
         
         const shippingDataAtCreation = {
-          option: currentShippingOption,
+          option: currentShippingOption || 'pickup',
           service: currentSelectedService
         };
         setCapturedShippingData(shippingDataAtCreation);
-        
-        console.log('🚚 CRITICAL SHIPPING DATA CAPTURE:', {
-          capturedOption: shippingDataAtCreation.option,
-          capturedService: shippingDataAtCreation.service,
-          originalCustomerData: {
-            shippingOption: customerData.shippingOption,
-            selectedShippingService: customerData.selectedShippingService
-          },
-          calculatedData: {
-            hasSelectedDeliveryService,
-            actualShippingOption,
-            currentShippingOption,
-            currentSelectedService
-          }
-        });
         
         console.log('🚚 CRITICAL FIX: Payment creation shipping validation:');
         console.log('  - Current customerData.shippingOption:', currentShippingOption);
@@ -456,21 +357,12 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
         
         // CRITICAL: Validation check - prevent payment creation if delivery selected but no service
         if (currentShippingOption === 'delivery' && !currentSelectedService) {
-          console.error('🚚 PAYMENT BLOCKED: Delivery selected but no shipping service', {
-            currentShippingOption,
-            hasCurrentSelectedService: !!currentSelectedService,
-            customerDataState: {
-              shippingOption: customerData.shippingOption,
-              selectedShippingService: customerData.selectedShippingService
-            }
-          });
           toast({
             title: "Shipping Service Required",
             description: "Please select a delivery service before placing your order",
             variant: "destructive"
           });
           setIsProcessingPayment(false);
-          setIsCreatingIntent(false);
           return;
         }
         
@@ -490,7 +382,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
             items: cart.map(item => ({
               productId: item.product.id,
               quantity: item.quantity || 0,
-              sellingType: item.sellingType, // Add selling type for better idempotency key uniqueness
               unitPrice: (() => {
                 // CRITICAL FIX: Use correct price based on selling type (units vs pallets)
                 if (item.sellingType === 'pallets') {
@@ -517,11 +408,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
           console.log('  - Payload shippingInfo service:', requestPayload.shippingInfo?.service);
           console.log('  - Full payload:', JSON.stringify(requestPayload, null, 2));
-          
-          // CRITICAL DEBUG: Alert to ensure this is visible
-          if (requestPayload.shippingInfo?.option === 'pickup' && customerData.selectedShippingService) {
-            alert('CRITICAL BUG: Sending pickup but selectedShippingService exists: ' + JSON.stringify(customerData.selectedShippingService));
-          }
           
           const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
           
@@ -613,7 +499,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, !!customerData.selectedShippingService, totalAmount, clientSecret, isCreatingIntent]); // CRITICAL FIX: Re-added selectedShippingService dependency so payment intent updates when delivery service is selected
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, customerData.selectedShippingService?.serviceId, totalAmount, clientSecret, isCreatingIntent]); // FIXED: Include selectedShippingService.serviceId to recreate payment intent when delivery service changes
 
   if (!clientSecret) {
     return (
@@ -768,94 +654,95 @@ const PaymentFormContent = ({
         console.log('✅ Payment succeeded! PaymentIntent:', paymentIntent.id);
         console.log('💾 Creating order immediately to ensure it saves to database');
         
-        // ENHANCED: Primary webhook processing with fallback order creation
-        console.log('✅ Payment succeeded! Webhook should create order automatically');
-        
-        // Capture values in scope before setTimeout
-        const wholesalerId = wholesaler?.id;
-        const customerPhone = customerData.phone;
-        const currentPaymentIntentId = paymentIntent.id;
-        
-        // Step 1: Wait for webhook processing (3 seconds)
-        setTimeout(async () => {
-          console.log('🔄 Checking if webhook created order...');
+        try {
+          // Call the order creation endpoint directly to ensure order is saved
+          const response = await fetch("/api/marketplace/create-order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id
+            })
+          });
           
-          if (wholesalerId && customerPhone) {
-            // Import query client and API utilities
-            const { queryClient } = await import('@/lib/queryClient');
-            const { apiRequest } = await import('@/lib/queryClient');
+          if (response.ok) {
+            const orderData = await response.json();
+            console.log('✅ Order created successfully:', orderData);
             
-            // Invalidate cache to get latest orders
-            await queryClient.invalidateQueries({
-              queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
+            // Success callback with order data for thank you page
+            // Get accurate values from payment intent metadata
+            const metadata = (paymentIntent as any).metadata || {};
+            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+            const actualShipping = parseFloat(metadata.shippingCost || '0');
+            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
+            
+            onSuccess({
+              orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
+              cart: [],
+              customerData: {},  
+              totalAmount: actualTotal,
+              subtotal: actualSubtotal,
+              transactionFee: actualTransactionFee,
+              shippingCost: actualShipping
             });
             
-            // Step 2: Check if order exists after webhook delay
-            setTimeout(async () => {
-              try {
-                console.log('🔍 Checking for new orders after webhook delay...');
-                
-                // Refetch orders to see if webhook created one
-                const ordersResponse = await fetch(`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`);
-                const orders = await ordersResponse.json();
-                
-                // Look for order with this payment intent ID or recent orders
-                const recentOrders = orders.filter((order: any) => 
-                  order.stripePaymentIntentId === currentPaymentIntentId ||
-                  new Date(order.createdAt) > new Date(Date.now() - 60000) // Last minute
-                );
-                
-                if (recentOrders.length > 0) {
-                  console.log('✅ Webhook created order successfully:', recentOrders[0].orderNumber);
-                } else {
-                  console.log('⚠️ No order found from webhook, attempting fallback creation...');
-                  
-                  // Fallback: Create order manually
-                  const fallbackResponse = await apiRequest('/api/customer/create-order-fallback', {
-                    method: 'POST',
-                    body: JSON.stringify({ paymentIntentId: currentPaymentIntentId }),
-                  });
-                  
-                  if (fallbackResponse.success) {
-                    console.log('✅ Fallback order creation successful:', fallbackResponse.orderNumber);
-                    
-                    // Invalidate cache again to show new order
-                    await queryClient.invalidateQueries({
-                      queryKey: [`/api/customer-orders/${wholesalerId}/${encodeURIComponent(customerPhone)}`]
-                    });
-                  } else {
-                    console.error('❌ Fallback order creation failed:', fallbackResponse);
-                  }
-                }
-              } catch (error) {
-                console.error('❌ Error in fallback order creation:', error);
-              }
-            }, 2000); // Additional 2 second delay for order checking
+            toast({
+              title: "Payment Successful!",
+              description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
+            });
+          } else {
+            console.error('❌ Order creation failed:', response.status);
+            toast({
+              title: "Payment Successful!",
+              description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+            });
+            
+            // Still call success callback even if order creation failed, payment succeeded
+            // Get accurate values from payment intent metadata
+            const metadata = (paymentIntent as any).metadata || {};
+            const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+            const actualShipping = parseFloat(metadata.shippingCost || '0');
+            const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+            const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
+            
+            onSuccess({
+              orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+              cart: [],
+              customerData: {},
+              totalAmount: actualTotal,
+              subtotal: actualSubtotal,
+              transactionFee: actualTransactionFee,
+              shippingCost: actualShipping
+            });
           }
-        }, 3000); // Initial 3 second delay for webhook processing
-        
-        // Success callback with order data for thank you page
-        // Get accurate values from payment intent metadata
-        const metadata = (paymentIntent as any).metadata || {};
-        const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
-        const actualShipping = parseFloat(metadata.shippingCost || '0');
-        const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
-        const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
-        
-        onSuccess({
-          orderNumber: `Order #${paymentIntent.id.slice(-8)}`, // Temporary reference until webhook creates proper SF-XXX order number
-          cart: [],
-          customerData: {},  
-          totalAmount: actualTotal,
-          subtotal: actualSubtotal,
-          transactionFee: actualTransactionFee,
-          shippingCost: actualShipping
-        });
-        
-        toast({
-          title: "Payment Successful!",
-          description: "Payment processed successfully. You'll receive a confirmation email shortly.",
-        });
+        } catch (orderError) {
+          console.error('❌ Error creating order:', orderError);
+          
+          // Still call success callback even if order creation failed, payment succeeded
+          // Get accurate values from payment intent metadata
+          const metadata = (paymentIntent as any).metadata || {};
+          const actualSubtotal = parseFloat(metadata.productSubtotal || '0');
+          const actualShipping = parseFloat(metadata.shippingCost || '0');
+          const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
+          const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
+          
+          onSuccess({
+            orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+            cart: [],
+            customerData: {},
+            totalAmount: actualTotal,
+            subtotal: actualSubtotal,
+            transactionFee: actualTransactionFee,
+            shippingCost: actualShipping
+          });
+          
+          toast({
+            title: "Payment Successful!",
+            description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
+          });
+        }
       } else {
         console.log('⚠️ Unexpected payment result:', { error, paymentIntent });
       }
@@ -1248,17 +1135,11 @@ export default function CustomerPortal() {
   // Update customer data when authenticated customer becomes available
   useEffect(() => {
     if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone)) {
-      console.log('🚚 FRONTEND: Updating customerData from authenticatedCustomer, preserving shipping selection:', {
-        currentShippingOption: customerData.shippingOption,
-        currentSelectedService: customerData.selectedShippingService
-      });
       setCustomerData(prevData => ({
         ...prevData,
         name: authenticatedCustomer.name || 'Michael Ogunjemilua',
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
         phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'
-        // CRITICAL: DO NOT reset shippingOption or selectedShippingService here
-        // Keep existing shipping selection intact
       }));
     }
   }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone]);
@@ -1266,8 +1147,7 @@ export default function CustomerPortal() {
   // Debug: Log state changes
   useEffect(() => {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
-    console.log('🚚 FRONTEND: customerData.selectedShippingService:', customerData.selectedShippingService);
-  }, [customerData.shippingOption, customerData.selectedShippingService]);
+  }, [customerData.shippingOption]);
 
   // Personalized welcome microinteraction effect
   useEffect(() => {
@@ -4137,7 +4017,6 @@ export default function CustomerPortal() {
                                 checked={customerData.selectedShippingService?.serviceId === service.serviceId}
                                 onChange={() => setCustomerData(prev => ({
                                   ...prev,
-                                  shippingOption: 'delivery', // CRITICAL: Ensure delivery option is set when service is selected
                                   selectedShippingService: service
                                 }))}
                                 className="w-4 h-4 text-emerald-600"
