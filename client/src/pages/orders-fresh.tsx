@@ -361,7 +361,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="font-medium text-xs">
                         <div>
-                          <div>{formatCurrency(calculateNetAmount(order.total, order.platformFee))}</div>
+                          <div>{formatCurrency(calculateNetAmount(order))}</div>
                           <div className="text-xs text-gray-500">After platform fee</div>
                         </div>
                       </TableCell>
