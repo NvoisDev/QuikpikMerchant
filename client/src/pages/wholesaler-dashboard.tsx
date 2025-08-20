@@ -10,7 +10,7 @@ import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
@@ -34,6 +34,7 @@ import {
   CreditCard
 } from "lucide-react";
 import { Link } from "wouter";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
@@ -477,51 +478,113 @@ export default function WholesalerDashboard() {
           </div>
           
           {/* Interactive Quick Actions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <InteractiveActionCard
-              href="/products"
-              icon={Package}
-              title="Manage Products"
-              description="Add, edit and organize your inventory"
-              metric={`${formatNumber((stats as any)?.activeProducts || 0)} Active`}
-              colorClass="from-blue-500 to-blue-600"
-              gradientFrom="from-blue-50"
-              gradientTo="to-blue-100"
-            />
-            
-            <InteractiveActionCard
-              href="/campaigns"
-              icon={MessageSquare}
-              title="Send Campaigns"
-              description="Broadcast to your customers"
-              metric={`${formatNumber((broadcastStats as any)?.recipientsReached || 0)} Reached`}
-              colorClass="from-emerald-500 to-emerald-600"
-              gradientFrom="from-emerald-50"
-              gradientTo="to-emerald-100"
-            />
-            
-            <InteractiveActionCard
-              href="/orders"
-              icon={ShoppingCart}
-              title="View Orders"
-              description="Track customer purchases"
-              metric={`${formatNumber((stats as any)?.ordersCount || 0)} Orders`}
-              colorClass="from-purple-500 to-purple-600"
-              gradientFrom="from-purple-50"
-              gradientTo="to-purple-100"
-            />
-            
-            <InteractiveActionCard
-              href="/customer-groups"
-              icon={Users}
-              title="Customer Groups"
-              description="Organize your customers"
-              metric="Manage Groups"
-              colorClass="from-orange-500 to-orange-600"
-              gradientFrom="from-orange-50"
-              gradientTo="to-orange-100"
-            />
-          </div>
+          <TooltipProvider>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <InteractiveActionCard
+                      href="/products"
+                      icon={Package}
+                      title="Manage Products"
+                      description="Add, edit and organize your inventory"
+                      metric={`${formatNumber((stats as any)?.activeProducts || 0)} Active`}
+                      colorClass="from-blue-500 to-blue-600"
+                      gradientFrom="from-blue-50"
+                      gradientTo="to-blue-100"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-2">
+                    <p className="font-semibold">Product Management</p>
+                    <p className="text-sm">Create, edit, and organize your product catalog. Upload images, set prices, manage inventory, and configure minimum order quantities.</p>
+                    <div className="text-xs text-gray-400">
+                      Keyboard shortcut: Ctrl+1 (⌘+1 on Mac)
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <InteractiveActionCard
+                      href="/campaigns"
+                      icon={MessageSquare}
+                      title="Send Campaigns"
+                      description="Broadcast to your customers"
+                      metric={`${formatNumber((broadcastStats as any)?.recipientsReached || 0)} Reached`}
+                      colorClass="from-emerald-500 to-emerald-600"
+                      gradientFrom="from-emerald-50"
+                      gradientTo="to-emerald-100"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-2">
+                    <p className="font-semibold">WhatsApp Campaigns</p>
+                    <p className="text-sm">Send targeted WhatsApp messages to customer groups. Promote products, announce sales, and engage directly with your customers.</p>
+                    <div className="text-xs text-gray-400">
+                      Keyboard shortcut: Ctrl+2 (⌘+2 on Mac)
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <InteractiveActionCard
+                      href="/orders"
+                      icon={ShoppingCart}
+                      title="View Orders"
+                      description="Track customer purchases"
+                      metric={`${formatNumber((stats as any)?.ordersCount || 0)} Orders`}
+                      colorClass="from-purple-500 to-purple-600"
+                      gradientFrom="from-purple-50"
+                      gradientTo="to-purple-100"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-2">
+                    <p className="font-semibold">Order Management</p>
+                    <p className="text-sm">View and manage all customer orders. Process payments, update order status, arrange fulfillment, and track delivery progress.</p>
+                    <div className="text-xs text-gray-400">
+                      Keyboard shortcut: Ctrl+3 (⌘+3 on Mac)
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <InteractiveActionCard
+                      href="/customer-groups"
+                      icon={Users}
+                      title="Customer Groups"
+                      description="Organize your customers"
+                      metric="Manage Groups"
+                      colorClass="from-orange-500 to-orange-600"
+                      gradientFrom="from-orange-50"
+                      gradientTo="to-orange-100"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-2">
+                    <p className="font-semibold">Customer Organization</p>
+                    <p className="text-sm">Create customer groups for targeted marketing. Organize customers by region, purchase volume, or business type for better relationship management.</p>
+                    <div className="text-xs text-gray-400">
+                      Keyboard shortcut: Ctrl+4 (⌘+4 on Mac)
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
 
           {/* Top Selling Product Section */}
           <div className="mb-8">
@@ -636,7 +699,7 @@ export default function WholesalerDashboard() {
                           axisLine={false}
                           tickFormatter={(value) => `${formatCurrency(value)}`}
                         />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: any) => [formatCurrency(value), 'Revenue']}
                           labelStyle={{ color: '#374151' }}
                           contentStyle={{ 
