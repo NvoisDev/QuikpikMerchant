@@ -1688,10 +1688,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const search = req.query.search; // search term
       
+      console.log(`🔍 Orders API called - User: ${JSON.stringify({
+        id: req.user?.id,
+        role: req.user?.role, 
+        wholesalerId: req.user?.wholesalerId,
+        email: req.user?.email
+      })}`);
+      
       // Use parent company ID for team members to inherit data access
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
         ? req.user.wholesalerId 
         : req.user.id;
+      
+      if (!targetUserId) {
+        console.error('❌ No target user ID found');
+        return res.status(400).json({ message: "Invalid user context" });
+      }
       
       // Get orders for the authenticated wholesaler only
       console.log(`📦 Fetching orders for wholesaler: ${targetUserId}, search: ${search || 'none'}`);
@@ -1700,8 +1712,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(orders);
     } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Failed to fetch orders" });
+      console.error("❌ Error fetching orders:", error);
+      console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace available');
+      res.status(500).json({ 
+        message: "Failed to fetch orders",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
+  // Debug orders endpoint for development (temporary)
+  app.get('/api/orders-debug', async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      const search = req.query.search;
+      const wholesalerId = req.query.wholesalerId || '104871691614680693123'; // Default to Surulere
+      
+      console.log(`🔧 DEBUG: Fetching orders for wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
+      const orders = await storage.getOrders(wholesalerId, undefined, search);
+      console.log(`🔧 DEBUG: Found ${orders.length} orders`);
+      
+      res.json({
+        success: true,
+        wholesalerId,
+        orderCount: orders.length,
+        orders: orders.slice(0, 5), // Show first 5 orders only for debugging
+      });
+    } catch (error) {
+      console.error("❌ DEBUG: Error fetching orders:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch orders",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

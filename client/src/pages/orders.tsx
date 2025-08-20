@@ -413,30 +413,67 @@ export default function Orders() {
       stack: error.stack,
       cause: error.cause
     });
+    
+    // Check if it's an authentication error
+    const isAuthError = error.message.includes('(401)') || error.message.includes('(400)') || 
+                       error.message.includes('Authentication required') || 
+                       error.message.includes('Invalid user context');
+    
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <p className="text-red-600 font-medium">Failed to load orders</p>
-          <p className="text-gray-500 text-sm mt-2">{error.message}</p>
-          <div className="mt-4 space-y-2">
-            <Button onClick={() => window.location.reload()} className="mr-2">
-              Retry
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                // Force clear cache and retry
-                queryClient.removeQueries({ queryKey: ["/api/orders"] });
-                window.location.reload();
-              }}
-            >
-              Clear Cache & Retry
-            </Button>
+          <div className="mb-4">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           </div>
+          
+          {isAuthError ? (
+            <>
+              <p className="text-red-600 font-medium">Authentication Required</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Please log in with Google OAuth to access your wholesale orders dashboard.
+              </p>
+              <div className="mt-4 space-y-2">
+                <Button onClick={() => window.location.href = '/login'} className="mr-2">
+                  Go to Login
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-red-600 font-medium">Failed to load orders</p>
+              <p className="text-gray-500 text-sm mt-2">{error.message}</p>
+              <div className="mt-4 space-y-2">
+                <Button onClick={() => window.location.reload()} className="mr-2">
+                  Retry
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    // Force clear cache and retry
+                    queryClient.removeQueries({ queryKey: ["/api/orders"] });
+                    window.location.reload();
+                  }}
+                >
+                  Clear Cache & Retry
+                </Button>
+              </div>
+            </>
+          )}
+          
           <details className="mt-4 text-left">
             <summary className="text-xs text-gray-400 cursor-pointer">Debug Info</summary>
-            <pre className="text-xs text-gray-400 mt-2 bg-gray-100 p-2 rounded">
-              {JSON.stringify({ error: error.message, name: error.name }, null, 2)}
+            <pre className="text-xs text-gray-400 mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded">
+              {JSON.stringify({ 
+                error: error.message, 
+                name: error.name,
+                isAuthError: isAuthError 
+              }, null, 2)}
             </pre>
           </details>
         </div>
