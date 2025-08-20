@@ -1759,22 +1759,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📦 Updating order ${orderId} status to: ${status}`);
 
-      // Update order status in database
-      const updatedOrder = await db
-        .update(orders)
-        .set({ 
-          status: status,
-          updatedAt: new Date().toISOString()
-        })
-        .where(eq(orders.id, orderId))
-        .returning();
-
-      if (updatedOrder.length === 0) {
+      // Update order status using storage method
+      const updated = await storage.updateOrderStatus(orderId, status);
+      if (!updated) {
         return res.status(404).json({ error: 'Order not found' });
       }
 
       console.log(`✅ Order ${orderId} status updated to ${status}`);
-      res.json({ success: true, order: updatedOrder[0] });
+      res.json({ success: true, order: updated });
     } catch (error) {
       console.error("❌ Error updating order status:", error);
       res.status(500).json({ error: "Failed to update order status" });

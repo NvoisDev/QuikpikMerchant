@@ -478,8 +478,15 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              {selectedOrder.status !== 'fulfilled' && (
-                <div className="flex justify-end pt-2 border-t">
+              <div className="flex justify-between pt-2 border-t">
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`https://quikpik.app/customer-portal?phone=${selectedOrder.customerPhone}`, '_blank')}
+                >
+                  View Customer Portal
+                </Button>
+                {selectedOrder.status !== 'fulfilled' && (
                   <Button 
                     size="sm"
                     onClick={() => markAsFulfilled(selectedOrder.id)}
@@ -487,8 +494,8 @@ export default function OrdersFresh() {
                   >
                     {updatingOrderId === selectedOrder.id ? 'Updating...' : 'Mark as Fulfilled'}
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
