@@ -123,8 +123,15 @@ export default function OrdersFresh() {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
+  // Calculate amounts after platform fee (3.3% for wholesaler)
+  const calculateNetAmount = (total: string) => {
+    const totalAmount = parseFloat(total || '0');
+    const platformFee = totalAmount * 0.033; // 3.3% platform fee
+    return totalAmount - platformFee;
+  };
+
   const totalOrders = orders.length;
-  const totalValue = orders.reduce((sum, order) => sum + parseFloat(order.total || '0'), 0);
+  const totalValue = orders.reduce((sum, order) => sum + calculateNetAmount(order.total), 0);
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
@@ -179,11 +186,12 @@ export default function OrdersFresh() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+            <p className="text-xs text-muted-foreground">After platform fees</p>
           </CardContent>
         </Card>
         
@@ -226,7 +234,7 @@ export default function OrdersFresh() {
                   <TableRow>
                     <TableHead>Order #</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Net Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                     <TableHead>Date</TableHead>
@@ -245,7 +253,10 @@ export default function OrdersFresh() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(parseFloat(order.total || '0'))}
+                        <div>
+                          <div>{formatCurrency(calculateNetAmount(order.total))}</div>
+                          <div className="text-xs text-gray-500">After platform fee</div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -376,19 +387,20 @@ export default function OrdersFresh() {
                 <h3 className="font-semibold mb-3">Payment Summary</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(parseFloat(selectedOrder.subtotal || selectedOrder.total))}</span>
-                  </div>
-                  {selectedOrder.deliveryCost && parseFloat(selectedOrder.deliveryCost) > 0 && (
-                    <div className="flex justify-between">
-                      <span>Delivery Cost:</span>
-                      <span>{formatCurrency(parseFloat(selectedOrder.deliveryCost))}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between font-semibold">
-                    <span>Total Paid:</span>
+                    <span>Customer Total Paid:</span>
                     <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Platform Fee (3.3%):</span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.total) * 0.033)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-semibold text-green-600">
+                    <span>Your Net Amount:</span>
+                    <span>{formatCurrency(calculateNetAmount(selectedOrder.total))}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    This is the amount you'll receive after the 3.3% platform fee is deducted.
                   </div>
                 </div>
               </div>
