@@ -315,27 +315,30 @@ export default function OrdersFresh() {
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <DialogTitle>Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(null)}>
-                <X className="h-4 w-4" />
+              <div>
+                <DialogTitle className="text-lg font-semibold">Order {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}</DialogTitle>
+                <p className="text-sm text-gray-500">Order ID: {selectedOrder?.id}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(null)}>
+                Close
               </Button>
             </div>
           </DialogHeader>
 
           {selectedOrder && (
-            <div className="space-y-6">
+            <div className="space-y-4 text-sm">
               {/* Status & Fulfillment */}
               <div>
-                <h3 className="font-semibold mb-3">Status & Fulfillment</h3>
+                <h3 className="font-medium mb-2 text-sm">Status & Fulfillment</h3>
                 <div className="flex gap-2">
-                  <Badge className="bg-green-100 text-green-800">
+                  <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
                     <CheckCircle className="w-3 h-3 mr-1" />
                     Paid
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs px-2 py-1">
                     {selectedOrder.fulfillmentType === 'delivery' ? (
                       <><Truck className="w-3 h-3 mr-1" />Delivery</>
                     ) : (
@@ -343,7 +346,7 @@ export default function OrdersFresh() {
                     )}
                   </Badge>
                   {selectedOrder.status === 'fulfilled' && (
-                    <Badge className="bg-blue-100 text-blue-800">
+                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Fulfilled
                     </Badge>
@@ -351,35 +354,31 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              <Separator />
-
               {/* Customer Information */}
               <div>
-                <h3 className="font-semibold mb-3">Your Information</h3>
-                <div className="space-y-1 text-sm">
-                  <div><strong>Name:</strong> {selectedOrder.customerName}</div>
-                  <div><strong>Email:</strong> {selectedOrder.customerEmail}</div>
+                <h3 className="font-medium mb-2 text-sm">Your Information</h3>
+                <div className="space-y-1 text-xs">
+                  <div><span className="font-medium">Name:</span> {selectedOrder.customerName}</div>
+                  <div><span className="font-medium">Email:</span> {selectedOrder.customerEmail}</div>
                   {selectedOrder.customerPhone && (
-                    <div><strong>Phone:</strong> {selectedOrder.customerPhone}</div>
+                    <div><span className="font-medium">Phone:</span> {selectedOrder.customerPhone}</div>
                   )}
                 </div>
               </div>
 
-              <Separator />
-
               {/* Order Items */}
               <div>
-                <h3 className="font-semibold mb-3">Items ({selectedOrder.items?.length || 0})</h3>
-                <div className="space-y-3">
+                <h3 className="font-medium mb-2 text-sm">Items ({selectedOrder.items?.length || 0})</h3>
+                <div className="space-y-2">
                   {selectedOrder.items?.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">{item.product?.name || 'Unknown Product'}</div>
-                        <div className="text-sm text-gray-500">
+                    <div key={index} className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</div>
+                        <div className="text-xs text-gray-500">
                           Quantity: {item.quantity} units × {formatCurrency(parseFloat(item.unitPrice))}
                         </div>
                       </div>
-                      <div className="font-medium">
+                      <div className="font-medium text-sm ml-4">
                         {formatCurrency(parseFloat(item.total))}
                       </div>
                     </div>
@@ -387,59 +386,57 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              <Separator />
-
               {/* Payment Summary */}
               <div>
-                <h3 className="font-semibold mb-3">Payment Summary</h3>
-                <div className="space-y-2">
+                <h3 className="font-medium mb-2 text-sm">Payment Summary</h3>
+                <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span>Customer Total Paid:</span>
+                    <span>Subtotal:</span>
                     <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
                   </div>
-                  <div className="flex justify-between text-red-600">
-                    <span>Platform Fee (3.3%):</span>
-                    <span>-{formatCurrency(parseFloat(selectedOrder.total) * 0.033)}</span>
+                  <div className="flex justify-between">
+                    <span>Transaction Fee (5.5% + £0.50):</span>
+                    <span>£{((parseFloat(selectedOrder.total) * 0.055) + 0.50).toFixed(2)}</span>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between font-semibold text-green-600">
-                    <span>Your Net Amount:</span>
-                    <span>{formatCurrency(calculateNetAmount(selectedOrder.total))}</span>
+                  <div className="flex justify-between">
+                    <span>Delivery Cost:</span>
+                    <span>£{(parseFloat(selectedOrder.deliveryCost || '0')).toFixed(2)}</span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    This is the amount you'll receive after the 3.3% platform fee is deducted.
+                  <div className="border-t pt-1 mt-2">
+                    <div className="flex justify-between font-medium">
+                      <span>Total Paid:</span>
+                      <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
               {/* Order Timeline */}
               <div>
-                <h3 className="font-semibold mb-3">Order Timeline</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-sm font-medium">Payment processed successfully</div>
+                      <div className="text-xs font-medium">Payment processed successfully</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-sm font-medium">Order confirmation sent to you</div>
+                      <div className="text-xs font-medium">Order confirmation sent to you</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
                     <div>
-                      <div className="text-sm font-medium">Wholesaler notified of your order</div>
+                      <div className="text-xs font-medium">Wholesaler notified of your order</div>
                       <div className="text-xs text-gray-500">
                         {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
                       </div>
@@ -447,31 +444,31 @@ export default function OrdersFresh() {
                   </div>
                   {selectedOrder.status !== 'fulfilled' && (
                     <>
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-sm text-gray-500">Awaiting wholesaler confirmation</div>
+                          <div className="text-xs text-gray-500">Awaiting wholesaler confirmation</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-sm text-gray-500">Order preparation pending</div>
+                          <div className="text-xs text-gray-500">Order preparation pending</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
                         <div>
-                          <div className="text-sm text-gray-500">Fulfillment pending</div>
+                          <div className="text-xs text-gray-500">Fulfillment pending</div>
                         </div>
                       </div>
                     </>
                   )}
                   {selectedOrder.status === 'fulfilled' && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
                       <div>
-                        <div className="text-sm font-medium">Order fulfilled</div>
+                        <div className="text-xs font-medium">Order fulfilled</div>
                         <div className="text-xs text-gray-500">Ready for collection/delivered</div>
                       </div>
                     </div>
@@ -481,8 +478,9 @@ export default function OrdersFresh() {
 
               {/* Action Buttons */}
               {selectedOrder.status !== 'fulfilled' && (
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-2 border-t">
                   <Button 
+                    size="sm"
                     onClick={() => markAsFulfilled(selectedOrder.id)}
                     disabled={updatingOrderId === selectedOrder.id}
                   >
