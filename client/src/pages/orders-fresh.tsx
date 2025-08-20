@@ -57,6 +57,7 @@ export default function OrdersFresh() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const ordersPerPage = 20;
 
   const loadOrders = async (page = 1, search = '') => {
@@ -100,8 +101,16 @@ export default function OrdersFresh() {
     loadOrders(1, query);
   };
 
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+    const searchTerm = status || searchQuery;
+    loadOrders(1, searchTerm);
+  };
+
   const handlePageChange = (newPage: number) => {
-    loadOrders(newPage, searchQuery);
+    const searchTerm = statusFilter || searchQuery;
+    loadOrders(newPage, searchTerm);
   };
 
   // Load detailed order information for modal
@@ -198,10 +207,10 @@ export default function OrdersFresh() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Orders</h1>
         <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500">
+          <div className="text-xs text-gray-500">
             Showing {displayedOrders} of {totalOrders} orders
           </div>
-          <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline">
+          <Button onClick={() => loadOrders(currentPage, searchQuery)} variant="outline" size="sm" className="text-xs">
             Refresh
           </Button>
         </div>
@@ -215,16 +224,30 @@ export default function OrdersFresh() {
             placeholder="Search orders by customer name, phone, or order number..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
-        {searchQuery && (
+        <select 
+          className="px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+          value={statusFilter}
+          onChange={(e) => handleStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="paid">Paid</option>
+          <option value="fulfilled">Fulfilled</option>
+          <option value="pending">Pending</option>
+        </select>
+        {(searchQuery || statusFilter) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleSearch('')}
+            onClick={() => {
+              handleSearch('');
+              setStatusFilter('');
+            }}
+            className="text-sm"
           >
-            Clear
+            Clear All
           </Button>
         )}
       </div>
@@ -233,42 +256,42 @@ export default function OrdersFresh() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Total Orders</CardTitle>
+            <Package className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
+            <div className="text-xl font-bold">{totalOrders}</div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Net Revenue</CardTitle>
+            <DollarSign className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+            <div className="text-xl font-bold">{formatCurrency(totalValue)}</div>
             <p className="text-xs text-muted-foreground">After platform fees</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid Orders</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Paid Orders</CardTitle>
+            <Users className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paidOrders}</div>
+            <div className="text-xl font-bold">{paidOrders}</div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Pending</CardTitle>
+            <Clock className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingOrders}</div>
+            <div className="text-xl font-bold">{pendingOrders}</div>
           </CardContent>
         </Card>
       </div>
@@ -276,7 +299,7 @@ export default function OrdersFresh() {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
+          <CardTitle className="text-lg">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
@@ -290,49 +313,49 @@ export default function OrdersFresh() {
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Net Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead className="text-xs">Order #</TableHead>
+                    <TableHead className="text-xs">Customer</TableHead>
+                    <TableHead className="text-xs">Net Amount</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Actions</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orders.slice(0, 50).map((order) => (
                     <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order.id)}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         <div>
                           <div className="font-medium">{order.customerName || 'Unknown'}</div>
-                          <div className="text-sm text-gray-500">{order.customerEmail}</div>
+                          <div className="text-xs text-gray-500">{order.customerEmail}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-xs">
                         <div>
                           <div>{formatCurrency(calculateNetAmount(order.total))}</div>
                           <div className="text-xs text-gray-500">After platform fee</div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         <div className="flex gap-1">
-                          <Badge className={getStatusColor(order.status)}>
+                          <Badge className={getStatusColor(order.status) + " text-xs"}>
                             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
                           </Badge>
                           {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
-                                <><Truck className="w-3 h-3 mr-1" />Delivery</>
+                                <><Truck className="w-2 h-2 mr-1" />Delivery</>
                               ) : (
-                                <><MapPin className="w-3 h-3 mr-1" />Collection</>
+                                <><MapPin className="w-2 h-2 mr-1" />Collection</>
                               )}
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         {order.status !== 'fulfilled' ? (
                           <Button 
                             size="sm" 
@@ -342,17 +365,18 @@ export default function OrdersFresh() {
                               e.stopPropagation();
                               markAsFulfilled(order.id);
                             }}
+                            className="text-xs"
                           >
                             {updatingOrderId === order.id ? 'Updating...' : 'Mark Fulfilled'}
                           </Button>
                         ) : (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            <CheckCircle className="w-3 h-3 mr-1" />
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">
+                            <CheckCircle className="w-2 h-2 mr-1" />
                             Fulfilled
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-xs text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
@@ -364,7 +388,7 @@ export default function OrdersFresh() {
               {/* Pagination Controls */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
                     Page {currentPage} of {totalPages} • {totalOrders} total orders
                   </div>
                   <div className="flex items-center gap-2">
@@ -373,6 +397,7 @@ export default function OrdersFresh() {
                       size="sm"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
+                      className="text-xs"
                     >
                       Previous
                     </Button>
@@ -381,6 +406,7 @@ export default function OrdersFresh() {
                       size="sm"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
+                      className="text-xs"
                     >
                       Next
                     </Button>
