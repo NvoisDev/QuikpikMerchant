@@ -69,8 +69,8 @@ const productCategories = [
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional().refine(
-    (val) => !val || val.length <= 104,
-    { message: "Description must be 104 characters or less" }
+    (val) => !val || val.length <= 100,
+    { message: "Description must be 100 characters or less" }
   ),
   price: z.string().min(1, "Price is required"),
   currency: z.string().min(1, "Currency is required"),
@@ -444,16 +444,16 @@ export default function ProductManagement() {
         form.setValue("description", generatedDescription);
         
         // Validate character count and provide feedback
-        if (generatedDescription.length > 104) {
+        if (generatedDescription.length > 100) {
           toast({
             title: "Description Generated (Warning)",
-            description: `Generated description is ${generatedDescription.length} characters. Please trim to 104 characters max.`,
+            description: `Generated description is ${generatedDescription.length} characters. Please trim to 100 characters max.`,
             variant: "destructive",
           });
-        } else if (generatedDescription.length > 90) {
+        } else if (generatedDescription.length > 85) {
           toast({
             title: "Description Generated",
-            description: `Generated ${generatedDescription.length} characters. Consider keeping under 90 for best results.`,
+            description: `Generated ${generatedDescription.length} characters. Consider keeping under 85 for best results.`,
           });
         } else {
           toast({
@@ -1576,31 +1576,31 @@ export default function ProductManagement() {
                                 isLoading={isGeneratingDescription}
                                 variant="default"
                                 size="sm"
-                                className="h-9 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 font-medium relative z-10"
+                                className="h-9 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 font-medium relative z-10 flex items-center justify-center"
                                 onClick={generateDescription}
                               >
                                 <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
-                                ✨ AI Generate
+                                AI Generate
                               </ButtonLoader>
                             </div>
                             <FormControl>
                               <Textarea 
-                                placeholder="Short punchy summary (max 104 characters)" 
-                                maxLength={104}
+                                placeholder="Short punchy summary (max 100 characters)" 
+                                maxLength={100}
                                 {...field} 
                               />
                             </FormControl>
                             <div className="flex justify-between text-xs mt-1">
                               <span className="text-gray-500">Short punchy summary</span>
                               <span className={
-                                (field.value?.length || 0) > 104 
+                                (field.value?.length || 0) > 100 
                                   ? "text-red-600 font-medium" 
-                                  : (field.value?.length || 0) > 90
+                                  : (field.value?.length || 0) > 85
                                     ? "text-amber-600 font-medium"
                                     : "text-gray-500"
                               }>
-                                {field.value?.length || 0}/104
-                                {(field.value?.length || 0) > 104 && (
+                                {field.value?.length || 0}/100
+                                {(field.value?.length || 0) > 100 && (
                                   <span className="ml-1 text-red-600">⚠️ Exceeds limit</span>
                                 )}
                               </span>

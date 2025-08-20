@@ -27,14 +27,14 @@ export async function generateProductDescription(productName: string, category?:
   try {
     const prompt = `Write a compelling product description for a wholesale product called "${productName}"${
       category ? ` in the ${category} category` : ""
-    }. Focus on key features, benefits, and selling points that would appeal to retailers. CRITICAL: Keep it under 95 characters total. Write a very short, punchy summary. Do NOT include formatting markers like **Product Name:** or **Category:** - just write a clean, concise description.`;
+    }. Focus on key features, benefits, and selling points that would appeal to retailers. CRITICAL: Keep it under 90 characters total. Write a very short, punchy summary. Do NOT include formatting markers like **Product Name:** or **Category:** - just write a clean, concise description.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers. CRITICAL REQUIREMENT: Keep descriptions under 95 characters - very short, punchy summaries only. Count characters carefully. Never include formatting markers like **Product Name:** or **Category:** - only write clean, professional description text.",
+          content: "You are a professional product copywriter specializing in wholesale product descriptions. Write clear, compelling descriptions that highlight value propositions for retailers. CRITICAL REQUIREMENT: Keep descriptions under 90 characters - very short, punchy summaries only. Count characters carefully. Never include formatting markers like **Product Name:** or **Category:** - only write clean, professional description text.",
         },
         {
           role: "user",
@@ -50,9 +50,9 @@ export async function generateProductDescription(productName: string, category?:
     // Clean the description to ensure no formatting markers appear
     let cleanedDescription = cleanAIDescription(rawDescription);
     
-    // Enforce 104 character limit strictly
-    if (cleanedDescription.length > 104) {
-      cleanedDescription = cleanedDescription.substring(0, 101).trim() + "...";
+    // Enforce 100 character limit strictly
+    if (cleanedDescription.length > 100) {
+      cleanedDescription = cleanedDescription.substring(0, 97).trim() + "...";
     }
     
     return cleanedDescription;
