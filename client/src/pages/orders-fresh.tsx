@@ -36,8 +36,8 @@ export default function OrdersFresh() {
     setError(null);
     
     try {
-      console.log('📦 Loading orders from main endpoint...');
-      const response = await fetch('/api/orders');
+      console.log('📦 Loading orders from lightweight endpoint...');
+      const response = await fetch('/api/orders-light');
       
       if (response.ok) {
         const data = await response.json();

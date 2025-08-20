@@ -1684,6 +1684,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders endpoint (no authentication required for seamless access)
+  // Lightweight orders endpoint for frontend UI - fast response with essential data only
+  app.get('/api/orders-light', async (req: any, res) => {
+    try {
+      const wholesalerId = '104871691614680693123';
+      
+      console.log(`📦 Fetching lightweight orders for wholesaler: ${wholesalerId}`);
+      
+      // Get orders with minimal data for fast loading
+      const orderResults = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerName: orders.customerName,
+          customerEmail: orders.customerEmail,
+          total: orders.total,
+          status: orders.status,
+          fulfillmentType: orders.fulfillmentType,
+          createdAt: orders.createdAt
+        })
+        .from(orders)
+        .where(eq(orders.wholesalerId, wholesalerId))
+        .orderBy(desc(orders.createdAt))
+        .limit(50); // Limit to 50 most recent orders for fast loading
+      
+      console.log(`📦 Found ${orderResults.length} lightweight orders`);
+      
+      res.json(orderResults);
+    } catch (error) {
+      console.error("❌ Error fetching lightweight orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
   app.get('/api/orders', async (req: any, res) => {
     try {
       const search = req.query.search; // search term
