@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {
@@ -48,6 +49,7 @@ interface OrderItem {
 }
 
 export default function OrdersFresh() {
+  const { user, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +176,8 @@ export default function OrdersFresh() {
   const paidOrders = orders.filter(o => o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
-  if (loading) {
+  // Show loading state for auth or orders loading
+  if (authLoading || loading) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -183,6 +186,26 @@ export default function OrdersFresh() {
             <p className="text-gray-500">Loading orders...</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+              <p className="text-gray-600 mb-4">Please log in to view your orders.</p>
+              <Button onClick={() => window.location.href = '/api/auth/google'}>
+                Sign in with Google
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
