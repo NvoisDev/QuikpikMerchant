@@ -930,8 +930,8 @@ export default function ProductManagement() {
         moq: String(product.moq || ""),
         stock: String(product.stock || ""),
         category: product.category || "",
-        imageUrl: product.imageUrl || "",
-        images: Array.isArray(product.images) ? product.images : [],
+        imageUrl: "", // Clear image URL when duplicating
+        images: [], // Clear images array when duplicating
         priceVisible: Boolean(product.priceVisible),
         negotiationEnabled: Boolean(product.negotiationEnabled),
         minimumBidPrice: String(product.minimumBidPrice || ""),
