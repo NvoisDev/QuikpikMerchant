@@ -82,9 +82,11 @@ export default function OrdersFinal() {
   }, [selectedOrder]);
 
   const { data: orders = [], isLoading, error } = useQuery<Order[]>({
-    queryKey: ['/api/public-orders'],
+    queryKey: ['/api/orders', searchTerm],
     retry: 1,
-    staleTime: 30000
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   });
 
   // Filter and sort orders
@@ -174,6 +176,24 @@ export default function OrdersFinal() {
     return `£${parseFloat(amount).toFixed(2)}`;
   };
 
+  // Handle error state
+  if (error) {
+    console.error('Orders fetch error:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-red-600 font-medium">Failed to load orders</div>
+          <p className="text-gray-500 text-sm">
+            {error instanceof Error ? error.message : 'Unknown error occurred'}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "MMM dd, yyyy");
   };
@@ -239,8 +259,7 @@ export default function OrdersFinal() {
       });
 
       
-      // Refresh orders data with multiple query invalidations
-      queryClient.invalidateQueries({ queryKey: ["/api/public-orders"] });
+      // Refresh orders data
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
       // Update selected order if it's the one being modified

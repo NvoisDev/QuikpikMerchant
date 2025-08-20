@@ -140,7 +140,6 @@ function AuthenticatedRoutes() {
         ) : (
           <>
             <Route path="/" component={RetailerInterface} />
-            <Route path="/orders" component={Orders} />
             <Route path="/checkout" component={Checkout} />
           </>
         )}
