@@ -391,22 +391,21 @@ export default function OrdersFresh() {
                 <h3 className="font-medium mb-2 text-sm">Payment Summary</h3>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
+                    <span>Customer Paid:</span>
                     <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Transaction Fee (5.5% + £0.50):</span>
-                    <span>£{((parseFloat(selectedOrder.total) * 0.055) + 0.50).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Delivery Cost:</span>
-                    <span>£{(parseFloat(selectedOrder.deliveryCost || '0')).toFixed(2)}</span>
+                  <div className="flex justify-between text-red-600">
+                    <span>Platform Fee (3.3%):</span>
+                    <span>-{formatCurrency(parseFloat(selectedOrder.total) * 0.033)}</span>
                   </div>
                   <div className="border-t pt-1 mt-2">
-                    <div className="flex justify-between font-medium">
-                      <span>Total Paid:</span>
-                      <span>{formatCurrency(parseFloat(selectedOrder.total))}</span>
+                    <div className="flex justify-between font-medium text-green-600">
+                      <span>Your Net Amount:</span>
+                      <span>{formatCurrency(calculateNetAmount(selectedOrder.total))}</span>
                     </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Amount you receive after platform fee deduction
                   </div>
                 </div>
               </div>
