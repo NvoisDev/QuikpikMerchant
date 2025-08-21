@@ -253,24 +253,33 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     }
   }, [wholesalerId]); // Only depend on wholesalerId to prevent infinite loops
 
-  // DISABLED - Fetch wholesaler data causing infinite loop
-  // useEffect(() => {
-  //   const fetchWholesaler = async () => {
-  //     try {
-  //       const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
-  //       if (response.ok) {
-  //         const data = await response.json();
-  //         setWholesaler(data);
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to fetch wholesaler data:', error);
-  //     }
-  //   };
+  // Fetch wholesaler data
+  useEffect(() => {
+    const fetchWholesaler = async () => {
+      try {
+        console.log('🔍 Fetching wholesaler data for ID:', wholesalerId);
+        const response = await fetch(`/api/marketplace/wholesaler/${wholesalerId}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🏪 Wholesaler data received:', {
+            id: data.id,
+            businessName: data.businessName,
+            logoUrl: data.logoUrl,
+            initials: data.businessName ? getInitials(data.businessName) : 'N/A'
+          });
+          setWholesaler(data);
+        } else {
+          console.error('❌ Failed to fetch wholesaler - response not ok:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch wholesaler - network error:', error);
+      }
+    };
 
-  //   if (wholesalerId) {
-  //     fetchWholesaler();
-  //   }
-  // }, [wholesalerId]);
+    if (wholesalerId) {
+      fetchWholesaler();
+    }
+  }, [wholesalerId]);
 
   // Countdown timer for SMS expiry
   useEffect(() => {
@@ -887,14 +896,14 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
               ) : (
                 <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-2 sm:border-3 border-gray-200 shadow-lg">
                   <span className="text-lg sm:text-xl font-bold text-white">
-                    {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
+                    {wholesaler && wholesaler.businessName ? getInitials(wholesaler.businessName) : 'Q'}
                   </span>
                 </div>
               )}
             </div>
             {/* Store Name Display */}
             <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
-              {wholesaler?.businessName || 'Store'}
+              {wholesaler?.businessName || 'Loading...'}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500">
               Customer Portal Access
