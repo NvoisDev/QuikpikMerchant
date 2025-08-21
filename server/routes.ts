@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
@@ -1184,12 +1184,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerPhone,
         customerName,
         customerEmail,
+        businessName: req.body.businessName || null,
         requestMessage
       });
       
       console.log("✅ Registration request created with ID:", request.id);
       
-      // TODO: Send notification to wholesaler (email/SMS)
+      // Send email notification to wholesaler
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (wholesaler && wholesaler.email) {
+        try {
+          const emailSubject = `New Customer Registration Request - ${customerName}`;
+          const emailContent = `
+Dear ${wholesaler.firstName || 'Wholesaler'},
+
+You have received a new customer registration request:
+
+Customer Details:
+• Name: ${customerName}
+• Business: ${req.body.businessName || 'Not provided'}
+• Phone: ${customerPhone}
+• Email: ${customerEmail || 'Not provided'}
+
+${requestMessage ? `Message: ${requestMessage}` : ''}
+
+To approve or manage this request, please log into your Quikpik dashboard.
+
+Best regards,
+The Quikpik Team
+          `;
+          
+          await sendEmail(process.env.SENDGRID_API_KEY!, {
+            to: wholesaler.email,
+            from: 'notifications@quikpik.app',
+            subject: emailSubject,
+            text: emailContent
+          });
+          
+          console.log(`📧 Registration request notification sent to ${wholesaler.email}`);
+        } catch (emailError) {
+          console.error('Failed to send registration request notification:', emailError);
+        }
+      }
       
       res.json({ 
         success: true, 

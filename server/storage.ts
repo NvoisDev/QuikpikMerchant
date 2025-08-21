@@ -3942,6 +3942,7 @@ export class DatabaseStorage implements IStorage {
     customerPhone: string;
     customerName: string;
     customerEmail?: string;
+    businessName?: string;
     requestMessage?: string;
   }) {
     const [newRequest] = await db

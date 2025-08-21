@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Shield, ShoppingCart, Package, Star, MessageSquare, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Shield, ShoppingCart, Package, Star, MessageSquare, Mail, Building2, User, Phone, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/ui/logo";
 import Footer from "@/components/ui/footer";
@@ -43,8 +45,74 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const [wholesaler, setWholesaler] = useState<Wholesaler | null>(null);
   const [smsRequestInProgress, setSmsRequestInProgress] = useState(false);
   const [lastSmsTime, setLastSmsTime] = useState<number>(0);
+  
+  // Registration request form state
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [registrationData, setRegistrationData] = useState({
+    name: '',
+    businessName: '',
+    phone: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
 
   const { toast } = useToast();
+
+  // Handle registration request form submission
+  const handleRegistrationSubmit = async () => {
+    if (!registrationData.name || !registrationData.phone) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in your name and phone number.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmittingRegistration(true);
+    try {
+      const response = await fetch('/api/customer/request-wholesaler-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wholesalerId,
+          customerPhone: registrationData.phone,
+          customerName: registrationData.name,
+          customerEmail: registrationData.email,
+          businessName: registrationData.businessName,
+          requestMessage: registrationData.message
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Request Sent!",
+          description: data.message || "Your access request has been sent to the wholesaler.",
+        });
+        setShowRegistrationForm(false);
+        setRegistrationData({ name: '', businessName: '', phone: '', email: '', message: '' });
+        setError(""); // Clear the customer not found error
+      } else {
+        toast({
+          title: "Request Failed",
+          description: data.error || "Failed to send your request. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Registration request error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Unable to send your request. Please check your connection and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingRegistration(false);
+    }
+  };
 
   // Handle automatic authentication when coming from CustomerLogin
   const handleAuthenticationFromLogin = useCallback(async (digits: string) => {
@@ -892,23 +960,32 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     {error && (
                       <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-xl border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
                         {error === "CUSTOMER_NOT_FOUND" ? (
-                          <AlertDescription className="text-center space-y-3">
+                          <AlertDescription className="text-center space-y-4">
                             <div className="flex items-center justify-center mb-2">
-                              <Mail className="w-5 h-5 text-blue-600 mr-2" />
-                              <span className="text-blue-800 font-semibold">Not yet a customer?</span>
+                              <Building2 className="w-5 h-5 text-blue-600 mr-2" />
+                              <span className="text-blue-800 font-semibold">Not registered yet?</span>
                             </div>
                             <p className="text-blue-700 text-sm mb-3">
-                              You're not registered with {wholesaler?.businessName || 'this store'} yet. 
-                              Contact them to get added as a customer and start shopping.
+                              You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store. 
+                              Request access by filling out a quick form below.
                             </p>
-                            <Button
-                              onClick={() => window.location.href = '/'}
-                              variant="outline"
-                              className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
-                            >
-                              <Mail className="w-4 h-4 mr-2" />
-                              Contact {wholesaler?.businessName || 'Wholesaler'}
-                            </Button>
+                            <div className="space-y-2">
+                              <Button
+                                onClick={() => setShowRegistrationForm(true)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                <User className="w-4 h-4 mr-2" />
+                                Request Access
+                              </Button>
+                              <Button
+                                onClick={() => setError("")}
+                                variant="outline"
+                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+                              >
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Try Different Number
+                              </Button>
+                            </div>
                           </AlertDescription>
                         ) : (
                           <AlertDescription className="text-center">{error}</AlertDescription>
@@ -918,7 +995,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
                     <div className="space-y-3">
                       <Button 
-                        onClick={handleLogin} 
+                        onClick={() => handleLogin()} 
                         className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                         disabled={isLoading || lastFourDigits.length !== 4}
                       >
@@ -1305,6 +1382,108 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           </div>
         </div>
       </div>
+
+      {/* Registration Request Dialog */}
+      <Dialog open={showRegistrationForm} onOpenChange={setShowRegistrationForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Building2 className="w-5 h-5 mr-2 text-blue-600" />
+              Request Access to {wholesaler?.businessName || 'Store'}
+            </DialogTitle>
+            <DialogDescription>
+              Fill out this form to request access. The wholesaler will review your request and get back to you.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reg-name">Name *</Label>
+              <Input
+                id="reg-name"
+                value={registrationData.name}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Your full name"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="reg-business">Business Name</Label>
+              <Input
+                id="reg-business"
+                value={registrationData.businessName}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, businessName: e.target.value }))}
+                placeholder="Your business name"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="reg-phone">Phone Number *</Label>
+              <Input
+                id="reg-phone"
+                type="tel"
+                value={registrationData.phone}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Your phone number"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="reg-email">Email</Label>
+              <Input
+                id="reg-email"
+                type="email"
+                value={registrationData.email}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Your email address"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="reg-message">Message (Optional)</Label>
+              <Textarea
+                id="reg-message"
+                value={registrationData.message}
+                onChange={(e) => setRegistrationData(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Tell them why you'd like access to their store..."
+                className="mt-1 resize-none"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="space-y-2 sm:space-y-0">
+            <Button
+              onClick={() => setShowRegistrationForm(false)}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRegistrationSubmit}
+              disabled={isSubmittingRegistration || !registrationData.name || !registrationData.phone}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+            >
+              {isSubmittingRegistration ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Request
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -485,6 +485,7 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   customerPhone: varchar("customer_phone", { length: 20 }).notNull(),
   customerName: varchar("customer_name", { length: 255 }).notNull(),
   customerEmail: varchar("customer_email", { length: 255 }),
+  businessName: varchar("business_name", { length: 255 }),
   requestMessage: text("request_message"),
   status: varchar("status").$type<'pending' | 'approved' | 'rejected'>().notNull().default('pending'),
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
@@ -980,6 +981,7 @@ export const insertCustomerRegistrationRequestSchema = createInsertSchema(custom
   respondedAt: true,
 });
 export type InsertCustomerRegistrationRequest = z.infer<typeof insertCustomerRegistrationRequestSchema>;
+export type CustomerRegistrationRequest = typeof customerRegistrationRequests.$inferSelect;
 
 // Customer Profile Update Notification schemas
 export const insertCustomerProfileUpdateNotificationSchema = createInsertSchema(customerProfileUpdateNotifications).omit({
