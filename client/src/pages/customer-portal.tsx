@@ -1146,15 +1146,16 @@ export default function CustomerPortal() {
   
   // Update customer data when authenticated customer becomes available
   useEffect(() => {
-    if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone)) {
+    if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone || !customerData.businessName)) {
       setCustomerData(prevData => ({
         ...prevData,
         name: authenticatedCustomer.name || 'Michael Ogunjemilua',
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
-        phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'
+        phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550',
+        businessName: authenticatedCustomer.businessName || ''
       }));
     }
-  }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone]);
+  }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone, customerData.businessName]);
   
   // Debug: Log state changes
   useEffect(() => {
