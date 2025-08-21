@@ -899,44 +899,70 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3 sm:space-y-4">
 
-                {/* Step 1: Store Introduction */}
+                {/* Enhanced Step 1: Store Introduction with Progress Indicator */}
                 {authStep === 'step1' && (
                   <>
-                    <div className="text-center space-y-4">
-                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl p-6 border border-blue-100">
-                        <h4 className="text-xl font-bold text-gray-800 mb-2">
+                    <div className="text-center space-y-4 sm:space-y-6">
+                      {/* Progress Bar */}
+                      <div className="mb-4 sm:mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 1 of 3</span>
+                          <span className="text-xs sm:text-sm text-gray-500">Getting Started</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '33%' }}></div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-blue-100 shadow-sm">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                          <span className="text-white text-2xl sm:text-3xl">🏪</span>
+                        </div>
+                        <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
                           Welcome to {wholesaler?.businessName || 'Our Store'}
                         </h4>
-                        <p className="text-gray-600 mb-4">
-                          Step 1 of 3: Getting Started
+                        <p className="text-gray-600 text-sm sm:text-base">
+                          Access your wholesale portal with secure authentication
                         </p>
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-white text-2xl">🏪</span>
-                        </div>
                       </div>
                       
                       <Button 
                         onClick={() => setAuthStep('step2')} 
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl"
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1"
                       >
                         Continue to Authentication
-                        <span className="ml-2">→</span>
+                        <span className="ml-2 text-lg">→</span>
                       </Button>
                     </div>
                   </>
                 )}
 
-                {/* Step 2: Phone Number Entry */}
+                {/* Enhanced Step 2: Phone Number Entry */}
                 {authStep === 'step2' && (
                   <>
-                    <div className="space-y-4">
-                      <div className="text-center mb-4">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                          Step 2 of 3: Phone Authentication
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          Enter the last 4 digits of your phone number
-                        </p>
+                    <div className="space-y-3 sm:space-y-4">
+                      {/* Enhanced Progress Indicator */}
+                      <div className="text-center mb-3 sm:mb-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs sm:text-sm font-medium text-gray-600">Step 2 of 3</span>
+                          <span className="text-xs sm:text-sm text-gray-500">Authentication</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mb-3 sm:mb-4">
+                          <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1.5 sm:h-2 rounded-full transition-all duration-700 ease-out" style={{ width: '66%' }}></div>
+                        </div>
+                        
+                        {/* Visual Header */}
+                        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-100">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-md">
+                            <span className="text-white text-lg sm:text-xl">📱</span>
+                          </div>
+                          <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
+                            Phone Authentication
+                          </h4>
+                          <p className="text-xs sm:text-sm text-gray-600">
+                            Enter the last 4 digits of your phone number
+                          </p>
+                        </div>
                       </div>
                       <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
                         Last 4 digits of your phone number
@@ -949,9 +975,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                           value={lastFourDigits}
                           onChange={handleLastFourChange}
                           maxLength={4}
-                          className="text-center text-2xl tracking-[0.8rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
+                          className="text-center text-xl sm:text-2xl tracking-[0.4rem] sm:tracking-[0.8rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
                         />
-                        <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
+                        <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">🔐</div>
+                        {/* Progress indicator for phone input */}
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-300 rounded-full"
+                            style={{ width: `${(lastFourDigits.length / 4) * 100}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -1103,6 +1136,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
                           />
                           <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📱</div>
+                          {/* Progress indicator for SMS input */}
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300 rounded-full"
+                              style={{ width: `${(smsCode.length / 6) * 100}%` }}
+                            />
+                          </div>
                         </div>
                         
 
@@ -1149,6 +1189,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
                           />
                           <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📧</div>
+                          {/* Progress indicator for email input */}
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300 rounded-full"
+                              style={{ width: `${(emailCode.length / 6) * 100}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
