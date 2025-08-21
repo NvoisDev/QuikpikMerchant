@@ -242,12 +242,6 @@ interface CustomerData {
   country: string;
   notes: string;
   shippingOption: "pickup" | "delivery" | undefined;
-  selectedShippingService?: {
-    serviceId: string;
-    serviceName: string;
-    price: number;
-    description: string;
-  };
 }
 
 // Stripe Checkout Form Component
@@ -271,71 +265,30 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [capturedShippingData, setCapturedShippingData] = useState<{
-    option: string;
-    service?: any;
-  } | null>(null);
 
-  // CRITICAL FIX: Clear clientSecret when shipping selection changes to force payment intent recreation
-  useEffect(() => {
-    if (clientSecret) {
-      console.log('🔄 Shipping selection changed, clearing payment intent to recreate with new data');
-      setClientSecret("");
-    }
-  }, [customerData.shippingOption, customerData.selectedShippingService?.serviceId]);
+  // Note: Shipping handled directly by supplier - no payment intent recreation needed for shipping changes
   const { toast } = useToast();
 
   // Create payment intent when customer data is complete - only once when form is ready
   useEffect(() => {
     const createPaymentIntent = async () => {
-      console.log('🚚 PAYMENT INTENT CHECK: About to create payment intent with shipping data:', {
-        shippingOption: customerData.shippingOption,
-        selectedShippingService: customerData.selectedShippingService,
+      console.log('💳 PAYMENT INTENT CHECK: About to create payment intent:', {
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
         isCreatingIntent
       });
       
-      // CRITICAL FIX: Reset clientSecret when shipping changes so payment intent gets recreated
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
-      const hasValidShipping = customerData.shippingOption === 'pickup' || (customerData.shippingOption === 'delivery' && customerData.selectedShippingService);
       
-      if (shouldCreateIntent && hasValidShipping && !clientSecret) {
+      if (shouldCreateIntent && !clientSecret) {
         setIsCreatingIntent(true);
         
-        // CRITICAL FIX: Capture shipping data at the exact moment of payment creation
-        // CRITICAL FIX: Always capture the absolute latest shipping state
-        const currentShippingOption = customerData.shippingOption;
-        const currentSelectedService = customerData.selectedShippingService;
-        
+        // Simple shipping data capture
         const shippingDataAtCreation = {
-          option: currentShippingOption || 'pickup',
-          service: currentSelectedService
+          option: customerData.shippingOption || 'pickup'
         };
-        setCapturedShippingData(shippingDataAtCreation);
         
-        console.log('🚚 CRITICAL FIX: Payment creation shipping validation:');
-        console.log('  - Current customerData.shippingOption:', currentShippingOption);
-        console.log('  - Current customerData.selectedShippingService:', currentSelectedService);
-        console.log('  - Will send to backend:', shippingDataAtCreation);
-        console.log('  - Is delivery order?', currentShippingOption === 'delivery');
-        console.log('  - Has shipping service?', !!currentSelectedService);
-        console.log('  - Service details:', currentSelectedService ? {
-            serviceName: currentSelectedService.serviceName,
-            price: currentSelectedService.price,
-            serviceId: currentSelectedService.serviceId
-          } : 'NO SERVICE SELECTED');
-        
-        // CRITICAL: Validation check - prevent payment creation if delivery selected but no service
-        if (currentShippingOption === 'delivery' && !currentSelectedService) {
-          toast({
-            title: "Shipping Service Required",
-            description: "Please select a delivery service before placing your order",
-            variant: "destructive"
-          });
-          setIsProcessingPayment(false);
-          return;
-        }
+        console.log('🚚 Payment creation with shipping option:', customerData.shippingOption);
         
         try {
           // CRITICAL DEBUG: Log the exact data being sent to backend
@@ -470,7 +423,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     };
 
     createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, customerData.selectedShippingService?.serviceId, totalAmount, clientSecret, isCreatingIntent]); // FIXED: Include selectedShippingService.serviceId to recreate payment intent when delivery service changes
+  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Simplified: No shipping service dependencies
 
   if (!clientSecret) {
     return (
@@ -1092,8 +1045,7 @@ export default function CustomerPortal() {
     transactionFee: number;
     shippingCost: number;
   } | null>(null);
-  const [availableShippingServices, setAvailableShippingServices] = useState<any[]>([]);
-  const [loadingShippingQuotes, setLoadingShippingQuotes] = useState(false);
+  // Shipping handled directly by supplier - no API integration needed
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: '',
     email: '',
@@ -1105,8 +1057,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'pickup',
-    selectedShippingService: undefined
+    shippingOption: 'pickup'
   });
   
   // Update customer data when authenticated customer becomes available
@@ -1183,146 +1134,7 @@ export default function CustomerPortal() {
     }
   }, [quickActionExpanded]);
 
-  // Fetch shipping quotes for customer delivery
-  const fetchShippingQuotes = async () => {
-    if (!customerData.address || !customerData.city || !customerData.postalCode) {
-      toast({
-        title: "Address Required",
-        description: "Please complete your address to get shipping quotes",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoadingShippingQuotes(true);
-    try {
-      // Enhanced shipping request with precise unit configuration
-      console.log("📦 Sending enhanced shipping request with cart items for precise calculation");
-      
-      // Debug: Log cart items with unit configuration
-      console.log("📦 Cart items for shipping:", cart.map(item => ({
-        name: item.product.name,
-        packQuantity: item.product.packQuantity,
-        unitSize: item.product.unitSize,
-        unitOfMeasure: item.product.unitOfMeasure,
-        quantity: item.quantity
-      })));
-      
-      const response = await apiRequest("POST", "/api/customer/shipping/quotes", {
-        collectionAddress: {
-          contactName: wholesaler?.businessName || "Business Pickup",
-          property: wholesaler?.businessAddress?.split(',')[0] || "1",
-          street: wholesaler?.businessAddress?.split(',')[1] || "Business Street",
-          town: wholesaler?.businessAddress?.split(',')[2] || "City",
-          postcode: wholesaler?.businessPostcode || "SW1A 1AA",
-          countryIsoCode: 'GBR'
-        },
-        deliveryAddress: {
-          contactName: customerData.name,
-          property: customerData.address,
-          street: customerData.address,
-          town: customerData.city,
-          postcode: customerData.postalCode,
-          countryIsoCode: 'GBR'
-        },
-        // Send cart items for precise shipping calculation
-        cartItems: cart.map(item => ({
-          product: {
-            // Unit configuration fields for precise calculation
-            packQuantity: item.product.packQuantity,
-            unitOfMeasure: item.product.unitOfMeasure,
-            unitSize: item.product.unitSize,
-            individualUnitWeight: item.product.individualUnitWeight,
-            totalPackageWeight: item.product.totalPackageWeight,
-            packageDimensions: item.product.packageDimensions,
-            // Fallback fields for compatibility
-            unitWeight: item.product.unitWeight || item.product.unit_weight,
-            palletWeight: item.product.palletWeight || item.product.pallet_weight,
-            price: item.product.price
-          },
-          quantity: item.quantity,
-          sellingType: item.sellingType,
-          unitPrice: item.sellingType === "pallets" ? (item.product as any).palletPrice : item.product.price
-        })),
-        // Fallback parcels for backward compatibility
-        parcels: [{
-          weight: Math.max(2, cart.reduce((totalWeight, item) => {
-            // Calculate weight based on actual product unit weights and quantities
-            // Check both camelCase and snake_case field names for compatibility
-            const unitWeight = parseFloat(item.product.unitWeight || item.product.unit_weight || "0") || 0;
-            const palletWeight = parseFloat(item.product.palletWeight || item.product.pallet_weight || "0") || 0;
-            
-            let itemWeight = 0;
-            if (item.sellingType === "pallets" && palletWeight > 0) {
-              itemWeight = palletWeight * item.quantity;
-            } else if (unitWeight > 0) {
-              itemWeight = unitWeight * item.quantity;
-            } else {
-              // Fallback to value-based calculation only if no weight data available
-              itemWeight = Math.floor((parseFloat(item.product.price) || 0) * item.quantity / 50);
-            }
-            
-            return totalWeight + itemWeight;
-          }, 0)),
-          length: 30,
-          width: 20,
-          height: 15,
-          value: cartStats.totalValue
-        }]
-      });
-
-      // Parse the JSON response
-      const data = await response.json();
-      console.log("Shipping quotes response:", data);
-      console.log("Response quotes array:", data.quotes);
-      console.log("Quotes length:", data.quotes?.length);
-      
-      if (data.quotes && data.quotes.length > 0) {
-        console.log("Setting available shipping services:", data.quotes);
-        console.log("📦 Enhanced shipping calculation:", {
-          preciseCalculation: data.preciseCalculation,
-          totalWeight: data.totalWeight,
-          recommendations: data.recommendations
-        });
-        
-        setAvailableShippingServices(data.quotes);
-        
-        const calculationType = data.preciseCalculation ? "precise unit configuration" : "estimated";
-        const weightInfo = data.totalWeight ? ` (${data.totalWeight}kg total)` : '';
-        
-        toast({
-          title: data.demoMode ? "Demo Shipping Options" : "Shipping Quotes Retrieved",
-          description: `Found ${data.quotes.length} delivery options using ${calculationType}${weightInfo}${data.demoMode ? ' - demo mode' : ''}`,
-        });
-        
-        // Show recommendations if available
-        if (data.recommendations && data.recommendations.warnings.length > 0) {
-          toast({
-            title: "Shipping Information",
-            description: data.recommendations.warnings.join(', '),
-            variant: "default"
-          });
-        }
-      } else {
-        console.log("No quotes found in response");
-        setAvailableShippingServices([]);
-        toast({
-          title: "No Shipping Options",
-          description: "No shipping services available for your location",
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      console.error("Error fetching shipping quotes:", error);
-      toast({
-        title: "Shipping Error",
-        description: error.message || "Failed to get shipping quotes",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingShippingQuotes(false);
-    }
-  };
+  // Shipping handled directly by supplier - no quotes API needed
 
   // Featured product ID is now managed by state initialized from URL
 
@@ -1466,7 +1278,6 @@ export default function CustomerPortal() {
     let totalPromotionalItems = 0; // For calculations - includes free items
     let subtotal = 0;
     let appliedPromotions: string[] = [];
-    let freeShippingApplied = false;
     let bogoffDetails: any[] = [];
 
     // Calculate each item with full promotional support
@@ -1510,47 +1321,25 @@ export default function CustomerPortal() {
           });
         }
         
-        // Check for free shipping offers
-        if (item.product.promotionalOffers?.some(offer => 
-          offer.type === 'free_shipping' && 
-          offer.minimumOrderValue && 
-          subtotal >= offer.minimumOrderValue
-        )) {
-          freeShippingApplied = true;
-        }
+        // Note: Free shipping offers removed - delivery handled directly by supplier
       }
     });
     
-    // Calculate shipping cost (consider free shipping promotions)
-    let shippingCost = 0;
-    if (customerData.shippingOption === 'delivery') {
-      if (freeShippingApplied) {
-        shippingCost = 0;
-        if (!appliedPromotions.includes('Free Shipping')) {
-          appliedPromotions.push('Free Shipping');
-        }
-      } else if (customerData.selectedShippingService) {
-        shippingCost = customerData.selectedShippingService.price || 90.00; // Default £90 for custom quotes
-      } else {
-        // For "Custom Quote Required" delivery without selected service
-        shippingCost = 90.00; // Default delivery cost
-      }
-    }
-      
-    const totalValue = subtotal + shippingCost;
+    // No shipping cost calculation needed - delivery arranged directly by supplier
+    const shippingCost = 0;
+    const totalValue = subtotal; // Pure product cost only
     
     // Ensure values are never NaN
     return { 
       totalItems: isNaN(totalItems) ? 0 : totalItems, // Display count - user selections only
       totalPromotionalItems: isNaN(totalPromotionalItems) ? 0 : totalPromotionalItems, // Calculation count - includes free items
       subtotal: isNaN(subtotal) ? 0 : subtotal, // PURE product subtotal (no shipping)
-      shippingCost: isNaN(shippingCost) ? 0 : shippingCost,
-      totalValue: isNaN(totalValue) ? 0 : totalValue, // Total including shipping
+      shippingCost: 0, // No shipping cost - handled directly by supplier
+      totalValue: isNaN(totalValue) ? 0 : totalValue, // Total product cost only
       appliedPromotions,
-      freeShippingApplied,
       bogoffDetails
     };
-  }, [cart, customerData.shippingOption, customerData.selectedShippingService]);
+  }, [cart]); // Simplified dependencies - no shipping calculations needed
 
 
 
@@ -4083,9 +3872,9 @@ export default function CustomerPortal() {
                       <Label htmlFor="delivery" className="flex-1 cursor-pointer">
                         <div className="flex justify-between">
                           <span>Home delivery</span>
-                          <span className="text-gray-600">Calculated at checkout</span>
+                          <span className="text-blue-600 font-medium">Arranged by supplier</span>
                         </div>
-                        <p className="text-sm text-gray-600">We'll deliver to your address</p>
+                        <p className="text-sm text-gray-600">The supplier will contact you to arrange delivery and discuss costs</p>
                       </Label>
                     </div>
                   </div>
@@ -4124,48 +3913,14 @@ export default function CustomerPortal() {
                         </div>
                       </div>
                       
-                      {customerData.address && customerData.city && customerData.postalCode && (
-                        <Button
-                          onClick={fetchShippingQuotes}
-                          disabled={loadingShippingQuotes}
-                          className="w-full"
-                        >
-                          {loadingShippingQuotes ? "Getting shipping quotes..." : "Get Shipping Quotes"}
-                        </Button>
-                      )}
-                      
-                      {availableShippingServices.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>Choose Shipping Service</Label>
-                          {availableShippingServices.map((service, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                id={`service-${index}`}
-                                name="shippingService"
-                                checked={customerData.selectedShippingService?.serviceId === service.serviceId}
-                                onChange={() => setCustomerData(prev => ({
-                                  ...prev,
-                                  selectedShippingService: service
-                                }))}
-                                className="w-4 h-4 text-emerald-600"
-                              />
-                              <Label htmlFor={`service-${index}`} className="flex-1 cursor-pointer">
-                                <div className="flex justify-between">
-                                  <span>{service.serviceName}</span>
-                                  <PriceDisplay
-                                    price={service.price}
-                                    currency="GBP"
-                                    isGuestMode={false}
-                                    size="small"
-                                  />
-                                </div>
-                                <p className="text-sm text-gray-600">{service.description}</p>
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {/* Delivery Information Note */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h5 className="font-medium text-blue-800 mb-1">Delivery Arrangement</h5>
+                        <p className="text-sm text-blue-700">
+                          The supplier will contact you within 24 hours to discuss delivery options, 
+                          timing, and costs based on your location and order size.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -4190,9 +3945,7 @@ export default function CustomerPortal() {
                     wholesaler={wholesaler}
                     totalAmount={(() => {
                       const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
-                      const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-                        ? customerData.selectedShippingService.price 
-                        : 0;
+                      const shipping = 0; // Delivery arranged directly by supplier
                       const beforeFees = subtotal + shipping;
                       const transactionFee = (beforeFees * 0.055) + 0.50;
                       return beforeFees + transactionFee;
@@ -4202,9 +3955,7 @@ export default function CustomerPortal() {
                       
                       // Set completed order data for thank you page with current cart state
                       const subtotal = cartStats.subtotal;
-                      const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-                        ? customerData.selectedShippingService.price 
-                        : 0;
+                      const shipping = 0; // Delivery arranged directly by supplier
                       const beforeFees = subtotal + shipping;
                       const transactionFee = (beforeFees * 0.055) + 0.50;
                       const totalAmount = beforeFees + transactionFee;
