@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ShoppingCart, Plus, Minus, Trash2, Package, Store, Search, 
   Grid, List, Home, User, Settings, ShoppingBag, CheckCircle,
-  Building2, History, Clock, Truck, CreditCard
+  Building2, History, Clock, Truck, CreditCard, Palette
 } from "lucide-react";
 
 // Optimized imports and lazy loading
