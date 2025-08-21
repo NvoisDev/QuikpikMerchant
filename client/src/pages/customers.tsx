@@ -71,6 +71,8 @@ const bulkAddFormSchema = z.object({
 });
 
 const editMemberFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
@@ -80,8 +82,15 @@ const editMemberFormSchema = z.object({
 
 const editCustomerFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().optional(),
-  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string()
+    .min(10, "Valid phone number is required")
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
+  email: z.union([
+    z.string().email("Please enter a valid email address"),
+    z.literal("")
+  ]).optional(),
+  businessName: z.string().optional(),
 });
 
 const editGroupFormSchema = z.object({
@@ -213,7 +222,13 @@ export default function Customers() {
 
   const editCustomerForm = useForm<EditCustomerFormData>({
     resolver: zodResolver(editCustomerFormSchema),
-    defaultValues: { firstName: "", lastName: "", email: "" },
+    defaultValues: { 
+      firstName: "", 
+      lastName: "", 
+      phoneNumber: "",
+      email: "",
+      businessName: ""
+    },
   });
 
   const addToGroupForm = useForm<AddToGroupFormData>({
@@ -563,7 +578,9 @@ export default function Customers() {
     editCustomerForm.reset({
       firstName: customer.firstName,
       lastName: customer.lastName || '',
+      phoneNumber: customer.phoneNumber || '',
       email: customer.email || '',
+      businessName: customer.businessName || '',
     });
     setIsEditCustomerDialogOpen(true);
   };
@@ -1625,12 +1642,38 @@ export default function Customers() {
               />
               <FormField
                 control={editCustomerForm.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., +44 7123 456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editCustomerForm.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Email address" {...field} />
+                      <Input placeholder="customer@example.com" type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editCustomerForm.control}
+                name="businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter business name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
