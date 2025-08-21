@@ -678,10 +678,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             </div>
           </div>
         )}
+        
+        {/* Quikpik Footer */}
+        <QuikpikFooter />
       </CardContent>
-      
-      {/* Quikpik Footer */}
-      <QuikpikFooter />
     </Card>
   );
 }
