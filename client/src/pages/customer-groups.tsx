@@ -1489,7 +1489,7 @@ Mike Johnson, 07444 555666`}
 
       {/* Edit Member Dialog */}
       <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Customer Information</DialogTitle>
             <DialogDescription>
