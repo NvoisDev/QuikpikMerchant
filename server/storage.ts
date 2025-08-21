@@ -444,6 +444,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User> {
+    // Check if phone number is being updated
+    if (updates.phoneNumber) {
+      const currentUser = await this.getUser(id);
+      if (currentUser && currentUser.phoneNumber !== updates.phoneNumber) {
+        // Store previous phone number and timestamp for grace period
+        (updates as any).previousPhoneNumber = currentUser.phoneNumber;
+        (updates as any).phoneChangedAt = new Date();
+        console.log(`🔄 Phone number changed for ${id}: ${currentUser.phoneNumber} → ${updates.phoneNumber}`);
+      }
+    }
+    
     const [user] = await db
       .update(users)
       .set(updates)
@@ -1177,12 +1188,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Customer authentication using last 4 digits only
+  // Enhanced customer authentication - supports both last 4 digits and full phone number
   async findCustomerByLastFourDigits(wholesalerId: string, lastFourDigits: string): Promise<any> {
     try {
       console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
       
-      // CRITICAL FIX: Only search customers belonging to the specific wholesaler
+      // ENHANCED: Search customers with grace period for phone changes
       const wholesalerCustomers = await db.execute(sql`
         SELECT 
           u.id as customer_id,
@@ -1191,6 +1202,8 @@ export class DatabaseStorage implements IStorage {
           COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), u.first_name, 'Customer') as name,
           u.email,
           COALESCE(u.phone_number, u.business_phone) as phone,
+          u.previous_phone_number,
+          u.phone_changed_at,
           u.role,
           cg.id as group_id,
           cg.name as group_name
@@ -1202,10 +1215,29 @@ export class DatabaseStorage implements IStorage {
           AND cg.wholesaler_id = ${wholesalerId}
       `);
       
-      // Find customers of this wholesaler whose phone number ends with the provided last 4 digits
+      // ENHANCED: Find customers by current OR previous phone number (grace period)
       const matchingCustomers = wholesalerCustomers.rows.filter((customer: any) => {
         const phoneLastFour = customer.phone?.slice(-4);
-        return phoneLastFour === lastFourDigits;
+        const previousPhoneLastFour = customer.previous_phone_number?.slice(-4);
+        
+        // Check current phone number
+        if (phoneLastFour === lastFourDigits) {
+          return true;
+        }
+        
+        // Check previous phone number within 7-day grace period
+        if (previousPhoneLastFour === lastFourDigits && customer.phone_changed_at) {
+          const changeDate = new Date(customer.phone_changed_at);
+          const gracePeriodEnd = new Date(changeDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+          const now = new Date();
+          
+          if (now <= gracePeriodEnd) {
+            console.log(`🔄 Using previous phone number within grace period for customer: ${customer.name}`);
+            return true;
+          }
+        }
+        
+        return false;
       });
 
       console.log(`Found ${matchingCustomers.length} customers with last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);

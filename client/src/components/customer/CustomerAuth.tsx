@@ -30,6 +30,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const authParam = urlParams.get('auth');
   
   const [lastFourDigits, setLastFourDigits] = useState(authParam || "");
+  const [fullPhoneNumber, setFullPhoneNumber] = useState("");
+  const [phoneAuthMethod, setPhoneAuthMethod] = useState<'last4' | 'full'>('last4');
   const [smsCode, setSmsCode] = useState("");
   const [authStep, setAuthStep] = useState<'step1' | 'step2' | 'step3' | 'success'>('step1');
   const [customerData, setCustomerData] = useState<any>(null);
@@ -85,12 +87,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         console.log('✅ CUSTOMER FOUND - SETTING CUSTOMER DATA');
         setCustomerData(verifyData.customer);
         
-        // Send SMS code
+        // Send SMS code with enhanced authentication support
         console.log('📱 SENDING SMS REQUEST...');
         const smsResponse = await fetch('/api/customer-auth/request-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wholesalerId, lastFourDigits: digits }),
+          body: JSON.stringify({ 
+            wholesalerId, 
+            lastFourDigits: digits,
+            fullPhoneNumber: phoneAuthMethod === 'full' ? fullPhoneNumber : undefined
+          }),
         });
 
         const smsData = await smsResponse.json();
@@ -213,16 +219,32 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
 
   const handleLogin = async (overrideDigits?: string) => {
     const phoneDigits = overrideDigits || lastFourDigits;
-    console.log('🚀 Starting streamlined authentication...', { wholesalerId, lastFourDigits: phoneDigits });
+    console.log('🚀 Starting enhanced authentication...', { 
+      wholesalerId, 
+      method: phoneAuthMethod,
+      lastFourDigits: phoneDigits,
+      fullPhoneUsed: phoneAuthMethod === 'full'
+    });
     
-    if (!phoneDigits) {
-      setError("Please enter the last 4 digits of your phone number");
-      return;
-    }
-
-    if (phoneDigits.length !== 4) {
-      setError("Please enter exactly 4 digits");
-      return;
+    // Validation based on selected method
+    if (phoneAuthMethod === 'last4') {
+      if (!phoneDigits) {
+        setError("Please enter the last 4 digits of your phone number");
+        return;
+      }
+      if (phoneDigits.length !== 4) {
+        setError("Please enter exactly 4 digits");
+        return;
+      }
+    } else {
+      if (!fullPhoneNumber) {
+        setError("Please enter your full phone number");
+        return;
+      }
+      if (fullPhoneNumber.length < 10) {
+        setError("Please enter a valid phone number");
+        return;
+      }
     }
 
     // Prevent multiple simultaneous authentication attempts
@@ -255,7 +277,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         console.log('✅ Customer found, sending SMS immediately...');
         setCustomerData(verifyData.customer);
         
-        // Immediately send SMS code without going to verification step
+        // Enhanced SMS request with both authentication methods
         const smsResponse = await fetch('/api/customer-auth/request-sms', {
           method: 'POST',
           headers: {
@@ -263,7 +285,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           },
           body: JSON.stringify({
             wholesalerId,
-            lastFourDigits: phoneDigits.trim()
+            lastFourDigits: phoneAuthMethod === 'last4' ? phoneDigits.trim() : undefined,
+            fullPhoneNumber: phoneAuthMethod === 'full' ? fullPhoneNumber.trim() : undefined
           }),
         });
 
@@ -391,7 +414,8 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         },
         body: JSON.stringify({
           wholesalerId,
-          lastFourDigits: lastFourDigits.trim(),
+          lastFourDigits: phoneAuthMethod === 'last4' ? lastFourDigits.trim() : undefined,
+          fullPhoneNumber: phoneAuthMethod === 'full' ? fullPhoneNumber.trim() : undefined,
           smsCode: smsCode.trim()
         }),
       });
@@ -860,7 +884,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                   </>
                 )}
 
-                {/* Step 2: Phone Number Entry */}
+                {/* Step 2: Enhanced Phone Authentication */}
                 {authStep === 'step2' && (
                   <>
                     <div className="space-y-4">
@@ -869,24 +893,83 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                           Step 2 of 3: Phone Authentication
                         </h4>
                         <p className="text-sm text-gray-600">
-                          Enter the last 4 digits of your phone number
+                          Choose your authentication method
                         </p>
                       </div>
-                      <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
-                        Last 4 digits of your phone number
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="lastFour"
-                          type="password"
-                          placeholder="••••"
-                          value={lastFourDigits}
-                          onChange={handleLastFourChange}
-                          maxLength={4}
-                          className="text-center text-2xl tracking-[0.8rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
-                        />
-                        <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
+
+                      {/* Authentication Method Selector */}
+                      <div className="mb-6">
+                        <div className="flex bg-gray-100 rounded-xl p-1">
+                          <button
+                            onClick={() => setPhoneAuthMethod('last4')}
+                            className={`flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
+                              phoneAuthMethod === 'last4' 
+                                ? 'bg-blue-500 text-white shadow-md' 
+                                : 'text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            🔢 Last 4 Digits
+                          </button>
+                          <button
+                            onClick={() => setPhoneAuthMethod('full')}
+                            className={`flex-1 flex items-center justify-center py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
+                              phoneAuthMethod === 'full' 
+                                ? 'bg-blue-500 text-white shadow-md' 
+                                : 'text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            📱 Full Number
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Conditional Input Based on Method */}
+                      {phoneAuthMethod === 'last4' ? (
+                        <>
+                          <Label htmlFor="lastFour" className="text-sm font-semibold text-gray-800 text-center block">
+                            Last 4 digits of your phone number
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="lastFour"
+                              type="password"
+                              placeholder="••••"
+                              value={lastFourDigits}
+                              onChange={handleLastFourChange}
+                              maxLength={4}
+                              className="text-center text-2xl tracking-[0.8rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
+                            />
+                            <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">🔐</div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-gray-500 mt-2">
+                              💡 Compatible with phone number changes (7-day grace period)
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <Label htmlFor="fullPhone" className="text-sm font-semibold text-gray-800 text-center block">
+                            Enter your full phone number
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="fullPhone"
+                              type="tel"
+                              placeholder="+44 7XX XXX XXXX"
+                              value={fullPhoneNumber}
+                              onChange={(e) => setFullPhoneNumber(e.target.value)}
+                              className="text-center text-lg h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 shadow-inner"
+                            />
+                            <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-gray-500 mt-2">
+                              🔒 More secure authentication method
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {error && (
@@ -920,7 +1003,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       <Button 
                         onClick={handleLogin} 
                         className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-                        disabled={isLoading || lastFourDigits.length !== 4}
+                        disabled={isLoading || (phoneAuthMethod === 'last4' ? lastFourDigits.length !== 4 : !fullPhoneNumber || fullPhoneNumber.length < 10)}
                       >
                         {isLoading ? (
                           <>
@@ -938,7 +1021,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       <div className="text-center">
                         <p className="text-xs text-gray-500 flex items-center justify-center">
                           <Shield className="mr-1 h-3 w-3" />
-                          SMS verification is required for security
+                          {phoneAuthMethod === 'last4' 
+                            ? 'SMS verification with grace period support' 
+                            : 'Enhanced SMS security verification'
+                          }
                         </p>
                       </div>
                     </div>
