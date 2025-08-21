@@ -621,23 +621,26 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
         {/* Pagination Controls */}
         {filteredOrders.length > ordersPerPage && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="mt-6 space-y-4">
+            {/* Order count - on its own line on mobile */}
+            <div className="text-sm text-gray-600 text-center sm:text-left">
               Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
             </div>
-            <div className="flex items-center space-x-2">
+            
+            {/* Pagination controls - centered with proper spacing */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-3"
+                className="h-8 px-2 sm:px-3"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Previous</span>
               </Button>
               
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
                   // Show first page, last page, current page, and pages around current
                   const showPage = page === 1 || page === totalPages || 
@@ -670,10 +673,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-3"
+                className="h-8 px-2 sm:px-3"
               >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4 sm:ml-1" />
               </Button>
             </div>
           </div>
