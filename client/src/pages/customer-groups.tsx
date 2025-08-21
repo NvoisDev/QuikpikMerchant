@@ -1493,7 +1493,7 @@ Mike Johnson, 07444 555666`}
           <DialogHeader>
             <DialogTitle>Edit Customer Information</DialogTitle>
             <DialogDescription>
-              Update customer details. Changes will be reflected across all groups.
+              Update customer details including business information. Changes will be reflected across all groups.
             </DialogDescription>
           </DialogHeader>
           <Form {...editMemberForm}>
