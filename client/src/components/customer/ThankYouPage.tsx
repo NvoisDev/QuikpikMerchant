@@ -313,8 +313,7 @@ export const ThankYouPage = ({
                     </p>
                   ) : (
                     <p className="text-sm text-blue-800">
-                      Your order will be delivered via {customerData.selectedShippingService?.serviceName}. 
-                      You will receive tracking information once your order is dispatched.
+                      Your order will be delivered by the supplier. The wholesaler will contact you directly to arrange delivery and discuss any associated costs.
                     </p>
                   )}
                 </div>
