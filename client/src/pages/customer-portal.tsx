@@ -4559,9 +4559,6 @@ export default function CustomerPortal() {
             </Button>
           </div>
         )}
-        
-        {/* Quikpik Footer */}
-        <QuikpikFooter />
       </div>
     </div>
   );
