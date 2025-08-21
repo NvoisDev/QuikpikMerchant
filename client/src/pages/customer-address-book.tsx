@@ -30,6 +30,7 @@ interface Customer {
   lastName?: string;
   email?: string;
   phoneNumber: string;
+  businessName?: string;
   streetAddress?: string;
   city?: string;
   state?: string;

@@ -141,6 +141,7 @@ interface Customer {
   lastName?: string;
   email?: string;
   phoneNumber: string;
+  businessName?: string;
   streetAddress?: string;
   city?: string;
   state?: string;
@@ -580,7 +581,7 @@ export default function Customers() {
       lastName: customer.lastName || '',
       phoneNumber: customer.phoneNumber || '',
       email: customer.email || '',
-      businessName: (customer as any).businessName || '',
+      businessName: customer.businessName || '',
     });
     setIsEditCustomerDialogOpen(true);
   };

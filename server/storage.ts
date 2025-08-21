@@ -3713,6 +3713,7 @@ export class DatabaseStorage implements IStorage {
         u.last_name,
         u.email,
         u.phone_number,
+        u.business_name,
         u.street_address,
         u.city,
         u.state,
@@ -3738,7 +3739,7 @@ export class DatabaseStorage implements IStorage {
         (u.id = ${wholesalerId} AND (o.wholesaler_id = ${wholesalerId} OR o.retailer_id = ${wholesalerId}))
       )
       WHERE u.role IN ('retailer', 'customer') AND u.id != ${wholesalerId} AND u.archived = false
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, 
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, u.business_name,
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
     `);
@@ -3749,6 +3750,7 @@ export class DatabaseStorage implements IStorage {
       lastName: customer.last_name,
       email: customer.email,
       phoneNumber: customer.phone_number,
+      businessName: customer.business_name,
       streetAddress: customer.street_address,
       city: customer.city,
       state: customer.state,
