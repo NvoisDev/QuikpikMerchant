@@ -3803,7 +3803,7 @@ export default function CustomerPortal() {
                         <div>
                           <Label className="text-sm font-medium">Business</Label>
                           <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                            {wholesaler?.businessName || 'Not provided'}
+                            {customerData?.businessName || 'Not provided'}
                           </div>
                         </div>
                       </div>
