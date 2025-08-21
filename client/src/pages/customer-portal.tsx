@@ -2332,20 +2332,20 @@ export default function CustomerPortal() {
         {isAuthenticated && !isGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 data-[state=active]:text-green-600 data-[state=active]:border-green-600 data-[state=active]:bg-green-50">
                 <Home className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden xs:inline sm:inline">Home</span>
               </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 data-[state=active]:text-green-600 data-[state=active]:border-green-600 data-[state=active]:bg-green-50">
                 <Package className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden xs:inline sm:inline">Products</span>
               </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0">
+              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0 data-[state=active]:text-green-600 data-[state=active]:border-green-600 data-[state=active]:bg-green-50">
                 <History className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden sm:inline whitespace-nowrap">Order History</span>
                 <span className="sm:hidden text-xs truncate">Orders</span>
               </TabsTrigger>
-              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 data-[state=active]:text-green-600 data-[state=active]:border-green-600 data-[state=active]:bg-green-50">
                 <User className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden xs:inline sm:inline">Account</span>
               </TabsTrigger>
