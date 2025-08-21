@@ -857,50 +857,47 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   const themeConfig = getThemeConfig();
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Side - White Background with Authentication Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-start justify-center p-2 lg:p-4 overflow-y-auto">
-        <div className="w-full max-w-md mx-auto py-2">
-          {/* Back Button */}
-          <div className="mb-3">
+      <div className="w-full lg:w-1/2 bg-white flex items-start justify-center p-3 sm:p-4 lg:p-4 overflow-y-auto">
+        <div className="w-full max-w-md mx-auto py-2 sm:py-4">
+          {/* Back Button - Mobile Optimized */}
+          <div className="mb-3 sm:mb-4">
             <Button
               onClick={() => window.location.href = '/customer-login'}
               variant="ghost"
-              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-all duration-200 flex items-center space-x-2"
+              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 sm:p-3 rounded-full transition-all duration-200 flex items-center space-x-2 text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-sm font-medium">Back</span>
+              <span className="font-medium">Back</span>
             </Button>
           </div>
 
-          {/* Wholesaler Logo/Initials Header */}
-          <div className="text-center mb-3">
-            <div className="mx-auto mb-3 relative">
+          {/* Wholesaler Logo/Initials Header - Mobile Optimized */}
+          <div className="text-center mb-3 sm:mb-4">
+            <div className="mx-auto mb-2 sm:mb-3 relative">
               {wholesaler?.logoUrl ? (
                 <img 
                   src={wholesaler.logoUrl} 
                   alt={wholesaler.businessName}
-                  className="w-16 h-16 rounded-full object-cover mx-auto border-3 border-gray-200 shadow-lg"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mx-auto border-2 sm:border-3 border-gray-200 shadow-lg"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-3 border-gray-200 shadow-lg">
-                  <span className="text-xl font-bold text-white">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto border-2 sm:border-3 border-gray-200 shadow-lg">
+                  <span className="text-lg sm:text-xl font-bold text-white">
                     {wholesaler ? getInitials(wholesaler.businessName) : 'Q'}
                   </span>
                 </div>
               )}
-
             </div>
-            
-
           </div>
 
-          {/* Unified Authentication Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-            <CardContent className="p-4">
-              <div className="space-y-4">
+          {/* Unified Authentication Card - Mobile Optimized */}
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl sm:shadow-2xl rounded-2xl sm:rounded-3xl overflow-hidden">
+            <CardContent className="p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4">
 
                 {/* Step 1: Store Introduction */}
                 {authStep === 'step1' && (
@@ -958,38 +955,57 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       </div>
                     </div>
 
+                    {/* Enhanced Mobile-Optimized Error Display for Step 2 */}
                     {error && (
-                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-xl border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
+                      <Alert variant={error === "CUSTOMER_NOT_FOUND" ? "default" : "destructive"} className={`rounded-lg sm:rounded-xl border-0 ${error === "CUSTOMER_NOT_FOUND" ? "bg-blue-50" : "bg-red-50"}`}>
                         {error === "CUSTOMER_NOT_FOUND" ? (
-                          <AlertDescription className="text-center space-y-4">
-                            <div className="flex items-center justify-center mb-2">
-                              <Building2 className="w-5 h-5 text-blue-600 mr-2" />
-                              <span className="text-blue-800 font-semibold">Not registered yet?</span>
+                          <AlertDescription className="text-center space-y-3 sm:space-y-4">
+                            <div className="flex items-center justify-center mb-1 sm:mb-2">
+                              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-1 sm:mr-2" />
+                              <span className="text-blue-800 font-semibold text-sm sm:text-base">Not registered yet?</span>
                             </div>
-                            <p className="text-blue-700 text-sm mb-3">
+                            <p className="text-blue-700 text-xs sm:text-sm mb-2 sm:mb-3 px-2">
                               You need to be registered by {wholesaler?.businessName || 'this wholesaler'} before you can access their store. 
                               Request access by filling out a quick form below.
                             </p>
                             <div className="space-y-2">
                               <Button
                                 onClick={() => setShowRegistrationForm(true)}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 sm:h-11 text-sm sm:text-base"
                               >
-                                <User className="w-4 h-4 mr-2" />
+                                <User className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                                 Request Access
                               </Button>
                               <Button
                                 onClick={() => setError("")}
                                 variant="outline"
-                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+                                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 h-10 sm:h-11 text-sm sm:text-base"
                               >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                                 Try Different Number
                               </Button>
                             </div>
                           </AlertDescription>
+                        ) : error.includes("SMS failed") || error.includes("Failed to send") ? (
+                          <AlertDescription className="text-center space-y-2 sm:space-y-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                              <span className="text-orange-600 text-sm sm:text-lg">📱</span>
+                            </div>
+                            <h6 className="font-semibold text-gray-800 text-sm sm:text-base">SMS Delivery Issue</h6>
+                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
+                            <div className="bg-orange-50 p-2 sm:p-3 rounded-lg">
+                              <p className="text-xs text-orange-700 font-medium">Troubleshooting tips:</p>
+                              <ul className="text-xs text-orange-600 mt-1 space-y-1 text-left">
+                                <li>• Check your phone has signal</li>
+                                <li>• Wait 30 seconds and try again</li>
+                                <li>• Ensure your number is correct</li>
+                              </ul>
+                            </div>
+                          </AlertDescription>
                         ) : (
-                          <AlertDescription className="text-center">{error}</AlertDescription>
+                          <AlertDescription className="text-center">
+                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
+                          </AlertDescription>
                         )}
                       </Alert>
                     )}
@@ -997,7 +1013,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     <div className="space-y-3">
                       <Button 
                         onClick={() => handleLogin()} 
-                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                         disabled={isLoading || lastFourDigits.length !== 4}
                       >
                         {isLoading ? (
@@ -1073,7 +1089,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     {(verificationMethod === 'sms' || verificationMethod === 'both') && (
                       <div className="space-y-4">
                         <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 px-2">
                             Enter the 6-digit code sent to your phone
                           </p>
                         </div>
@@ -1084,9 +1100,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             value={smsCode}
                             onChange={handleSMSCodeChange}
                             maxLength={6}
-                            className="text-center text-xl tracking-[0.4rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
+                            className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 shadow-inner"
                           />
-                          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📱</div>
+                          <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📱</div>
                         </div>
                         
 
@@ -1097,10 +1113,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                     {verificationMethod === 'email' && (
                       <div className="space-y-4">
                         <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-2">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 px-2">
                             Enter the 6-digit code sent to:
                           </p>
-                          <p className="text-sm font-medium text-blue-600 mb-3">
+                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-2 sm:mb-3 break-all px-2">
                             {customerData.email}
                           </p>
                           <Button
@@ -1108,16 +1124,16 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             size="sm"
                             onClick={handleRequestEmail}
                             disabled={isSMSLoading}
-                            className="text-xs"
+                            className="text-xs h-8 sm:h-9"
                           >
                             {isSMSLoading ? (
                               <>
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                <Loader2 className="mr-1 h-2 w-2 sm:h-3 sm:w-3 animate-spin" />
                                 Sending...
                               </>
                             ) : (
                               <>
-                                <Mail className="mr-1 h-3 w-3" />
+                                <Mail className="mr-1 h-2 w-2 sm:h-3 sm:w-3" />
                                 Send Email Code
                               </>
                             )}
@@ -1130,24 +1146,56 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                             value={emailCode}
                             onChange={handleEmailCodeChange}
                             maxLength={6}
-                            className="text-center text-xl tracking-[0.4rem] font-mono h-12 border-2 border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
+                            className="text-center text-lg sm:text-xl tracking-[0.2rem] sm:tracking-[0.4rem] font-mono h-10 sm:h-12 border-2 border-gray-300 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 shadow-inner"
                           />
-                          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 text-2xl animate-pulse">📧</div>
+                          <div className="absolute -right-2 sm:-right-3 top-1/2 transform -translate-y-1/2 text-lg sm:text-2xl animate-pulse">📧</div>
                         </div>
                       </div>
                     )}
 
+                    {/* Enhanced Error Display for Step 3 Verification */}
                     {error && (
-                      <Alert variant="destructive" className="rounded-xl border-0 bg-red-50">
-                        <AlertDescription className="text-center">{error}</AlertDescription>
+                      <Alert className="border-red-200 bg-red-50 rounded-lg sm:rounded-xl">
+                        <AlertDescription className="text-center space-y-2 sm:space-y-3">
+                          {error.includes("Invalid") || error.includes("incorrect") ? (
+                            <>
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                                <span className="text-red-600 text-sm sm:text-lg">❌</span>
+                              </div>
+                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">Code Incorrect</h6>
+                              <p className="text-xs text-gray-600 px-2">Double-check the code and try again. Make sure you're using the most recent code sent to you.</p>
+                            </>
+                          ) : error.includes("expired") ? (
+                            <>
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                                <span className="text-orange-600 text-sm sm:text-lg">⏰</span>
+                              </div>
+                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">Code Expired</h6>
+                              <p className="text-xs text-gray-600 px-2">Request a new verification code and try again.</p>
+                            </>
+                          ) : error.includes("Failed to send") || error.includes("SMS") ? (
+                            <>
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                                <span className="text-orange-600 text-sm sm:text-lg">📱</span>
+                              </div>
+                              <h6 className="font-semibold text-gray-800 text-xs sm:text-sm">SMS Issue</h6>
+                              <p className="text-xs text-gray-600 px-2">{error}</p>
+                              <div className="bg-orange-50 p-2 rounded-lg">
+                                <p className="text-xs text-orange-700">Try resending or check your signal</p>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs sm:text-sm text-gray-600 px-2">{error}</p>
+                          )}
+                        </AlertDescription>
                       </Alert>
                     )}
 
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {verificationMethod === 'sms' || verificationMethod === 'both' ? (
                         <Button 
                           onClick={handleSMSVerification}
-                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                           disabled={isLoading || smsCode.length !== 6}
                         >
                           {isLoading ? (
@@ -1165,7 +1213,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                       ) : (
                         <Button 
                           onClick={handleEmailVerification}
-                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-12 rounded-xl font-semibold text-base shadow-xl hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-10 sm:h-12 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
                           disabled={isLoading || emailCode.length !== 6}
                         >
                           {isLoading ? (
@@ -1384,100 +1432,100 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
         </div>
       </div>
 
-      {/* Registration Request Dialog */}
+      {/* Mobile-Optimized Registration Request Dialog */}
       <Dialog open={showRegistrationForm} onOpenChange={setShowRegistrationForm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Building2 className="w-5 h-5 mr-2 text-blue-600" />
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center text-base sm:text-lg">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 text-blue-600" />
               Request Access to {wholesaler?.businessName || 'Store'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Fill out this form to request access. The wholesaler will review your request and get back to you.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4 py-2">
             <div>
-              <Label htmlFor="reg-name">Name *</Label>
+              <Label htmlFor="reg-name" className="text-sm font-medium">Name *</Label>
               <Input
                 id="reg-name"
                 value={registrationData.name}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Your full name"
-                className="mt-1"
+                className="mt-1 h-9 sm:h-10 text-sm"
               />
             </div>
             
             <div>
-              <Label htmlFor="reg-business">Business Name</Label>
+              <Label htmlFor="reg-business" className="text-sm font-medium">Business Name</Label>
               <Input
                 id="reg-business"
                 value={registrationData.businessName}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, businessName: e.target.value }))}
                 placeholder="Your business name"
-                className="mt-1"
+                className="mt-1 h-9 sm:h-10 text-sm"
               />
             </div>
             
             <div>
-              <Label htmlFor="reg-phone">Phone Number *</Label>
+              <Label htmlFor="reg-phone" className="text-sm font-medium">Phone Number *</Label>
               <Input
                 id="reg-phone"
                 type="tel"
                 value={registrationData.phone}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="Your phone number"
-                className="mt-1"
+                className="mt-1 h-9 sm:h-10 text-sm"
               />
             </div>
             
             <div>
-              <Label htmlFor="reg-email">Email</Label>
+              <Label htmlFor="reg-email" className="text-sm font-medium">Email</Label>
               <Input
                 id="reg-email"
                 type="email"
                 value={registrationData.email}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="Your email address"
-                className="mt-1"
+                className="mt-1 h-9 sm:h-10 text-sm"
               />
             </div>
             
             <div>
-              <Label htmlFor="reg-message">Message (Optional)</Label>
+              <Label htmlFor="reg-message" className="text-sm font-medium">Message (Optional)</Label>
               <Textarea
                 id="reg-message"
                 value={registrationData.message}
                 onChange={(e) => setRegistrationData(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="Tell them why you'd like access to their store..."
-                className="mt-1 resize-none"
+                className="mt-1 resize-none text-sm h-20 sm:h-24"
                 rows={3}
               />
             </div>
           </div>
 
-          <DialogFooter className="space-y-2 sm:space-y-0">
+          <DialogFooter className="space-y-2 sm:space-y-0 pt-2">
             <Button
               onClick={() => setShowRegistrationForm(false)}
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRegistrationSubmit}
               disabled={isSubmittingRegistration || !registrationData.name || !registrationData.phone}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-9 sm:h-10 text-sm"
             >
               {isSubmittingRegistration ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Mail className="mr-2 h-4 w-4" />
+                  <Mail className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                   Send Request
                 </>
               )}
