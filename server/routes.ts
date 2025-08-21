@@ -2995,18 +2995,18 @@ The Quikpik Team
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-              // 🚚 ADDED: Shipping information processing
+              // 🚚 SIMPLIFIED: Shipping information processing (delivery arranged by supplier)
               fulfillmentType: shippingInfo.option || 'pickup',
-              deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-              deliveryCost: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00',
-              shippingTotal: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'
+              deliveryCarrier: shippingInfo.option === 'delivery' ? 'Supplier Arranged' : null,
+              deliveryCost: '0.00', // No cost - arranged directly by supplier
+              shippingTotal: '0.00' // No shipping total - handled separately
             };
             
-            console.log('🚚 COMPETING SYSTEM DEBUG: Order data with shipping fields:', {
+            console.log('🚚 SIMPLIFIED DELIVERY: Order data with shipping fields:', {
               fulfillmentType: orderData.fulfillmentType,
               deliveryCarrier: orderData.deliveryCarrier,
-              deliveryCost: orderData.deliveryCost,
-              willSaveAsDelivery: orderData.fulfillmentType === 'delivery'
+              isDeliveryOrder: orderData.fulfillmentType === 'delivery',
+              supplierWillArrangeDelivery: orderData.fulfillmentType === 'delivery'
             });
 
             // Create order items with orderId for storage
