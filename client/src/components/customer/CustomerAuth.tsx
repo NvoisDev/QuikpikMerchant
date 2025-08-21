@@ -178,10 +178,10 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           setAuthStep('step2');
         }
       } else {
-        console.log('❌ CUSTOMER VERIFY FAILED - BACK TO STEP 1');
+        console.log('❌ CUSTOMER VERIFY FAILED - SHOWING STEP 2 WITH REGISTRATION OPTIONS');
         // Show customer not found message with contact instructions
         setError("CUSTOMER_NOT_FOUND");
-        setAuthStep('step1');
+        setAuthStep('step2'); // Go to step 2 to show phone form and registration options
       }
     } catch (error) {
       console.error('❌ AUTO-AUTHENTICATION EXCEPTION:', error);
@@ -231,8 +231,9 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     });
     
     if (authParam && authParam.length === 4 && /^\d{4}$/.test(authParam)) {
-      // Customer came from CustomerLogin - check for existing session first
+      // Customer came from CustomerLogin - start at step 2 and check authentication
       setLastFourDigits(authParam);
+      setAuthStep('step2'); // Start directly at step 2 with the digits
       
       checkExistingSession().then(hasSession => {
         if (!hasSession) {
