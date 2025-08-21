@@ -439,7 +439,7 @@ export function CustomerHome({
                       
                       {featuredProduct.packQuantity && featuredProduct.unitOfMeasure && (
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                          📦 {featuredProduct.packQuantity} x {featuredProduct.unitSize}{featuredProduct.unitOfMeasure}
+                          📦 {featuredProduct.packQuantity} x {Math.round(parseFloat(featuredProduct.unitSize))}{featuredProduct.unitOfMeasure}
                         </Badge>
                       )}
                     </div>

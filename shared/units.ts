@@ -200,6 +200,12 @@ export function formatUnitDisplay(quantity: number, unit: string, unitFormat?: s
   return `${quantity} ${unitSymbol}`;
 }
 
+// Utility function to format product pack sizes without decimals
+export function formatProductPackSize(packQuantity: string | number, unitSize: string | number, unitOfMeasure: string): string {
+  const cleanUnitSize = Math.round(parseFloat(String(unitSize)));
+  return `${packQuantity} x ${cleanUnitSize}${unitOfMeasure}`;
+}
+
 export function calculateWeightFromUnit(quantity: number, unit: string, unitWeight?: number): number {
   if (unitWeight) return quantity * unitWeight;
   

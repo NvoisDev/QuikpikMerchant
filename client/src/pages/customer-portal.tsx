@@ -3021,7 +3021,7 @@ export default function CustomerPortal() {
                                     if (unitSize && unitOfMeasure) {
                                       return (
                                         <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
-                                          {packQuantity} x {unitSize}{unitOfMeasure}
+                                          {packQuantity} x {Math.round(parseFloat(unitSize))}{unitOfMeasure}
                                         </span>
                                       );
                                     }
@@ -3405,7 +3405,7 @@ export default function CustomerPortal() {
                                       if (unitSize && unitOfMeasure) {
                                         return (
                                           <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-medium">
-                                            {packQuantity} x {unitSize}{unitOfMeasure}
+                                            {packQuantity} x {Math.round(parseFloat(unitSize))}{unitOfMeasure}
                                           </span>
                                         );
                                       }
