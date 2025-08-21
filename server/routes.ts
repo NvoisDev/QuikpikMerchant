@@ -2726,11 +2726,37 @@ The Quikpik Team
       
       let paymentIntent;
       try {
-        paymentIntent = await stripe.paymentIntents.create({
+        // Check if wholesaler has Stripe Connect account
+        const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
+        const applicationFeeAmount = useConnect ? Math.round(wholesalerPlatformFee * 100) : 0;
+        
+        console.log('💳 Stripe Connect Configuration:', {
+          wholesalerId: wholesaler.id,
+          stripeAccountId: wholesaler.stripeAccountId,
+          useConnect,
+          applicationFeeAmount,
+          wholesalerReceives: Math.round(wholesalerReceives * 100)
+        });
+
+        const paymentConfig: any = {
           amount: stripeAmount, // Total amount customer pays (product + transaction fee) - pre-validated
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
+        };
+
+        // Add Stripe Connect configuration if wholesaler has Connect account
+        if (useConnect) {
+          paymentConfig.application_fee_amount = applicationFeeAmount;
+          paymentConfig.transfer_data = {
+            destination: wholesaler.stripeAccountId,
+            amount: Math.round(wholesalerReceives * 100) // Amount wholesaler receives
+          };
+          paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
+        }
+
+        paymentIntent = await stripe.paymentIntents.create({
+          ...paymentConfig,
         metadata: {
           customerName,
           customerEmail,
@@ -2744,6 +2770,7 @@ The Quikpik Team
           totalCustomerPays: totalCustomerPays.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
           orderType: 'customer_portal',
+          connectAccountUsed: useConnect ? 'true' : 'false',
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
