@@ -3754,21 +3754,21 @@ export default function CustomerPortal() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
                           {customerOrderStats?.totalOrders || 0}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Orders</div>
+                        <div className="text-sm text-gray-600">Total Orders</div>
                       </div>
-                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>
                           {formatCurrency(customerOrderStats?.totalSpent || 0)}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Spent</div>
+                        <div className="text-sm text-gray-600">Total Spent</div>
                       </div>
-                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="text-2xl font-bold text-theme-primary" style={{color: 'var(--theme-primary)'}}>{cart.length}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Items in Cart</div>
+                        <div className="text-sm text-gray-600">Items in Cart</div>
                       </div>
                     </div>
                   </CardContent>
