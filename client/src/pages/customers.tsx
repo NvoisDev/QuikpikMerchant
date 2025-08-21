@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -252,10 +252,11 @@ export default function Customers() {
     defaultValues: { customerId: "" },
   });
 
-  // Queries - Customer Groups
+  // Optimized Queries - Customer Groups (longer cache, conditional loading)
   const { data: customerGroups = [], isLoading: isLoadingGroups } = useQuery<CustomerGroup[]>({
     queryKey: ['/api/customer-groups'],
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 15 * 60 * 1000,
   });
 
   const { data: groupMembers = [] } = useQuery({
@@ -263,23 +264,23 @@ export default function Customers() {
     queryFn: async () => {
       if (!selectedGroup?.id) return [];
       const url = `/api/customer-groups/${selectedGroup.id}/members`;
-      console.log('Fetching group members from:', url);
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`Failed to fetch group members: ${response.status}`);
       }
-      const data = await response.json();
-      console.log('Group members data received:', data);
-      return data;
+      return response.json();
     },
     enabled: !!selectedGroup?.id && isViewMembersDialogOpen,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // Longer cache
+    gcTime: 15 * 60 * 1000,
   });
 
-  // Query for customer orders
+  // Query for customer orders - only when needed
   const { data: customerOrders = [] } = useQuery({
     queryKey: ['/api/orders'],
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // Longer cache
+    gcTime: 15 * 60 * 1000,
+    enabled: isViewCustomerOrdersDialogOpen, // Only load when dialog is open
   });
 
   // Optimized queries for single customer scenario
@@ -297,15 +298,13 @@ export default function Customers() {
     enabled: customers.length > 0, // Only fetch if we have customers
   });
 
-  // Disable search for single customer scenario
-  const searchResults = customers.filter(customer => 
-    searchQuery.length > 2 ? 
-      customer.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phoneNumber?.includes(searchQuery) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    : false
-  );
+  // Optimized search - use API for complex searches, local filter for simple ones
+  const { data: searchResults = [] } = useQuery<Customer[]>({
+    queryKey: ['/api/customers/search', searchQuery],
+    enabled: searchQuery.length > 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for search results
+    gcTime: 10 * 60 * 1000,
+  });
 
   // Mutations - Customer Groups
   const createGroupMutation = useMutation({
@@ -611,24 +610,23 @@ export default function Customers() {
     addCustomerToGroupMutation.mutate({ groupId: data.groupId, customerId: selectedCustomer.id });
   };
 
-  // Find potential duplicate customers by phone number
-  const findDuplicateCustomers = (phoneNumber: string) => {
+  // Memoized functions for better performance
+  const findDuplicateCustomers = useCallback((phoneNumber: string) => {
     const lastFourDigits = phoneNumber.slice(-4);
     return (customers || []).filter(customer => 
       customer?.phoneNumber?.slice(-4) === lastFourDigits && 
       customer?.phoneNumber !== phoneNumber
     );
-  };
+  }, [customers]);
 
-  // Handle manual customer merge selection
-  const handleCustomerMergeSelection = (customer: Customer) => {
+  const handleCustomerMergeSelection = useCallback((customer: Customer) => {
     const isSelected = selectedCustomersForMerge.find(c => c.id === customer.id);
     if (isSelected) {
-      setSelectedCustomersForMerge(selectedCustomersForMerge.filter(c => c.id !== customer.id));
+      setSelectedCustomersForMerge(prev => prev.filter(c => c.id !== customer.id));
     } else {
-      setSelectedCustomersForMerge([...selectedCustomersForMerge, customer]);
+      setSelectedCustomersForMerge(prev => [...prev, customer]);
     }
-  };
+  }, [selectedCustomersForMerge]);
 
   const handleStartManualMerge = () => {
     if (selectedCustomersForMerge.length < 2) {
@@ -646,8 +644,8 @@ export default function Customers() {
     setIsMergeDialogOpen(true);
   };
 
-  // Filter customers for merge search
-  const getMergeSearchResults = () => {
+  // Memoized filtered data for performance
+  const mergeSearchResults = useMemo(() => {
     if (mergeSearchQuery.length < 2) return [];
     return (customers || []).filter(customer => {
       if (!customer) return false;
@@ -657,7 +655,15 @@ export default function Customers() {
              (customer.phoneNumber || '').includes(query) ||
              (customer.email && customer.email.toLowerCase().includes(query));
     });
-  };
+  }, [customers, mergeSearchQuery]);
+
+  // Memoized filtered customers for main display
+  const filteredCustomers = useMemo(() => {
+    if (searchQuery.length > 2 && searchResults.length > 0) {
+      return searchResults;
+    }
+    return customers || [];
+  }, [customers, searchResults, searchQuery]);
 
   // Handle customer merge
   const handleMergeCustomers = (primaryCustomer: Customer, duplicates: Customer[]) => {
