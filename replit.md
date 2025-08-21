@@ -7,8 +7,10 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
-## Recent Changes (Version Control 6 - August 21, 2025)
-MAXIMUM SETTINGS PAGE SIMPLIFICATION: Completely stripped the settings page to absolute minimum functionality to eliminate ALL risk of future conflicts. Removed integration setup functionality and replaced with informational placeholders. Settings page now contains ONLY: basic tab navigation, read-only informational displays directing to customer portal, and notification preferences for wholesalers. Zero interactive editing capabilities remain. This creates the most conflict-proof architecture possible with definitive separation: customer portal = ALL editing, settings page = informational only.
+## Recent Changes (Version Control 7 - August 21, 2025)
+COMPREHENSIVE CUSTOMER EDITING UNIFORMITY: Implemented standardized customer editing across ALL wholesaler platform dialogs. Every customer edit function now includes consistent comprehensive fields: firstName, lastName, phoneNumber, email, and businessName. Updated customer editing in Customer Directory, Customer Groups, and Customer Address Book to provide complete profile management capabilities. This ensures wholesalers have full visibility and editing control over customer information regardless of where they access it from in the platform.
+
+BLUE BACKGROUND WIDTH FIX: Fixed MOQ helper messages (Minimum X units required) to use inline-block styling instead of full-width, ensuring the blue background only extends to the text content width rather than spanning the entire screen.
 
 CUSTOMER PORTAL ACCOUNT SETTINGS EDIT FEATURE: Complete profile editing functionality implemented directly in the customer portal Account Settings tab. Features include edit button that transforms read-only profile display into editable form with Name, Email, Phone, and Business Name fields. Includes proper save/cancel controls with real-time validation and backend API endpoint (/api/customer-profile/update) for secure profile updates. Profile changes automatically sync with existing automated wholesaler notification system.
 

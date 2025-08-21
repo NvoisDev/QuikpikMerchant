@@ -343,6 +343,7 @@ function CustomerEditForm({ customer, onSave, isLoading }: CustomerEditFormProps
     lastName: customer.lastName || '',
     email: customer.email || '',
     phoneNumber: customer.phoneNumber || '',
+    businessName: (customer as any).businessName || '',
     streetAddress: customer.streetAddress || '',
     city: customer.city || '',
     state: customer.state || '',
@@ -394,6 +395,16 @@ function CustomerEditForm({ customer, onSave, isLoading }: CustomerEditFormProps
           value={formData.phoneNumber}
           onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
           required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="businessName">Business Name</Label>
+        <Input
+          id="businessName"
+          value={formData.businessName}
+          onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+          placeholder="Enter business name"
         />
       </div>
       

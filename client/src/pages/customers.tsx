@@ -580,7 +580,7 @@ export default function Customers() {
       lastName: customer.lastName || '',
       phoneNumber: customer.phoneNumber || '',
       email: customer.email || '',
-      businessName: customer.businessName || '',
+      businessName: (customer as any).businessName || '',
     });
     setIsEditCustomerDialogOpen(true);
   };
