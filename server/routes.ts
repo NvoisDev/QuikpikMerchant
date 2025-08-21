@@ -2707,12 +2707,17 @@ The Quikpik Team
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Create stable idempotency key based on customer, items, and CORE amount (without fees) to prevent duplicate payments
-      // Use product subtotal + delivery cost as base (before transaction fees) for more stable key generation
+      // Check if wholesaler has Stripe Connect account FIRST
+      const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
+      const applicationFeeAmount = useConnect ? Math.round(wholesalerPlatformFee * 100) : 0;
+      
+      // Create stable idempotency key including Connect configuration to prevent conflicts
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
       const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4); // Clean phone number
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
+      const timestamp = Date.now().toString().slice(-6); // Add timestamp to force new keys during Connect testing
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${timestamp}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
@@ -2721,14 +2726,13 @@ The Quikpik Team
         totalCustomerPays,
         productSubtotal,
         deliveryCost,
-        customerTransactionFee
+        customerTransactionFee,
+        useConnect,
+        connectFlag
       });
       
       let paymentIntent;
       try {
-        // Check if wholesaler has Stripe Connect account
-        const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
-        const applicationFeeAmount = useConnect ? Math.round(wholesalerPlatformFee * 100) : 0;
         
         console.log('💳 Stripe Connect Configuration:', {
           wholesalerId: wholesaler.id,
