@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Settings2, Building2, Bell, Puzzle, ExternalLink } from "lucide-react";
+import { SiWhatsapp, SiStripe } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -195,9 +196,7 @@ export default function Settings() {
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
                         <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-                          </svg>
+                          <SiWhatsapp className="w-6 h-6 text-green-600" />
                         </div>
                       </div>
                       <div className="flex-1">
@@ -207,11 +206,13 @@ export default function Settings() {
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                           <h5 className="font-medium text-blue-900 mb-2">Setup Instructions:</h5>
                           <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
-                            <li>Sign up for WhatsApp Business API through a provider (360Dialog, Twilio, etc.)</li>
-                            <li>Get your WhatsApp Business Account ID and Access Token</li>
-                            <li>Configure webhook URL: <code className="bg-blue-100 px-1 rounded">https://your-domain.com/api/webhooks/whatsapp</code></li>
-                            <li>Add the credentials to your environment variables</li>
-                            <li>Test the integration with a sample message</li>
+                            <li>Apply for WhatsApp Business API at <a href="https://business.whatsapp.com/products/business-api" target="_blank" rel="noopener noreferrer" className="underline">business.whatsapp.com</a></li>
+                            <li>Get approved by Meta and receive your WhatsApp Business Account ID</li>
+                            <li>Generate a permanent access token from your Meta Business account</li>
+                            <li>Add your phone number and verify it with WhatsApp Business</li>
+                            <li>Configure webhook URL in Meta Developer Console: <code className="bg-blue-100 px-1 rounded">https://quikpik.app/api/webhooks/whatsapp</code></li>
+                            <li>Set webhook fields: messages, message_deliveries, message_reads</li>
+                            <li>Test with a template message to verify the connection</li>
                           </ol>
                         </div>
                         
@@ -234,9 +235,7 @@ export default function Settings() {
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
                         <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305h0z"/>
-                          </svg>
+                          <SiStripe className="w-6 h-6 text-purple-600" />
                         </div>
                       </div>
                       <div className="flex-1">
@@ -246,12 +245,12 @@ export default function Settings() {
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
                           <h5 className="font-medium text-purple-900 mb-2">Setup Instructions:</h5>
                           <ol className="list-decimal list-inside text-sm text-purple-800 space-y-1">
-                            <li>Create a Stripe account at <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" className="underline">stripe.com</a></li>
-                            <li>Get your Publishable Key and Secret Key from the Stripe Dashboard</li>
-                            <li>Configure webhook endpoint: <code className="bg-purple-100 px-1 rounded">https://your-domain.com/api/webhooks/stripe</code></li>
-                            <li>Add webhook events: payment_intent.succeeded, customer.subscription.updated</li>
-                            <li>Add the keys to your environment variables (STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY)</li>
-                            <li>Test with Stripe's test cards</li>
+                            <li>Click "Connect Stripe" below to start the Stripe Connect onboarding process</li>
+                            <li>Complete business verification with Stripe (identity, bank account, business details)</li>
+                            <li>Stripe will verify your information (usually takes 1-2 business days)</li>
+                            <li>Once approved, you'll receive payments directly to your connected bank account</li>
+                            <li>Webhook endpoints are automatically configured: <code className="bg-purple-100 px-1 rounded">https://quikpik.app/api/webhooks/stripe</code></li>
+                            <li>Test the integration by processing a sample customer order</li>
                           </ol>
                         </div>
                         
