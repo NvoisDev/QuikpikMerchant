@@ -509,27 +509,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced SMS authentication - supports both last 4 digits and full phone number
   app.post('/api/customer-auth/request-sms', async (req, res) => {
     try {
-      const { wholesalerId, lastFourDigits, fullPhoneNumber } = req.body;
+      const { wholesalerId, lastFourDigits } = req.body;
       
-      if (!wholesalerId || (!lastFourDigits && !fullPhoneNumber)) {
-        return res.status(400).json({ error: "Wholesaler ID and either last four digits or full phone number are required" });
+      if (!wholesalerId || !lastFourDigits) {
+        return res.status(400).json({ error: "Wholesaler ID and last four digits are required" });
       }
 
-      // Enhanced customer lookup - support full phone number or last 4 digits
-      let customer;
-      if (fullPhoneNumber) {
-        // Use full phone number authentication
-        const formattedPhone = formatPhoneToInternational(fullPhoneNumber);
-        customer = await storage.findCustomerByPhoneAndWholesaler(wholesalerId, formattedPhone, formattedPhone.slice(-4));
-        console.log(`🔍 Finding customer by full phone: ${formattedPhone.slice(-4)}****`);
-      } else {
-        // Use last 4 digits authentication (legacy + grace period)
-        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-        console.log(`🔍 Finding customer by last 4 digits: ${lastFourDigits}`);
-      }
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
       
       if (!customer) {
         return res.status(401).json({ error: "Customer not found" });
@@ -576,7 +565,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         wholesalerId: wholesalerId,
         code: code, // Use the generated code directly
         phoneNumber: customer.phone,
-        fullPhoneUsed: !!fullPhoneNumber, // Track if full phone was used
         expiresAt: expiresAt
       };
       console.log("About to create SMS verification with data:", smsData);
@@ -619,25 +607,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced SMS verification - supports both last 4 digits and full phone number
+  // SMS verification
   app.post('/api/customer-auth/verify-sms', async (req, res) => {
     try {
-      const { wholesalerId, lastFourDigits, fullPhoneNumber, smsCode } = req.body;
+      const { wholesalerId, lastFourDigits, smsCode } = req.body;
       
-      if (!wholesalerId || (!lastFourDigits && !fullPhoneNumber) || !smsCode) {
-        return res.status(400).json({ error: "Wholesaler ID, phone identifier, and SMS code are required" });
+      if (!wholesalerId || !lastFourDigits || !smsCode) {
+        return res.status(400).json({ error: "Wholesaler ID, last four digits, and SMS code are required" });
       }
 
-      // Enhanced customer lookup for verification 
-      let customer;
-      if (fullPhoneNumber) {
-        // Use full phone number verification
-        const formattedPhone = formatPhoneToInternational(fullPhoneNumber);
-        customer = await storage.findCustomerByPhoneAndWholesaler(wholesalerId, formattedPhone, formattedPhone.slice(-4));
-      } else {
-        // Use last 4 digits verification (legacy + grace period)
-        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
-      }
+      // Find customer by last 4 digits
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
       
       if (!customer) {
         return res.status(401).json({ error: "Customer not found" });

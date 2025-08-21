@@ -81,7 +81,6 @@ export const smsVerificationCodes = pgTable(
     wholesalerId: varchar("wholesaler_id", { length: 255 }).notNull(),
     code: varchar("code", { length: 6 }).notNull(),
     phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
-    fullPhoneUsed: boolean("full_phone_used").default(false), // Track if full number was used for auth
     createdAt: timestamp("created_at").defaultNow().notNull(),
     expiresAt: timestamp("expires_at").notNull(),
     usedAt: timestamp("used_at"),
@@ -156,8 +155,6 @@ export const users = pgTable("users", {
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code
   timezone: varchar("timezone").default("UTC"),
   phoneNumber: varchar("phone_number"),
-  previousPhoneNumber: varchar("previous_phone_number"), // Track old number for grace period
-  phoneChangedAt: timestamp("phone_changed_at"), // When phone number was last changed
   
   // Address fields for delivery/billing
   streetAddress: varchar("street_address"),
