@@ -56,23 +56,6 @@ const convertImageToPNG = (file: File): Promise<string> => {
   });
 };
 
-const settingsFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  businessName: z.string().min(1, "Business name is required"),
-  businessAddress: z.string().optional(),
-  businessPhone: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  preferredCurrency: z.string().min(1, "Currency is required"),
-  timezone: z.string().optional(),
-  streetAddress: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
-});
-
 const businessFormSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
   businessAddress: z.string().optional(),
@@ -88,7 +71,6 @@ const businessFormSchema = z.object({
   storeTagline: z.string().optional(),
 });
 
-type SettingsFormData = z.infer<typeof settingsFormSchema>;
 type BusinessFormData = z.infer<typeof businessFormSchema>;
 
 // Comprehensive list of supported currencies
@@ -208,25 +190,7 @@ function Settings() {
     handleUrlParams();
   }, [toast]);
 
-  const form = useForm<SettingsFormData>({
-    resolver: zodResolver(settingsFormSchema),
-    defaultValues: {
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      email: user?.email || "",
-      businessName: user?.businessName || "",
-      businessAddress: user?.businessAddress || "",
-      businessPhone: user?.businessPhone || "",
-      phoneNumber: user?.phoneNumber || "",
-      preferredCurrency: user?.preferredCurrency || "GBP",
-      timezone: user?.timezone || "UTC",
-      streetAddress: user?.streetAddress || "",
-      city: user?.city || "",
-      state: user?.state || "",
-      postalCode: user?.postalCode || "",
-      country: user?.country || "United Kingdom",
-    },
-  });
+
 
   const businessForm = useForm<BusinessFormData>({
     resolver: zodResolver(businessFormSchema),
@@ -245,26 +209,7 @@ function Settings() {
     },
   });
 
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (data: SettingsFormData) => {
-      const response = await apiRequest("PATCH", "/api/settings", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Settings Updated",
-        description: "Your settings have been successfully updated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const updateBusinessMutation = useMutation({
     mutationFn: async (data: BusinessFormData) => {
@@ -307,9 +252,7 @@ function Settings() {
     },
   });
 
-  const onSubmit = (data: SettingsFormData) => {
-    updateSettingsMutation.mutate(data);
-  };
+
 
   const onBusinessSubmit = (data: BusinessFormData) => {
     updateBusinessMutation.mutate(data);
@@ -339,21 +282,7 @@ function Settings() {
                   <User className="h-5 w-5 mr-3" />
                   <span className="font-medium">Account</span>
                 </div>
-                
-                {/* Customer Profile tab - only for customers */}
-                {user?.role === 'customer' && (
-                  <div 
-                    className={`flex items-center p-3 rounded-lg cursor-pointer ${
-                      activeTab === "profile" 
-                        ? "bg-blue-50 text-blue-700" 
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                    onClick={() => setActiveTab("profile")}
-                  >
-                    <User className="h-5 w-5 mr-3" />
-                    <span className="font-medium">My Profile</span>
-                  </div>
-                )}
+
                 <div 
                   className={`flex items-center p-3 rounded-lg cursor-pointer ${
                     activeTab === "business" 
@@ -401,7 +330,6 @@ function Settings() {
               <CardTitle className="flex items-center">
                 <Settings2 className="h-6 w-6 mr-2" />
                 {activeTab === "account" && "Account Settings"}
-                {activeTab === "profile" && "My Profile"}
                 {activeTab === "business" && "Business Settings"}
                 {activeTab === "notifications" && "Notification Settings"}
                 {activeTab === "integrations" && "Integrations"}
@@ -409,76 +337,21 @@ function Settings() {
             </CardHeader>
             <CardContent>
               {activeTab === "account" && (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Personal Information</h3>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>First Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Last Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="email" disabled />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-
-                    </div>
-
-                    <div className="pt-6">
-                      <Button 
-                        type="submit" 
-                        disabled={updateSettingsMutation.isPending}
-                        className="min-w-[120px]"
-                      >
-                        {updateSettingsMutation.isPending ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              )}
-
-              {activeTab === "profile" && user && (
                 <div className="space-y-6">
-                  <p className="text-gray-600">Profile editing is available in the customer portal. Please use the Account Settings there to modify your profile information.</p>
+                  <div className="text-center py-8">
+                    <User className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">Account Information</h3>
+                    <p className="mt-1 text-gray-500">
+                      Personal profile settings are managed in the customer portal.
+                    </p>
+                    <p className="mt-2 text-sm text-gray-400">
+                      Use the customer portal Account Settings to edit your name, email, phone, and business information.
+                    </p>
+                  </div>
                 </div>
               )}
+
+
 
               {activeTab === "business" && (
                 <Form {...businessForm}>
