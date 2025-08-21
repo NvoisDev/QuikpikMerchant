@@ -2332,21 +2332,22 @@ export default function CustomerPortal() {
         {isAuthenticated && !isGuestMode && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="home" className="flex items-center gap-2">
-                <Home className="w-4 h-4" />
-                Home
+              <TabsTrigger value="home" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <Home className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden xs:inline sm:inline">Home</span>
               </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                Products
+              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <Package className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden xs:inline sm:inline">Products</span>
               </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Order History
+              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 px-1 sm:px-3 min-w-0">
+                <History className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline whitespace-nowrap">Order History</span>
+                <span className="sm:hidden text-xs truncate">Orders</span>
               </TabsTrigger>
-              <TabsTrigger value="account" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Account
+              <TabsTrigger value="account" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <User className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden xs:inline sm:inline">Account</span>
               </TabsTrigger>
             </TabsList>
 
