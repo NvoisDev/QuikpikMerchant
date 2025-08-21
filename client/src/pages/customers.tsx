@@ -282,21 +282,30 @@ export default function Customers() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Queries - Customer Address Book
+  // Optimized queries for single customer scenario
   const { data: customers = [], isLoading: isLoadingCustomers, refetch: refetchCustomers } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
-    staleTime: 30 * 1000, // 30 seconds instead of 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - much longer cache for single customer
+    gcTime: 15 * 60 * 1000, // Keep in memory longer
   });
 
+  // Only load stats when needed, with longer cache
   const { data: stats } = useQuery<CustomerStats>({
     queryKey: ['/api/customers/stats'],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 minutes cache
+    gcTime: 20 * 60 * 1000,
+    enabled: customers.length > 0, // Only fetch if we have customers
   });
 
-  const { data: searchResults = [] } = useQuery<Customer[]>({
-    queryKey: ['/api/customers/search', searchQuery],
-    enabled: searchQuery.length > 2,
-  });
+  // Disable search for single customer scenario
+  const searchResults = customers.filter(customer => 
+    searchQuery.length > 2 ? 
+      customer.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phoneNumber?.includes(searchQuery) ||
+      customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    : false
+  );
 
   // Mutations - Customer Groups
   const createGroupMutation = useMutation({
