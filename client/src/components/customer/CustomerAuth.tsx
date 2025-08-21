@@ -875,7 +875,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
             </Button>
           </div>
 
-          {/* Wholesaler Logo/Initials Header - Mobile Optimized */}
+          {/* Wholesaler Logo/Initials Header with Store Name - Mobile Optimized */}
           <div className="text-center mb-3 sm:mb-4">
             <div className="mx-auto mb-2 sm:mb-3 relative">
               {wholesaler?.logoUrl ? (
@@ -892,6 +892,13 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
                 </div>
               )}
             </div>
+            {/* Store Name Display */}
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
+              {wholesaler?.businessName || 'Store'}
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500">
+              Customer Portal Access
+            </p>
           </div>
 
           {/* Unified Authentication Card - Mobile Optimized */}
