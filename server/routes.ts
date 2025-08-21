@@ -4934,6 +4934,61 @@ Write a professional, sales-focused description that highlights the key benefits
     }
   });
 
+  // Tab permissions routes for team access control
+  app.get('/api/tab-permissions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const permissions = await storage.getTabPermissions(userId);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching tab permissions:", error);
+      res.status(500).json({ message: "Failed to fetch tab permissions" });
+    }
+  });
+
+  app.get('/api/tab-permissions/check/:tabName', requireAuth, async (req: any, res) => {
+    try {
+      const { tabName } = req.params;
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      // For team members, check their role access; for owners, always allow
+      let hasAccess = true;
+      if (req.user.role === 'team_member') {
+        const teamMemberRole = req.user.teamMemberRole || 'member';
+        hasAccess = await storage.checkTabAccess(userId, tabName, teamMemberRole);
+      }
+      
+      res.json({ hasAccess });
+    } catch (error) {
+      console.error("Error checking tab access:", error);
+      res.status(500).json({ hasAccess: true }); // Default to allow for backwards compatibility
+    }
+  });
+
+  app.put('/api/tab-permissions/:tabName', requireAuth, async (req: any, res) => {
+    try {
+      const { tabName } = req.params;
+      const { isRestricted, allowedRoles } = req.body;
+      const userId = req.user.id;
+      
+      // Only allow wholesaler owners to update permissions
+      if (req.user.role !== 'wholesaler') {
+        return res.status(403).json({ message: "Only account owners can update permissions" });
+      }
+      
+      const permission = await storage.updateTabPermission(userId, tabName, isRestricted, allowedRoles);
+      res.json(permission);
+    } catch (error) {
+      console.error("Error updating tab permission:", error);
+      res.status(500).json({ message: "Failed to update tab permission" });
+    }
+  });
+
   // Note: Subscription status endpoint is defined later in the file with correct product counting
 
   app.post('/api/subscription/create', requireAuth, async (req: any, res) => {

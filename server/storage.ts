@@ -4116,6 +4116,142 @@ export class DatabaseStorage implements IStorage {
     return results.map(r => r.wholesalerId);
   }
 
+  // Tab permissions for team access control
+  async getTabPermissions(wholesalerId: string): Promise<TabPermission[]> {
+    try {
+      const permissions = await db
+        .select()
+        .from(tabPermissions)
+        .where(eq(tabPermissions.wholesalerId, wholesalerId));
+      
+      // If no permissions exist, create default ones
+      if (permissions.length === 0) {
+        await this.createDefaultTabPermissions(wholesalerId);
+        return await this.getTabPermissions(wholesalerId);
+      }
+      
+      return permissions;
+    } catch (error) {
+      console.error("Error getting tab permissions:", error);
+      // Return empty array if table doesn't exist yet
+      return [];
+    }
+  }
+
+  async createDefaultTabPermissions(wholesalerId: string): Promise<void> {
+    try {
+      const defaultPermissions = [
+        { tabName: 'account-settings', isRestricted: true, allowedRoles: ['admin'] },
+        { tabName: 'business-settings', isRestricted: true, allowedRoles: ['admin'] },
+        { tabName: 'notification-settings', isRestricted: false, allowedRoles: ['admin', 'member'] },
+        { tabName: 'integration-settings', isRestricted: true, allowedRoles: ['admin'] }
+      ];
+
+      for (const permission of defaultPermissions) {
+        await db.insert(tabPermissions).values({
+          id: crypto.randomUUID(),
+          wholesalerId,
+          tabName: permission.tabName,
+          isRestricted: permission.isRestricted,
+          allowedRoles: permission.allowedRoles,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+    } catch (error) {
+      console.error("Error creating default tab permissions:", error);
+    }
+  }
+
+  async updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles: string[]): Promise<TabPermission> {
+    try {
+      const existingPermission = await db
+        .select()
+        .from(tabPermissions)
+        .where(
+          and(
+            eq(tabPermissions.wholesalerId, wholesalerId),
+            eq(tabPermissions.tabName, tabName)
+          )
+        )
+        .limit(1);
+
+      if (existingPermission.length === 0) {
+        // Create new permission
+        const newPermission = {
+          id: crypto.randomUUID(),
+          wholesalerId,
+          tabName,
+          isRestricted,
+          allowedRoles,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await db.insert(tabPermissions).values(newPermission);
+        return newPermission;
+      } else {
+        // Update existing permission
+        await db
+          .update(tabPermissions)
+          .set({
+            isRestricted,
+            allowedRoles,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(tabPermissions.wholesalerId, wholesalerId),
+              eq(tabPermissions.tabName, tabName)
+            )
+          );
+
+        return {
+          ...existingPermission[0],
+          isRestricted,
+          allowedRoles,
+          updatedAt: new Date()
+        };
+      }
+    } catch (error) {
+      console.error("Error updating tab permission:", error);
+      throw error;
+    }
+  }
+
+  async checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean> {
+    try {
+      const permission = await db
+        .select()
+        .from(tabPermissions)
+        .where(
+          and(
+            eq(tabPermissions.wholesalerId, wholesalerId),
+            eq(tabPermissions.tabName, tabName)
+          )
+        )
+        .limit(1);
+
+      if (permission.length === 0) {
+        // No permission set, default to allow
+        return true;
+      }
+
+      const tabPermission = permission[0];
+      
+      // If not restricted, allow access
+      if (!tabPermission.isRestricted) {
+        return true;
+      }
+
+      // Check if user role is in allowed roles
+      return tabPermission.allowedRoles.includes(userRole);
+    } catch (error) {
+      console.error("Error checking tab access:", error);
+      // Default to allow access on error
+      return true;
+    }
+  }
 
 }
 

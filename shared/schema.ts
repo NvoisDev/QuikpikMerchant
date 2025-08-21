@@ -1221,4 +1221,13 @@ export const insertFinancialPerformanceSchema = createInsertSchema(financialPerf
 export type InsertFinancialPerformance = z.infer<typeof insertFinancialPerformanceSchema>;
 export type FinancialPerformance = typeof financialPerformance.$inferSelect;
 
+// Tab permissions types
+export const insertTabPermissionSchema = createInsertSchema(tabPermissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTabPermission = z.infer<typeof insertTabPermissionSchema>;
+export type TabPermission = typeof tabPermissions.$inferSelect;
+
 
