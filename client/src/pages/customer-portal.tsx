@@ -1784,11 +1784,7 @@ export default function CustomerPortal() {
   // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: typeof editedProfile) => {
-      const response = await apiRequest('/api/customer-profile/update', {
-        method: 'PUT',
-        body: JSON.stringify(profileData),
-      });
-      if (!response.ok) throw new Error('Failed to update profile');
+      const response = await apiRequest('PUT', '/api/customer-profile/update', profileData);
       return response.json();
     },
     onSuccess: () => {
