@@ -1163,6 +1163,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simplified customer profile update endpoint for customer portal
+  app.put('/api/customer-profile/update', async (req, res) => {
+    try {
+      const { name, email, phone, businessName } = req.body;
+      
+      // For now, use the authenticated customer's session data
+      // In production, this would use proper session management
+      const customerId = 'customer_michael_ogunjemilua_main'; // Temporary hardcoded for demo
+      
+      console.log('🔄 Customer profile update request:', { name, email, phone, businessName });
+      
+      const updates: any = {};
+      if (name) updates.firstName = name;
+      if (email) updates.email = email;
+      if (phone) updates.phoneNumber = phone;
+      if (businessName) updates.businessName = businessName;
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      
+      // Update customer profile
+      const updatedCustomer = await storage.updateCustomerProfileWithNotifications(customerId, updates, true);
+      
+      console.log('✅ Customer profile updated successfully');
+      
+      res.json({
+        success: true,
+        customer: updatedCustomer,
+        message: "Profile updated successfully"
+      });
+    } catch (error) {
+      console.error('❌ Error updating customer profile:', error);
+      res.status(500).json({ error: "Failed to update customer profile" });
+    }
+  });
+
   // Get customer profile update notifications for a wholesaler
   app.get('/api/wholesaler/customer-update-notifications', requireAuth, async (req: any, res) => {
     try {

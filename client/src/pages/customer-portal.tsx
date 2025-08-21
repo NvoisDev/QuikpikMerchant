@@ -960,6 +960,15 @@ export default function CustomerPortal() {
   // Wholesaler search state
   const [showWholesalerSearch, setShowWholesalerSearch] = useState(false);
   
+  // Profile editing states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    businessName: ''
+  });
+  
 
   const [wholesalerSearchQuery, setWholesalerSearchQuery] = useState("");
   
@@ -1770,6 +1779,49 @@ export default function CustomerPortal() {
       });
     }
   });
+
+  // Profile update mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: typeof editedProfile) => {
+      const response = await apiRequest('/api/customer-profile/update', {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
+      if (!response.ok) throw new Error('Failed to update profile');
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsEditingProfile(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-auth/check', wholesalerId] });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Initialize edit form with current data
+  const initializeEditForm = () => {
+    setEditedProfile({
+      name: customerData?.name || '',
+      email: customerData?.email || '',
+      phone: customerData?.phone || '',
+      businessName: wholesaler?.businessName || ''
+    });
+    setIsEditingProfile(true);
+  };
+
+  // Handle profile save
+  const handleSaveProfile = () => {
+    updateProfileMutation.mutate(editedProfile);
+  };
 
   const handleNegotiationSubmit = () => {
     if (!negotiationProduct) return;
@@ -3693,38 +3745,113 @@ export default function CustomerPortal() {
                 {/* User Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Profile Information
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Profile Information
+                      </div>
+                      {!isEditingProfile ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={initializeEditForm}
+                          className="gap-2"
+                        >
+                          <Settings className="h-4 w-4" />
+                          Edit
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsEditingProfile(false)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={handleSaveProfile}
+                            disabled={updateProfileMutation.isPending}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
+                          </Button>
+                        </div>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium">Name</Label>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {customerData.name || 'Not provided'}
+                    {!isEditingProfile ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Name</Label>
+                          <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                            {customerData.name || 'Not provided'}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Email</Label>
+                          <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                            {customerData.email || 'Not provided'}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Phone</Label>
+                          <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                            {customerData.phone || 'Not provided'}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Business</Label>
+                          <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                            {wholesaler?.businessName || 'Not provided'}
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium">Email</Label>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {customerData.email || 'Not provided'}
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Name</Label>
+                          <Input
+                            value={editedProfile.name}
+                            onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
+                            placeholder="Enter your name"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Email</Label>
+                          <Input
+                            value={editedProfile.email}
+                            onChange={(e) => setEditedProfile({...editedProfile, email: e.target.value})}
+                            placeholder="Enter your email"
+                            type="email"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Phone</Label>
+                          <Input
+                            value={editedProfile.phone}
+                            onChange={(e) => setEditedProfile({...editedProfile, phone: e.target.value})}
+                            placeholder="Enter your phone"
+                            type="tel"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Business Name</Label>
+                          <Input
+                            value={editedProfile.businessName}
+                            onChange={(e) => setEditedProfile({...editedProfile, businessName: e.target.value})}
+                            placeholder="Enter business name"
+                            className="mt-1"
+                          />
                         </div>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium">Phone</Label>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {customerData.phone || 'Not provided'}
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Business</Label>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {wholesaler?.businessName || 'Not provided'}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
 
