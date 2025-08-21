@@ -580,7 +580,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
   };
 
   const handleBackToPhone = () => {
-    setAuthStep('phone');
+    setAuthStep('step2');
     setSmsCode("");
     setEmailCode("");
     setCountdown(0);
@@ -702,7 +702,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
       ]
     };
 
-    const messages = businessMessages[businessType] || businessMessages.default;
+    const messages = (businessMessages as Record<string, string[]>)[businessType] || businessMessages.default;
     const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
     // Special occasion override
@@ -805,19 +805,19 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
     const specialOccasion = getSpecialOccasion(new Date());
     
     if (specialOccasion.isSpecial) {
-      if (specialOccasion.greeting.includes('Christmas')) {
+      if (specialOccasion.greeting?.includes('Christmas')) {
         return {
           background: 'bg-gradient-to-br from-red-50 via-green-50 to-white',
           floatingIcons: ['🎄', '🎁', '⭐', '❄️', '🔔'],
           shapes: ['bg-red-300', 'bg-green-300', 'bg-gold-300', 'bg-white']
         };
-      } else if (specialOccasion.greeting.includes('New Year')) {
+      } else if (specialOccasion.greeting?.includes('New Year')) {
         return {
           background: 'bg-gradient-to-br from-purple-50 via-gold-50 to-white',
           floatingIcons: ['🎊', '🎉', '✨', '🥳', '🎆'],
           shapes: ['bg-purple-300', 'bg-gold-300', 'bg-green-300', 'bg-blue-300']
         };
-      } else if (specialOccasion.greeting.includes('Friday')) {
+      } else if (specialOccasion.greeting?.includes('Friday')) {
         return {
           background: 'bg-gradient-to-br from-orange-50 via-yellow-50 to-white',
           floatingIcons: ['🎉', '🍕', '🎵', '🌟', '😄'],
