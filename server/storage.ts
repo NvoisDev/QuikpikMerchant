@@ -1197,8 +1197,8 @@ export class DatabaseStorage implements IStorage {
         FROM users u
         JOIN customer_group_members cgm ON u.id = cgm.customer_id
         JOIN customer_groups cg ON cgm.group_id = cg.id
-        WHERE (u.phone_number IS NOT NULL AND u.phone_number != '')
-          OR (u.business_phone IS NOT NULL AND u.business_phone != '')
+        WHERE ((u.phone_number IS NOT NULL AND u.phone_number != '')
+          OR (u.business_phone IS NOT NULL AND u.business_phone != ''))
           AND cg.wholesaler_id = ${wholesalerId}
       `);
       
