@@ -45,14 +45,16 @@ const bulkAddFormSchema = z.object({
 });
 
 const editMemberFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
-  name: z.string().min(1, "Customer name is required"),
   email: z.union([
     z.string().email("Please enter a valid email address"),
     z.literal("")
   ]).optional(),
+  businessName: z.string().optional(),
 });
 
 type CustomerGroupFormData = z.infer<typeof customerGroupFormSchema>;
@@ -157,9 +159,11 @@ export default function CustomerGroups() {
   const editMemberForm = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberFormSchema),
     defaultValues: {
+      firstName: "",
+      lastName: "",
       phoneNumber: "",
-      name: "",
       email: "",
+      businessName: "",
     },
   });
 
@@ -294,11 +298,13 @@ export default function CustomerGroups() {
   });
 
   const editMemberMutation = useMutation({
-    mutationFn: async ({ groupId, customerId, phoneNumber, name, email }: { groupId: number; customerId: string; phoneNumber: string; name: string; email?: string }) => {
+    mutationFn: async ({ groupId, customerId, firstName, lastName, phoneNumber, email, businessName }: { groupId: number; customerId: string; firstName: string; lastName: string; phoneNumber: string; email?: string; businessName?: string }) => {
       const response = await apiRequest("PATCH", `/api/customer-groups/${groupId}/members/${customerId}`, {
+        firstName,
+        lastName,
         phoneNumber,
-        name,
-        email
+        email,
+        businessName
       });
       return response.json();
     },
@@ -629,12 +635,16 @@ export default function CustomerGroups() {
 
   const onEditMember = (member: any) => {
     setEditingMember(member);
-    // Handle different member data structures - some have firstName/lastName, others have name
-    const fullName = member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim();
+    // Extract first and last names from the member data
+    const firstName = member.firstName || member.name?.split(' ')[0] || '';
+    const lastName = member.lastName || member.name?.split(' ').slice(1).join(' ') || '';
+    
     editMemberForm.reset({
+      firstName: firstName,
+      lastName: lastName,
       phoneNumber: member.phoneNumber || member.phone || "",
-      name: fullName || "",
       email: member.email || "",
+      businessName: member.businessName || "",
     });
     setIsEditMemberDialogOpen(true);
   };
@@ -644,9 +654,11 @@ export default function CustomerGroups() {
     editMemberMutation.mutate({
       groupId: selectedGroup.id,
       customerId: editingMember.id,
+      firstName: data.firstName,
+      lastName: data.lastName,
       phoneNumber: data.phoneNumber,
-      name: data.name,
       email: data.email,
+      businessName: data.businessName,
     });
   };
 
@@ -1481,20 +1493,55 @@ Mike Johnson, 07444 555666`}
           <DialogHeader>
             <DialogTitle>Edit Customer Information</DialogTitle>
             <DialogDescription>
-              Update the contact information for {editingMember?.firstName} {editingMember?.lastName || ''}
+              Update customer details. Changes will be reflected across all groups.
             </DialogDescription>
           </DialogHeader>
           <Form {...editMemberForm}>
             <form onSubmit={editMemberForm.handleSubmit(onSaveEditMember)} className="space-y-4">
               <FormField
                 control={editMemberForm.control}
-                name="name"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Enter customer name" 
+                        placeholder="Enter first name" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editMemberForm.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter last name" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editMemberForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="customer@example.com" 
+                        type="email"
                         {...field}
                       />
                     </FormControl>
@@ -1522,14 +1569,13 @@ Mike Johnson, 07444 555666`}
               
               <FormField
                 control={editMemberForm.control}
-                name="email"
+                name="businessName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormLabel>Business Name</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="customer@example.com" 
-                        type="email"
+                        placeholder="Enter business name" 
                         {...field}
                       />
                     </FormControl>

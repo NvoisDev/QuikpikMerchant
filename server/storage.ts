@@ -129,6 +129,13 @@ export interface IStorage {
   removeCustomerFromGroup(groupId: number, customerId: string): Promise<void>;
   updateCustomerPhone(customerId: string, phoneNumber: string): Promise<void>;
   updateCustomerInfo(customerId: string, phoneNumber: string, name: string, email?: string): Promise<void>;
+  updateCustomerInfoDetailed(customerId: string, updates: {
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    email?: string;
+    businessName?: string;
+  }): Promise<void>;
   updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string }): Promise<User>;
   deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }>;
   findCustomerByPhoneAndWholesaler(wholesalerId: string, phoneNumber: string, lastFourDigits: string): Promise<any>;
@@ -1624,6 +1631,35 @@ export class DatabaseStorage implements IStorage {
     // Only update email if provided
     if (email !== undefined) {
       updateData.email = email || null;
+    }
+    
+    await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, customerId));
+  }
+
+  async updateCustomerInfoDetailed(customerId: string, updates: {
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    email?: string;
+    businessName?: string;
+  }): Promise<void> {
+    const updateData: any = { 
+      firstName: updates.firstName,
+      lastName: updates.lastName,
+      phoneNumber: updates.phoneNumber
+    };
+
+    // Only update email if provided
+    if (updates.email !== undefined) {
+      updateData.email = updates.email || null;
+    }
+
+    // Only update business name if provided
+    if (updates.businessName !== undefined) {
+      updateData.businessName = updates.businessName || null;
     }
     
     await db

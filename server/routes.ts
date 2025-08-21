@@ -4040,14 +4040,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const groupId = parseInt(req.params.groupId);
       const customerId = req.params.customerId;
-      const { phoneNumber, name, email } = req.body;
+      const { firstName, lastName, phoneNumber, email, businessName } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
       }
 
-      if (!name) {
-        return res.status(400).json({ message: "Customer name is required" });
+      if (!firstName || !lastName) {
+        return res.status(400).json({ message: "First name and last name are required" });
       }
 
       // Verify group ownership using parent company data
@@ -4058,8 +4058,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
-      // Update customer information
-      await storage.updateCustomerInfo(customerId, phoneNumber, name, email);
+      // Update customer information with new fields
+      await storage.updateCustomerInfoDetailed(customerId, {
+        firstName,
+        lastName,
+        phoneNumber,
+        email,
+        businessName
+      });
       
       res.json({
         success: true,
