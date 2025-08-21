@@ -432,6 +432,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
+  // Stripe Connect endpoint
+  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const user = req.user;
+      console.log('🔗 Creating Stripe Connect account for user:', user.id);
+
+      // Check if user already has a Connect account
+      if (user.stripeAccountId) {
+        // Get account link for existing account
+        const accountLink = await stripe.accountLinks.create({
+          account: user.stripeAccountId,
+          refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
+          return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
+          type: 'account_onboarding',
+        });
+
+        return res.json({ url: accountLink.url, accountId: user.stripeAccountId });
+      }
+
+      // Create new Connect Express account
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'GB', // UK for GBP
+        email: user.email,
+        business_profile: {
+          name: user.businessName || user.username,
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+
+      // Update user with Connect account ID
+      await storage.updateUser(user.id, {
+        stripeAccountId: account.id
+      });
+
+      // Create account link for onboarding
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
+        return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
+        type: 'account_onboarding',
+      });
+
+      console.log('✅ Stripe Connect account created:', account.id);
+      
+      res.json({ url: accountLink.url, accountId: account.id });
+    } catch (error) {
+      console.error('❌ Error creating Stripe Connect account:', error);
+      res.status(500).json({ message: "Failed to create Stripe Connect account" });
+    }
+  });
+
   // TEST WITH SIMILAR PATH PATTERN TO WORKING ENDPOINTS
   app.post('/api/webhook-test/verify', async (req, res) => {
     console.log(`🎯 WEBHOOK TEST EXECUTING - ${new Date().toISOString()}`);

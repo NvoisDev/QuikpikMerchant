@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, Bell, Puzzle } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("account");
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
 
   if (!user) {
     return (
@@ -17,6 +21,39 @@ export default function Settings() {
       </div>
     );
   }
+
+  const handleStripeConnect = async () => {
+    setIsConnectingStripe(true);
+    try {
+      const response = await apiRequest('POST', '/api/stripe/connect');
+      const data = await response.json();
+      
+      if (data.url) {
+        // Redirect to Stripe Connect onboarding
+        window.open(data.url, '_blank');
+        toast({
+          title: "Stripe Connect",
+          description: "Opening Stripe account setup in a new window.",
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting to Stripe:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Unable to connect to Stripe. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingStripe(false);
+    }
+  };
+
+  const handleWhatsAppConfig = () => {
+    toast({
+      title: "WhatsApp Configuration",
+      description: "WhatsApp setup will be available in the next update. Contact support for early access.",
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -180,8 +217,12 @@ export default function Settings() {
                         
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-gray-500">Status: Not configured</span>
-                          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                            Configure WhatsApp
+                          <button 
+                            onClick={handleWhatsAppConfig}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                          >
+                            <span>Configure WhatsApp</span>
+                            <ExternalLink className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -215,9 +256,16 @@ export default function Settings() {
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">Status: Configured</span>
-                          <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            Manage Stripe
+                          <span className="text-sm text-gray-500">
+                            Status: {user?.stripeAccountId ? 'Connected' : 'Ready to connect'}
+                          </span>
+                          <button 
+                            onClick={handleStripeConnect}
+                            disabled={isConnectingStripe}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span>{isConnectingStripe ? 'Connecting...' : (user?.stripeAccountId ? 'Manage Account' : 'Connect Stripe')}</span>
+                            {!isConnectingStripe && <ExternalLink className="h-4 w-4" />}
                           </button>
                         </div>
                       </div>
