@@ -2009,7 +2009,7 @@ export default function CustomerPortal() {
       )}
 
       {/* Header - Mobile Responsive */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             {/* Center Section - Store Info with Logo */}
