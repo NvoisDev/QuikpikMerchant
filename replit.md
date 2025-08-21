@@ -7,7 +7,9 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
-## Recent Changes (Version Control 7 - August 21, 2025)
+## Recent Changes (Version Control 8 - August 21, 2025)
+BIDIRECTIONAL CUSTOMER PROFILE SYNC COMPLETE: Successfully implemented end-to-end synchronization between customer portal and wholesaler platform. Fixed critical data flow issues where business name updates in customer portal were not appearing in wholesaler edit dialogs. Updated Customer interface definitions across all files (customers.tsx, customer-address-book.tsx, customer-groups.tsx) to include businessName field. Modified database queries in getAllCustomers to fetch business_name column and map to businessName property. Authentication issues resolved for customer profile updates. Real-time sync confirmed working: customer portal changes immediately reflect in all wholesaler platform customer management screens.
+
 COMPREHENSIVE CUSTOMER EDITING UNIFORMITY: Implemented standardized customer editing across ALL wholesaler platform dialogs. Every customer edit function now includes consistent comprehensive fields: firstName, lastName, phoneNumber, email, and businessName. Updated customer editing in Customer Directory, Customer Groups, and Customer Address Book to provide complete profile management capabilities. This ensures wholesalers have full visibility and editing control over customer information regardless of where they access it from in the platform.
 
 BLUE BACKGROUND WIDTH FIX: Fixed MOQ helper messages (Minimum X units required) to use inline-block styling instead of full-width, ensuring the blue background only extends to the text content width rather than spanning the entire screen.
