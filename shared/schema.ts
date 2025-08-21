@@ -498,6 +498,28 @@ export const customerRegistrationRequests = pgTable("customer_registration_reque
   requestedAtIdx: index("registration_requests_requested_at_idx").on(table.requestedAt),
 }));
 
+// Customer profile update notifications for wholesalers
+export const customerProfileUpdateNotifications = pgTable("customer_profile_update_notifications", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
+  updateType: varchar("update_type").notNull(), // 'name', 'email', 'phone', 'business_name', 'address'
+  oldValue: text("old_value"), // Previous value (JSON string for complex data)
+  newValue: text("new_value"), // New value (JSON string for complex data)
+  changesApplied: jsonb("changes_applied").notNull(), // Detailed changes applied
+  notificationSent: boolean("notification_sent").default(false),
+  notificationMethod: varchar("notification_method"), // 'email', 'sms', 'whatsapp'
+  notificationSentAt: timestamp("notification_sent_at"),
+  readAt: timestamp("read_at"), // When wholesaler read the notification
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  customerIdIdx: index("profile_updates_customer_id_idx").on(table.customerId),
+  wholesalerIdIdx: index("profile_updates_wholesaler_id_idx").on(table.wholesalerId),
+  updateTypeIdx: index("profile_updates_type_idx").on(table.updateType),
+  notificationSentIdx: index("profile_updates_sent_idx").on(table.notificationSent),
+  createdAtIdx: index("profile_updates_created_at_idx").on(table.createdAt),
+}));
+
 // Message Templates for multi-product campaigns
 export const messageTemplates = pgTable("message_templates", {
   id: serial("id").primaryKey(),
@@ -950,6 +972,22 @@ export const insertCampaignOrderSchema = createInsertSchema(campaignOrders).omit
 });
 export type InsertCampaignOrder = z.infer<typeof insertCampaignOrderSchema>;
 export type CampaignOrder = typeof campaignOrders.$inferSelect;
+
+// Customer Registration Request schemas  
+export const insertCustomerRegistrationRequestSchema = createInsertSchema(customerRegistrationRequests).omit({
+  id: true,
+  requestedAt: true,
+  respondedAt: true,
+});
+export type InsertCustomerRegistrationRequest = z.infer<typeof insertCustomerRegistrationRequestSchema>;
+
+// Customer Profile Update Notification schemas
+export const insertCustomerProfileUpdateNotificationSchema = createInsertSchema(customerProfileUpdateNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCustomerProfileUpdateNotification = z.infer<typeof insertCustomerProfileUpdateNotificationSchema>;
+export type SelectCustomerProfileUpdateNotification = typeof customerProfileUpdateNotifications.$inferSelect;
 
 export const insertStockUpdateNotificationSchema = createInsertSchema(stockUpdateNotifications).omit({
   id: true,

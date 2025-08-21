@@ -1116,6 +1116,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer profile update endpoint with automated wholesaler notifications
+  app.patch('/api/customer/update-profile/:customerId', async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const { firstName, lastName, email, phoneNumber, businessName } = req.body;
+      
+      console.log(`🔄 Customer profile update request for: ${customerId}`, { firstName, lastName, email, phoneNumber, businessName });
+      
+      // Validate required fields
+      if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+      }
+      
+      const updates: any = {};
+      if (firstName) updates.firstName = firstName;
+      if (lastName) updates.lastName = lastName;
+      if (email) updates.email = email;
+      if (phoneNumber) updates.phoneNumber = phoneNumber;
+      if (businessName) updates.businessName = businessName;
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      
+      // Update customer profile with automatic notifications to wholesalers
+      const updatedCustomer = await storage.updateCustomerProfileWithNotifications(customerId, updates, true);
+      
+      console.log(`✅ Customer profile updated successfully: ${customerId}`);
+      
+      res.json({
+        success: true,
+        customer: {
+          id: updatedCustomer.id,
+          firstName: updatedCustomer.firstName,
+          lastName: updatedCustomer.lastName,
+          email: updatedCustomer.email,
+          phoneNumber: updatedCustomer.phoneNumber,
+          businessName: updatedCustomer.businessName
+        },
+        message: "Profile updated successfully. All your wholesalers have been notified of the changes."
+      });
+    } catch (error) {
+      console.error("❌ Error updating customer profile:", error);
+      res.status(500).json({ error: "Failed to update customer profile" });
+    }
+  });
+
+  // Get customer profile update notifications for a wholesaler
+  app.get('/api/wholesaler/customer-update-notifications', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const notifications = await storage.getCustomerProfileUpdateNotifications(targetUserId, limit);
+      
+      // Add customer details to notifications
+      const enrichedNotifications = await Promise.all(
+        notifications.map(async (notification) => {
+          const customer = await storage.getUser(notification.customerId);
+          return {
+            ...notification,
+            customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown Customer',
+            customerEmail: customer?.email,
+            customerPhone: customer?.phoneNumber
+          };
+        })
+      );
+      
+      res.json({
+        success: true,
+        notifications: enrichedNotifications
+      });
+    } catch (error) {
+      console.error("❌ Error fetching customer update notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  // Mark customer profile update notification as read
+  app.patch('/api/wholesaler/customer-update-notifications/:notificationId/read', requireAuth, async (req: any, res) => {
+    try {
+      const { notificationId } = req.params;
+      
+      await storage.markNotificationAsRead(parseInt(notificationId));
+      
+      res.json({
+        success: true,
+        message: "Notification marked as read"
+      });
+    } catch (error) {
+      console.error("❌ Error marking notification as read:", error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId, phoneNumber } = req.params;

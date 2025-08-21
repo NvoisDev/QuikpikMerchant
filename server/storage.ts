@@ -15,6 +15,7 @@ import {
   stockMovements,
   stockAlerts,
   customerRegistrationRequests,
+  customerProfileUpdateNotifications,
   userBadges,
   onboardingMilestones,
   smsVerificationCodes,
@@ -58,6 +59,8 @@ import {
   type InsertOnboardingMilestone,
   type SMSVerificationCode,
   type InsertSMSVerificationCode,
+  type InsertCustomerProfileUpdateNotification,
+  type SelectCustomerProfileUpdateNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
@@ -315,6 +318,13 @@ export interface IStorage {
   getProductPerformanceSummary(wholesalerId: string, productId: number): Promise<any>;
   getPromotionDashboard(wholesalerId: string): Promise<any>;
   trackPromotionActivity(wholesalerId: string, campaignId: number, productId: number, action: string, metadata?: any): Promise<void>;
+  
+  // Customer profile update notification operations
+  createCustomerProfileUpdateNotification(notification: InsertCustomerProfileUpdateNotification): Promise<SelectCustomerProfileUpdateNotification>;
+  getCustomerProfileUpdateNotifications(wholesalerId: string, limit?: number): Promise<SelectCustomerProfileUpdateNotification[]>;
+  markNotificationAsRead(notificationId: number): Promise<void>;
+  updateCustomerProfileWithNotifications(customerId: string, updates: Partial<User>, notifyWholesalers?: boolean): Promise<User>;
+  getWholesalersForCustomerProfile(customerId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3948,6 +3958,123 @@ export class DatabaseStorage implements IStorage {
       .where(eq(customerRegistrationRequests.id, requestId))
       .returning();
     return updated;
+  }
+
+  // Customer Profile Update Notification operations
+  async createCustomerProfileUpdateNotification(notification: InsertCustomerProfileUpdateNotification): Promise<SelectCustomerProfileUpdateNotification> {
+    const [created] = await db
+      .insert(customerProfileUpdateNotifications)
+      .values(notification)
+      .returning();
+    return created;
+  }
+
+  async getCustomerProfileUpdateNotifications(wholesalerId: string, limit = 50): Promise<SelectCustomerProfileUpdateNotification[]> {
+    return await db
+      .select()
+      .from(customerProfileUpdateNotifications)
+      .where(eq(customerProfileUpdateNotifications.wholesalerId, wholesalerId))
+      .orderBy(desc(customerProfileUpdateNotifications.createdAt))
+      .limit(limit);
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<void> {
+    await db
+      .update(customerProfileUpdateNotifications)
+      .set({ readAt: new Date() })
+      .where(eq(customerProfileUpdateNotifications.id, notificationId));
+  }
+
+  async updateCustomerProfileWithNotifications(customerId: string, updates: Partial<User>, notifyWholesalers = true): Promise<User> {
+    // Get current customer data before updating
+    const currentCustomer = await this.getUser(customerId);
+    if (!currentCustomer) {
+      throw new Error('Customer not found');
+    }
+
+    // Update the customer profile
+    const updatedCustomer = await this.updateUser(customerId, updates);
+
+    if (notifyWholesalers) {
+      // Get all wholesalers this customer works with
+      const wholesalerIds = await this.getWholesalersForCustomerProfile(customerId);
+      
+      // Create notifications for each change
+      const notifications = [];
+      
+      if (updates.firstName && updates.firstName !== currentCustomer.firstName) {
+        notifications.push({
+          customerId,
+          updateType: 'name',
+          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName}`,
+          newValue: `${updates.firstName} ${updates.lastName || currentCustomer.lastName}`,
+          changesApplied: { firstName: updates.firstName }
+        });
+      }
+      
+      if (updates.lastName && updates.lastName !== currentCustomer.lastName) {
+        notifications.push({
+          customerId,
+          updateType: 'name', 
+          oldValue: `${currentCustomer.firstName} ${currentCustomer.lastName}`,
+          newValue: `${updates.firstName || currentCustomer.firstName} ${updates.lastName}`,
+          changesApplied: { lastName: updates.lastName }
+        });
+      }
+      
+      if (updates.email && updates.email !== currentCustomer.email) {
+        notifications.push({
+          customerId,
+          updateType: 'email',
+          oldValue: currentCustomer.email || '',
+          newValue: updates.email,
+          changesApplied: { email: updates.email }
+        });
+      }
+      
+      if (updates.phoneNumber && updates.phoneNumber !== currentCustomer.phoneNumber) {
+        notifications.push({
+          customerId,
+          updateType: 'phone',
+          oldValue: currentCustomer.phoneNumber || '',
+          newValue: updates.phoneNumber,
+          changesApplied: { phoneNumber: updates.phoneNumber }
+        });
+      }
+      
+      if (updates.businessName && updates.businessName !== currentCustomer.businessName) {
+        notifications.push({
+          customerId,
+          updateType: 'business_name',
+          oldValue: currentCustomer.businessName || '',
+          newValue: updates.businessName,
+          changesApplied: { businessName: updates.businessName }
+        });
+      }
+
+      // Create notification records for each wholesaler
+      for (const wholesalerId of wholesalerIds) {
+        for (const notificationData of notifications) {
+          await this.createCustomerProfileUpdateNotification({
+            ...notificationData,
+            wholesalerId,
+            notificationSent: false
+          });
+        }
+      }
+    }
+
+    return updatedCustomer;
+  }
+
+  async getWholesalersForCustomerProfile(customerId: string): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ wholesalerId: customerGroups.wholesalerId })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(eq(customerGroupMembers.customerId, customerId));
+      
+    return results.map(r => r.wholesalerId);
   }
 
 

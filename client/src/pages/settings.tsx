@@ -19,6 +19,8 @@ import { ProviderSelection } from "@/components/provider-selection";
 import { WhatsAppProviderSelection } from "@/components/WhatsAppProviderSelection";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { whatsappHelpContent } from "@/data/whatsapp-help-content";
+import { CustomerProfileSettings } from "@/components/customer/CustomerProfileSettings";
+import { CustomerProfileNotifications } from "@/components/wholesaler/CustomerProfileNotifications";
 
 // Utility function to convert any image format to PNG
 const convertImageToPNG = (file: File): Promise<string> => {
@@ -337,6 +339,21 @@ function Settings() {
                   <User className="h-5 w-5 mr-3" />
                   <span className="font-medium">Account</span>
                 </div>
+                
+                {/* Customer Profile tab - only for customers */}
+                {user?.role === 'customer' && (
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                      activeTab === "profile" 
+                        ? "bg-blue-50 text-blue-700" 
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setActiveTab("profile")}
+                  >
+                    <User className="h-5 w-5 mr-3" />
+                    <span className="font-medium">My Profile</span>
+                  </div>
+                )}
                 <div 
                   className={`flex items-center p-3 rounded-lg cursor-pointer ${
                     activeTab === "business" 
@@ -384,6 +401,7 @@ function Settings() {
               <CardTitle className="flex items-center">
                 <Settings2 className="h-6 w-6 mr-2" />
                 {activeTab === "account" && "Account Settings"}
+                {activeTab === "profile" && "My Profile"}
                 {activeTab === "business" && "Business Settings"}
                 {activeTab === "notifications" && "Notification Settings"}
                 {activeTab === "integrations" && "Integrations"}
@@ -452,6 +470,29 @@ function Settings() {
                     </div>
                   </form>
                 </Form>
+              )}
+
+              {activeTab === "profile" && user && (
+                <div className="space-y-6">
+                  <CustomerProfileSettings 
+                    customer={{
+                      id: user.id,
+                      firstName: user.firstName || '',
+                      lastName: user.lastName || '',
+                      email: user.email || undefined,
+                      phoneNumber: user.phoneNumber || undefined,
+                      businessName: user.businessName || undefined
+                    }}
+                    onProfileUpdate={(updatedCustomer) => {
+                      // Update the user context with the new profile data
+                      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                      toast({
+                        title: "Profile Updated",
+                        description: "Your profile has been updated and all wholesalers have been notified.",
+                      });
+                    }}
+                  />
+                </div>
               )}
 
               {activeTab === "business" && (
@@ -785,10 +826,20 @@ function Settings() {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
-                    <p className="text-gray-600">Choose how you want to receive notifications.</p>
+                    <p className="text-gray-600">Manage your notifications and stay updated with important information.</p>
                   </div>
+                  
+                  {/* Customer Profile Notifications - Only for wholesalers */}
+                  {user?.role === 'wholesaler' && (
+                    <div className="space-y-4">
+                      <CustomerProfileNotifications />
+                    </div>
+                  )}
+                  
+                  {/* General notification settings */}
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-gray-800">Notification settings coming soon.</p>
+                    <h4 className="font-medium text-gray-800 mb-2">General Notification Settings</h4>
+                    <p className="text-gray-600">Additional notification preferences coming soon.</p>
                   </div>
                 </div>
               )}
