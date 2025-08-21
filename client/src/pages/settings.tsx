@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Settings2, Building2, Bell, Puzzle, ExternalLink } from "lucide-react";
@@ -12,6 +12,46 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("account");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    phoneNumber: user?.phoneNumber || '',
+    preferredCurrency: user?.preferredCurrency || 'GBP'
+  });
+  const [businessForm, setBusinessForm] = useState({
+    businessName: user?.businessName || '',
+    businessPhone: user?.businessPhone || '',
+    businessAddress: user?.businessAddress || '',
+    city: user?.city || '',
+    postalCode: user?.postalCode || '',
+    country: user?.country || 'United Kingdom',
+    timezone: user?.timezone || 'UTC'
+  });
+
+  // Sync form state with user data when user loads
+  useEffect(() => {
+    if (user) {
+      setAccountForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        preferredCurrency: user.preferredCurrency || 'GBP'
+      });
+      setBusinessForm({
+        businessName: user.businessName || '',
+        businessPhone: user.businessPhone || '',
+        businessAddress: user.businessAddress || '',
+        city: user.city || '',
+        postalCode: user.postalCode || '',
+        country: user.country || 'United Kingdom',
+        timezone: user.timezone || 'UTC'
+      });
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -49,6 +89,52 @@ export default function Settings() {
       setIsConnectingStripe(false);
     }
   }
+
+  const handleSaveAccount = async () => {
+    try {
+      const response = await apiRequest('PUT', '/api/user/profile', accountForm);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Account Updated",
+          description: "Your account information has been saved successfully.",
+        });
+        setIsEditingAccount(false);
+        window.location.reload(); // Refresh to show updated data
+      }
+    } catch (error) {
+      console.error('Error updating account:', error);
+      toast({
+        title: "Update Failed",
+        description: "Unable to update account information. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveBusiness = async () => {
+    try {
+      const response = await apiRequest('PUT', '/api/user/profile', businessForm);
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Business Updated",
+          description: "Your business information has been saved successfully.",
+        });
+        setIsEditingBusiness(false);
+        window.location.reload(); // Refresh to show updated data
+      }
+    } catch (error) {
+      console.error('Error updating business:', error);
+      toast({
+        title: "Update Failed",
+        description: "Unable to update business information. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleWhatsAppConnect = async () => {
     // Show configuration dialog
@@ -207,9 +293,44 @@ export default function Settings() {
             <CardContent>
               {activeTab === "account" && (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900">Account Information</h3>
+                    {!isEditingAccount ? (
+                      <button
+                        onClick={() => setIsEditingAccount(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleSaveAccount}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingAccount(false);
+                            setAccountForm({
+                              firstName: user?.firstName || '',
+                              lastName: user?.lastName || '',
+                              email: user?.email || '',
+                              phoneNumber: user?.phoneNumber || '',
+                              preferredCurrency: user?.preferredCurrency || 'GBP'
+                            });
+                          }}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    {!isEditingAccount ? (
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Name</dt>
@@ -225,32 +346,121 @@ export default function Settings() {
                           <dd className="mt-1 text-sm text-gray-900">{user.email || 'Not set'}</dd>
                         </div>
                         <div>
-                          <dt className="text-sm font-medium text-gray-500">Role</dt>
-                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role || 'Wholesaler'}</dd>
-                        </div>
-                        <div>
                           <dt className="text-sm font-medium text-gray-500">Phone</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.phoneNumber || 'Not set'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-sm font-medium text-gray-500">Subscription</dt>
-                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.subscriptionTier || 'Free'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Currency</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.preferredCurrency || 'GBP'}</dd>
                         </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Role</dt>
+                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role || 'Wholesaler'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Subscription</dt>
+                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.subscriptionTier || 'Free'}</dd>
+                        </div>
                       </dl>
-                    </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">First Name</label>
+                          <input
+                            type="text"
+                            value={accountForm.firstName}
+                            onChange={(e) => setAccountForm({...accountForm, firstName: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Last Name</label>
+                          <input
+                            type="text"
+                            value={accountForm.lastName}
+                            onChange={(e) => setAccountForm({...accountForm, lastName: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Email</label>
+                          <input
+                            type="email"
+                            value={accountForm.email}
+                            onChange={(e) => setAccountForm({...accountForm, email: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Phone</label>
+                          <input
+                            type="tel"
+                            value={accountForm.phoneNumber}
+                            onChange={(e) => setAccountForm({...accountForm, phoneNumber: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="+44XXXXXXXXXX"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Currency</label>
+                          <select
+                            value={accountForm.preferredCurrency}
+                            onChange={(e) => setAccountForm({...accountForm, preferredCurrency: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="GBP">GBP (£)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {activeTab === "business" && (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900">Business Information</h3>
+                    {!isEditingBusiness ? (
+                      <button
+                        onClick={() => setIsEditingBusiness(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleSaveBusiness}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingBusiness(false);
+                            setBusinessForm({
+                              businessName: user?.businessName || '',
+                              businessPhone: user?.businessPhone || '',
+                              businessAddress: user?.businessAddress || '',
+                              city: user?.city || '',
+                              postalCode: user?.postalCode || '',
+                              country: user?.country || 'United Kingdom',
+                              timezone: user?.timezone || 'UTC'
+                            });
+                          }}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    {!isEditingBusiness ? (
                       <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Business Name</dt>
@@ -283,7 +493,84 @@ export default function Settings() {
                           <dd className="mt-1 text-sm text-gray-900">{user.timezone || 'UTC'}</dd>
                         </div>
                       </dl>
-                    </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Business Name</label>
+                          <input
+                            type="text"
+                            value={businessForm.businessName}
+                            onChange={(e) => setBusinessForm({...businessForm, businessName: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Business Phone</label>
+                          <input
+                            type="tel"
+                            value={businessForm.businessPhone}
+                            onChange={(e) => setBusinessForm({...businessForm, businessPhone: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="+44XXXXXXXXXX"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-sm font-medium text-gray-500">Business Address</label>
+                          <textarea
+                            value={businessForm.businessAddress}
+                            onChange={(e) => setBusinessForm({...businessForm, businessAddress: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            rows={3}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">City</label>
+                          <input
+                            type="text"
+                            value={businessForm.city}
+                            onChange={(e) => setBusinessForm({...businessForm, city: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Postal Code</label>
+                          <input
+                            type="text"
+                            value={businessForm.postalCode}
+                            onChange={(e) => setBusinessForm({...businessForm, postalCode: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Country</label>
+                          <select
+                            value={businessForm.country}
+                            onChange={(e) => setBusinessForm({...businessForm, country: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="United Kingdom">United Kingdom</option>
+                            <option value="United States">United States</option>
+                            <option value="Canada">Canada</option>
+                            <option value="Australia">Australia</option>
+                            <option value="Ireland">Ireland</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Timezone</label>
+                          <select
+                            value={businessForm.timezone}
+                            onChange={(e) => setBusinessForm({...businessForm, timezone: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="UTC">UTC</option>
+                            <option value="Europe/London">London (GMT/BST)</option>
+                            <option value="America/New_York">New York (EST/EDT)</option>
+                            <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
+                            <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

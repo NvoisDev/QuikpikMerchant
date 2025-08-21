@@ -535,6 +535,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User profile update endpoint
+  app.put('/api/user/profile', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const updates = req.body;
+      
+      console.log('👤 Updating profile for user:', user.id, updates);
+
+      // Update user profile
+      await storage.updateUser(user.id, updates);
+
+      console.log('✅ Profile updated successfully for user:', user.id);
+      
+      res.json({ 
+        success: true, 
+        message: "Profile updated successfully" 
+      });
+    } catch (error) {
+      console.error('❌ Error updating profile:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to update profile" 
+      });
+    }
+  });
+
   // TEST WITH SIMILAR PATH PATTERN TO WORKING ENDPOINTS
   app.post('/api/webhook-test/verify', async (req, res) => {
     console.log(`🎯 WEBHOOK TEST EXECUTING - ${new Date().toISOString()}`);
