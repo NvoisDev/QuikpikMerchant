@@ -1473,14 +1473,8 @@ The Quikpik Team
         return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
       }
       
-      // Find the wholesaler user - prioritize the consolidated account
-      let user;
-      if (email === 'mogunjemilua@gmail.com') {
-        // Find the consolidated Google account for Surulere Foods
-        user = await storage.getUser('104871691614680693123');
-      } else {
-        user = await storage.getUserByEmail(email);
-      }
+      // Find the wholesaler user by email only - no hardcoded IDs
+      const user = await storage.getUserByEmail(email);
       
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
@@ -2174,20 +2168,23 @@ The Quikpik Team
     }
   });
 
-  // Public orders endpoint for Surulere Foods (ecommerce-style)
-  app.get('/api/public-orders', async (req: any, res) => {
+  // DISABLED: Public orders endpoint - SECURITY RISK
+  // This endpoint allowed unauthorized access to order data
+  app.get('/api/public-orders', requireAuth, async (req: any, res) => {
     try {
       const search = req.query.search; // search term
       
-      // Use consolidated Google account for Surulere Foods Wholesale
-      const surulereWholesalerId = '104871691614680693123';
+      // SECURITY FIX: Use authenticated user's ID instead of hardcoded ID
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      // Get orders received by Surulere Foods Wholesale
-      const orders = await storage.getOrders(surulereWholesalerId, undefined, search);
+      // Get orders for authenticated wholesaler only
+      const orders = await storage.getOrders(wholesalerId, undefined, search);
       
-      console.log(`📦 Public orders request - found ${orders.length} orders for Surulere Foods`);
+      console.log(`📦 Authenticated orders request - found ${orders.length} orders for user ${wholesalerId}`);
       
-      // Return complete orders for the Orders tab (no authentication required)
+      // Return complete orders for authenticated user only
       const cleanOrders = orders.map(order => ({
         id: order.id,
         orderNumber: order.orderNumber,

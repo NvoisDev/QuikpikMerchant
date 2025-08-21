@@ -50,10 +50,11 @@ export default function OrdersFinal() {
       
       console.log('🔄 Direct fetch from orders endpoint...');
       
-      // Try main endpoint first
+      // Try main endpoint first with proper authentication
       try {
         const response = await fetch(`/api/orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`, {
           method: 'GET',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
         });
         
@@ -70,28 +71,8 @@ export default function OrdersFinal() {
         console.log('Main endpoint failed, trying backup...');
       }
       
-      // Try public endpoint as backup
-      try {
-        const response = await fetch(`/api/public-orders${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        console.log(`Public endpoint response: ${response.status}`);
-        
-        if (response.ok) {
-          const responseData = await response.json();
-          const ordersData = Array.isArray(responseData) ? responseData : (responseData.orders || []);
-          console.log(`✅ Public endpoint success: ${ordersData.length} orders`);
-          setOrders(ordersData);
-          setLoading(false);
-          return;
-        }
-      } catch (publicError) {
-        console.error('Public endpoint also failed:', publicError);
-      }
-      
-      throw new Error('Both endpoints failed');
+      // SECURITY FIX: No backup endpoint - authentication is required
+      throw new Error('Authentication required - please log in to access orders');
       
     } catch (err) {
       console.error('❌ All endpoints failed:', err);
