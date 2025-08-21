@@ -19,7 +19,7 @@ import { ProviderSelection } from "@/components/provider-selection";
 import { WhatsAppProviderSelection } from "@/components/WhatsAppProviderSelection";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { whatsappHelpContent } from "@/data/whatsapp-help-content";
-import { CustomerProfileSettings } from "@/components/customer/CustomerProfileSettings";
+
 import { CustomerProfileNotifications } from "@/components/wholesaler/CustomerProfileNotifications";
 
 // Utility function to convert any image format to PNG
@@ -458,33 +458,7 @@ function Settings() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="tel" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
 
-                      <FormField
-                        control={form.control}
-                        name="businessName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Business Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
 
                     <div className="pt-6">
@@ -502,24 +476,7 @@ function Settings() {
 
               {activeTab === "profile" && user && (
                 <div className="space-y-6">
-                  <CustomerProfileSettings 
-                    customer={{
-                      id: user.id,
-                      firstName: user.firstName || '',
-                      lastName: user.lastName || '',
-                      email: user.email || undefined,
-                      phoneNumber: user.phoneNumber || undefined,
-                      businessName: user.businessName || undefined
-                    }}
-                    onProfileUpdate={(updatedCustomer) => {
-                      // Update the user context with the new profile data
-                      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                      toast({
-                        title: "Profile Updated",
-                        description: "Your profile has been updated and all wholesalers have been notified.",
-                      });
-                    }}
-                  />
+                  <p className="text-gray-600">Profile editing is available in the customer portal. Please use the Account Settings there to modify your profile information.</p>
                 </div>
               )}
 

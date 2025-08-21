@@ -7,8 +7,8 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
-## Recent Changes (Version Control 3 - August 21, 2025)
-AUTOMATED CUSTOMER PROFILE SYNC SYSTEM: Complete customer profile update system implemented with automatic wholesaler notifications when customers change email, phone, or business name. System uses dedicated customerProfileUpdateNotifications table to track profile changes and notification status across all wholesaler relationships. API integration provides comprehensive profile update endpoint with automatic sync to all connected wholesalers. Frontend components include CustomerProfileSettings for seamless customer profile management and CustomerProfileNotifications for wholesaler notification management. Storage implementation includes complete methods for handling profile updates, change tracking, and notification management with support for multiple notification methods (email, SMS, WhatsApp) and read status tracking.
+## Recent Changes (Version Control 4 - August 21, 2025)
+CUSTOMER PORTAL ACCOUNT SETTINGS EDIT FEATURE: Complete profile editing functionality implemented directly in the customer portal Account Settings tab. Features include edit button that transforms read-only profile display into editable form with Name, Email, Phone, and Business Name fields. Includes proper save/cancel controls with real-time validation and backend API endpoint (/api/customer-profile/update) for secure profile updates. Cleaned up conflicting edit functionality from wholesaler settings page to maintain single source of truth for customer profile management. Profile changes automatically sync with existing automated wholesaler notification system.
 
 ## System Architecture
 ### Frontend
