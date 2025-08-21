@@ -147,6 +147,13 @@
   transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* Tab theme-aware active state */
+.tab-theme-active[data-state="active"] {
+  color: var(--theme-primary) !important;
+  border-bottom-color: var(--theme-primary) !important;
+  background-color: var(--theme-secondary) !important;
+}
+
 /* Dark theme text adjustments */
 [data-customer-theme="midnight"] {
   color-scheme: dark;
