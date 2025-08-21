@@ -1810,7 +1810,7 @@ export default function CustomerPortal() {
       name: customerData?.name || '',
       email: customerData?.email || '',
       phone: customerData?.phone || '',
-      businessName: wholesaler?.businessName || ''
+      businessName: customerData?.businessName || '' // Use customer's business name, not wholesaler's
     });
     setIsEditingProfile(true);
   };

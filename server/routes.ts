@@ -812,7 +812,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`✅ Customer session valid for ${customerAuth.name} (expires: ${customerAuth.expiresAt})`);
       
-      // Valid session found
+      // Valid session found - get full customer data including business name
+      const fullCustomerData = await storage.getUser(customerAuth.customerId);
+      
       res.json({
         authenticated: true,
         customer: {
@@ -821,7 +823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: customerAuth.email || '',
           phone: customerAuth.phone || '',
           groupId: customerAuth.groupId || null,
-          groupName: customerAuth.groupName || ''
+          groupName: customerAuth.groupName || '',
+          businessName: fullCustomerData?.businessName || ''
         },
         expiresAt: customerAuth.expiresAt
       });
@@ -845,6 +848,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Customer logout error:", error);
       res.status(500).json({ error: "Logout failed" });
+    }
+  });
+
+  // Customer profile update endpoint for customer portal
+  app.put('/api/customer-profile/update', async (req, res) => {
+    try {
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      // If session auth fails, try fallback cookie
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          
+          // Verify cookie data and expiration
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              name: cookieData.name,
+              email: cookieData.email || '',
+              phone: cookieData.phone || ''
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const { name, email, phone, businessName } = req.body;
+      
+      console.log('🔄 Customer profile update request:', { name, email, phone, businessName });
+      
+      // Prepare update data
+      const updates: any = {};
+      if (name && name.trim()) {
+        const nameParts = name.trim().split(' ');
+        updates.firstName = nameParts[0] || '';
+        updates.lastName = nameParts.slice(1).join(' ') || '';
+      }
+      if (email && email.trim()) updates.email = email.trim();
+      if (phone && phone.trim()) updates.phoneNumber = phone.trim();
+      if (businessName && businessName.trim()) updates.businessName = businessName.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      
+      // Update customer profile
+      const updatedCustomer = await storage.updateUser(customerAuth.customerId, updates);
+      
+      if (!updatedCustomer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      
+      console.log('✅ Customer profile updated successfully');
+      
+      res.json({
+        success: true,
+        customer: {
+          id: updatedCustomer.id,
+          name: `${updatedCustomer.firstName} ${updatedCustomer.lastName}`.trim(),
+          email: updatedCustomer.email,
+          phone: updatedCustomer.phoneNumber,
+          businessName: updatedCustomer.businessName
+        }
+      });
+    } catch (error) {
+      console.error("❌ Customer profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
     }
   });
 
