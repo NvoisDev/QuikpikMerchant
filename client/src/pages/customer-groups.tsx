@@ -634,13 +634,10 @@ export default function CustomerGroups() {
   };
 
   const onEditMember = (member: any) => {
-    console.log('🔧 Edit member clicked:', member);
     setEditingMember(member);
     // Extract first and last names from the member data
     const firstName = member.firstName || member.name?.split(' ')[0] || '';
     const lastName = member.lastName || member.name?.split(' ').slice(1).join(' ') || '';
-    
-    console.log('🔧 Setting form values:', { firstName, lastName, phoneNumber: member.phoneNumber || member.phone || "", email: member.email || "", businessName: member.businessName || "" });
     
     editMemberForm.reset({
       firstName: firstName,
@@ -649,7 +646,6 @@ export default function CustomerGroups() {
       email: member.email || "",
       businessName: member.businessName || "",
     });
-    console.log('🔧 Opening edit member dialog');
     setIsEditMemberDialogOpen(true);
   };
 
@@ -1500,12 +1496,7 @@ Mike Johnson, 07444 555666`}
               Update customer details: name, email, phone, and business information. Changes will be reflected across all groups.
             </DialogDescription>
           </DialogHeader>
-          {/* Debug info */}
-          {editingMember && (
-            <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-              <strong>Debug:</strong> Editing {editingMember.firstName || editingMember.name} (ID: {editingMember.id})
-            </div>
-          )}
+
           <Form {...editMemberForm}>
             <form onSubmit={editMemberForm.handleSubmit(onSaveEditMember)} className="space-y-4">
               <FormField
