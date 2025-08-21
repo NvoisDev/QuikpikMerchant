@@ -1,46 +1,46 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Core UI Components - loaded immediately
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProductGridSkeleton, FormSkeleton } from "@/components/ui/loading-skeletons";
-import { DynamicTooltip, HelpTooltip, InfoTooltip, WarningTooltip } from "@/components/ui/dynamic-tooltip";
-import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
-import { WhimsicalError, NetworkError, PaymentError, NotFoundError } from "@/components/ui/whimsical-error";
-import { FloatingHelp } from "@/components/ui/floating-help";
-import LoadingSkeleton from "@/components/ui/loading-skeleton";
-import PageLoader from "@/components/ui/page-loader";
-import ButtonLoader from "@/components/ui/button-loader";
-import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Package, Star, Store, Mail, Phone, MapPin, CreditCard, Search, Filter, Grid, List, Eye, MoreHorizontal, ShieldCheck, Truck, ArrowLeft, ArrowRight, Heart, Home, HelpCircle, Building2, History, User, Settings, ShoppingBag, Clock, Palette, TrendingUp, Building, CheckCircle } from "lucide-react";
+
+// Icons - grouped for better tree shaking
+import { 
+  ShoppingCart, Plus, Minus, Trash2, Package, Store, Search, 
+  Grid, List, Home, User, Settings, ShoppingBag, CheckCircle,
+  Building2, History, Clock, Truck, CreditCard
+} from "lucide-react";
+
+// Optimized imports and lazy loading
+import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/components/LazyComponents";
 import Logo from "@/components/ui/logo";
-import Footer from "@/components/ui/footer";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
-import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
-import { ThankYouPage } from "@/components/customer/ThankYouPage";
+import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+// Shared utilities and types
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
-import { getOfferTypeConfig } from "@shared/promotional-offer-utils";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
-import { format } from "date-fns";
-import { OrderSuccessModal } from "@/components/OrderSuccessModal";
-import { detectOrderMilestone, useOrderMilestones } from "@/hooks/useOrderMilestones";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatNumber } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { debounce } from "@/utils/performance";
 
 // Type-safe Product interface that matches actual database schema
 interface ExtendedProduct {
@@ -3674,10 +3674,12 @@ export default function CustomerPortal() {
             <TabsContent value="orders" className="space-y-6">
               {/* Customer Order History */}
               {authenticatedCustomer && wholesaler?.id && (
-                <CustomerOrderHistory 
-                  wholesalerId={wholesaler.id} 
-                  customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'} 
-                />
+                <Suspense fallback={<ComponentLoader />}>
+                  <LazyOrderHistory 
+                    wholesalerId={wholesaler.id} 
+                    customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'} 
+                  />
+                </Suspense>
               )}
             </TabsContent>
 

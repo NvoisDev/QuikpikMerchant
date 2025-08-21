@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,6 @@ export default function OrdersFresh() {
     setError(null);
     
     try {
-      console.log(`📦 Loading orders page ${page} with search: "${search}"`);
       const params = new URLSearchParams({
         page: page.toString(),
         limit: ordersPerPage.toString(),
