@@ -3112,7 +3112,7 @@ export default function CustomerPortal() {
                                 </div>
                                 {/* MOQ Helper Message */}
                                 {product.moq && product.moq > 1 && (
-                                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
                                     💡 Minimum order: {product.moq} units required to add to cart
                                   </div>
                                 )}
@@ -3496,7 +3496,7 @@ export default function CustomerPortal() {
                                   </div>
                                   {/* MOQ Helper Message for List View */}
                                   {product.moq && product.moq > 1 && (
-                                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
                                       💡 Minimum {product.moq} units required
                                     </div>
                                   )}
