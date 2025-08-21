@@ -491,6 +491,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WhatsApp Connect endpoint
+  app.post('/api/whatsapp/connect', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      console.log('📞 Configuring WhatsApp for user:', user.id);
+
+      // For now, we'll simulate a successful connection
+      // In production, this would validate WhatsApp Business API credentials
+      const { accessToken, phoneNumberId, businessName, businessPhone } = req.body;
+
+      // Validate required fields
+      if (!accessToken || !phoneNumberId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "WhatsApp Access Token and Phone Number ID are required" 
+        });
+      }
+
+      // Update user with WhatsApp credentials
+      await storage.updateUser(user.id, {
+        whatsappEnabled: true,
+        whatsappProvider: 'direct',
+        whatsappAccessToken: accessToken,
+        whatsappBusinessPhoneId: phoneNumberId,
+        whatsappBusinessPhone: businessPhone || user.businessPhone,
+        whatsappBusinessName: businessName || user.businessName
+      });
+
+      console.log('✅ WhatsApp configured for user:', user.id);
+      
+      res.json({ 
+        success: true, 
+        message: "WhatsApp Business API configured successfully",
+        phoneId: phoneNumberId 
+      });
+    } catch (error) {
+      console.error('❌ Error configuring WhatsApp:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to configure WhatsApp Business API" 
+      });
+    }
+  });
+
   // TEST WITH SIMILAR PATH PATTERN TO WORKING ENDPOINTS
   app.post('/api/webhook-test/verify', async (req, res) => {
     console.log(`🎯 WEBHOOK TEST EXECUTING - ${new Date().toISOString()}`);

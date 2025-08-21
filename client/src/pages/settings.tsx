@@ -11,6 +11,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("account");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
 
   if (!user) {
     return (
@@ -46,6 +47,71 @@ export default function Settings() {
       });
     } finally {
       setIsConnectingStripe(false);
+    }
+  }
+
+  const handleWhatsAppConnect = async () => {
+    // Show configuration dialog
+    const accessToken = prompt(
+      "Enter your WhatsApp Business API Access Token\n\n" +
+      "You can get this from:\n" +
+      "1. Go to Meta Business Manager\n" +
+      "2. Navigate to System Users\n" +
+      "3. Generate a permanent access token with whatsapp_business_messaging permissions"
+    );
+
+    if (!accessToken) return;
+
+    const phoneNumberId = prompt(
+      "Enter your WhatsApp Business Phone Number ID\n\n" +
+      "You can find this in:\n" +
+      "1. Meta Business Manager\n" +
+      "2. WhatsApp Manager\n" +
+      "3. Phone Numbers section\n" +
+      "4. Copy the Phone Number ID (not the actual phone number)"
+    );
+
+    if (!phoneNumberId) return;
+
+    const businessName = prompt(
+      "Enter your WhatsApp Business Display Name (optional)\n\n" +
+      "This will appear in WhatsApp messages to customers"
+    );
+
+    const businessPhone = prompt(
+      "Enter your WhatsApp Business Phone Number (optional)\n\n" +
+      "Format: +44XXXXXXXXXX"
+    );
+
+    setIsConnectingWhatsApp(true);
+    try {
+      const response = await apiRequest('POST', '/api/whatsapp/connect', {
+        accessToken,
+        phoneNumberId,
+        businessName: businessName || undefined,
+        businessPhone: businessPhone || undefined
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "WhatsApp Connected",
+          description: "WhatsApp Business API configured successfully. You can now send broadcasts to customers.",
+        });
+        window.location.reload();
+      } else {
+        throw new Error(data.message || "Configuration failed");
+      }
+    } catch (error) {
+      console.error('Error connecting WhatsApp:', error);
+      toast({
+        title: "Configuration Failed",
+        description: "Unable to configure WhatsApp. Please check your credentials and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingWhatsApp(false);
     }
   };
 
@@ -217,13 +283,16 @@ export default function Settings() {
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">Status: Not configured</span>
+                          <span className="text-sm text-gray-500">
+                            Status: {user?.whatsappEnabled ? 'Connected' : 'Not configured'}
+                          </span>
                           <button 
-                            onClick={handleWhatsAppConfig}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                            onClick={handleWhatsAppConnect}
+                            disabled={isConnectingWhatsApp}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <span>Configure WhatsApp</span>
-                            <ExternalLink className="h-4 w-4" />
+                            <span>{isConnectingWhatsApp ? 'Connecting...' : (user?.whatsappEnabled ? 'Reconfigure' : 'Configure WhatsApp')}</span>
+                            {!isConnectingWhatsApp && <ExternalLink className="h-4 w-4" />}
                           </button>
                         </div>
                       </div>
