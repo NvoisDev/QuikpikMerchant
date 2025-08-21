@@ -815,13 +815,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Valid session found - get full customer data including business name
       const fullCustomerData = await storage.getUser(customerAuth.customerId);
       
+      // Use fresh data from database instead of cached session data
+      const customerName = fullCustomerData ? `${fullCustomerData.firstName} ${fullCustomerData.lastName}`.trim() : customerAuth.name;
+      
       res.json({
         authenticated: true,
         customer: {
           id: customerAuth.customerId,
-          name: customerAuth.name,
-          email: customerAuth.email || '',
-          phone: customerAuth.phone || '',
+          name: customerName,
+          email: fullCustomerData?.email || customerAuth.email || '',
+          phone: fullCustomerData?.phoneNumber || customerAuth.phone || '',
           groupId: customerAuth.groupId || null,
           groupName: customerAuth.groupName || '',
           businessName: fullCustomerData?.businessName || ''
