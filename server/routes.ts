@@ -2751,12 +2751,12 @@ The Quikpik Team
 
         // Add Stripe Connect configuration if wholesaler has Connect account
         if (useConnect) {
-          paymentConfig.application_fee_amount = applicationFeeAmount;
           paymentConfig.transfer_data = {
             destination: wholesaler.stripeAccountId,
-            amount: Math.round(wholesalerReceives * 100) // Amount wholesaler receives
+            amount: Math.round(wholesalerReceives * 100) // Amount wholesaler receives (platform keeps the rest)
           };
           paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
+          console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
         }
 
         paymentIntent = await stripe.paymentIntents.create({
