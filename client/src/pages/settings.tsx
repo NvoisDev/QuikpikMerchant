@@ -207,30 +207,83 @@ export default function Settings() {
             <CardContent>
               {activeTab === "account" && (
                 <div className="space-y-6">
-                  <div className="text-center py-8">
-                    <User className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-lg font-medium text-gray-900">Account Information</h3>
-                    <p className="mt-1 text-gray-500">
-                      Personal profile settings are managed in the customer portal.
-                    </p>
-                    <p className="mt-2 text-sm text-gray-400">
-                      Use the customer portal Account Settings to edit your name, email, phone, and business information.
-                    </p>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Name</dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {user.firstName && user.lastName 
+                              ? `${user.firstName} ${user.lastName}` 
+                              : user.firstName || user.lastName || 'Not set'
+                            }
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Email</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.email || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Role</dt>
+                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role || 'Wholesaler'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Phone</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.phoneNumber || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Subscription</dt>
+                          <dd className="mt-1 text-sm text-gray-900 capitalize">{user.subscriptionTier || 'Free'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Currency</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.preferredCurrency || 'GBP'}</dd>
+                        </div>
+                      </dl>
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeTab === "business" && (
                 <div className="space-y-6">
-                  <div className="text-center py-8">
-                    <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-lg font-medium text-gray-900">Business Settings</h3>
-                    <p className="mt-1 text-gray-500">
-                      Business information is managed through the customer portal.
-                    </p>
-                    <p className="mt-2 text-sm text-gray-400">
-                      Use the customer portal Account Settings to edit business details like name, address, and contact information.
-                    </p>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Business Name</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.businessName || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Business Phone</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.businessPhone || 'Not set'}</dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-sm font-medium text-gray-500">Business Address</dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {user.businessAddress || 'Not set'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">City</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.city || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Postal Code</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.postalCode || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Country</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.country || 'United Kingdom'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Timezone</dt>
+                          <dd className="mt-1 text-sm text-gray-900">{user.timezone || 'UTC'}</dd>
+                        </div>
+                      </dl>
+                    </div>
                   </div>
                 </div>
               )}
