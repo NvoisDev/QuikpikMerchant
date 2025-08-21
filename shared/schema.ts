@@ -865,8 +865,7 @@ export const insertOnboardingMilestoneSchema = createInsertSchema(onboardingMile
 export type InsertOnboardingMilestone = typeof onboardingMilestones.$inferInsert;
 export type OnboardingMilestone = typeof onboardingMilestones.$inferSelect;
 
-export type TabPermission = typeof tabPermissions.$inferSelect;
-export type InsertTabPermission = typeof tabPermissions.$inferInsert;
+
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,

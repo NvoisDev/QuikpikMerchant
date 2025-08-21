@@ -41,49 +41,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PromotionalPricingCalculator, type PromotionalOffer } from "@shared/promotional-pricing";
 import { Product as ProductType, PromotionalOfferType } from "@shared/schema";
 import { cleanAIDescription } from "@shared/utils";
+
 import { formatCurrency, formatNumber } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
 
-// Type-safe Product interface that matches actual database schema
-interface ExtendedProduct {
-  id: number;
-  name: string;
-  description?: string | null;
-  imageUrl?: string;
-  images?: string | string[] | null;
-  price: string;
-  promoPrice?: string | null;
-  currency?: string | null;
-  stock?: number;
-  category?: string;
-  categories?: string[];
-  status?: string;
-  wholesalerId?: string;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
-  wholesaler?: {
-    businessName: string;
-    businessPhone?: string;
-  };
-  
-  // Additional properties that may exist in database
-  palletPrice?: string | number | null;
-  palletMoq?: number | null;
-  palletStock?: number | null;
-  unitsPerPallet?: number | null;
-  palletWeight?: string | number | null;
-  pallet_weight?: string | number | null;
-  sellingFormat?: string | null;
-  sizePerUnit?: string | null;
-  individualUnitWeight?: string | number | null;
-  packageDimensions?: any;
-  negotiationEnabled?: boolean;
-  deliveryExcluded?: boolean;
-  moq?: number;
-  priceVisible?: boolean;
-}
+// Extended Product type that includes all schema fields for customer portal
+type ExtendedProduct = ProductType;
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -1133,6 +1098,7 @@ export default function CustomerPortal() {
     name: '',
     email: '',
     phone: '',
+    businessName: '',
     address: '',
     city: '',
     state: '',
