@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 
 // Core UI Components - loaded immediately
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,7 @@ interface ExtendedProduct {
   negotiationEnabled?: boolean;
   deliveryExcluded?: boolean;
   moq?: number;
+  priceVisible?: boolean;
 }
 
 // Initialize Stripe
@@ -268,6 +269,7 @@ interface CustomerData {
   name: string;
   email: string;
   phone: string;
+  businessName?: string;
   address: string;
   city: string;
   state: string;
@@ -786,34 +788,30 @@ const PaymentFormContent = ({
           <div className="flex items-center space-x-2 mb-2">
             <ShieldCheck className="w-4 h-4" />
             <span className="font-semibold">Secure Payment Processing</span>
-            <InfoTooltip content="All payments are processed securely through Stripe, a trusted payment platform used by millions of businesses worldwide. Your card details are never stored on our servers.">
-              <HelpCircle className="w-3 h-3 text-blue-600 cursor-help" />
-            </InfoTooltip>
+            <HelpCircle className="w-3 h-3 text-blue-600 cursor-help" />
           </div>
           <p>Your payment is processed securely through Stripe. Transaction fee (5.5% + £0.50) is included in the total.</p>
         </div>
 
-        <ButtonLoader
-          isLoading={isProcessing}
-          variant="success"
-          size="lg"
-          disabled={!stripe || paymentSubmitted}
+        <Button
+          type="submit"
+          disabled={!stripe || isProcessing || paymentSubmitted}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          {paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
-        </ButtonLoader>
+          {isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
+        </Button>
       </form>
 
       {/* Payment Failure Dialog */}
       <Dialog open={paymentFailureDialog.isOpen} onOpenChange={(open) => setPaymentFailureDialog(prev => ({ ...prev, isOpen: open }))}>
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
-          <PaymentError
-            title={paymentFailureDialog.title}
-            message={paymentFailureDialog.message}
-            onRetry={() => setPaymentFailureDialog(prev => ({ ...prev, isOpen: false }))}
-            showHome={false}
-            className="border-0 bg-transparent"
-          />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">{paymentFailureDialog.title}</h3>
+            <p className="text-gray-700 mb-4">{paymentFailureDialog.message}</p>
+            <Button onClick={() => setPaymentFailureDialog(prev => ({ ...prev, isOpen: false }))} variant="outline">
+              Try Again
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
@@ -1997,7 +1995,7 @@ export default function CustomerPortal() {
   // Show thank you page after successful order
   if (showThankYou && completedOrder && wholesaler && isAuthenticated) {
     console.log('🎉 Showing thank you page');
-    return <ThankYouPage
+    return <LazyThankYouPage
       orderNumber={completedOrder.orderNumber}
       cart={completedOrder.cart}
       customerData={completedOrder.customerData}

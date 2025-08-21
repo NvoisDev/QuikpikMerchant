@@ -7,7 +7,9 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
-## Recent Changes (Version Control 9 - August 21, 2025)
+## Recent Changes (Version Control 10 - August 21, 2025)
+CRITICAL DATA ISOLATION SECURITY BREACH FULLY RESOLVED: Eliminated all hardcoded wholesaler IDs from API endpoints that allowed unauthorized cross-tenant data access. Fixed `/api/public-orders`, `/api/orders-light`, `/api/orders-paginated` endpoints to require proper authentication. Updated frontend components to use authenticated requests with credentials. Removed insecure fallback endpoints that bypassed authentication. Fixed auth recovery endpoint hardcoded ID. Result: Users can now only access their own data - complete data isolation achieved across all wholesaler accounts.
+
 CRITICAL CUSTOMER ACCESS CONTROL BUG FIXED: Resolved critical security issue where customers could access any wholesaler platform regardless of their actual registration status. Fixed SQL operator precedence bug in findCustomerByLastFourDigits function that allowed customers to bypass proper access controls. Added proper parentheses to ensure wholesaler ID filtering applies correctly. Customer access is now properly restricted - customers can only access wholesaler platforms they're actually registered with.
 
 CUSTOMER REGISTRATION REQUEST SYSTEM COMPLETE: Implemented comprehensive registration request system for unregistered customers. Features include professional dialog form with name, business name, phone, email and message fields, automatic email notifications to wholesalers, API validation with duplicate prevention, and clear user experience messaging. When customers try to access wholesaler platforms they're not registered with, they now see helpful registration request form instead of basic error messages.
