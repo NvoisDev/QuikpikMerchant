@@ -123,15 +123,9 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 export default function ProductManagement() {
   const { user } = useAuth();
   
-  // Temporary mock user for testing edit functionality when auth fails
-  const mockUser = {
-    id: "104871691614680693123",
-    email: "hello@quikpik.co", 
-    subscriptionTier: "premium",
-    role: "wholesaler"
-  };
-  
-  const effectiveUser = user || mockUser;
+  // SECURITY FIX: Removed hardcoded mock user to prevent data isolation bugs
+  // Users must be properly authenticated to access any data
+  const effectiveUser = user;
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -149,20 +143,13 @@ export default function ProductManagement() {
   
   const { canCreateProduct, canEditProduct: hookCanEditProduct, currentTier } = useSubscription();
   
-  // Create a custom canEditProduct that considers the effective user
+  // Create a custom canEditProduct that requires proper authentication
   const canEditProduct = (editCount: number) => {
-    // If we have a real user, use the hook
-    if (user) {
-      return hookCanEditProduct(editCount);
+    // SECURITY FIX: Only authenticated users can edit products
+    if (!user) {
+      return false;
     }
     
-    // If using mock user, check the mock user's subscription tier
-    if (effectiveUser?.subscriptionTier === 'premium') {
-      console.log('✅ Mock premium user - allowing unlimited edits');
-      return true;
-    }
-    
-    // Default to hook behavior for other cases
     return hookCanEditProduct(editCount);
   };
 
@@ -638,29 +625,9 @@ export default function ProductManagement() {
         credentials: "include",
       });
       if (!response.ok) {
-        // If not authenticated, provide mock data for testing
-        if (response.status === 401) {
-          console.log('Not authenticated, using mock data for testing edit functionality');
-          return [
-            {
-              id: 1,
-              name: "Test Product for Edit/Duplicate",
-              description: "This is a test product to verify edit and duplicate functionality works",
-              price: "10.00",
-              currency: "GBP",
-              moq: 1,
-              stock: 100,
-              category: "Test Category",
-              status: "active",
-              priceVisible: true,
-              negotiationEnabled: false,
-              sellingFormat: "units",
-              editCount: 0,
-              wholesalerId: "104871691614680693123"
-            }
-          ];
-        }
-        throw new Error("Failed to fetch products");
+        // SECURITY FIX: Removed mock data that used hardcoded wholesaler IDs
+        // All users must be properly authenticated to prevent data isolation bugs
+        throw new Error("Authentication required to fetch products");
       }
       const data = await response.json();
       console.log('Products fetched:', data.length, data);

@@ -1907,11 +1907,14 @@ The Quikpik Team
 
   // Orders endpoint (no authentication required for seamless access)
   // Lightweight orders endpoint for frontend UI - fast response with essential data only
-  app.get('/api/orders-light', async (req: any, res) => {
+  app.get('/api/orders-light', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = '104871691614680693123';
+      // Use authenticated user's ID for proper data isolation - SECURITY FIX
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      console.log(`📦 Fetching lightweight orders for wholesaler: ${wholesalerId}`);
+      console.log(`📦 Fetching lightweight orders for authenticated wholesaler: ${wholesalerId}`);
       
       // Get orders with minimal data for fast loading
       const orderResults = await db
@@ -1939,16 +1942,19 @@ The Quikpik Team
     }
   });
 
-  // Get individual order details
-  app.get('/api/orders/:id', async (req: any, res) => {
+  // Get individual order details - REQUIRES AUTHENTICATION
+  app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) {
         return res.status(400).json({ error: 'Invalid order ID' });
       }
 
-      const wholesalerId = '104871691614680693123';
-      console.log(`📦 Fetching order details for order ${orderId}`);
+      // Use authenticated user's ID for proper data isolation - SECURITY FIX
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      console.log(`📦 Fetching order details for order ${orderId} by authenticated user`);
 
       // Get order with full details including items
       const orders = await storage.getOrders(wholesalerId, undefined, undefined);
@@ -1995,14 +2001,16 @@ The Quikpik Team
     }
   });
 
-  app.get('/api/orders', async (req: any, res) => {
+  app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
       const search = req.query.search; // search term
       
-      // Default to Surulere Foods Wholesale for seamless access (no auth required)
-      const wholesalerId = '104871691614680693123';
+      // Use authenticated user's ID for proper data isolation - SECURITY FIX
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      console.log(`📦 Fetching orders for wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
+      console.log(`📦 Fetching orders for authenticated wholesaler: ${wholesalerId}, search: ${search || 'none'}`);
       const orders = await storage.getOrders(wholesalerId, undefined, search);
       console.log(`📦 Found ${orders.length} orders for wholesaler ${wholesalerId}`);
       
@@ -2017,15 +2025,18 @@ The Quikpik Team
     }
   });
 
-  // Paginated orders endpoint
-  app.get('/api/orders-paginated', async (req: any, res) => {
+  // Paginated orders endpoint - REQUIRES AUTHENTICATION
+  app.get('/api/orders-paginated', requireAuth, async (req: any, res) => {
     try {
       const page = parseInt(req.query.page || '1');
       const limit = parseInt(req.query.limit || '20');
       const search = req.query.search;
-      const wholesalerId = '104871691614680693123';
+      // Use authenticated user's ID for proper data isolation - SECURITY FIX
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
       
-      console.log(`📦 Fetching paginated orders - page: ${page}, limit: ${limit}, search: ${search || 'none'}`);
+      console.log(`📦 Fetching paginated orders for authenticated user - page: ${page}, limit: ${limit}, search: ${search || 'none'}`);
       
       // Get total count first
       const totalCountQuery = await db
@@ -2079,11 +2090,14 @@ The Quikpik Team
     }
   });
 
-  // Orders statistics endpoint (no authentication required for ecommerce-style access)
-  app.get('/api/orders/stats', async (req: any, res) => {
+  // Orders statistics endpoint - REQUIRES AUTHENTICATION
+  app.get('/api/orders/stats', requireAuth, async (req: any, res) => {
     try {
-      const wholesalerId = '104871691614680693123';
-      console.log(`📊 Fetching order statistics for wholesaler: ${wholesalerId}`);
+      // Use authenticated user's ID for proper data isolation
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      console.log(`📊 Fetching order statistics for authenticated wholesaler: ${wholesalerId}`);
 
       // Get all orders to calculate overall statistics
       const allOrders = await storage.getOrders(wholesalerId, undefined, undefined);
