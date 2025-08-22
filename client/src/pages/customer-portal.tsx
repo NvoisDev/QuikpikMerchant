@@ -250,6 +250,7 @@ interface StripeCheckoutFormProps {
   customerData: CustomerData;
   wholesaler: any;
   totalAmount: number;
+  clientSecret: string;
   onSuccess: (orderData: {
     orderNumber: string;
     cart: CartItem[];
@@ -261,296 +262,22 @@ interface StripeCheckoutFormProps {
   }) => void;
 }
 
-const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuccess }: StripeCheckoutFormProps) => {
-  const [clientSecret, setClientSecret] = useState("");
-  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clientSecret, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Note: Shipping handled directly by supplier - no payment intent recreation needed for shipping changes
   const { toast } = useToast();
 
-  // Function to create payment intent when user proceeds to checkout
-  const createPaymentIntentForCheckout = async () => {
-    if (isCreatingIntent || clientSecret) {
-      console.log('🚚 Payment intent already exists or is being created');
-      return;
-    }
-
-    setIsCreatingIntent(true);
-    
-    // Capture shipping data at the moment user proceeds to checkout
-    const shippingDataAtCreation = {
-      option: customerData.shippingOption || 'pickup'
-    };
-    
-    console.log('🚚 CHECKOUT BUTTON CLICKED - Creating payment intent with shipping data:', {
-      customerDataShippingOption: customerData.shippingOption,
-      shippingDataOption: shippingDataAtCreation.option,
-      willSendToBackend: shippingDataAtCreation.option,
-      isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
-    });
-    
-    try {
-      const requestPayload = {
-        customerName: customerData.name,
-        customerEmail: customerData.email,
-        customerPhone: customerData.phone,
-        customerAddress: {
-          street: customerData.address,
-          city: customerData.city,
-          state: customerData.state,
-          postalCode: customerData.postalCode,
-          country: customerData.country || 'United Kingdom'
-        },
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity || 0,
-          unitPrice: (() => {
-            if (item.sellingType === 'pallets') {
-              return parseFloat((item.product as any).palletPrice || "0") || 0;
-            } else {
-              const basePrice = parseFloat(item.product.price) || 0;
-              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                basePrice,
-                item.quantity,
-                item.product.promotionalOffers || [],
-                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                item.product.promoActive
-              );
-              return pricing.effectivePrice;
-            }
-          })()
-        })),
-        shippingInfo: shippingDataAtCreation
-      };
-      
-      console.log('🚚 CHECKOUT FINAL CHECK: About to send this exact payload to backend:');
-      console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
-      console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
-      
-      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setClientSecret(data.clientSecret);
-        console.log('🚚 CHECKOUT: Payment intent created successfully with shipping option:', shippingDataAtCreation.option);
-        toast({
-          title: "Payment Ready",
-          description: "You can now complete your payment",
-        });
-      } else {
-        throw new Error('Failed to create payment intent');
-      }
-    } catch (error) {
-      console.error('🚚 CHECKOUT: Error creating payment intent:', error);
-      toast({
-        title: "Payment Setup Failed",
-        description: "Unable to set up payment. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingIntent(false);
-    }
-  };
-
-  // Create payment intent only when user explicitly proceeds to checkout
-  // DISABLED: Automatic payment intent creation that was causing issues
-  // Now payment intent is created only when user clicks "Proceed to Payment"
+  // Payment intent creation is now handled by parent component
+  // This component only handles the Stripe payment form with provided clientSecret
   useEffect(() => {
-    // TEMPORARILY DISABLED: Automatic payment intent creation
-    // This was creating payment intents before user could select delivery option
-    // Payment intent is now created only when user clicks "Proceed to Payment" button
-    
-    console.log('🚚 PAYMENT INTENT AUTO-CREATION DISABLED - Current shipping option:', customerData.shippingOption);
-    
-    return; // Exit early - no automatic payment intent creation
-    
-    const createPaymentIntent = async () => {
-      console.log('💳 PAYMENT INTENT CHECK: About to create payment intent:', {
-        hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
-        clientSecretExists: !!clientSecret,
-        isCreatingIntent,
-        currentShippingOption: customerData.shippingOption
-      });
-      
-      const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
-      
-      if (shouldCreateIntent && !clientSecret) {
-        setIsCreatingIntent(true);
-        
-        // Simple shipping data capture
-        const shippingDataAtCreation = {
-          option: customerData.shippingOption || 'pickup'
-        };
-        
-        console.log('🚚 CRITICAL DEBUG - Payment creation with shipping data:', {
-          customerDataShippingOption: customerData.shippingOption,
-          shippingDataOption: shippingDataAtCreation.option,
-          willSendToBackend: shippingDataAtCreation.option,
-          isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
-        });
-        
-        try {
-          // CRITICAL DEBUG: Log the exact data being sent to backend
-          const requestPayload = {
-            customerName: customerData.name,
-            customerEmail: customerData.email,
-            customerPhone: customerData.phone,
-            customerAddress: {
-              street: customerData.address,
-              city: customerData.city,
-              state: customerData.state,
-              postalCode: customerData.postalCode,
-              country: customerData.country || 'United Kingdom'
-            },
-            items: cart.map(item => ({
-              productId: item.product.id,
-              quantity: item.quantity || 0,
-              unitPrice: (() => {
-                // CRITICAL FIX: Use correct price based on selling type (units vs pallets)
-                if (item.sellingType === 'pallets') {
-                  return parseFloat((item.product as any).palletPrice || "0") || 0;
-                } else {
-                  // For units, apply promotional pricing
-                  const basePrice = parseFloat(item.product.price) || 0;
-                  const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
-                    basePrice,
-                    item.quantity,
-                    item.product.promotionalOffers || [],
-                    item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-                    item.product.promoActive
-                  );
-                  return pricing.effectivePrice;
-                }
-              })()
-            })),
-            shippingInfo: shippingDataAtCreation
-          };
-          
-          console.log('🚚 FRONTEND FINAL CHECK: About to send this exact payload to backend:');
-          console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
-          console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
-          console.log('  - Payload shippingInfo service:', requestPayload.shippingInfo?.service);
-          console.log('  - Full payload:', JSON.stringify(requestPayload, null, 2));
-          
-          const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
-          
-          console.log('🚚 FRONTEND: === PAYMENT CREATION DEBUG ===');
-          console.log('🚚 FRONTEND: CAPTURED shipping data (what we\'re actually sending):', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: Current customerData.shippingOption (might be different):', customerData.shippingOption);
-          console.log('🚚 FRONTEND: Sending shippingInfo to backend:', shippingDataAtCreation);
-          console.log('🚚 FRONTEND: FULL PAYMENT REQUEST BODY:', {
-            shippingInfo: shippingDataAtCreation,
-            isDeliveryOrder: shippingDataAtCreation.option === 'delivery',
-            hasShippingService: !!shippingDataAtCreation.service,
-            willCreateDeliveryOrder: shippingDataAtCreation.option === 'delivery' && !!shippingDataAtCreation.service
-          });
-          console.log('🚚 FRONTEND: === END DEBUG ===');
-          
-          const data = await response.json();
-          setClientSecret(data.clientSecret);
-        } catch (error: any) {
-          console.error("Error creating payment intent:", error);
-          
-          // Enhanced error handling for payment intent creation
-          let errorMessage = "Unable to initialize payment. Please try again.";
-          let errorTitle = "Payment Setup Failed";
-          
-          // Check for specific Stripe setup error
-          if (error.message && error.message.includes("payment setup incomplete")) {
-            errorTitle = "Store Payment Setup Required";
-            errorMessage = "This store hasn't completed their payment setup yet. Please contact the business owner to complete their Stripe payment configuration before placing orders.";
-          } else if (error.response?.status === 409 || error.response?.status === 429) {
-            // Handle duplicate request error
-            try {
-              const errorData = await error.response.json();
-              if (errorData.errorType === "duplicate_request" || errorData.errorType === "system_busy") {
-                errorTitle = "Payment In Progress";
-                errorMessage = "A payment request is already being processed. Please wait a moment before trying again.";
-              } else {
-                errorMessage = errorData.message || "Request already in progress. Please wait and try again.";
-              }
-            } catch {
-              errorMessage = "Request already in progress. Please wait and try again.";
-            }
-          } else if (error.response?.status === 400) {
-            // Try to parse error response for more details
-            try {
-              const errorData = await error.response.json();
-              if (errorData.errorType === "stripe_setup_required") {
-                errorTitle = "Payment Processing Unavailable";
-                errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
-              } else {
-                errorMessage = errorData.message || "Invalid payment details. Please check your order and try again.";
-              }
-            } catch {
-              errorMessage = "Invalid payment details. Please check your order and try again.";
-            }
-          } else if (error.name === "ApiRequestError" && error.message.includes("stripe_setup_required")) {
-            errorTitle = "Payment Processing Unavailable";
-            errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
-          } else if (error.name === "ApiRequestError") {
-            // Enhanced error parsing for API request errors
-            try {
-              const errorResponse = JSON.parse(error.message);
-              if (errorResponse.errorType === "stripe_setup_required") {
-                errorTitle = "Payment Processing Unavailable";
-                errorMessage = "The business owner needs to complete their payment setup. Please contact them directly to arrange payment or ask them to complete their Stripe setup in their dashboard.";
-              } else {
-                errorMessage = errorResponse.message || error.message || "Unable to process payment. Please try again.";
-              }
-            } catch {
-              errorMessage = error.message || "Unable to process payment. Please try again.";
-            }
-          } else if (error.response?.status === 429) {
-            errorMessage = "Too many payment attempts. Please wait a moment and try again.";
-          } else if (error.response?.status >= 500) {
-            errorMessage = "Payment service temporarily unavailable. Please try again later.";
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-          
-          toast({
-            title: errorTitle,
-            description: errorMessage,
-            variant: "destructive",
-            duration: 10000, // Show longer for Stripe setup errors
-          });
-        } finally {
-          setIsCreatingIntent(false);
-        }
-      }
-    };
-
-    createPaymentIntent();
-  }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Simplified: No shipping service dependencies
-
-  // TEMPORARILY DISABLED: Reset payment intent when shipping option changes
-  // This was causing multiple payment intents. Need to fix the root issue first.
-  /*
-  const [initialShippingOption, setInitialShippingOption] = useState<string | null>(null);
-  const [isResettingIntent, setIsResettingIntent] = useState(false);
-  
-  useEffect(() => {
-    if (customerData.shippingOption && initialShippingOption === null) {
-      setInitialShippingOption(customerData.shippingOption);
-    } else if (customerData.shippingOption && initialShippingOption && 
-               customerData.shippingOption !== initialShippingOption && 
-               clientSecret && !isCreatingIntent && !isResettingIntent) {
-      console.log('🚚 SHIPPING OPTION CHANGED: From', initialShippingOption, 'to', customerData.shippingOption, '- Resetting payment intent');
-      setIsResettingIntent(true);
-      setClientSecret('');
-      setInitialShippingOption(customerData.shippingOption);
-      setTimeout(() => setIsResettingIntent(false), 1000);
-    }
-  }, [customerData.shippingOption, initialShippingOption, clientSecret, isCreatingIntent, isResettingIntent]);
-  */
+    console.log('🚚 STRIPE FORM: Client secret provided:', !!clientSecret);
+  }, [clientSecret]);
 
   if (!clientSecret) {
     return (
       <div className="text-center py-8">
         <div className="flex flex-col items-center space-y-4">
-          {/* Enhanced Loading Animation */}
           <div className="flex space-x-1">
             {[...Array(3)].map((_, i) => (
               <div
@@ -973,6 +700,10 @@ export default function CustomerPortal() {
   const [selectedModalType, setSelectedModalType] = useState<'units' | 'pallets' | null>(null);
   const [modalQuantity, setModalQuantity] = useState(1);
   const [quantityInputValues, setQuantityInputValues] = useState<Record<number, string>>({});
+  
+  // Payment intent creation state
+  const [clientSecret, setClientSecret] = useState("");
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
   const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
   const [activeQuantityInput, setActiveQuantityInput] = useState<number | null>(null);
@@ -1549,6 +1280,90 @@ export default function CustomerPortal() {
       description: `${product.name} (${quantity} ${unitLabel}) added to your cart`,
     });
   }, [toast, isPreviewMode]);
+
+  // Function to create payment intent when user proceeds to checkout
+  const createPaymentIntentForCheckout = useCallback(async () => {
+    if (isCreatingIntent || clientSecret || !wholesaler) {
+      console.log('🚚 Payment intent already exists or is being created');
+      return;
+    }
+
+    setIsCreatingIntent(true);
+    
+    // Capture shipping data at the moment user proceeds to checkout
+    const shippingDataAtCreation = {
+      option: customerData.shippingOption || 'pickup'
+    };
+    
+    console.log('🚚 CHECKOUT BUTTON CLICKED - Creating payment intent with shipping data:', {
+      customerDataShippingOption: customerData.shippingOption,
+      shippingDataOption: shippingDataAtCreation.option,
+      willSendToBackend: shippingDataAtCreation.option,
+      isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
+    });
+    
+    try {
+      const requestPayload = {
+        customerName: customerData.name,
+        customerEmail: customerData.email,
+        customerPhone: customerData.phone,
+        customerAddress: {
+          street: customerData.address,
+          city: customerData.city,
+          state: customerData.state,
+          postalCode: customerData.postalCode,
+          country: customerData.country || 'United Kingdom'
+        },
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity || 0,
+          unitPrice: (() => {
+            if (item.sellingType === 'pallets') {
+              return parseFloat((item.product as any).palletPrice || "0") || 0;
+            } else {
+              const basePrice = parseFloat(item.product.price) || 0;
+              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                basePrice,
+                item.quantity,
+                item.product.promotionalOffers || [],
+                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                item.product.promoActive
+              );
+              return pricing.effectivePrice;
+            }
+          })()
+        })),
+        shippingInfo: shippingDataAtCreation
+      };
+      
+      console.log('🚚 CHECKOUT FINAL CHECK: About to send this exact payload to backend:');
+      console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
+      console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
+      
+      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+        console.log('🚚 CHECKOUT: Payment intent created successfully with shipping option:', shippingDataAtCreation.option);
+        toast({
+          title: "Payment Ready",
+          description: "You can now complete your payment",
+        });
+      } else {
+        throw new Error('Failed to create payment intent');
+      }
+    } catch (error) {
+      console.error('🚚 CHECKOUT: Error creating payment intent:', error);
+      toast({
+        title: "Payment Setup Failed",
+        description: "Unable to set up payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingIntent(false);
+    }
+  }, [isCreatingIntent, clientSecret, wholesaler, customerData, cart, toast]);
 
   // Helper function to generate quantity suggestions
   const getQuantitySuggestions = useCallback((product: ExtendedProduct, currentQuantity?: number) => {
@@ -4097,6 +3912,7 @@ export default function CustomerPortal() {
                     cart={cart}
                     customerData={customerData}
                     wholesaler={wholesaler}
+                    clientSecret={clientSecret}
                     totalAmount={(() => {
                       const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
                       const shipping = 0; // Delivery arranged directly by supplier
