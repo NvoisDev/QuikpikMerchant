@@ -2747,6 +2747,8 @@ The Quikpik Team
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
+          statement_descriptor: wholesaler.businessName?.slice(0, 22) || 'Quikpik Purchase',
+          description: `Purchase from ${wholesaler.businessName || 'Quikpik Wholesaler'}`,
         };
 
         // Add Stripe Connect configuration if wholesaler has Connect account
@@ -2773,6 +2775,7 @@ The Quikpik Team
           wholesalerReceives: wholesalerReceives.toFixed(2),
           totalCustomerPays: totalCustomerPays.toFixed(2),
           wholesalerId: firstProduct.wholesalerId,
+          wholesalerBusinessName: wholesaler.businessName || 'Quikpik Wholesaler',
           orderType: 'customer_portal',
           connectAccountUsed: useConnect ? 'true' : 'false',
           items: JSON.stringify(validatedItems.map(item => ({
