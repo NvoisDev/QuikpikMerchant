@@ -90,6 +90,32 @@ export default function Settings() {
     }
   }
 
+  const handleStripeDashboard = async () => {
+    setIsConnectingStripe(true);
+    try {
+      const response = await apiRequest('POST', '/api/stripe/dashboard');
+      const data = await response.json();
+      
+      if (data.url) {
+        // Open Stripe dashboard in new window
+        window.open(data.url, '_blank');
+        toast({
+          title: "Stripe Dashboard",
+          description: "Opening your Stripe account dashboard in a new window.",
+        });
+      }
+    } catch (error) {
+      console.error('Error opening Stripe dashboard:', error);
+      toast({
+        title: "Dashboard Error",
+        description: "Unable to open Stripe dashboard. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingStripe(false);
+    }
+  }
+
   const handleSaveAccount = async () => {
     try {
       const response = await apiRequest('PUT', '/api/user/profile', accountForm);
@@ -668,7 +694,7 @@ export default function Settings() {
                             Status: {user?.stripeAccountId ? 'Connected' : 'Ready to connect'}
                           </span>
                           <button 
-                            onClick={handleStripeConnect}
+                            onClick={user?.stripeAccountId ? handleStripeDashboard : handleStripeConnect}
                             disabled={isConnectingStripe}
                             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >

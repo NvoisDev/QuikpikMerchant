@@ -491,6 +491,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe Connect dashboard management endpoint
+  app.post('/api/stripe/dashboard', requireAuth, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const user = req.user;
+      
+      if (!user.stripeAccountId) {
+        return res.status(400).json({ message: "No Stripe Connect account found. Please set up payments first." });
+      }
+
+      // Create a login link for the Express dashboard
+      const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
+      
+      console.log('🔗 Generated Stripe dashboard link for user:', user.id);
+      
+      res.json({ url: loginLink.url });
+    } catch (error: any) {
+      console.error('❌ Error creating Stripe dashboard link:', error);
+      res.status(500).json({ message: "Failed to create dashboard link: " + error.message });
+    }
+  });
+
   // WhatsApp Connect endpoint
   app.post('/api/whatsapp/connect', requireAuth, async (req: any, res) => {
     try {
@@ -2747,7 +2772,7 @@ The Quikpik Team
           currency: 'gbp',
           receipt_email: customerEmail,
           automatic_payment_methods: { enabled: true },
-          statement_descriptor: wholesaler.businessName?.slice(0, 22) || 'Quikpik Purchase',
+          statement_descriptor_suffix: wholesaler.businessName?.slice(0, 10) || 'Quikpik',
           description: `Purchase from ${wholesaler.businessName || 'Quikpik Wholesaler'}`,
         };
 
