@@ -531,7 +531,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db.execute(sql`
         SELECT 
           id, name, description, price, stock, moq, 
-          wholesaler_id, image_url, status, category, brand,
+          wholesaler_id, image_url, status, category,
           promo_active, promo_price, low_stock_threshold,
           created_at, updated_at
         FROM products 
@@ -559,7 +559,6 @@ export class DatabaseStorage implements IStorage {
         imageUrl: row.image_url,
         status: row.status,
         category: row.category,
-        brand: row.brand,
         promoActive: Boolean(row.promo_active),
         promoPrice: row.promo_price,
         lowStockThreshold: row.low_stock_threshold || 50,
@@ -572,7 +571,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.execute(sql`
       SELECT 
         id, name, description, price, stock, moq, 
-        wholesaler_id, image_url, status, category, brand,
+        wholesaler_id, image_url, status, category,
         promo_active, promo_price, low_stock_threshold,
         created_at, updated_at
       FROM products 
@@ -598,7 +597,6 @@ export class DatabaseStorage implements IStorage {
       imageUrl: row.image_url,
       status: row.status,
       category: row.category,
-      brand: row.brand,
       promoActive: Boolean(row.promo_active),
       promoPrice: row.promo_price,
       lowStockThreshold: row.low_stock_threshold || 50,

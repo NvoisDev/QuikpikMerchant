@@ -1930,11 +1930,58 @@ The Quikpik Team
     }
     
     try {
-      // Use hardcoded user ID for development testing
+      // Use the same successful query from customer-products
       const defaultUserId = "104871691614680693123";
-      const products = await storage.getProducts(defaultUserId);
-      console.log('Dev products found:', products.length);
-      res.json(products);
+      console.log('🛍️ Dev requesting products for wholesaler:', defaultUserId);
+      console.log('🔧 Environment: development');
+      console.log('⚡ TESTING: Endpoint reached successfully');
+      console.log('🔍 Executing optimized SQL query...');
+      
+      const startTime = Date.now();
+      const result = await db.execute(sql`
+        SELECT 
+          p.id, p.name, p.description, p.price, p.currency, p.image_url,
+          p.moq, p.stock, p.category, p.status, p.created_at, p.updated_at,
+          p.promo_active, p.promo_price, p.unit, p.selling_format,
+          p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock,
+          u.business_name as wholesaler_name
+        FROM products p
+        INNER JOIN users u ON p.wholesaler_id = u.id
+        WHERE p.wholesaler_id = ${defaultUserId}
+          AND p.status IN ('active', 'inactive', 'out_of_stock')
+        ORDER BY p.created_at DESC
+      `);
+      
+      const queryTime = Date.now() - startTime;
+      console.log(`📊 SQL query returned ${result.rows.length} rows in ${queryTime}ms`);
+      
+      const formattedProducts = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
+        price: row.price,
+        currency: row.currency || 'GBP',
+        imageUrl: row.image_url,
+        moq: row.moq || 1,
+        stock: row.stock || 0,
+        category: row.category || 'General',
+        status: row.status,
+        wholesalerId: defaultUserId,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+        promoActive: Boolean(row.promo_active),
+        promoPrice: row.promo_price,
+        unit: row.unit || 'units',
+        sellingFormat: row.selling_format || 'units',
+        unitsPerPallet: row.units_per_pallet,
+        palletPrice: row.pallet_price,
+        palletMoq: row.pallet_moq,
+        palletStock: row.pallet_stock,
+        wholesalerName: row.wholesaler_name
+      }));
+      
+      console.log(`✅ Successfully formatted ${formattedProducts.length} products for dev response`);
+      res.json(formattedProducts);
     } catch (error) {
       console.error('Error fetching dev products:', error);
       res.status(500).json({ error: "Failed to fetch products" });
