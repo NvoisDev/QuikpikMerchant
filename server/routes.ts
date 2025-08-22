@@ -3714,6 +3714,90 @@ The Quikpik Team
     }
   });
 
+  // Real-time inventory monitoring routes
+  app.get('/api/inventory/status', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { includeAlerts = 'true' } = req.query;
+      
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : userId;
+      
+      const inventoryStatus = await storage.getInventoryStatus(targetUserId);
+      
+      if (includeAlerts === 'true') {
+        const stockAlerts = await storage.getStockAlerts(targetUserId);
+        inventoryStatus.alerts = stockAlerts;
+      }
+      
+      res.json(inventoryStatus);
+    } catch (error) {
+      console.error("Error fetching inventory status:", error);
+      res.status(500).json({ message: "Failed to fetch inventory status" });
+    }
+  });
+
+  app.get('/api/inventory/alerts', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { unreadOnly = 'false' } = req.query;
+      
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : userId;
+      
+      const alerts = await storage.getStockAlerts(targetUserId, unreadOnly === 'true');
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching stock alerts:", error);
+      res.status(500).json({ message: "Failed to fetch stock alerts" });
+    }
+  });
+
+  app.post('/api/inventory/alerts/:id/mark-read', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const alertId = parseInt(req.params.id);
+      
+      await storage.markStockAlertAsRead(alertId, userId);
+      res.json({ message: "Alert marked as read" });
+    } catch (error) {
+      console.error("Error marking alert as read:", error);
+      res.status(500).json({ message: "Failed to mark alert as read" });
+    }
+  });
+
+  app.post('/api/inventory/alerts/:id/resolve', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const alertId = parseInt(req.params.id);
+      
+      await storage.resolveStockAlert(alertId, userId);
+      res.json({ message: "Alert resolved" });
+    } catch (error) {
+      console.error("Error resolving alert:", error);
+      res.status(500).json({ message: "Failed to resolve alert" });
+    }
+  });
+
+  app.get('/api/products/:id/stock-status', async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await storage.getProduct(productId);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const stockStatus = await storage.getProductStockStatus(productId);
+      res.json(stockStatus);
+    } catch (error) {
+      console.error("Error fetching product stock status:", error);
+      res.status(500).json({ message: "Failed to fetch stock status" });
+    }
+  });
+
   // Stock Movement routes
   app.get('/api/products/:id/stock-movements', requireAuth, async (req: any, res) => {
     try {
@@ -13230,6 +13314,54 @@ The Quikpik Team
     } catch (error) {
       console.error("Error fetching inventory insights:", error);
       res.status(500).json({ message: "Failed to fetch inventory insights" });
+    }
+  });
+
+  // Real-time inventory monitoring endpoints
+  app.get('/api/inventory/status', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+
+      const status = await storage.getInventoryStatus(wholesalerId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching inventory status:", error);
+      res.status(500).json({ message: "Failed to fetch inventory status" });
+    }
+  });
+
+  app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      const unreadOnly = req.query.unreadOnly === 'true';
+
+      const alerts = await storage.getStockAlerts(wholesalerId, unreadOnly);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching stock alerts:", error);
+      res.status(500).json({ message: "Failed to fetch stock alerts" });
+    }
+  });
+
+  app.get('/api/products/:id/stock-status', async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const stockStatus = await storage.getProductStockStatus(productId);
+      res.json(stockStatus);
+    } catch (error) {
+      console.error("Error fetching product stock status:", error);
+      if (error instanceof Error && error.message === 'Product not found') {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.status(500).json({ message: "Failed to fetch product stock status" });
     }
   });
 

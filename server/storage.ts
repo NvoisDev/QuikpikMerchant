@@ -257,6 +257,31 @@ export interface IStorage {
   updateDefaultLowStockThreshold(userId: string, threshold: number): Promise<void>;
   checkAndCreateStockAlerts(productId: number, wholesalerId: string, newStock: number): Promise<void>;
   
+  // Real-time inventory monitoring operations
+  getInventoryStatus(wholesalerId: string): Promise<{
+    totalProducts: number;
+    inStockProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+    totalStockValue: number;
+    averageStockLevel: number;
+    lastUpdated: Date;
+  }>;
+  getStockAlerts(wholesalerId: string, unreadOnly?: boolean): Promise<(StockAlert & { product: Product })[]>;
+  getProductStockStatus(productId: number): Promise<{
+    productId: number;
+    currentStock: number;
+    lowStockThreshold: number;
+    status: 'in_stock' | 'low_stock' | 'out_of_stock';
+    daysUntilOutOfStock?: number;
+    reorderSuggested: boolean;
+    lastMovement?: {
+      type: string;
+      quantity: number;
+      date: Date;
+    };
+  }>;
+  
   // Team Management operations
   getTeamMembers(wholesalerId: string): Promise<TeamMember[]>;
   getAllTeamMembers(): Promise<TeamMember[]>;
@@ -4269,6 +4294,147 @@ export class DatabaseStorage implements IStorage {
       // Default to allow access on error
       return true;
     }
+  }
+
+  // Real-time inventory monitoring implementations
+  async getInventoryStatus(wholesalerId: string): Promise<{
+    totalProducts: number;
+    inStockProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+    totalStockValue: number;
+    averageStockLevel: number;
+    lastUpdated: Date;
+  }> {
+    const inventoryData = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_products,
+        COUNT(CASE WHEN stock > 0 THEN 1 END) as in_stock_products,
+        COUNT(CASE WHEN stock = 0 THEN 1 END) as out_of_stock_products,
+        COUNT(CASE WHEN stock > 0 AND stock <= COALESCE(low_stock_threshold, 50) THEN 1 END) as low_stock_products,
+        COALESCE(SUM(CASE WHEN stock > 0 THEN stock * price::numeric ELSE 0 END), 0) as total_stock_value,
+        COALESCE(AVG(CASE WHEN status = 'active' THEN stock ELSE NULL END), 0) as average_stock_level
+      FROM products 
+      WHERE wholesaler_id = ${wholesalerId} 
+        AND status = 'active'
+    `);
+
+    const data = inventoryData.rows[0];
+
+    return {
+      totalProducts: parseInt(data.total_products) || 0,
+      inStockProducts: parseInt(data.in_stock_products) || 0,
+      lowStockProducts: parseInt(data.low_stock_products) || 0,
+      outOfStockProducts: parseInt(data.out_of_stock_products) || 0,
+      totalStockValue: parseFloat(data.total_stock_value) || 0,
+      averageStockLevel: parseFloat(data.average_stock_level) || 0,
+      lastUpdated: new Date()
+    };
+  }
+
+  async getStockAlerts(wholesalerId: string, unreadOnly: boolean = false): Promise<(StockAlert & { product: Product })[]> {
+    let query = db
+      .select()
+      .from(stockAlerts)
+      .innerJoin(products, eq(stockAlerts.productId, products.id))
+      .where(
+        and(
+          eq(stockAlerts.wholesalerId, wholesalerId),
+          eq(stockAlerts.isResolved, false)
+        )
+      );
+
+    if (unreadOnly) {
+      query = query.where(eq(stockAlerts.isRead, false));
+    }
+
+    const results = await query.orderBy(desc(stockAlerts.createdAt));
+
+    return results.map(row => ({
+      ...row.stock_alerts,
+      product: row.products
+    }));
+  }
+
+  async getProductStockStatus(productId: number): Promise<{
+    productId: number;
+    currentStock: number;
+    lowStockThreshold: number;
+    status: 'in_stock' | 'low_stock' | 'out_of_stock';
+    daysUntilOutOfStock?: number;
+    reorderSuggested: boolean;
+    lastMovement?: {
+      type: string;
+      quantity: number;
+      date: Date;
+    };
+  }> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, productId));
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    // Get last stock movement
+    const [lastMovement] = await db
+      .select()
+      .from(stockMovements)
+      .where(eq(stockMovements.productId, productId))
+      .orderBy(desc(stockMovements.createdAt))
+      .limit(1);
+
+    const currentStock = product.stock;
+    const threshold = product.lowStockThreshold || 50;
+
+    let status: 'in_stock' | 'low_stock' | 'out_of_stock';
+    if (currentStock === 0) {
+      status = 'out_of_stock';
+    } else if (currentStock <= threshold) {
+      status = 'low_stock';
+    } else {
+      status = 'in_stock';
+    }
+
+    // Calculate days until out of stock based on recent sales velocity
+    let daysUntilOutOfStock: number | undefined;
+    if (currentStock > 0) {
+      // Get sales from last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const salesData = await db.execute(sql`
+        SELECT COALESCE(SUM(oi.quantity), 0) as total_sold
+        FROM order_items oi
+        INNER JOIN orders o ON oi.order_id = o.id
+        WHERE oi.product_id = ${productId}
+          AND o.created_at >= ${thirtyDaysAgo}
+          AND o.status IN ('paid', 'processing', 'shipped', 'fulfilled', 'completed')
+      `);
+
+      const totalSold = parseInt(salesData.rows[0]?.total_sold) || 0;
+      const dailyVelocity = totalSold / 30;
+      
+      if (dailyVelocity > 0) {
+        daysUntilOutOfStock = Math.floor(currentStock / dailyVelocity);
+      }
+    }
+
+    return {
+      productId,
+      currentStock,
+      lowStockThreshold: threshold,
+      status,
+      daysUntilOutOfStock,
+      reorderSuggested: status === 'low_stock' || status === 'out_of_stock' || (daysUntilOutOfStock !== undefined && daysUntilOutOfStock <= 7),
+      lastMovement: lastMovement ? {
+        type: lastMovement.movementType,
+        quantity: lastMovement.quantity,
+        date: lastMovement.createdAt
+      } : undefined
+    };
   }
 
 }

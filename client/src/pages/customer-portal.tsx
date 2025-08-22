@@ -46,6 +46,7 @@ import { formatCurrency, formatNumber } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
+import { StockIndicator } from "@/components/ui/stock-indicator";
 
 // Extended Product type that includes all schema fields for customer portal
 type ExtendedProduct = ProductType;
@@ -2286,10 +2287,20 @@ export default function CustomerPortal() {
                                 </div>
                               </div>
 
+                              {/* Stock Availability */}
+                              <div className="flex items-center justify-between">
+                                <StockIndicator 
+                                  stock={product.stock} 
+                                  lowStockThreshold={product.lowStockThreshold || 50}
+                                  size="sm"
+                                  variant="badge"
+                                />
+                              </div>
+
                               {/* Quick Order Controls */}
                               <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">
-                                  Stock: {formatNumber(product.stock)}
+                                <div className="text-xs text-gray-500">
+                                  {formatNumber(product.stock)} available
                                 </div>
                                 
                                 <div className="flex items-center space-x-2">
@@ -2802,17 +2813,23 @@ export default function CustomerPortal() {
                                       Min: {product.moq} units
                                     </span>
                                   )}
-                                  {product.stock && (
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                                      Stock: {product.stock}
-                                    </span>
-                                  )}
+                                  {/* Stock indicator replaced with enhanced component */}
                                   {(product as any).brand && (
                                     <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
                                       {(product as any).brand}
                                     </span>
                                   )}
                                 </div>
+                                {/* Stock Availability Indicator */}
+                                <div className="mb-2">
+                                  <StockIndicator 
+                                    stock={product.stock} 
+                                    lowStockThreshold={product.lowStockThreshold || 50}
+                                    size="sm"
+                                    variant="inline"
+                                  />
+                                </div>
+                                
                                 {/* MOQ Helper Message */}
                                 {product.moq && product.moq > 1 && (
                                   <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
