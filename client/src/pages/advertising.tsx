@@ -292,8 +292,8 @@ export default function Advertising() {
                 <div className="space-y-4">
                   {campaigns.map((campaign) => (
                     <div key={campaign.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 space-y-3 sm:space-y-0">
+                        <div className="flex-1">
                           <h3 className="font-semibold text-lg">{campaign.name}</h3>
                           <div className="flex items-center gap-3 mt-1">
                             <Badge variant={
@@ -308,13 +308,13 @@ export default function Advertising() {
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                           <p className="text-sm text-gray-600">Budget</p>
                           <p className="font-semibold">{formatCurrency(campaign.budget, 'GBP')}</p>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-gray-600">Impressions</p>
                           <p className="font-semibold">{campaign.impressions.toLocaleString()}</p>
@@ -329,16 +329,17 @@ export default function Advertising() {
                         </div>
                       </div>
                       
-                      <div className="flex justify-between items-center mt-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 space-y-3 sm:space-y-0">
                         <div className="text-sm text-gray-600">
                           {new Date(campaign.startDate).toLocaleDateString()} - {new Date(campaign.endDate).toLocaleDateString()}
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
                             Edit
                           </Button>
-                          <Button variant="outline" size="sm">
-                            View Details
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                            <span className="hidden sm:inline">View Details</span>
+                            <span className="sm:hidden">Details</span>
                           </Button>
                         </div>
                       </div>
@@ -353,7 +354,7 @@ export default function Advertising() {
         <TabsContent value="seo" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5" />
                   SEO-Optimized Product Pages
@@ -367,6 +368,7 @@ export default function Advertising() {
                   }}
                   disabled={!hasAdvancedAccess || products.length === 0}
                   size="sm"
+                  className="w-full sm:w-auto"
                 >
                   <Zap className="w-4 h-4 mr-2" />
                   Generate All
@@ -400,11 +402,11 @@ export default function Advertising() {
                 <div className="space-y-4">
                   {seoPages.map((page) => (
                     <div key={page.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
                         <div className="flex-1">
                           <h3 className="font-semibold">{page.productName}</h3>
                           <p className="text-sm text-gray-600 mt-1">{page.metaDescription}</p>
-                          <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 text-sm text-gray-500">
                             <span>Views: {page.views.toLocaleString()}</span>
                             <span>Leads: {page.leads}</span>
                             <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
@@ -412,13 +414,15 @@ export default function Advertising() {
                             </Badge>
                           </div>
                         </div>
-                        <div className="flex gap-2 ml-4">
-                          <Button variant="outline" size="sm">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:ml-4">
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
                             <ExternalLink className="w-4 h-4 mr-1" />
-                            View Page
+                            <span className="hidden sm:inline">View Page</span>
+                            <span className="sm:hidden">View</span>
                           </Button>
-                          <Button variant="outline" size="sm">
-                            Edit SEO
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                            <span className="hidden sm:inline">Edit SEO</span>
+                            <span className="sm:hidden">Edit</span>
                           </Button>
                         </div>
                       </div>
@@ -479,12 +483,12 @@ export default function Advertising() {
 
       {/* New Campaign Dialog */}
       <Dialog open={newCampaignOpen} onOpenChange={setNewCampaignOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Advertising Campaign</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="campaign-name">Campaign Name</Label>
                 <Input id="campaign-name" placeholder="e.g., Holiday Product Promotion" />
@@ -505,7 +509,7 @@ export default function Advertising() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="budget">Budget (£)</Label>
                 <Input id="budget" type="number" placeholder="100" />
@@ -526,8 +530,8 @@ export default function Advertising() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setNewCampaignOpen(false)}>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <Button variant="outline" onClick={() => setNewCampaignOpen(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
               <Button 
@@ -538,6 +542,7 @@ export default function Advertising() {
                   budget: 100
                 })}
                 disabled={createCampaignMutation.isPending}
+                className="w-full sm:w-auto"
               >
                 {createCampaignMutation.isPending ? "Creating..." : "Create Campaign"}
               </Button>
