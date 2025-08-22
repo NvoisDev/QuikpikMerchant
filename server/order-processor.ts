@@ -138,18 +138,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
   const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
 
-  // Extract and process shipping data from payment metadata
-  const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-  const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+  // SIMPLIFIED: Get shipping choice from customer data instead of Stripe metadata
+  const customerShippingChoice = await storage.getCustomerShippingChoice(customer.id);
+  const fulfillmentType = customerShippingChoice || 'pickup';
   
-  console.log('🚚 Processing shipping metadata:', {
-    hasShippingInfo: !!shippingInfoJson,
-    shippingInfoRaw: shippingInfoJson,
-    parsedShippingInfo: shippingInfo,
-    customerChoice: shippingInfo.option,
-    hasService: !!shippingInfo.service,
-    serviceName: shippingInfo.service?.serviceName,
-    servicePrice: shippingInfo.service?.price
+  console.log('🚚 Using customer shipping choice:', {
+    customerId: customer.id,
+    customerName: customer.firstName + ' ' + customer.lastName,
+    shippingChoice: fulfillmentType,
+    willCreateDeliveryOrder: fulfillmentType === 'delivery'
   });
 
   // Get wholesaler info for logging
@@ -179,11 +176,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-    // Shipping information processing - use metadata values as fallback
-    fulfillmentType: shippingInfo.option || 'pickup',
-    deliveryCarrier: shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.serviceName : null,
-    deliveryCost: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00'),
-    shippingTotal: paymentIntent.metadata.shippingCost || (shippingInfo.option === 'delivery' && shippingInfo.service ? shippingInfo.service.price.toString() : '0.00')
+    // SIMPLIFIED: Use customer shipping choice directly
+    fulfillmentType: fulfillmentType,
+    deliveryCarrier: null, // No carrier needed for simplified delivery system
+    deliveryCost: '0.00', // No delivery cost - arranged directly with customer
+    shippingTotal: '0.00' // No shipping total
   };
   
   console.log('🚚 Order data with shipping fields:', {

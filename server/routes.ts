@@ -1307,6 +1307,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save customer shipping choice (delivery or pickup)
+  app.post("/api/customer/shipping-choice", async (req, res) => {
+    try {
+      const { customerId, shippingChoice } = req.body;
+      
+      if (!customerId || !shippingChoice || !['pickup', 'delivery'].includes(shippingChoice)) {
+        return res.status(400).json({ error: "Invalid customer ID or shipping choice" });
+      }
+      
+      await storage.setCustomerShippingChoice(customerId, shippingChoice);
+      console.log(`🚚 Updated shipping choice for customer ${customerId}: ${shippingChoice}`);
+      
+      res.json({ success: true, shippingChoice });
+    } catch (error) {
+      console.error("Error saving shipping choice:", error);
+      res.status(500).json({ error: "Failed to save shipping choice" });
+    }
+  });
+
   // Submit customer registration request to wholesaler
   app.post("/api/customer/request-wholesaler-access", async (req, res) => {
     try {

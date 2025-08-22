@@ -1281,35 +1281,16 @@ export default function CustomerPortal() {
     });
   }, [toast, isPreviewMode]);
 
-  // Function to create payment intent when user proceeds to checkout
+  // Simplified payment intent creation - no shipping metadata needed
   const createPaymentIntentForCheckout = useCallback(async () => {
-    console.log('🚚 CHECKOUT FUNCTION CALLED - Starting payment intent creation');
-    console.log('🚚 Current state check:', {
-      isCreatingIntent,
-      hasClientSecret: !!clientSecret,
-      hasWholesaler: !!wholesaler,
-      currentShippingOption: customerData.shippingOption
-    });
+    console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
       return;
     }
 
-    console.log('🚚 PROCEEDING WITH PAYMENT INTENT CREATION');
     setIsCreatingIntent(true);
-    
-    // Capture shipping data at the moment user proceeds to checkout
-    const shippingDataAtCreation = {
-      option: customerData.shippingOption || 'pickup'
-    };
-    
-    console.log('🚚 CHECKOUT BUTTON CLICKED - Creating payment intent with shipping data:', {
-      customerDataShippingOption: customerData.shippingOption,
-      shippingDataOption: shippingDataAtCreation.option,
-      willSendToBackend: shippingDataAtCreation.option,
-      isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
-    });
     
     try {
       const requestPayload = {
@@ -1341,25 +1322,16 @@ export default function CustomerPortal() {
               return pricing.effectivePrice;
             }
           })()
-        })),
-        shippingInfo: shippingDataAtCreation
+        }))
+        // No shipping info needed - handled separately
       };
       
-      console.log('🚚 CHECKOUT FINAL CHECK: About to send this exact payload to backend:');
-      console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
-      console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
-      
-      console.log('🚚 Making API request to create payment intent...');
       const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
-      
-      console.log('🚚 API Response status:', response.status);
-      console.log('🚚 API Response ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('🚚 Payment intent created successfully! Response data:', data);
         setClientSecret(data.clientSecret);
-        console.log('🚚 CHECKOUT: Payment intent created successfully with shipping option:', shippingDataAtCreation.option);
+        console.log('🚚 SIMPLIFIED: Payment intent created successfully');
         toast({
           title: "Payment Ready",
           description: "You can now complete your payment",
@@ -1370,7 +1342,7 @@ export default function CustomerPortal() {
         throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('🚚 CHECKOUT: Error creating payment intent:', error);
+      console.error('🚚 Error creating payment intent:', error);
       toast({
         title: "Payment Setup Failed",
         description: "Unable to set up payment. Please try again.",
@@ -3826,7 +3798,23 @@ export default function CustomerPortal() {
                         id="pickup"
                         name="shipping"
                         checked={customerData.shippingOption === 'pickup'}
-                        onChange={() => setCustomerData(prev => ({...prev, shippingOption: 'pickup'}))}
+                        onChange={async () => {
+                          setCustomerData(prev => ({...prev, shippingOption: 'pickup'}));
+                          // Save to backend if customer is authenticated
+                          if (authenticatedCustomer?.id) {
+                            try {
+                              const response = await apiRequest("POST", "/api/customer/shipping-choice", {
+                                customerId: authenticatedCustomer.id,
+                                shippingChoice: 'pickup'
+                              });
+                              if (response.ok) {
+                                console.log('🚚 Successfully saved pickup choice to backend');
+                              }
+                            } catch (error) {
+                              console.error('🚚 Error saving pickup choice:', error);
+                            }
+                          }
+                        }}
                         className="w-4 h-4 text-emerald-600"
                       />
                       <Label htmlFor="pickup" className="flex-1 cursor-pointer">
@@ -3843,7 +3831,7 @@ export default function CustomerPortal() {
                         id="delivery"
                         name="shipping"
                         checked={customerData.shippingOption === 'delivery'}
-                        onChange={() => {
+                        onChange={async () => {
                           console.log('🚚 RADIO BUTTON: User clicked delivery option');
                           setCustomerData(prev => {
                             console.log('🚚 STATE UPDATE: Setting shippingOption to delivery, prev state:', prev);
@@ -3851,6 +3839,20 @@ export default function CustomerPortal() {
                             console.log('🚚 STATE UPDATE: New state will be:', newState);
                             return newState;
                           });
+                          // Save to backend if customer is authenticated
+                          if (authenticatedCustomer?.id) {
+                            try {
+                              const response = await apiRequest("POST", "/api/customer/shipping-choice", {
+                                customerId: authenticatedCustomer.id,
+                                shippingChoice: 'delivery'
+                              });
+                              if (response.ok) {
+                                console.log('🚚 Successfully saved delivery choice to backend');
+                              }
+                            } catch (error) {
+                              console.error('🚚 Error saving delivery choice:', error);
+                            }
+                          }
                         }}
                         className="w-4 h-4 text-emerald-600"
                       />

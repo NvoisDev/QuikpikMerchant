@@ -123,6 +123,10 @@ export interface IStorage {
   getGroupMembers(groupId: number): Promise<User[]>;
   searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]>;
   getUserByPhone(phoneNumber: string): Promise<User | undefined>;
+  
+  // Customer shipping preference operations
+  setCustomerShippingChoice(customerId: string, shippingChoice: 'pickup' | 'delivery'): Promise<void>;
+  getCustomerShippingChoice(customerId: string): Promise<'pickup' | 'delivery' | null>;
   createCustomer(customer: { phoneNumber: string; firstName: string; lastName?: string; role: string; email?: string; streetAddress?: string; city?: string; state?: string; postalCode?: string; country?: string }): Promise<User>;
   addCustomerToGroup(groupId: number, customerId: string): Promise<void>;
   isCustomerInGroup(groupId: number, customerId: string): Promise<boolean>;
@@ -1117,6 +1121,20 @@ export class DatabaseStorage implements IStorage {
     }));
 
     return ordersWithDetails;
+  }
+
+  // Simple customer shipping preference storage (in-memory for now)
+  private customerShippingChoices = new Map<string, 'pickup' | 'delivery'>();
+
+  async setCustomerShippingChoice(customerId: string, shippingChoice: 'pickup' | 'delivery'): Promise<void> {
+    this.customerShippingChoices.set(customerId, shippingChoice);
+    console.log(`🚚 Stored shipping choice for customer ${customerId}: ${shippingChoice}`);
+  }
+
+  async getCustomerShippingChoice(customerId: string): Promise<'pickup' | 'delivery' | null> {
+    const choice = this.customerShippingChoices.get(customerId) || null;
+    console.log(`🚚 Retrieved shipping choice for customer ${customerId}: ${choice}`);
+    return choice;
   }
 
   // Customer authentication
