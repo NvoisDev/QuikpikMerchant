@@ -1940,10 +1940,12 @@ The Quikpik Team
       const startTime = Date.now();
       const result = await db.execute(sql`
         SELECT 
-          p.id, p.name, p.description, p.price, p.currency, p.image_url,
+          p.id, p.name, p.description, p.price, p.currency, p.image_url, p.images,
           p.moq, p.stock, p.category, p.status, p.created_at, p.updated_at,
           p.promo_active, p.promo_price, p.unit, p.selling_format,
           p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock,
+          p.price_visible, p.negotiation_enabled, p.minimum_bid_price,
+          p.pack_quantity, p.unit_of_measure, p.size_per_unit,
           u.business_name as wholesaler_name
         FROM products p
         INNER JOIN users u ON p.wholesaler_id = u.id
@@ -1962,10 +1964,17 @@ The Quikpik Team
         price: row.price,
         currency: row.currency || 'GBP',
         imageUrl: row.image_url,
+        images: row.images || [],
         moq: row.moq || 1,
         stock: row.stock || 0,
         category: row.category || 'General',
         status: row.status,
+        priceVisible: row.price_visible !== false, // Default to true if null
+        negotiationEnabled: Boolean(row.negotiation_enabled),
+        minimumBidPrice: row.minimum_bid_price,
+        packQuantity: row.pack_quantity,
+        unitOfMeasure: row.unit_of_measure,
+        unitSize: row.size_per_unit,
         wholesalerId: defaultUserId,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
