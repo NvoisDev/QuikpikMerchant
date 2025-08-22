@@ -2748,13 +2748,33 @@ The Quikpik Team
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
       console.log('💰 Final payment details before Stripe:', {
         stripeAmount,
+        stripeAmountType: typeof stripeAmount,
+        stripeAmountIsInteger: Number.isInteger(stripeAmount),
         totalCustomerPays,
+        totalCustomerPaysType: typeof totalCustomerPays,
         productSubtotal,
         deliveryCost,
         customerTransactionFee,
         useConnect,
         connectFlag
       });
+      
+      // Additional validation specifically for Stripe amount
+      if (!Number.isInteger(stripeAmount) || stripeAmount <= 0 || isNaN(stripeAmount)) {
+        console.error('❌ STRIPE AMOUNT VALIDATION FAILED:', {
+          stripeAmount,
+          stripeAmountType: typeof stripeAmount,
+          isInteger: Number.isInteger(stripeAmount),
+          isPositive: stripeAmount > 0,
+          isNaN: isNaN(stripeAmount),
+          totalCustomerPays,
+          calculation: `${totalCustomerPays} * 100 = ${totalCustomerPays * 100}`,
+          rounded: Math.round(totalCustomerPays * 100)
+        });
+        return res.status(400).json({ 
+          message: 'Invalid payment amount calculated. Please try again.' 
+        });
+      }
       
       let paymentIntent;
       try {
@@ -2785,6 +2805,13 @@ The Quikpik Team
           paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
           console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
         }
+
+        console.log('💳 About to call Stripe with config:', {
+          amount: paymentConfig.amount,
+          amountType: typeof paymentConfig.amount,
+          currency: paymentConfig.currency,
+          hasTransferData: !!paymentConfig.transfer_data
+        });
 
         paymentIntent = await stripe.paymentIntents.create({
           ...paymentConfig,
