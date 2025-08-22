@@ -2500,6 +2500,10 @@ export default function CustomerPortal() {
                                         // Check if product has pallet pricing
                                         if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                           setSelectedProductForModal(product);
+                                          // Reset modal state and set initial quantity to MOQ
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
                                           setShowUnitSelectionModal(true);
                                         } else {
                                           // No pallet option, add units directly
@@ -3047,6 +3051,10 @@ export default function CustomerPortal() {
                                         // Check if product has pallet pricing
                                         if (product.palletPrice && parseFloat(product.palletPrice.toString()) > 0) {
                                           setSelectedProductForModal(product);
+                                          // Reset modal state and set initial quantity to MOQ
+                                          setModalStep('type');
+                                          setSelectedModalType(null);
+                                          setModalQuantity(product.moq || 1);
                                           setShowUnitSelectionModal(true);
                                         } else {
                                           // No pallet option, add units directly
@@ -4253,11 +4261,24 @@ export default function CustomerPortal() {
                 <>
                   <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {selectedModalType === 'units' ? 'Individual Units' : 'Full Pallets'} Selected
+                      {selectedModalType === 'units' ? '📦 Individual Units' : '🚛 Full Pallets'} Selected
                     </h3>
                     <p className="text-gray-600">
                       Adjust quantity for {selectedProductForModal.name}
                     </p>
+                    <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+                      <span>Want to switch?</span>
+                      <button
+                        onClick={() => {
+                          setModalStep('type');
+                          setSelectedModalType(null);
+                          setModalQuantity(selectedProductForModal.moq || 1);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium underline"
+                      >
+                        Change selection
+                      </button>
+                    </div>
                   </div>
 
                   {/* Product Info */}
@@ -4446,10 +4467,12 @@ export default function CustomerPortal() {
                       onClick={() => {
                         setModalStep('type');
                         setSelectedModalType(null);
+                        // Reset quantity to default MOQ when going back
+                        setModalQuantity(selectedProductForModal.moq || 1);
                       }}
                       className="flex-1"
                     >
-                      Back
+                      ← Change Selection
                     </Button>
                     <Button
                       onClick={() => {
