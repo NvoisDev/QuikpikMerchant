@@ -725,6 +725,35 @@ Orders go through these status stages:
 4. **Shipped**: Order has been dispatched
 5. **Delivered**: Order received by customer
 
+### Collection Notification System
+
+When customers place orders for collection/pickup, the platform **automatically handles all notifications**:
+
+#### Customer Notifications (Automatic)
+- **Confirmation Email**: Includes order details, collection address, and contact information
+- **WhatsApp Message**: Welcome message with business details and pickup instructions (if configured)
+- **Order Receipt**: Professional invoice with collection instructions
+
+#### Wholesaler Notifications (Automatic)
+- **Order Alert Email**: New order notification with customer details and items to prepare
+- **WhatsApp Alert**: Instant notification of new orders (if configured)
+- **Order Dashboard**: Real-time order updates in your dashboard
+
+#### Collection Address Information
+- **Automatic Display**: Your business address is automatically included in all customer notifications
+- **Fallback Message**: If no address is set, shows "Please contact store for address"
+- **Business Details**: Customer receives your business name, phone, and email for coordination
+
+#### Order Status Updates
+- **Ready for Collection**: Update order status to notify customers when ready
+- **Resend Notifications**: Resend confirmation emails with collection details anytime
+- **Customer Communication**: Direct contact information shared for easy coordination
+
+#### Setting Up Collection Address
+1. Go to **Settings → Business Settings**
+2. Add your **Business Address** - this will automatically appear in all collection notifications
+3. Ensure your **Business Phone** and **Email** are up to date for customer contact
+
 #### Processing Orders
 1. **View Orders** in the sidebar
 2. **Click on an order** to see details
