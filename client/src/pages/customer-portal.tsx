@@ -269,13 +269,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   // Note: Shipping handled directly by supplier - no payment intent recreation needed for shipping changes
   const { toast } = useToast();
 
-  // Create payment intent when customer data is complete - only once when form is ready
+  // Create payment intent when customer data is complete - recreate when shipping option changes
   useEffect(() => {
     const createPaymentIntent = async () => {
       console.log('💳 PAYMENT INTENT CHECK: About to create payment intent:', {
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
         clientSecretExists: !!clientSecret,
-        isCreatingIntent
+        isCreatingIntent,
+        currentShippingOption: customerData.shippingOption
       });
       
       const shouldCreateIntent = cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption && !isCreatingIntent;
@@ -424,6 +425,14 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
 
     createPaymentIntent();
   }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Simplified: No shipping service dependencies
+
+  // Reset payment intent when shipping option changes to ensure correct metadata
+  useEffect(() => {
+    if (clientSecret && customerData.shippingOption) {
+      console.log('🚚 SHIPPING OPTION CHANGED: Resetting payment intent to capture new shipping option:', customerData.shippingOption);
+      setClientSecret(''); // This will trigger creation of new payment intent with correct shipping option
+    }
+  }, [customerData.shippingOption]);
 
   if (!clientSecret) {
     return (
