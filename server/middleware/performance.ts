@@ -34,12 +34,13 @@ export class PerformanceMiddleware {
       if (cached && Date.now() - cached.timestamp < cached.ttl) {
         console.log(`⚡ CACHE HIT: ${req.originalUrl}`);
         
-        // Set cached headers
-        Object.entries(cached.headers).forEach(([key, value]) => {
-          res.set(key, value);
-        });
-        
-        res.set('X-Cache', 'HIT');
+        // Set cached headers only if response hasn't been sent
+        if (!res.headersSent) {
+          Object.entries(cached.headers).forEach(([key, value]) => {
+            res.set(key, value);
+          });
+          res.set('X-Cache', 'HIT');
+        }
         return res.json(cached.data);
       }
       
@@ -48,13 +49,15 @@ export class PerformanceMiddleware {
       res.json = function(data: any) {
         const etag = performanceMiddleware.generateETag(data);
         
-        // Set performance headers
-        res.set({
-          'ETag': etag,
-          'X-Cache': 'MISS',
-          'Cache-Control': `public, max-age=${Math.floor(ttl / 1000)}`,
-          'X-Response-Time': `${Date.now() - res.locals.startTime}ms`
-        });
+        // Set performance headers only if not already sent
+        if (!res.headersSent) {
+          res.set({
+            'ETag': etag,
+            'X-Cache': 'MISS',
+            'Cache-Control': `public, max-age=${Math.floor(ttl / 1000)}`,
+            'X-Response-Time': `${Date.now() - res.locals.startTime}ms`
+          });
+        }
         
         // Cache successful responses
         if (res.statusCode === 200 || res.statusCode === 304) {
@@ -97,8 +100,10 @@ export class PerformanceMiddleware {
           console.log(`⚡ FAST REQUEST: ${req.method} ${req.originalUrl} - ${duration.toFixed(2)}ms`);
         }
         
-        // Set timing header
-        res.set('X-Response-Time', `${duration.toFixed(2)}ms`);
+        // Only set header if response hasn't been sent
+        if (!res.headersSent) {
+          res.set('X-Response-Time', `${duration.toFixed(2)}ms`);
+        }
       });
       
       next();
@@ -180,7 +185,9 @@ export class PerformanceMiddleware {
           console.warn(`⚠️ HIGH MEMORY USAGE: ${heapUsedMB}MB heap used`);
         }
         
-        res.set('X-Memory-Usage', `${heapUsedMB}MB`);
+        if (!res.headersSent) {
+          res.set('X-Memory-Usage', `${heapUsedMB}MB`);
+        }
       }
       
       next();

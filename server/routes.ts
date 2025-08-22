@@ -381,25 +381,14 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Apply performance middleware
+  // Apply lightweight performance middleware
   app.use(compression());
-  app.use(performanceMiddleware.timingMiddleware());
-  app.use(performanceMiddleware.memoryMiddleware());
   app.use(performanceMiddleware.securityHeadersMiddleware());
-  app.use(performanceMiddleware.deduplicationMiddleware());
 
-  // Health check endpoint with caching
-  app.get("/api/health", performanceMiddleware.cacheMiddleware(60000), (req, res) => {
-    res.json({ 
-      status: "ok", 
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      version: "1.0.0"
-    });
-  });
+  // Health check endpoint for deployment monitoring
+  app.get('/api/health', healthCheck);
 
-  // Performance metrics endpoint
+  // Performance metrics endpoint (development only)
   app.get("/api/performance", (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
       return res.status(404).json({ error: "Not found" });
@@ -412,8 +401,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       responseCache: performanceMiddleware.getCacheStats()
     });
   });
-  // Health check endpoint for deployment monitoring
-  app.get('/api/health', healthCheck);
 
   // Debug auth endpoint for testing
   app.post("/api/debug/login", async (req, res) => {

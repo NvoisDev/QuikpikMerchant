@@ -817,7 +817,7 @@ export default function Customers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Customer Management</h1>
+          <h1 className="text-2xl font-bold">Customer Management</h1>
           <p className="text-muted-foreground">Manage your customer groups and address book</p>
         </div>
       </div>
@@ -1058,7 +1058,7 @@ export default function Customers() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Total Customers</p>
-                      <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+                      <p className="text-xl font-bold">{stats.totalCustomers}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1072,7 +1072,7 @@ export default function Customers() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                      <p className="text-2xl font-bold">{stats.activeCustomers}</p>
+                      <p className="text-xl font-bold">{stats.activeCustomers}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1086,7 +1086,7 @@ export default function Customers() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">New This Month</p>
-                      <p className="text-2xl font-bold">{stats.newCustomersThisMonth}</p>
+                      <p className="text-xl font-bold">{stats.newCustomersThisMonth}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1100,7 +1100,7 @@ export default function Customers() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Top Spenders</p>
-                      <p className="text-2xl font-bold">{stats.topCustomers.length}</p>
+                      <p className="text-xl font-bold">{stats.topCustomers.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1324,7 +1324,7 @@ export default function Customers() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Contact className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
+                <h3 className="text-base font-medium text-gray-900 mb-2">No customers found</h3>
                 <p className="text-gray-500 text-center mb-6 max-w-sm">
                   {searchQuery ? 'No customers match your search criteria.' : 'Start adding customers to your groups to see them here.'}
                 </p>
@@ -1344,7 +1344,7 @@ export default function Customers() {
                         </Avatar>
                         
                         <div className="space-y-1">
-                          <h3 className="text-lg font-semibold">
+                          <h3 className="text-base font-semibold">
                             {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                           </h3>
                           
@@ -1446,7 +1446,7 @@ export default function Customers() {
         <TabsContent value="orders" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold">Customer Orders</h3>
+              <h3 className="text-base font-semibold">Customer Orders</h3>
               <p className="text-gray-600">View all orders organized by customer</p>
             </div>
           </div>
@@ -1474,7 +1474,7 @@ export default function Customers() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <h4 className="text-lg font-semibold">
+                              <h4 className="text-base font-semibold">
                                 {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                               </h4>
                               <div className="flex items-center space-x-4 text-sm text-gray-600">
@@ -1815,7 +1815,7 @@ export default function Customers() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-xs">
                           {member.firstName && member.lastName 
                             ? `${member.firstName} ${member.lastName}` 
                             : member.name || 'Unknown'}
@@ -2196,12 +2196,12 @@ export default function Customers() {
                     }}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-600">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-600">
                         {customer?.firstName?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div>
-                        <p className="font-medium">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</p>
-                        <p className="text-sm text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
+                        <p className="font-medium text-sm">{customer?.firstName || 'Unknown'} {customer?.lastName || ''}</p>
+                        <p className="text-xs text-gray-600">{customer?.phoneNumber || 'No phone'}</p>
                         {customer?.email && (
                           <p className="text-xs text-gray-500">{customer.email}</p>
                         )}
@@ -2263,7 +2263,7 @@ export default function Customers() {
                 
                 {selectedCustomersForMerge.length > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-blue-800 mb-2">
+                    <h4 className="text-xs font-medium text-blue-800 mb-2">
                       Selected for Merge ({selectedCustomersForMerge.length} customers)
                     </h4>
                     <div className="space-y-2">
