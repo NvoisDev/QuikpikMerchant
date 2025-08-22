@@ -388,6 +388,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
 
+  // Test products endpoint (development only - bypasses auth for demo)
+  app.get('/api/test-products', async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    try {
+      // Return some test products for demonstration
+      const testProducts = [
+        {
+          id: '1',
+          name: 'Premium Widget A',
+          description: 'High-quality widget for premium customers',
+          price: '29.99',
+          stock: 150,
+          category: 'Electronics',
+          status: 'active'
+        },
+        {
+          id: '2', 
+          name: 'Standard Widget B',
+          description: 'Reliable widget for everyday use',
+          price: '19.99',
+          stock: 75,
+          category: 'Electronics', 
+          status: 'active'
+        },
+        {
+          id: '3',
+          name: 'Economy Widget C',
+          description: 'Budget-friendly widget option',
+          price: '12.99',
+          stock: 200,
+          category: 'Basic',
+          status: 'active'
+        }
+      ];
+      
+      res.json(testProducts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch test products" });
+    }
+  });
+
   // Performance metrics endpoint (development only)
   app.get("/api/performance", (req, res) => {
     if (process.env.NODE_ENV !== 'development') {

@@ -199,11 +199,20 @@ export class PerformanceMiddleware {
     return (req: Request, res: Response, next: NextFunction) => {
       res.set({
         'X-DNS-Prefetch-Control': 'on',
-        'X-Frame-Options': 'DENY',
+        'X-Frame-Options': 'SAMEORIGIN',
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        'Content-Security-Policy': `
+          default-src 'self';
+          script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com;
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          font-src 'self' https://fonts.gstatic.com;
+          img-src 'self' data: https: blob:;
+          connect-src 'self' https://api.stripe.com https://m.stripe.com wss: ws:;
+          frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
+          media-src 'self' blob:;
+          worker-src 'self' blob:;
+        `.replace(/\s+/g, ' ').trim()
       });
       
       next();
