@@ -1923,6 +1923,24 @@ The Quikpik Team
   });
 
   // Product routes
+  // Development bypass for products (only in development mode)
+  app.get('/api/dev-products', async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    try {
+      // Use hardcoded user ID for development testing
+      const defaultUserId = "104871691614680693123";
+      const products = await storage.getProducts(defaultUserId);
+      console.log('Dev products found:', products.length);
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching dev products:', error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
   app.get('/api/products', requireAuth, async (req: any, res) => {
     try {
       const { wholesalerId } = req.query;

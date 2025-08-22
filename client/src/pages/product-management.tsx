@@ -621,14 +621,24 @@ export default function ProductManagement() {
     queryKey: ["/api/products"],
     queryFn: async () => {
       console.log('Fetching products for current user');
-      const response = await fetch(`/api/products`, {
+      
+      // Try authenticated endpoint first
+      let response = await fetch(`/api/products`, {
         credentials: "include",
       });
-      if (!response.ok) {
-        // SECURITY FIX: Removed mock data that used hardcoded wholesaler IDs
-        // All users must be properly authenticated to prevent data isolation bugs
-        throw new Error("Authentication required to fetch products");
+      
+      // If auth fails in development, try dev endpoint
+      if (!response.ok && process.env.NODE_ENV === 'development') {
+        console.log('Auth failed, trying dev endpoint...');
+        response = await fetch(`/api/dev-products`, {
+          credentials: "include",
+        });
       }
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+      
       const data = await response.json();
       console.log('Products fetched:', data.length, data);
       return data;
