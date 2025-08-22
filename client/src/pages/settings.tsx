@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image } from "lucide-react";
 import Logo from '@/components/ui/logo';
+import { LogoUploader } from '@/components/LogoUploader';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -479,7 +480,9 @@ export default function Settings() {
                               city: user?.city || '',
                               postalCode: user?.postalCode || '',
                               country: user?.country || 'United Kingdom',
-                              timezone: user?.timezone || 'UTC'
+                              timezone: user?.timezone || 'UTC',
+                              logoType: user?.logoType || 'business',
+                              logoUrl: user?.logoUrl || ''
                             });
                           }}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -664,17 +667,20 @@ export default function Settings() {
                                   <span className="text-sm">Upload custom logo</span>
                                 </label>
                                 {businessForm.logoType === 'custom' && (
-                                  <div className="ml-6 mt-2 space-y-2">
-                                    <input
-                                      type="url"
-                                      placeholder="https://example.com/logo.png"
-                                      value={businessForm.logoUrl}
-                                      onChange={(e) => setBusinessForm({...businessForm, logoUrl: e.target.value})}
-                                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  <div className="ml-6 mt-2 space-y-4">
+                                    <LogoUploader 
+                                      onUploadComplete={(logoUrl) => setBusinessForm({...businessForm, logoUrl})}
                                     />
-                                    <p className="text-xs text-gray-500">
-                                      Enter the URL of your logo image. Best format: PNG with transparent background, 200x200px or larger.
-                                    </p>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-gray-600">Or enter logo URL manually:</label>
+                                      <input
+                                        type="url"
+                                        placeholder="https://example.com/logo.png"
+                                        value={businessForm.logoUrl}
+                                        onChange={(e) => setBusinessForm({...businessForm, logoUrl: e.target.value})}
+                                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                      />
+                                    </div>
                                   </div>
                                 )}
                               </div>

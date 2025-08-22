@@ -432,6 +432,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logo upload URL endpoint  
+  app.post('/api/logo-upload-url', requireAuth, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      res.status(500).json({ error: 'Failed to get upload URL' });
+    }
+  });
+
   // Performance metrics endpoint (development only)
   app.get("/api/performance", (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
