@@ -68,17 +68,17 @@ export default function BusinessPerformance() {
 
   if (!isPremium) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center py-16">
-          <div className="bg-amber-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-            <Lock className="h-10 w-10 text-amber-600" />
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        <div className="text-center py-8 sm:py-16">
+          <div className="bg-amber-100 p-6 rounded-full w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 flex items-center justify-center">
+            <Lock className="h-8 w-8 sm:h-10 sm:w-10 text-amber-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Premium Feature</h1>
-          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Premium Feature</h1>
+          <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-2xl mx-auto px-4">
             Business Performance analytics and insights are available with Premium subscription. 
             Upgrade to access detailed performance metrics, financial analytics, and advanced reporting.
           </p>
-          <div className="bg-white rounded-lg p-6 shadow-sm border max-w-md mx-auto mb-8">
+          <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border max-w-md mx-auto mb-8">
             <h3 className="font-semibold text-lg mb-3">Premium Features Include:</h3>
             <ul className="text-left space-y-2 text-gray-600">
               <li className="flex items-center gap-2">
@@ -99,9 +99,9 @@ export default function BusinessPerformance() {
               </li>
             </ul>
           </div>
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center px-4">
             <Link href="/subscription">
-              <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
+              <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
                 Upgrade to Premium
               </Button>
             </Link>
@@ -109,6 +109,7 @@ export default function BusinessPerformance() {
               variant="outline" 
               onClick={() => refetch()} 
               size="lg"
+              className="w-full sm:w-auto"
             >
               Refresh Access
             </Button>
@@ -117,6 +118,7 @@ export default function BusinessPerformance() {
               onClick={() => recoverAuthMutation.mutate()}
               disabled={recoverAuthMutation.isPending}
               size="lg"
+              className="w-full sm:w-auto"
             >
               {recoverAuthMutation.isPending ? "Recovering..." : "Recover Session"}
             </Button>
@@ -127,37 +129,40 @@ export default function BusinessPerformance() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Business Performance</h1>
-          <p className="text-gray-600">Comprehensive analytics and insights for your wholesale business</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Business Performance</h1>
+          <p className="text-gray-600 mt-1">Comprehensive analytics and insights for your wholesale business</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
+          <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <BarChart3 className="h-4 w-4" />
-            Analytics Overview
+            <span className="hidden sm:inline">Analytics Overview</span>
+            <span className="sm:hidden">Analytics</span>
           </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-2">
+          <TabsTrigger value="customers" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <Users className="h-4 w-4" />
-            Customer Insights
+            <span className="hidden sm:inline">Customer Insights</span>
+            <span className="sm:hidden">Customers</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
+          <TabsTrigger value="inventory" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <Package2 className="h-4 w-4" />
-            Inventory Insights
+            <span className="hidden sm:inline">Inventory Insights</span>
+            <span className="sm:hidden">Inventory</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Analytics Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           {dashboardLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {[...Array(4)].map((_, i) => (
                 <Card key={i}>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="animate-pulse">
                       <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
                       <div className="h-8 bg-gray-200 rounded w-3/4"></div>
@@ -169,9 +174,9 @@ export default function BusinessPerformance() {
           ) : dashboardData ? (
             <>
               {/* Key Metrics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Revenue</p>
@@ -191,7 +196,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Orders</p>
@@ -208,7 +213,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Products</p>
@@ -225,7 +230,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Customers</p>
@@ -368,7 +373,7 @@ export default function BusinessPerformance() {
               {/* Customer Segmentation */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">New Customers</p>
@@ -381,7 +386,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Returning</p>
@@ -394,7 +399,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">At Risk</p>
@@ -407,7 +412,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
@@ -480,7 +485,7 @@ export default function BusinessPerformance() {
               {/* Inventory Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Products</p>
@@ -492,7 +497,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Stock Value</p>
@@ -504,7 +509,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Low Stock</p>
@@ -516,7 +521,7 @@ export default function BusinessPerformance() {
                 </Card>
 
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Out of Stock</p>
