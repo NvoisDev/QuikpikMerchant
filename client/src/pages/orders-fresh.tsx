@@ -116,17 +116,10 @@ export default function OrdersFresh() {
     loadOrders(newPage, searchTerm);
   };
 
-  // Load detailed order information for modal
-  const loadOrderDetails = async (orderId: number) => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}`);
-      if (response.ok) {
-        const orderDetails = await response.json();
-        setSelectedOrder(orderDetails);
-      }
-    } catch (error) {
-      console.error('Failed to load order details:', error);
-    }
+  // Use existing order data instead of making another API call
+  const loadOrderDetails = (order: Order) => {
+    // Set selected order directly from existing data - no API call needed!
+    setSelectedOrder(order);
   };
 
   // Update order status to fulfilled
@@ -350,7 +343,7 @@ export default function OrdersFresh() {
                 </TableHeader>
                 <TableBody>
                   {orders.slice(0, 50).map((order) => (
-                    <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order.id)}>
+                    <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadOrderDetails(order)}>
                       <TableCell className="font-medium text-xs">
                         {order.orderNumber || `#${order.id}`}
                       </TableCell>
@@ -415,7 +408,7 @@ export default function OrdersFresh() {
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-3">
                 {orders.slice(0, 50).map((order) => (
-                  <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order.id)}>
+                  <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
