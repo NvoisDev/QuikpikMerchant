@@ -197,7 +197,7 @@ export default function TeamManagement() {
 
   const currentTier = subscription?.subscriptionTier || 'free';
   const teamLimit = getSubscriptionLimit(currentTier);
-  const currentTeamCount = teamMembers?.length || 0;
+  const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
   const canAddMembers = currentTeamCount < teamLimit;
 
   const handleInviteMember = (data: TeamMemberFormData) => {
@@ -275,11 +275,11 @@ export default function TeamManagement() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Team Management</h1>
           <p className="text-gray-600 mt-2">
             Manage team access and permissions for your wholesale platform
           </p>
@@ -315,7 +315,7 @@ export default function TeamManagement() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="firstName"
@@ -385,18 +385,19 @@ export default function TeamManagement() {
                     </FormItem>
                   )}
                 />
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setIsInviteDialogOpen(false)}
+                    className="w-full sm:w-auto"
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
                     disabled={inviteMemberMutation.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto"
                   >
                     {inviteMemberMutation.isPending ? "Sending..." : "Send Invitation"}
                   </Button>
@@ -416,7 +417,7 @@ export default function TeamManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div>
               <p className="text-sm text-gray-600">
                 Current Plan: <span className="font-semibold capitalize">{currentTier}</span>
@@ -429,7 +430,7 @@ export default function TeamManagement() {
               <Button 
                 onClick={() => setShowUpgradeModal(true)}
                 variant="outline"
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full sm:w-auto"
               >
                 Upgrade to Add Team Members
               </Button>
@@ -441,13 +442,15 @@ export default function TeamManagement() {
       {/* Main Content with Tabs */}
       <Tabs defaultValue="members" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="members" className="flex items-center gap-2">
+          <TabsTrigger value="members" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
             <Users className="h-4 w-4" />
-            Team Members
+            <span className="hidden sm:inline">Team Members</span>
+            <span className="sm:hidden">Members</span>
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2">
+          <TabsTrigger value="permissions" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
             <Settings className="h-4 w-4" />
-            Tab Permissions
+            <span className="hidden sm:inline">Tab Permissions</span>
+            <span className="sm:hidden">Permissions</span>
           </TabsTrigger>
         </TabsList>
 
@@ -457,7 +460,7 @@ export default function TeamManagement() {
               <CardTitle>Team Members</CardTitle>
             </CardHeader>
             <CardContent>
-          {teamMembers?.length === 0 ? (
+          {!Array.isArray(teamMembers) || teamMembers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
@@ -479,31 +482,33 @@ export default function TeamManagement() {
             </div>
           ) : (
             <div className="space-y-4">
-              {teamMembers?.map((member: TeamMember) => (
+              {Array.isArray(teamMembers) && teamMembers.map((member: TeamMember) => (
                 <div 
                   key={member.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg space-y-4 sm:space-y-0"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <span className="text-emerald-700 font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-emerald-700 font-semibold text-sm">
                         {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-gray-900 truncate">
                         {member.firstName} {member.lastName}
                       </h3>
-                      <p className="text-sm text-gray-600 flex items-center gap-2">
-                        <Mail className="h-3 w-3" />
-                        {member.email}
+                      <p className="text-sm text-gray-600 flex items-center gap-2 truncate">
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{member.email}</span>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  
+                  {/* Status and Role - Mobile responsive */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(member.status)}
-                      <Badge variant={getStatusBadgeVariant(member.status)}>
+                      <Badge variant={getStatusBadgeVariant(member.status)} className="text-xs">
                         {member.status}
                       </Badge>
                     </div>
@@ -513,17 +518,16 @@ export default function TeamManagement() {
                       ) : (
                         <Shield className="h-4 w-4 text-gray-400" />
                       )}
-                      <Badge variant={member.role === 'admin' ? 'default' : 'outline'} className={member.role === 'admin' ? 'bg-blue-500 text-white' : ''}>
+                      <Badge variant={member.role === 'admin' ? 'default' : 'outline'} className={`text-xs ${member.role === 'admin' ? 'bg-blue-500 text-white' : ''}`}>
                         {member.role === 'admin' ? 'Admin' : 'Member'}
                       </Badge>
-                      {member.role === 'admin' && (
-                        <span className="text-xs text-blue-600 font-medium">Full Access</span>
-                      )}
-                      {member.role === 'member' && (
-                        <span className="text-xs text-gray-500">Limited Access</span>
-                      )}
+                      <span className="text-xs text-gray-500 hidden sm:inline">
+                        {member.role === 'admin' ? 'Full Access' : 'Limited Access'}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    
+                    {/* Actions - Mobile responsive */}
+                    <div className="flex flex-wrap items-center gap-2">
                       {member.status === 'pending' && (
                         <>
                           <Button
@@ -531,19 +535,21 @@ export default function TeamManagement() {
                             size="sm"
                             onClick={() => handleResendInvite(member.id)}
                             disabled={resendInviteMutation.isPending}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 text-xs"
                           >
-                            <Mail className="h-4 w-4 mr-1" />
-                            {resendInviteMutation.isPending ? "Sending..." : "Resend Email"}
+                            <Mail className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">{resendInviteMutation.isPending ? "Sending..." : "Resend Email"}</span>
+                            <span className="sm:hidden">Resend</span>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleCopyInviteLink(member)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 text-xs"
                           >
-                            <Copy className="h-4 w-4 mr-1" />
-                            Copy Link
+                            <Copy className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Copy Link</span>
+                            <span className="sm:hidden">Copy</span>
                           </Button>
                         </>
                       )}
@@ -551,18 +557,19 @@ export default function TeamManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditRole(member)}
-                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 text-xs"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit Role
+                        <Edit className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Edit Role</span>
+                        <span className="sm:hidden">Edit</span>
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteMember(member.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -591,7 +598,7 @@ export default function TeamManagement() {
 
       {/* Upgrade Modal */}
       <SubscriptionUpgradeModal 
-        isOpen={showUpgradeModal}
+        open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         feature="team management"
         currentUsage={currentTeamCount}
