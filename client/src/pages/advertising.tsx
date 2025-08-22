@@ -140,17 +140,17 @@ export default function Advertising() {
   const hasAdvancedAccess = currentTier === 'premium';
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Advertising & Promotion</h1>
-          <p className="text-gray-600 mt-2">Reach new customers beyond your existing contacts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Advertising & Promotion</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2">Reach new customers beyond your existing contacts</p>
         </div>
         <div className="flex gap-3">
           <Button
             onClick={() => setNewCampaignOpen(true)}
             disabled={!hasAdvancedAccess}
-            className="bg-gradient-to-r from-blue-600 to-purple-600"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600"
           >
             <PlusCircle className="w-4 h-4 mr-2" />
             Create Campaign
@@ -178,28 +178,32 @@ export default function Advertising() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="campaigns" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <Megaphone className="w-4 h-4" />
-            Campaigns
+            <span className="hidden sm:inline">Campaigns</span>
+            <span className="sm:hidden text-xs">Campaigns</span>
           </TabsTrigger>
-          <TabsTrigger value="seo" className="flex items-center gap-2">
+          <TabsTrigger value="seo" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <Globe className="w-4 h-4" />
-            SEO Pages
+            <span className="hidden sm:inline">SEO Pages</span>
+            <span className="sm:hidden text-xs">SEO</span>
           </TabsTrigger>
-          <TabsTrigger value="social" className="flex items-center gap-2">
+          <TabsTrigger value="social" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <Share2 className="w-4 h-4" />
-            Social Media
+            <span className="hidden sm:inline">Social Media</span>
+            <span className="sm:hidden text-xs">Social</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
+          <TabsTrigger value="analytics" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4">
             <TrendingUp className="w-4 h-4" />
-            Analytics
+            <span className="hidden sm:inline">Analytics</span>
+            <span className="sm:hidden text-xs">Analytics</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns" className="space-y-6">
           {/* Campaign Performance Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

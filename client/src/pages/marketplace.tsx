@@ -172,9 +172,9 @@ export default function Marketplace() {
   if (!hasMarketplaceAccess) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">B2B Marketplace</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">B2B Marketplace</h1>
             <p className="text-gray-600 mt-1">Connect with trusted wholesalers and discover premium products</p>
           </div>
           
@@ -188,7 +188,7 @@ export default function Marketplace() {
 
         {/* Premium Access Gate */}
         <Card className="max-w-2xl mx-auto">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-4 sm:p-8 text-center">
             <div className="mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Crown className="w-8 h-8 text-white" />
@@ -246,11 +246,11 @@ export default function Marketplace() {
     <div className="min-h-screen bg-gray-50">
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-2">Marketplace Discovery</h1>
-            <p className="text-lg text-blue-100">Connect with verified wholesalers across the UK</p>
-            <div className="mt-6 max-w-2xl mx-auto">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">Marketplace Discovery</h1>
+            <p className="text-base sm:text-lg text-blue-100">Connect with verified wholesalers across the UK</p>
+            <div className="mt-4 sm:mt-6 max-w-2xl mx-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <Input
@@ -258,7 +258,7 @@ export default function Marketplace() {
                   placeholder="Search products, wholesalers, or categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 text-lg bg-white"
+                  className="pl-10 h-10 sm:h-12 text-base sm:text-lg bg-white"
                 />
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function Marketplace() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-2 sm:space-x-8 overflow-x-auto">
             {[
               { key: "featured", label: "Featured", icon: Star },
               { key: "products", label: "All Products", icon: Package },
@@ -278,14 +278,15 @@ export default function Marketplace() {
               <button
                 key={key}
                 onClick={() => setViewMode(key as any)}
-                className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm ${
+                className={`flex items-center space-x-1 sm:space-x-2 py-4 px-2 sm:px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
                   viewMode === key
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                <span>{label}</span>
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden text-xs">{label.split(' ')[0]}</span>
               </button>
             ))}
           </div>
@@ -296,18 +297,18 @@ export default function Marketplace() {
       {viewMode !== "featured" && (
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 w-full sm:w-auto"
               >
                 <Filter className="h-4 w-4" />
                 <span>Filters</span>
               </Button>
               
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -320,7 +321,7 @@ export default function Marketplace() {
               </Select>
 
               <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -333,7 +334,7 @@ export default function Marketplace() {
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,11 +346,12 @@ export default function Marketplace() {
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center space-x-2 ml-auto">
+              <div className="flex items-center space-x-2 w-full sm:w-auto sm:ml-auto">
                 <Button
                   variant={layoutMode === "grid" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setLayoutMode("grid")}
+                  className="flex-1 sm:flex-none"
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -357,6 +359,7 @@ export default function Marketplace() {
                   variant={layoutMode === "list" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setLayoutMode("list")}
+                  className="flex-1 sm:flex-none"
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -366,18 +369,18 @@ export default function Marketplace() {
             {/* Advanced Filters Panel */}
             {showFilters && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Price Range: £{priceRange[0]} - £{priceRange[1]}
                     </label>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4">
                       <Input
                         type="number"
                         placeholder="Min"
                         value={priceRange[0]}
                         onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-24"
+                        className="w-20 sm:w-24"
                       />
                       <span>-</span>
                       <Input
@@ -385,7 +388,7 @@ export default function Marketplace() {
                         placeholder="Max"
                         value={priceRange[1]}
                         onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-24"
+                        className="w-20 sm:w-24"
                       />
                     </div>
                   </div>
@@ -407,7 +410,7 @@ export default function Marketplace() {
                     </Select>
                   </div>
 
-                  <div className="flex items-end">
+                  <div className="flex items-end col-span-1 sm:col-span-2 lg:col-span-1">
                     <Button 
                       variant="outline" 
                       onClick={() => {
