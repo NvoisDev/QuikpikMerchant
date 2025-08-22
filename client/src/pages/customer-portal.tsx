@@ -2302,7 +2302,7 @@ export default function CustomerPortal() {
                                 <div>
                                   <PriceDisplay
                                     price={pricing.effectivePrice}
-                                    originalPrice={product.promoActive ? parseFloat(product.price) : undefined}
+                                    originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
                                     currency="GBP"
                                     isGuestMode={false}
                                     size="medium"
