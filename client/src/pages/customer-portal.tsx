@@ -3893,7 +3893,15 @@ export default function CustomerPortal() {
                         id="delivery"
                         name="shipping"
                         checked={customerData.shippingOption === 'delivery'}
-                        onChange={() => setCustomerData(prev => ({...prev, shippingOption: 'delivery'}))}
+                        onChange={() => {
+                          console.log('🚚 RADIO BUTTON: User clicked delivery option');
+                          setCustomerData(prev => {
+                            console.log('🚚 STATE UPDATE: Setting shippingOption to delivery, prev state:', prev);
+                            const newState = {...prev, shippingOption: 'delivery'};
+                            console.log('🚚 STATE UPDATE: New state will be:', newState);
+                            return newState;
+                          });
+                        }}
                         className="w-4 h-4 text-emerald-600"
                       />
                       <Label htmlFor="delivery" className="flex-1 cursor-pointer">
