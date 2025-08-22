@@ -1295,12 +1295,34 @@ export default function CustomerPortal() {
     setIsCreatingIntent(true);
     
     try {
+      // Calculate total amount for cart
+      const totalAmount = cart.reduce((total, item) => {
+        const unitPrice = (() => {
+          if (item.sellingType === 'pallets') {
+            return parseFloat((item.product as any).palletPrice || "0") || 0;
+          } else {
+            const basePrice = parseFloat(item.product.price) || 0;
+            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+              basePrice,
+              item.quantity,
+              item.product.promotionalOffers || [],
+              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+              item.product.promoActive
+            );
+            return pricing.effectivePrice;
+          }
+        })();
+        return total + (unitPrice * item.quantity);
+      }, 0);
+
       const requestPayload = {
-        customerName: customerData.name,
-        customerEmail: customerData.email,
-        customerPhone: customerData.phone,
-        customerAddress: {
-          street: customerData.address,
+        wholesalerId: wholesaler.id,
+        totalAmount: totalAmount,
+        customerData: {
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address,
           city: customerData.city,
           state: customerData.state,
           postalCode: customerData.postalCode,
@@ -1308,6 +1330,7 @@ export default function CustomerPortal() {
         },
         items: cart.map(item => ({
           productId: item.product.id,
+          productName: item.product.name,
           quantity: item.quantity || 0,
           unitPrice: (() => {
             if (item.sellingType === 'pallets') {
@@ -1323,12 +1346,17 @@ export default function CustomerPortal() {
               );
               return pricing.effectivePrice;
             }
-          })()
-        }))
-        // No shipping info needed - handled separately
+          })(),
+          sellingType: item.sellingType
+        })),
+        shippingInfo: {
+          option: customerData.shippingOption || 'pickup'
+        }
       };
       
-      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      console.log('🚚 PAYMENT REQUEST: Sending payment intent request with payload:', JSON.stringify(requestPayload, null, 2));
+      
+      const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", requestPayload);
       
       if (response.ok) {
         const data = await response.json();
