@@ -142,10 +142,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const customerShippingChoice = await storage.getCustomerShippingChoice(customer.id);
   const fulfillmentType = customerShippingChoice || 'pickup';
   
-  console.log('🚚 Using customer shipping choice:', {
+  console.log('🚚 SIMPLIFIED RETRIEVAL: Using customer shipping choice:', {
     customerId: customer.id,
     customerName: customer.firstName + ' ' + customer.lastName,
-    shippingChoice: fulfillmentType,
+    savedShippingChoice: customerShippingChoice,
+    finalFulfillmentType: fulfillmentType,
     willCreateDeliveryOrder: fulfillmentType === 'delivery'
   });
 
