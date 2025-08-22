@@ -3697,18 +3697,55 @@ export default function CustomerPortal() {
                   <h3 className="font-semibold mb-3">Order Summary</h3>
                   <div className="space-y-2">
                     {cart.map((item, index) => {
-                      // Use correct pricing based on selling type
-                      const itemPrice = item.sellingType === 'pallets' 
-                        ? parseFloat((item.product as any).palletPrice?.toString() || '0') 
-                        : parseFloat(item.product.price);
-                      const totalCost = itemPrice * item.quantity;
+                      // Calculate correct pricing with promotional support
+                      let itemPrice;
+                      let totalCost;
+                      
+                      if (item.sellingType === 'pallets') {
+                        itemPrice = parseFloat((item.product as any).palletPrice?.toString() || '0');
+                        totalCost = itemPrice * item.quantity;
+                      } else {
+                        const basePrice = parseFloat(item.product.price);
+                        const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                          basePrice,
+                          item.quantity,
+                          item.product.promotionalOffers || [],
+                          item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                          item.product.promoActive
+                        );
+                        itemPrice = pricing.effectivePrice;
+                        totalCost = pricing.totalCost;
+                      }
                       
                       return (
-                        <div key={index} className="flex justify-between items-center">
+                        <div key={index} className="flex justify-between items-center py-2">
                           <div className="flex-1">
-                            <p className="font-medium">{item.product.name}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium">{item.product.name}</p>
+                              {/* Edit button for switching units/pallets */}
+                              {item.product.palletPrice && parseFloat(item.product.palletPrice.toString()) > 0 && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedProductForModal(item.product);
+                                    setModalStep('type');
+                                    setSelectedModalType(item.sellingType);
+                                    setModalQuantity(item.quantity);
+                                    setShowUnitSelectionModal(true);
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                                  title="Change units/pallets or quantity"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-600">
                               Qty: {item.quantity} {item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}
+                              {item.sellingType === 'units' && itemPrice !== parseFloat(item.product.price) && (
+                                <span className="text-green-600 font-medium ml-1">
+                                  (£{itemPrice.toFixed(2)} each - promotional price)
+                                </span>
+                              )}
                             </p>
                             {item.sellingType === 'pallets' && (
                               <p className="text-xs text-gray-500">
@@ -3716,12 +3753,19 @@ export default function CustomerPortal() {
                               </p>
                             )}
                           </div>
-                          <PriceDisplay
-                            price={totalCost}
-                            currency="GBP"
-                            isGuestMode={false}
-                            size="small"
-                          />
+                          <div className="text-right">
+                            {item.sellingType === 'units' && itemPrice !== parseFloat(item.product.price) && (
+                              <div className="text-xs text-gray-500 line-through">
+                                £{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                              </div>
+                            )}
+                            <PriceDisplay
+                              price={totalCost}
+                              currency="GBP"
+                              isGuestMode={false}
+                              size="small"
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -4483,16 +4527,36 @@ export default function CustomerPortal() {
                           ? selectedProductForModal.stock 
                           : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
                         
-                        // Check if we have enough stock for the minimum order
-                        if (availableStock < minQuantity) {
-                          // If stock is less than MOQ, add only what's available
-                          const finalQuantity = availableStock;
-                          addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
-                        } else {
-                          // Normal case: enforce minimum and cap at available stock
+                        // Check if we're editing an existing cart item
+                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
+                        
+                        if (existingCartItem) {
+                          // Update existing cart item
                           const requestedQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
                           const finalQuantity = Math.min(requestedQuantity, availableStock);
-                          addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                          
+                          setCart(prevCart => 
+                            prevCart.map(item =>
+                              item.product.id === selectedProductForModal.id
+                                ? { ...item, quantity: finalQuantity, sellingType: selectedModalType! }
+                                : item
+                            )
+                          );
+                          
+                          toast({
+                            title: "Cart Updated",
+                            description: `${selectedProductForModal.name} updated to ${finalQuantity} ${selectedModalType === 'pallets' ? 'pallets' : 'units'}`,
+                          });
+                        } else {
+                          // Add new item to cart
+                          if (availableStock < minQuantity) {
+                            const finalQuantity = availableStock;
+                            addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                          } else {
+                            const requestedQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
+                            const finalQuantity = Math.min(requestedQuantity, availableStock);
+                            addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                          }
                         }
                         
                         setShowUnitSelectionModal(false);
@@ -4517,12 +4581,14 @@ export default function CustomerPortal() {
                           ? selectedProductForModal.stock 
                           : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
                         
+                        const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
+                        
                         if (availableStock <= 0) {
                           return "Out of Stock";
                         } else if (availableStock < minQuantity) {
-                          return `Add ${availableStock} (All Available)`;
+                          return existingCartItem ? "Update Cart" : `Add ${availableStock} (All Available)`;
                         } else {
-                          return "Add to Cart";
+                          return existingCartItem ? "Update Cart" : "Add to Cart";
                         }
                       })()}
                     </Button>
