@@ -289,7 +289,12 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
           option: customerData.shippingOption || 'pickup'
         };
         
-        console.log('🚚 Payment creation with shipping option:', customerData.shippingOption);
+        console.log('🚚 CRITICAL DEBUG - Payment creation with shipping data:', {
+          customerDataShippingOption: customerData.shippingOption,
+          shippingDataOption: shippingDataAtCreation.option,
+          willSendToBackend: shippingDataAtCreation.option,
+          isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
+        });
         
         try {
           // CRITICAL DEBUG: Log the exact data being sent to backend
@@ -426,20 +431,26 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
     createPaymentIntent();
   }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Simplified: No shipping service dependencies
 
-  // Reset payment intent when shipping option changes to ensure correct metadata
-  // Only reset if user actually changed the option (not initial load)
+  // TEMPORARILY DISABLED: Reset payment intent when shipping option changes
+  // This was causing multiple payment intents. Need to fix the root issue first.
+  /*
   const [initialShippingOption, setInitialShippingOption] = useState<string | null>(null);
+  const [isResettingIntent, setIsResettingIntent] = useState(false);
   
   useEffect(() => {
     if (customerData.shippingOption && initialShippingOption === null) {
-      // First time setting - don't reset
       setInitialShippingOption(customerData.shippingOption);
-    } else if (customerData.shippingOption && initialShippingOption && customerData.shippingOption !== initialShippingOption && clientSecret) {
+    } else if (customerData.shippingOption && initialShippingOption && 
+               customerData.shippingOption !== initialShippingOption && 
+               clientSecret && !isCreatingIntent && !isResettingIntent) {
       console.log('🚚 SHIPPING OPTION CHANGED: From', initialShippingOption, 'to', customerData.shippingOption, '- Resetting payment intent');
-      setClientSecret(''); // This will trigger creation of new payment intent with correct shipping option
+      setIsResettingIntent(true);
+      setClientSecret('');
       setInitialShippingOption(customerData.shippingOption);
+      setTimeout(() => setIsResettingIntent(false), 1000);
     }
-  }, [customerData.shippingOption, initialShippingOption, clientSecret]);
+  }, [customerData.shippingOption, initialShippingOption, clientSecret, isCreatingIntent, isResettingIntent]);
+  */
 
   if (!clientSecret) {
     return (
