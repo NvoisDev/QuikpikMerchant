@@ -3015,6 +3015,18 @@ The Quikpik Team
         
         console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
+        // SIMPLIFIED: Get customer's saved shipping choice
+        const customerShippingChoice = await storage.getCustomerShippingChoice(customer.id);
+        const fulfillmentType = customerShippingChoice || 'pickup';
+        
+        console.log('🚚 MARKETPLACE ROUTE: Retrieved customer shipping choice:', {
+          customerId: customer.id,
+          customerName: `${customer.firstName} ${customer.lastName}`,
+          savedShippingChoice: customerShippingChoice,
+          finalFulfillmentType: fulfillmentType,
+          willCreateDeliveryOrder: fulfillmentType === 'delivery'
+        });
+
         // Calculate actual platform fee based on Connect usage
         const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
         const wholesalerAmount = connectAccountUsed === 'true' 
@@ -3100,9 +3112,9 @@ The Quikpik Team
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
-              // 🚚 SIMPLIFIED: Shipping information processing (delivery arranged by supplier)
-              fulfillmentType: shippingInfo.option || 'pickup',
-              deliveryCarrier: shippingInfo.option === 'delivery' ? 'Supplier Arranged' : null,
+              // 🚚 SIMPLIFIED: Use saved customer shipping choice
+              fulfillmentType: fulfillmentType,
+              deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
               deliveryCost: '0.00', // No cost - arranged directly by supplier
               shippingTotal: '0.00' // No shipping total - handled separately
             };
