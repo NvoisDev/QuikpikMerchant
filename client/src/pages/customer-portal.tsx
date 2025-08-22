@@ -1283,11 +1283,20 @@ export default function CustomerPortal() {
 
   // Function to create payment intent when user proceeds to checkout
   const createPaymentIntentForCheckout = useCallback(async () => {
+    console.log('🚚 CHECKOUT FUNCTION CALLED - Starting payment intent creation');
+    console.log('🚚 Current state check:', {
+      isCreatingIntent,
+      hasClientSecret: !!clientSecret,
+      hasWholesaler: !!wholesaler,
+      currentShippingOption: customerData.shippingOption
+    });
+    
     if (isCreatingIntent || clientSecret || !wholesaler) {
-      console.log('🚚 Payment intent already exists or is being created');
+      console.log('🚚 Payment intent already exists or is being created - SKIPPING');
       return;
     }
 
+    console.log('🚚 PROCEEDING WITH PAYMENT INTENT CREATION');
     setIsCreatingIntent(true);
     
     // Capture shipping data at the moment user proceeds to checkout
@@ -1340,10 +1349,15 @@ export default function CustomerPortal() {
       console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
       console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
       
+      console.log('🚚 Making API request to create payment intent...');
       const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      
+      console.log('🚚 API Response status:', response.status);
+      console.log('🚚 API Response ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('🚚 Payment intent created successfully! Response data:', data);
         setClientSecret(data.clientSecret);
         console.log('🚚 CHECKOUT: Payment intent created successfully with shipping option:', shippingDataAtCreation.option);
         toast({
@@ -1351,7 +1365,9 @@ export default function CustomerPortal() {
           description: "You can now complete your payment",
         });
       } else {
-        throw new Error('Failed to create payment intent');
+        const errorText = await response.text();
+        console.error('🚚 API request failed:', response.status, errorText);
+        throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('🚚 CHECKOUT: Error creating payment intent:', error);
