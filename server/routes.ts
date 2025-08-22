@@ -1797,50 +1797,23 @@ The Quikpik Team
     }
   });
 
-  app.get('/api/auth/user', async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      // Check session for user data first
-      const sessionUser = req.session?.user;
-      const sessionUserId = req.session?.userId;
-      
-      console.log('🔍 Auth User Check:', {
-        sessionExists: !!req.session,
-        sessionUser: sessionUser ? 'exists' : 'missing',
-        sessionUserId: sessionUserId || 'missing'
-      });
-
-      let userId = null;
-      if (sessionUser && sessionUser.id) {
-        userId = sessionUser.id;
-      } else if (sessionUserId) {
-        userId = sessionUserId;
-      } else if (req.user) {
-        userId = req.user.id || req.user.claims?.sub;
-      }
-
-      if (!userId) {
-        console.log('❌ No user ID found in session or request');
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
       // Always fetch fresh user data from database to ensure subscription updates are reflected
+      const userId = req.user.id || req.user.claims?.sub;
       const freshUserData = await storage.getUser(userId);
       
-      if (!freshUserData) {
-        console.log('❌ User not found in database');
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      let responseUser = freshUserData;
+      let responseUser = freshUserData || req.user;
       
       // Check if this user is a team member and get wholesaler info
-      if (responseUser.role === 'team_member' && (responseUser as any).wholesalerId) {
-        const wholesalerInfo = await storage.getUser((responseUser as any).wholesalerId);
+      if (responseUser.role === 'team_member' && responseUser.wholesalerId) {
+        const wholesalerInfo = await storage.getUser(responseUser.wholesalerId);
         if (wholesalerInfo) {
           responseUser = {
             ...responseUser,
             subscriptionTier: wholesalerInfo.subscriptionTier,
             businessName: wholesalerInfo.businessName,
+            isTeamMember: true,
             role: 'team_member'
           };
         }
