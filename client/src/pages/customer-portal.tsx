@@ -269,8 +269,102 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   // Note: Shipping handled directly by supplier - no payment intent recreation needed for shipping changes
   const { toast } = useToast();
 
-  // Create payment intent when customer data is complete - recreate when shipping option changes
+  // Function to create payment intent when user proceeds to checkout
+  const createPaymentIntentForCheckout = async () => {
+    if (isCreatingIntent || clientSecret) {
+      console.log('🚚 Payment intent already exists or is being created');
+      return;
+    }
+
+    setIsCreatingIntent(true);
+    
+    // Capture shipping data at the moment user proceeds to checkout
+    const shippingDataAtCreation = {
+      option: customerData.shippingOption || 'pickup'
+    };
+    
+    console.log('🚚 CHECKOUT BUTTON CLICKED - Creating payment intent with shipping data:', {
+      customerDataShippingOption: customerData.shippingOption,
+      shippingDataOption: shippingDataAtCreation.option,
+      willSendToBackend: shippingDataAtCreation.option,
+      isDeliveryOrder: shippingDataAtCreation.option === 'delivery'
+    });
+    
+    try {
+      const requestPayload = {
+        customerName: customerData.name,
+        customerEmail: customerData.email,
+        customerPhone: customerData.phone,
+        customerAddress: {
+          street: customerData.address,
+          city: customerData.city,
+          state: customerData.state,
+          postalCode: customerData.postalCode,
+          country: customerData.country || 'United Kingdom'
+        },
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity || 0,
+          unitPrice: (() => {
+            if (item.sellingType === 'pallets') {
+              return parseFloat((item.product as any).palletPrice || "0") || 0;
+            } else {
+              const basePrice = parseFloat(item.product.price) || 0;
+              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                basePrice,
+                item.quantity,
+                item.product.promotionalOffers || [],
+                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                item.product.promoActive
+              );
+              return pricing.effectivePrice;
+            }
+          })()
+        })),
+        shippingInfo: shippingDataAtCreation
+      };
+      
+      console.log('🚚 CHECKOUT FINAL CHECK: About to send this exact payload to backend:');
+      console.log('  - Request payload shippingInfo:', requestPayload.shippingInfo);
+      console.log('  - Payload shippingInfo option:', requestPayload.shippingInfo?.option);
+      
+      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+        console.log('🚚 CHECKOUT: Payment intent created successfully with shipping option:', shippingDataAtCreation.option);
+        toast({
+          title: "Payment Ready",
+          description: "You can now complete your payment",
+        });
+      } else {
+        throw new Error('Failed to create payment intent');
+      }
+    } catch (error) {
+      console.error('🚚 CHECKOUT: Error creating payment intent:', error);
+      toast({
+        title: "Payment Setup Failed",
+        description: "Unable to set up payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingIntent(false);
+    }
+  };
+
+  // Create payment intent only when user explicitly proceeds to checkout
+  // DISABLED: Automatic payment intent creation that was causing issues
+  // Now payment intent is created only when user clicks "Proceed to Payment"
   useEffect(() => {
+    // TEMPORARILY DISABLED: Automatic payment intent creation
+    // This was creating payment intents before user could select delivery option
+    // Payment intent is now created only when user clicks "Proceed to Payment" button
+    
+    console.log('🚚 PAYMENT INTENT AUTO-CREATION DISABLED - Current shipping option:', customerData.shippingOption);
+    
+    return; // Exit early - no automatic payment intent creation
+    
     const createPaymentIntent = async () => {
       console.log('💳 PAYMENT INTENT CHECK: About to create payment intent:', {
         hasAllRequiredData: !!(cart.length > 0 && wholesaler && customerData.name && customerData.email && customerData.phone && customerData.shippingOption),
@@ -1964,10 +2058,17 @@ export default function CustomerPortal() {
 
               {!isPreviewMode && (
                 <Button
-                  onClick={() => setShowCheckout(true)}
+                  onClick={async () => {
+                    if (cart.length > 0) {
+                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
+                      console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                      await createPaymentIntentForCheckout();
+                      setShowCheckout(true);
+                    }
+                  }}
                   size="sm"
                   className="btn-theme-primary relative text-xs sm:text-sm"
-                  disabled={cart.length === 0}
+                  disabled={cart.length === 0 || isCreatingIntent}
                 >
                   <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Cart ({cartStats.totalItems})</span>
@@ -2240,7 +2341,14 @@ export default function CustomerPortal() {
               {/* Quick Stats with Microinteractions */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed cursor-pointer" 
-                     onClick={() => !isPreviewMode && setShowCheckout(true)}>
+                     onClick={async () => {
+                       if (!isPreviewMode && cart.length > 0) {
+                         console.log('🚚 CART STATS CHECKOUT: User clicked cart stats to checkout');
+                         console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                         await createPaymentIntentForCheckout();
+                         setShowCheckout(true);
+                       }
+                     }}>
                   <div className="flex items-center">
                     <ShoppingCart className="w-8 h-8 mr-3 animate-pulse-glow" style={{color: 'var(--theme-primary)'}} />
                     <div>
@@ -2607,8 +2715,18 @@ export default function CustomerPortal() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => cart.length > 0 ? setShowCheckout(true) : setActiveTab("products")}
+                    onClick={async () => {
+                      if (cart.length > 0) {
+                        console.log('🚚 QUICK ACTIONS CHECKOUT: User clicked checkout in quick actions');
+                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                        await createPaymentIntentForCheckout();
+                        setShowCheckout(true);
+                      } else {
+                        setActiveTab("products");
+                      }
+                    }}
                     className="h-20 flex flex-col items-center justify-center space-y-2"
+                    disabled={isCreatingIntent}
                   >
                     <ShoppingCart className="w-6 h-6" />
                     <span className="text-sm">
@@ -4055,12 +4173,18 @@ export default function CustomerPortal() {
                   <div className="space-y-2">
                     {/* Quick Checkout */}
                     <Button
-                      onClick={() => {
+                      onClick={async () => {
+                        console.log('🚚 CHECKOUT BUTTON: User clicked checkout button');
+                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                        
+                        // Create payment intent with current shipping option before showing checkout
+                        await createPaymentIntentForCheckout();
+                        
                         setShowCheckout(true);
                         setQuickActionExpanded(false);
                       }}
                       className="w-full justify-start h-10 text-left"
-                      disabled={cart.length === 0}
+                      disabled={cart.length === 0 || isCreatingIntent}
                       style={{background: cart.length > 0 ? 'var(--theme-primary)' : undefined, color: cart.length > 0 ? 'white' : undefined}}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
