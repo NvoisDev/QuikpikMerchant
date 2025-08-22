@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
+import { performanceMiddleware } from "./middleware/performance";
+import { queryOptimizer, queryCache } from "./utils/connectionPool";
+import compression from "compression";
 import { setupAuth } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema } from "@shared/schema";
@@ -378,6 +381,37 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply performance middleware
+  app.use(compression());
+  app.use(performanceMiddleware.timingMiddleware());
+  app.use(performanceMiddleware.memoryMiddleware());
+  app.use(performanceMiddleware.securityHeadersMiddleware());
+  app.use(performanceMiddleware.deduplicationMiddleware());
+
+  // Health check endpoint with caching
+  app.get("/api/health", performanceMiddleware.cacheMiddleware(60000), (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: "1.0.0"
+    });
+  });
+
+  // Performance metrics endpoint
+  app.get("/api/performance", (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    res.json({
+      queryStats: queryOptimizer.getQueryStats(),
+      slowQueries: queryOptimizer.getSlowQueries(),
+      cacheStats: queryCache.getStats(),
+      responseCache: performanceMiddleware.getCacheStats()
+    });
+  });
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
 
