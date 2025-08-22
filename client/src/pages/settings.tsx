@@ -247,62 +247,62 @@ export default function Settings() {
         <p className="text-gray-600 mt-2">Manage your account preferences and business settings</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Settings Navigation */}
         <div className="lg:col-span-1">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <nav className="space-y-2">
                 {/* Account Settings */}
                 <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                     activeTab === "account" 
                       ? "bg-blue-50 text-blue-700" 
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                   onClick={() => setActiveTab("account")}
                 >
-                  <User className="h-5 w-5 mr-3" />
-                  <span className="font-medium">Account</span>
+                  <User className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                  <span className="font-medium text-sm sm:text-base">Account</span>
                 </div>
 
                 {/* Business Settings */}
                 <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                     activeTab === "business" 
                       ? "bg-blue-50 text-blue-700" 
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                   onClick={() => setActiveTab("business")}
                 >
-                  <Building2 className="h-5 w-5 mr-3" />
-                  <span>Business</span>
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                  <span className="text-sm sm:text-base">Business</span>
                 </div>
 
                 {/* Notification Settings */}
                 <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                     activeTab === "notifications" 
                       ? "bg-blue-50 text-blue-700" 
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                   onClick={() => setActiveTab("notifications")}
                 >
-                  <Bell className="h-5 w-5 mr-3" />
-                  <span>Notifications</span>
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                  <span className="text-sm sm:text-base">Notifications</span>
                 </div>
                 
                 {/* Integration Settings */}
                 <div 
-                  className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
                     activeTab === "integrations" 
                       ? "bg-blue-50 text-blue-700" 
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                   onClick={() => setActiveTab("integrations")}
                 >
-                  <Puzzle className="h-5 w-5 mr-3" />
-                  <span>Integrations</span>
+                  <Puzzle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                  <span className="text-sm sm:text-base">Integrations</span>
                 </div>
 
               </nav>
@@ -314,31 +314,33 @@ export default function Settings() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings2 className="h-6 w-6 mr-2" />
-                {activeTab === "account" && "Account Settings"}
-                {activeTab === "business" && "Business Settings"}
-                {activeTab === "notifications" && "Notification Settings"}
-                {activeTab === "integrations" && "Integrations"}
+              <CardTitle className="flex items-center text-lg sm:text-xl">
+                <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                <span className="text-base sm:text-xl">
+                  {activeTab === "account" && "Account Settings"}
+                  {activeTab === "business" && "Business Settings"}
+                  {activeTab === "notifications" && "Notification Settings"}
+                  {activeTab === "integrations" && "Integrations"}
+                </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6">
               {activeTab === "account" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Account Information</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900">Account Information</h3>
                     {!isEditingAccount ? (
                       <button
                         onClick={() => setIsEditingAccount(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                       >
                         Edit
                       </button>
                     ) : (
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                         <button
                           onClick={handleSaveAccount}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                         >
                           Save
                         </button>
@@ -353,7 +355,7 @@ export default function Settings() {
                               preferredCurrency: user?.preferredCurrency || 'GBP'
                             });
                           }}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                         >
                           Cancel
                         </button>
@@ -453,20 +455,20 @@ export default function Settings() {
 
               {activeTab === "business" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Business Information</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900">Business Information</h3>
                     {!isEditingBusiness ? (
                       <button
                         onClick={() => setIsEditingBusiness(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                       >
                         Edit
                       </button>
                     ) : (
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                         <button
                           onClick={handleSaveBusiness}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                         >
                           Save
                         </button>
@@ -485,7 +487,7 @@ export default function Settings() {
                               logoUrl: user?.logoUrl || ''
                             });
                           }}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors w-full sm:w-auto text-sm sm:text-base"
                         >
                           Cancel
                         </button>
@@ -711,14 +713,14 @@ export default function Settings() {
               {activeTab === "notifications" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
-                    <p className="text-gray-600">Manage your notifications and stay updated with important information.</p>
+                    <h3 className="text-base sm:text-lg font-medium mb-4">Notification Preferences</h3>
+                    <p className="text-gray-600 text-sm sm:text-base">Manage your notifications and stay updated with important information.</p>
                   </div>
                   
                   {/* General notification settings */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-800 mb-2">General Notification Settings</h4>
-                    <p className="text-gray-600">Additional notification preferences coming soon.</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">General Notification Settings</h4>
+                    <p className="text-gray-600 text-sm sm:text-base">Additional notification preferences coming soon.</p>
                   </div>
                 </div>
               )}
@@ -726,45 +728,45 @@ export default function Settings() {
               {activeTab === "integrations" && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Integration Settings</h3>
-                    <p className="text-gray-600">Connect your business with WhatsApp and Stripe to streamline operations.</p>
+                    <h3 className="text-base sm:text-lg font-medium mb-4">Integration Settings</h3>
+                    <p className="text-gray-600 text-sm sm:text-base">Connect your business with WhatsApp and Stripe to streamline operations.</p>
                   </div>
                   
                   {/* WhatsApp Integration */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <SiWhatsapp className="w-6 h-6 text-green-600" />
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                      <div className="flex-shrink-0 self-center sm:self-start">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <SiWhatsapp className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-lg font-medium text-gray-900 mb-2">WhatsApp Business API</h4>
-                        <p className="text-gray-600 mb-4">Connect WhatsApp to send order updates and communicate with customers directly.</p>
+                        <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">WhatsApp Business API</h4>
+                        <p className="text-gray-600 mb-4 text-sm sm:text-base">Connect WhatsApp to send order updates and communicate with customers directly.</p>
                         
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                          <h5 className="font-medium text-blue-900 mb-2">Setup Instructions:</h5>
-                          <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
+                          <h5 className="font-medium text-blue-900 mb-2 text-sm sm:text-base">Setup Instructions:</h5>
+                          <ol className="list-decimal list-inside text-xs sm:text-sm text-blue-800 space-y-1">
                             <li>Apply for WhatsApp Business API at <a href="https://business.whatsapp.com/products/business-api" target="_blank" rel="noopener noreferrer" className="underline">business.whatsapp.com</a></li>
                             <li>Get approved by Meta and receive your WhatsApp Business Account ID</li>
                             <li>Generate a permanent access token from your Meta Business account</li>
                             <li>Add your phone number and verify it with WhatsApp Business</li>
-                            <li>Configure webhook URL in Meta Developer Console: <code className="bg-blue-100 px-1 rounded">https://quikpik.app/api/webhooks/whatsapp</code></li>
+                            <li>Configure webhook URL in Meta Developer Console: <code className="bg-blue-100 px-1 rounded text-xs break-all">https://quikpik.app/api/webhooks/whatsapp</code></li>
                             <li>Set webhook fields: messages, message_deliveries, message_reads</li>
                             <li>Test with a template message to verify the connection</li>
                           </ol>
                         </div>
                         
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                           <span className="text-sm text-gray-500">
                             Status: {user?.whatsappEnabled ? 'Connected' : 'Not configured'}
                           </span>
                           <button 
                             onClick={handleWhatsAppConnect}
                             disabled={isConnectingWhatsApp}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                           >
-                            <span>{isConnectingWhatsApp ? 'Connecting...' : (user?.whatsappEnabled ? 'Reconfigure' : 'Configure WhatsApp')}</span>
+                            <span className="text-sm sm:text-base">{isConnectingWhatsApp ? 'Connecting...' : (user?.whatsappEnabled ? 'Reconfigure' : 'Configure WhatsApp')}</span>
                             {!isConnectingWhatsApp && <ExternalLink className="h-4 w-4" />}
                           </button>
                         </div>
@@ -773,39 +775,39 @@ export default function Settings() {
                   </div>
 
                   {/* Stripe Integration */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <SiStripe className="w-6 h-6 text-purple-600" />
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                      <div className="flex-shrink-0 self-center sm:self-start">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <SiStripe className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-lg font-medium text-gray-900 mb-2">Stripe Payment Processing</h4>
-                        <p className="text-gray-600 mb-4">Accept secure payments and manage subscriptions through Stripe.</p>
+                        <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Stripe Payment Processing</h4>
+                        <p className="text-gray-600 mb-4 text-sm sm:text-base">Accept secure payments and manage subscriptions through Stripe.</p>
                         
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                          <h5 className="font-medium text-purple-900 mb-2">Setup Instructions:</h5>
-                          <ol className="list-decimal list-inside text-sm text-purple-800 space-y-1">
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
+                          <h5 className="font-medium text-purple-900 mb-2 text-sm sm:text-base">Setup Instructions:</h5>
+                          <ol className="list-decimal list-inside text-xs sm:text-sm text-purple-800 space-y-1">
                             <li>Click "Connect Stripe" below to start the Stripe Connect onboarding process</li>
                             <li>Complete business verification with Stripe (identity, bank account, business details)</li>
                             <li>Stripe will verify your information (usually takes 1-2 business days)</li>
                             <li>Once approved, you'll receive payments directly to your connected bank account</li>
-                            <li>Webhook endpoints are automatically configured: <code className="bg-purple-100 px-1 rounded">https://quikpik.app/api/webhooks/stripe</code></li>
+                            <li>Webhook endpoints are automatically configured: <code className="bg-purple-100 px-1 rounded text-xs break-all">https://quikpik.app/api/webhooks/stripe</code></li>
                             <li>Test the integration by processing a sample customer order</li>
                           </ol>
                         </div>
                         
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                           <span className="text-sm text-gray-500">
                             Status: {user?.stripeAccountId ? 'Connected' : 'Ready to connect'}
                           </span>
                           <button 
                             onClick={user?.stripeAccountId ? handleStripeDashboard : handleStripeConnect}
                             disabled={isConnectingStripe}
-                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                           >
-                            <span>{isConnectingStripe ? 'Connecting...' : (user?.stripeAccountId ? 'Manage Account' : 'Connect Stripe')}</span>
+                            <span className="text-sm sm:text-base">{isConnectingStripe ? 'Connecting...' : (user?.stripeAccountId ? 'Manage Account' : 'Connect Stripe')}</span>
                             {!isConnectingStripe && <ExternalLink className="h-4 w-4" />}
                           </button>
                         </div>
@@ -814,9 +816,9 @@ export default function Settings() {
                   </div>
 
                   {/* Additional Integrations */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-800 mb-2">Additional Integrations</h4>
-                    <p className="text-gray-600 text-sm">More integrations like SMS notifications, email marketing, and inventory management will be available soon.</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">Additional Integrations</h4>
+                    <p className="text-gray-600 text-xs sm:text-sm">More integrations like SMS notifications, email marketing, and inventory management will be available soon.</p>
                   </div>
                 </div>
               )}
