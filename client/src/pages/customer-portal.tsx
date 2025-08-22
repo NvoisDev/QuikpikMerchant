@@ -1090,15 +1090,16 @@ export default function CustomerPortal() {
   // Update customer data when authenticated customer becomes available
   useEffect(() => {
     if (authenticatedCustomer && (!customerData.name || !customerData.email || !customerData.phone || !customerData.businessName)) {
+      console.log('🚚 CRITICAL: Updating customer data from authenticated customer, preserving existing shippingOption:', customerData.shippingOption);
       setCustomerData(prevData => ({
-        ...prevData,
+        ...prevData, // CRITICAL: This preserves the shippingOption and all other fields
         name: authenticatedCustomer.name || 'Michael Ogunjemilua',
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
         phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550',
         businessName: authenticatedCustomer.businessName || ''
       }));
     }
-  }, [authenticatedCustomer, customerData.name, customerData.email, customerData.phone, customerData.businessName]);
+  }, [authenticatedCustomer]); // CRITICAL FIX: Remove customerData fields from dependency array to prevent loops
   
   // Debug: Log state changes
   useEffect(() => {
