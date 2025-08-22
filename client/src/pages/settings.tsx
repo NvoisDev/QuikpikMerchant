@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, Bell, Puzzle, ExternalLink } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image } from "lucide-react";
+import Logo from '@/components/ui/logo';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -28,7 +29,9 @@ export default function Settings() {
     city: user?.city || '',
     postalCode: user?.postalCode || '',
     country: user?.country || 'United Kingdom',
-    timezone: user?.timezone || 'UTC'
+    timezone: user?.timezone || 'UTC',
+    logoType: user?.logoType || 'business',
+    logoUrl: user?.logoUrl || ''
   });
 
   // Sync form state with user data when user loads
@@ -48,7 +51,9 @@ export default function Settings() {
         city: user.city || '',
         postalCode: user.postalCode || '',
         country: user.country || 'United Kingdom',
-        timezone: user.timezone || 'UTC'
+        timezone: user.timezone || 'UTC',
+        logoType: user.logoType || 'business',
+        logoUrl: user.logoUrl || ''
       });
     }
   }, [user]);
@@ -518,6 +523,23 @@ export default function Settings() {
                           <dt className="text-sm font-medium text-gray-500">Timezone</dt>
                           <dd className="mt-1 text-sm text-gray-900">{user.timezone || 'UTC'}</dd>
                         </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-sm font-medium text-gray-500">Company Logo / Business Initials</dt>
+                          <dd className="mt-1">
+                            <div className="flex items-center space-x-4">
+                              <Logo size="lg" user={user} />
+                              <div className="text-sm text-gray-600">
+                                {user.logoType === 'custom' && user.logoUrl ? (
+                                  <span>Custom logo uploaded</span>
+                                ) : user.logoType === 'business' && user.businessName ? (
+                                  <span>Business initials from: {user.businessName}</span>
+                                ) : (
+                                  <span>Default Quikpik logo</span>
+                                )}
+                              </div>
+                            </div>
+                          </dd>
+                        </div>
                       </dl>
                     ) : (
                       <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
@@ -594,6 +616,84 @@ export default function Settings() {
                             <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
                             <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
                           </select>
+                        </div>
+                        
+                        <div className="sm:col-span-2">
+                          <label className="text-sm font-medium text-gray-500 mb-4 block">Company Logo / Business Initials</label>
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-4">
+                              <Logo size="lg" user={{...user, ...businessForm}} />
+                              <div className="text-sm text-gray-600">
+                                Current display preview
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <div>
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="radio"
+                                    name="logoType"
+                                    value="business"
+                                    checked={businessForm.logoType === 'business'}
+                                    onChange={(e) => setBusinessForm({...businessForm, logoType: e.target.value})}
+                                    className="text-blue-600"
+                                  />
+                                  <span className="text-sm">Use business initials from business name</span>
+                                </label>
+                                {businessForm.logoType === 'business' && (
+                                  <p className="text-xs text-gray-500 ml-6 mt-1">
+                                    Will show: {businessForm.businessName ? 
+                                      businessForm.businessName.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase() || 'QP'
+                                      : 'QP'
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <div>
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="radio"
+                                    name="logoType"
+                                    value="custom"
+                                    checked={businessForm.logoType === 'custom'}
+                                    onChange={(e) => setBusinessForm({...businessForm, logoType: e.target.value})}
+                                    className="text-blue-600"
+                                  />
+                                  <span className="text-sm">Upload custom logo</span>
+                                </label>
+                                {businessForm.logoType === 'custom' && (
+                                  <div className="ml-6 mt-2 space-y-2">
+                                    <input
+                                      type="url"
+                                      placeholder="https://example.com/logo.png"
+                                      value={businessForm.logoUrl}
+                                      onChange={(e) => setBusinessForm({...businessForm, logoUrl: e.target.value})}
+                                      className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                      Enter the URL of your logo image. Best format: PNG with transparent background, 200x200px or larger.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div>
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="radio"
+                                    name="logoType"
+                                    value="default"
+                                    checked={businessForm.logoType === 'default'}
+                                    onChange={(e) => setBusinessForm({...businessForm, logoType: e.target.value})}
+                                    className="text-blue-600"
+                                  />
+                                  <span className="text-sm">Use default Quikpik logo</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
