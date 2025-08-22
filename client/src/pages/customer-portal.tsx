@@ -3908,6 +3908,10 @@ export default function CustomerPortal() {
 
                 {/* Payment Form */}
                 <div className="border-t pt-6">
+                  {/* Debug current shipping option when checkout modal opens */}
+                  {console.log('🚚 CHECKOUT MODAL: Opening with shipping option:', customerData.shippingOption)}
+                  {console.log('🚚 CHECKOUT MODAL: Client secret exists:', !!clientSecret)}
+                  
                   <StripeCheckoutForm
                     cart={cart}
                     customerData={customerData}
