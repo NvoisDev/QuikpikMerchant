@@ -427,12 +427,19 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, onSuc
   }, [cart.length, wholesaler?.id, !!customerData.name, !!customerData.email, !!customerData.phone, !!customerData.shippingOption, totalAmount, clientSecret, isCreatingIntent]); // Simplified: No shipping service dependencies
 
   // Reset payment intent when shipping option changes to ensure correct metadata
+  // Only reset if user actually changed the option (not initial load)
+  const [initialShippingOption, setInitialShippingOption] = useState<string | null>(null);
+  
   useEffect(() => {
-    if (clientSecret && customerData.shippingOption) {
-      console.log('🚚 SHIPPING OPTION CHANGED: Resetting payment intent to capture new shipping option:', customerData.shippingOption);
+    if (customerData.shippingOption && initialShippingOption === null) {
+      // First time setting - don't reset
+      setInitialShippingOption(customerData.shippingOption);
+    } else if (customerData.shippingOption && initialShippingOption && customerData.shippingOption !== initialShippingOption && clientSecret) {
+      console.log('🚚 SHIPPING OPTION CHANGED: From', initialShippingOption, 'to', customerData.shippingOption, '- Resetting payment intent');
       setClientSecret(''); // This will trigger creation of new payment intent with correct shipping option
+      setInitialShippingOption(customerData.shippingOption);
     }
-  }, [customerData.shippingOption]);
+  }, [customerData.shippingOption, initialShippingOption, clientSecret]);
 
   if (!clientSecret) {
     return (
