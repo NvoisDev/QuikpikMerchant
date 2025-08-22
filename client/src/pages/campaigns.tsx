@@ -700,12 +700,12 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Campaigns</h1>
             <ContextualHelpBubble
               topic="campaigns"
               title="Creating Effective Campaigns"
@@ -713,26 +713,28 @@ export default function Campaigns() {
               position="right"
             />
           </div>
-          <p className="text-gray-600">Create and manage WhatsApp marketing campaigns</p>
+          <p className="text-gray-600 mt-1">Create and manage WhatsApp marketing campaigns</p>
         </div>
       </div>
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'performance')}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+          <TabsTrigger value="campaigns" className="flex items-center gap-2 px-2 sm:px-4">
             <MessageSquare className="h-4 w-4" />
-            Campaign Management
+            <span className="hidden sm:inline">Campaign Management</span>
+            <span className="sm:hidden">Campaigns</span>
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2">
+          <TabsTrigger value="performance" className="flex items-center gap-2 px-2 sm:px-4">
             <BarChart3 className="h-4 w-4" />
-            Performance Analytics
+            <span className="hidden sm:inline">Performance Analytics</span>
+            <span className="sm:hidden">Analytics</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns" className="space-y-6">
           {/* Broadcast Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
