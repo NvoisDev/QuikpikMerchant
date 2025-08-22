@@ -4286,7 +4286,20 @@ export default function CustomerPortal() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setModalQuantity(modalQuantity + 1)}
+                          onClick={() => {
+                            const availableStock = selectedModalType === 'units' 
+                              ? selectedProductForModal.stock 
+                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                            if (modalQuantity < availableStock) {
+                              setModalQuantity(modalQuantity + 1);
+                            }
+                          }}
+                          disabled={(() => {
+                            const availableStock = selectedModalType === 'units' 
+                              ? selectedProductForModal.stock 
+                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                            return modalQuantity >= availableStock;
+                          })()}
                           className="h-10 w-10 p-0"
                         >
                           <Plus className="w-4 h-4" />
@@ -4305,9 +4318,13 @@ export default function CustomerPortal() {
                           value={modalQuantity}
                           onChange={(e) => {
                             const value = parseFloat(e.target.value) || 0;
-                            // Allow any positive number - no automatic enforcement
+                            const availableStock = selectedModalType === 'units' 
+                              ? selectedProductForModal.stock 
+                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                            
+                            // Cap quantity at available stock
                             if (value >= 0 || e.target.value === '') {
-                              setModalQuantity(value);
+                              setModalQuantity(Math.min(value, availableStock));
                             }
                           }}
                           className="text-center text-xl font-bold max-w-[120px] mx-auto"
@@ -4316,31 +4333,68 @@ export default function CustomerPortal() {
                         
                         {/* MOQ Information - Always visible */}
                         <div className="text-xs text-center space-y-1">
-                          <p className="text-gray-600 font-medium">
-                            Minimum Order: {selectedModalType === 'units' 
-                              ? `${selectedProductForModal.moq || 1} units`
-                              : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
-                          </p>
-                          
-                          {/* Warning if below MOQ */}
-                          {modalQuantity > 0 && modalQuantity < (selectedModalType === 'units' 
-                            ? (selectedProductForModal.moq || 1)
-                            : ((selectedProductForModal as any).palletMoq || 1)) && (
-                            <p className="text-amber-600 font-medium">
-                              ⚠️ Below minimum - will be adjusted to {selectedModalType === 'units' 
-                                ? `${selectedProductForModal.moq} units`
+                          <div className="flex justify-center space-x-4 text-gray-600 font-medium">
+                            <span>
+                              Minimum: {selectedModalType === 'units' 
+                                ? `${selectedProductForModal.moq || 1} units`
                                 : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
-                            </p>
-                          )}
+                            </span>
+                            <span>
+                              Available: {(() => {
+                                const availableStock = selectedModalType === 'units' 
+                                  ? selectedProductForModal.stock 
+                                  : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                                return `${availableStock} ${selectedModalType === 'units' ? 'units' : 'pallets'}`;
+                              })()}
+                            </span>
+                          </div>
                           
-                          {/* Confirmation if at or above MOQ */}
-                          {modalQuantity >= (selectedModalType === 'units' 
-                            ? (selectedProductForModal.moq || 1)
-                            : ((selectedProductForModal as any).palletMoq || 1)) && (
-                            <p className="text-green-600 font-medium">
-                              ✅ Meets minimum requirement
-                            </p>
-                          )}
+                          {(() => {
+                            const minQuantity = selectedModalType === 'units' 
+                              ? (selectedProductForModal.moq || 1)
+                              : ((selectedProductForModal as any).palletMoq || 1);
+                            const availableStock = selectedModalType === 'units' 
+                              ? selectedProductForModal.stock 
+                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                            
+                            // Case 1: Stock is less than MOQ - show critical warning
+                            if (availableStock < minQuantity) {
+                              return (
+                                <p className="text-red-600 font-medium">
+                                  ⚠️ Insufficient stock! Only {availableStock} available but minimum order is {minQuantity}
+                                </p>
+                              );
+                            }
+                            
+                            // Case 2: Quantity exceeds available stock
+                            if (modalQuantity > availableStock) {
+                              return (
+                                <p className="text-red-600 font-medium">
+                                  ⚠️ Quantity exceeds available stock ({availableStock})
+                                </p>
+                              );
+                            }
+                            
+                            // Case 3: Below MOQ but stock is sufficient
+                            if (modalQuantity > 0 && modalQuantity < minQuantity) {
+                              return (
+                                <p className="text-amber-600 font-medium">
+                                  ⚠️ Below minimum - will be adjusted to {minQuantity}
+                                </p>
+                              );
+                            }
+                            
+                            // Case 4: Everything is good
+                            if (modalQuantity >= minQuantity && modalQuantity <= availableStock) {
+                              return (
+                                <p className="text-green-600 font-medium">
+                                  ✅ Meets requirements
+                                </p>
+                              );
+                            }
+                            
+                            return null;
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -4374,20 +4428,52 @@ export default function CustomerPortal() {
                         const minQuantity = selectedModalType === 'units' 
                           ? (selectedProductForModal.moq || 1)
                           : ((selectedProductForModal as any).palletMoq || 1);
+                        const availableStock = selectedModalType === 'units' 
+                          ? selectedProductForModal.stock 
+                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
                         
-                        // Always enforce minimum requirement when adding to cart
-                        const finalQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
+                        // Check if we have enough stock for the minimum order
+                        if (availableStock < minQuantity) {
+                          // If stock is less than MOQ, add only what's available
+                          const finalQuantity = availableStock;
+                          addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                        } else {
+                          // Normal case: enforce minimum and cap at available stock
+                          const requestedQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
+                          const finalQuantity = Math.min(requestedQuantity, availableStock);
+                          addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                        }
                         
-                        addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
                         setShowUnitSelectionModal(false);
                         setSelectedProductForModal(null);
                         setModalStep('type');
                         setSelectedModalType(null);
                         setModalQuantity(1);
                       }}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      disabled={(() => {
+                        const availableStock = selectedModalType === 'units' 
+                          ? selectedProductForModal.stock 
+                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                        return availableStock <= 0;
+                      })()}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400"
                     >
-                      Add to Cart
+                      {(() => {
+                        const minQuantity = selectedModalType === 'units' 
+                          ? (selectedProductForModal.moq || 1)
+                          : ((selectedProductForModal as any).palletMoq || 1);
+                        const availableStock = selectedModalType === 'units' 
+                          ? selectedProductForModal.stock 
+                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                        
+                        if (availableStock <= 0) {
+                          return "Out of Stock";
+                        } else if (availableStock < minQuantity) {
+                          return `Add ${availableStock} (All Available)`;
+                        } else {
+                          return "Add to Cart";
+                        }
+                      })()}
                     </Button>
                   </div>
                 </>
