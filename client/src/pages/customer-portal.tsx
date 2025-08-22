@@ -32,7 +32,8 @@ import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/component
 import Logo from "@/components/ui/logo";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
-import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
+import { useOptimizedQuery, useCriticalQuery } from "@/hooks/useOptimizedQuery";
+import { LoadingSpinner, ProductGridSkeleton } from "@/components/ui/loading-spinner";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -2214,11 +2215,7 @@ export default function CustomerPortal() {
                 </div>
                 
                 {productsLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[...Array(3)].map((_, i) => (
-                      <ProductCardSkeleton key={i} />
-                    ))}
-                  </div>
+                  <ProductGridSkeleton />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {products?.slice(0, 3).map((product) => {

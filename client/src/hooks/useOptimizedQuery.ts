@@ -33,3 +33,44 @@ export function useBackgroundQuery<TData = unknown, TError = Error>(
     ...options,
   });
 }
+
+/**
+ * Critical path query hook for essential data
+ * Use this for data that must load fast for core functionality
+ */
+export function useCriticalQuery<TData = unknown, TError = Error>(
+  options: UseQueryOptions<TData, TError>
+) {
+  return useQuery({
+    staleTime: 30 * 1000, // 30 seconds - very fresh data
+    gcTime: 2 * 60 * 1000, // 2 minutes garbage collection
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    retry: 2, // Retry twice for critical queries
+    retryDelay: 100, // Fast retry for critical data
+    ...options,
+  });
+}
+
+/**
+ * Prefetch hook for warming up data before it's needed
+ */
+export function usePrefetchQuery<TData = unknown>(
+  queryKey: string,
+  endpoint: string,
+  enabled: boolean = true
+) {
+  return useQuery<TData>({
+    queryKey: [queryKey],
+    queryFn: async () => {
+      const response = await fetch(endpoint, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to prefetch');
+      return response.json();
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 0, // Don't retry prefetch queries
+  });
+}

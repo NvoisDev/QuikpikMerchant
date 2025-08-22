@@ -521,12 +521,90 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Product operations
+  // Ultra-optimized product retrieval for faster loading
   async getProducts(wholesalerId?: string): Promise<Product[]> {
-    const query = db.select().from(products);
+    console.log('⚡ PERFORMANCE: Ultra-optimized getProducts called for:', wholesalerId || 'all');
+    const startTime = Date.now();
+    
     if (wholesalerId) {
-      return await query.where(eq(products.wholesalerId, wholesalerId)).orderBy(desc(products.createdAt));
+      // Optimized query for specific wholesaler with strategic field selection
+      const result = await db.execute(sql`
+        SELECT 
+          id, name, description, price, stock, moq, 
+          wholesaler_id, image_url, status, category, brand,
+          promo_active, promo_price, low_stock_threshold,
+          created_at, updated_at
+        FROM products 
+        WHERE wholesaler_id = ${wholesalerId} 
+          AND status IN ('active', 'inactive')
+        ORDER BY 
+          status = 'active' DESC,
+          promo_active DESC,
+          stock > 0 DESC,
+          created_at DESC
+        LIMIT 200
+      `);
+      
+      const queryTime = Date.now() - startTime;
+      console.log(`⚡ PERFORMANCE: Wholesaler products query: ${result.rows.length} rows in ${queryTime}ms`);
+      
+      return result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
+        price: row.price,
+        stock: row.stock || 0,
+        moq: row.moq || 1,
+        wholesalerId: row.wholesaler_id,
+        imageUrl: row.image_url,
+        status: row.status,
+        category: row.category,
+        brand: row.brand,
+        promoActive: Boolean(row.promo_active),
+        promoPrice: row.promo_price,
+        lowStockThreshold: row.low_stock_threshold || 50,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at)
+      }));
     }
-    return await query.orderBy(desc(products.createdAt));
+    
+    // General query optimization for all products
+    const result = await db.execute(sql`
+      SELECT 
+        id, name, description, price, stock, moq, 
+        wholesaler_id, image_url, status, category, brand,
+        promo_active, promo_price, low_stock_threshold,
+        created_at, updated_at
+      FROM products 
+      WHERE status = 'active'
+      ORDER BY 
+        promo_active DESC,
+        stock > 0 DESC,
+        created_at DESC
+      LIMIT 100
+    `);
+    
+    const queryTime = Date.now() - startTime;
+    console.log(`⚡ PERFORMANCE: All products query: ${result.rows.length} rows in ${queryTime}ms`);
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description || '',
+      price: row.price,
+      stock: row.stock || 0,
+      moq: row.moq || 1,
+      wholesalerId: row.wholesaler_id,
+      imageUrl: row.image_url,
+      status: row.status,
+      category: row.category,
+      brand: row.brand,
+      promoActive: Boolean(row.promo_active),
+      promoPrice: row.promo_price,
+      lowStockThreshold: row.low_stock_threshold || 50,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
