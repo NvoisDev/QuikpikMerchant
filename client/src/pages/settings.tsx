@@ -670,6 +670,7 @@ export default function Settings() {
                                   <div className="ml-6 mt-2 space-y-4">
                                     <LogoUploader 
                                       onUploadComplete={(logoUrl) => setBusinessForm({...businessForm, logoUrl})}
+                                      currentLogoUrl={businessForm.logoUrl}
                                     />
                                     <div className="space-y-2">
                                       <label className="text-xs font-medium text-gray-600">Or enter logo URL manually:</label>
