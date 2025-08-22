@@ -388,6 +388,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for deployment monitoring
   app.get('/api/health', healthCheck);
 
+  // Test auth endpoint for development
+  app.get('/api/test-auth', async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
+    const testUser = {
+      id: 'test-user-123',
+      firstName: 'Test',
+      lastName: 'User', 
+      email: 'test@example.com',
+      businessName: 'Test Business',
+      role: 'wholesaler',
+      logoType: 'business',
+      logoUrl: ''
+    };
+    
+    res.json({ user: testUser, authenticated: true });
+  });
+
   // Test products endpoint (development only - bypasses auth for demo)
   app.get('/api/test-products', async (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
