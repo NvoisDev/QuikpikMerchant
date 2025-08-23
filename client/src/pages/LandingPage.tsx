@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import quikpikLogo from "@assets/Quikpik - Products (2)_1755616492587.png";
+// Logo removed during cleanup
 import { 
   ArrowRight, 
   MessageSquare, 
