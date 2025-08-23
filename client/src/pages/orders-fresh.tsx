@@ -28,21 +28,45 @@ const formatAddress = (addressData?: string): string => {
     // Try to parse as JSON first
     const parsed = JSON.parse(addressData);
     if (typeof parsed === 'object' && parsed !== null) {
-      // Handle comprehensive address object with multiple possible field names
-      const addressParts = [
-        parsed.street || parsed.property || parsed.address1 || parsed.address,
-        parsed.address2,
-        parsed.town || parsed.city,
-        parsed.county || parsed.state,
-        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
-        parsed.country
-      ].filter(part => part && part.trim() !== '');
+      // Show all available address fields, including empty ones with labels
+      const addressLines = [];
       
-      if (addressParts.length > 0) {
-        return addressParts.join(', ');
+      // Add street/property if available
+      if (parsed.street || parsed.property || parsed.address1 || parsed.address) {
+        addressLines.push(parsed.street || parsed.property || parsed.address1 || parsed.address);
+      }
+      
+      // Add address line 2 if available
+      if (parsed.address2 && parsed.address2.trim()) {
+        addressLines.push(parsed.address2);
+      }
+      
+      // Add city/town if available
+      if (parsed.town || parsed.city) {
+        addressLines.push(parsed.town || parsed.city);
+      }
+      
+      // Add county/state if available
+      if (parsed.county || parsed.state) {
+        addressLines.push(parsed.county || parsed.state);
+      }
+      
+      // Add postcode if available
+      if (parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip) {
+        addressLines.push(parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip);
+      }
+      
+      // Add country if available
+      if (parsed.country && parsed.country.trim()) {
+        addressLines.push(parsed.country);
+      }
+      
+      // If we have any address parts, join them
+      if (addressLines.length > 0) {
+        return addressLines.join(', ');
       } else {
-        // If all fields are empty, show a helpful message
-        return 'Delivery address not fully specified';
+        // Show structured empty address info
+        return `Address incomplete - Country: ${parsed.country || 'Not specified'}`;
       }
     }
     return addressData;
