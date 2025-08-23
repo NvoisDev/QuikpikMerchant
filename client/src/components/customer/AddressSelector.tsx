@@ -115,6 +115,7 @@ export function AddressSelector({
                     wholesalerId={wholesalerId}
                     onAddressSelect={handleAddressSelect}
                     showAddButton={true}
+                    selectedAddress={selectedAddress}
                   />
                 </div>
               </DialogContent>
@@ -181,6 +182,7 @@ export function AddressSelector({
                       wholesalerId={wholesalerId}
                       onAddressSelect={handleAddressSelect}
                       showAddButton={true}
+                      selectedAddress={selectedAddress}
                     />
                   </div>
                 </DialogContent>
@@ -210,6 +212,7 @@ export function AddressSelector({
                     wholesalerId={wholesalerId}
                     onAddressSelect={handleAddressSelect}
                     showAddButton={true}
+                    selectedAddress={selectedAddress}
                   />
                 </div>
               </DialogContent>
@@ -241,6 +244,7 @@ export function AddressSelector({
                 wholesalerId={wholesalerId}
                 onAddressSelect={handleAddressSelect}
                 showAddButton={true}
+                selectedAddress={selectedAddress}
               />
             </div>
           </DialogContent>

@@ -35,6 +35,7 @@ interface DeliveryAddressManagerProps {
   showAddButton?: boolean;
   showDefaultOnly?: boolean;
   compact?: boolean;
+  selectedAddress?: DeliveryAddress;
 }
 
 interface AddressFormData {
@@ -72,7 +73,8 @@ export function DeliveryAddressManager({
   onAddressSelect, 
   showAddButton = true, 
   showDefaultOnly = false,
-  compact = false 
+  compact = false,
+  selectedAddress
 }: DeliveryAddressManagerProps) {
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editingAddress, setEditingAddress] = useState<DeliveryAddress | null>(null);
@@ -285,8 +287,9 @@ export function DeliveryAddressManager({
             return (
               <Card 
                 key={address.id} 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  address.isDefault ? 'ring-2 ring-green-500 bg-green-50' : ''
+                className={`cursor-pointer transition-all hover:shadow-lg hover:bg-blue-50 border-2 ${
+                  selectedAddress?.id === address.id ? 'border-blue-500 bg-blue-50' : 
+                  address.isDefault ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-blue-300'
                 } ${compact ? 'p-3' : ''}`}
                 onClick={() => onAddressSelect?.(address)}
               >

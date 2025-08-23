@@ -3997,6 +3997,7 @@ export default function CustomerPortal() {
                       <h4 className="font-medium">Delivery Address</h4>
                       <AddressSelector
                         wholesalerId={wholesaler.id}
+                        selectedAddress={customerData.selectedDeliveryAddress}
                         onAddressSelect={(address) => {
                           console.log('🏠 Address selected in checkout:', address);
                           // Update customer data with selected address and save full address object
