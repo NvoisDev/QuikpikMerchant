@@ -1128,7 +1128,7 @@ export default function Customers() {
                 className="pl-10"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <ContextualHelpBubble 
                 topic="Customer Directory"
                 title="Customer Directory & Groups"
@@ -1346,36 +1346,36 @@ export default function Customers() {
             <div className="space-y-4">
               {sortedCustomers.map((customer) => (
                 <Card key={customer?.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
+                          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm sm:text-base">
                             {getInitials(customer?.firstName || '', customer?.lastName)}
                           </AvatarFallback>
                         </Avatar>
                         
-                        <div className="space-y-1">
-                          <h3 className="text-base font-semibold">
+                        <div className="space-y-2 sm:space-y-1 flex-1 min-w-0">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                             {customer?.firstName || 'Unknown'} {customer?.lastName || ''}
                           </h3>
                           
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-600">
                             <div className="flex items-center space-x-1">
-                              <Phone className="h-4 w-4" />
-                              <span>{customer?.phoneNumber || 'No phone'}</span>
+                              <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <span className="truncate">{customer?.phoneNumber || 'No phone'}</span>
                             </div>
                             
                             {customer?.email && (
                               <div className="flex items-center space-x-1">
-                                <Mail className="h-4 w-4" />
-                                <span>{customer.email}</span>
+                                <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span className="truncate">{customer.email}</span>
                               </div>
                             )}
                           </div>
                           
                           {customer?.groupNames && customer.groupNames.length > 0 && (
-                            <div className="flex items-center space-x-2">
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                               {Array.from(new Set(customer?.groupNames || [])).map((groupName, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {groupName}
@@ -1386,7 +1386,56 @@ export default function Customers() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-6">
+                      {/* Mobile Stats */}
+                      <div className="flex items-center justify-between sm:hidden">
+                        <div className="flex items-center space-x-4 text-xs">
+                          <div className="flex items-center space-x-1">
+                            <ShoppingBag className="h-3 w-3 text-blue-500" />
+                            <span className="font-medium">{customer?.totalOrders || 0}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <DollarSign className="h-3 w-3 text-green-500" />
+                            <span className="font-medium">{formatCurrency(customer?.totalSpent || 0)}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Mobile Actions Dropdown */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewCustomerOrders(customer)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Orders
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAddToGroup(customer)}>
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Add to Group
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit Customer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
+                                  deleteCustomerMutation.mutate(customer?.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      {/* Desktop Stats & Actions */}
+                      <div className="hidden sm:flex sm:items-center sm:space-x-6">
                         <div className="text-right space-y-1">
                           <div className="flex items-center space-x-2">
                             <ShoppingBag className="h-4 w-4 text-blue-500" />
