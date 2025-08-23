@@ -1058,58 +1058,58 @@ export default function Customers() {
         <TabsContent value="address-book" className="space-y-6">
           {/* Customer Stats */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-6 w-6 text-blue-600" />
+                <CardContent className="flex items-center p-4 sm:p-6">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Total Customers</p>
-                      <p className="text-xl font-bold">{stats.totalCustomers}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-600">Total Customers</p>
+                      <p className="text-lg sm:text-xl font-bold">{stats.totalCustomers}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Activity className="h-6 w-6 text-green-600" />
+                <CardContent className="flex items-center p-4 sm:p-6">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
+                      <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                      <p className="text-xl font-bold">{stats.activeCustomers}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-600">Active Customers</p>
+                      <p className="text-lg sm:text-xl font-bold">{stats.activeCustomers}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-6 w-6 text-purple-600" />
+                <CardContent className="flex items-center p-4 sm:p-6">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
+                      <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">New This Month</p>
-                      <p className="text-xl font-bold">{stats.newCustomersThisMonth}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-600">New This Month</p>
+                      <p className="text-lg sm:text-xl font-bold">{stats.newCustomersThisMonth}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="flex items-center p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <TrendingUp className="h-6 w-6 text-orange-600" />
+                <CardContent className="flex items-center p-4 sm:p-6">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
+                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Top Spenders</p>
-                      <p className="text-xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
+                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1118,7 +1118,7 @@ export default function Customers() {
           )}
 
           {/* Search Bar and Actions */}
-          <div className="flex items-center justify-between space-x-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -1128,7 +1128,7 @@ export default function Customers() {
                 className="pl-10"
               />
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2 sm:space-x-2">
               <ContextualHelpBubble 
                 topic="Customer Directory"
                 title="Customer Directory & Groups"
@@ -1139,10 +1139,11 @@ export default function Customers() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
                   >
-                    <Users className="h-4 w-4" />
-                    <span>Merge Customers</span>
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Merge Customers</span>
+                    <span className="sm:hidden">Merge</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1224,16 +1225,18 @@ export default function Customers() {
                 }}
                 variant="outline"
                 size="sm"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
               >
-                <Smartphone className="h-4 w-4" />
-                <span>Import Contacts</span>
+                <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Import Contacts</span>
+                <span className="sm:hidden">Import</span>
               </Button>
               <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="flex items-center space-x-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span>Add Customer</span>
+                  <Button size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
+                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Add Customer</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
