@@ -65,7 +65,7 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   });
 
   // Check if user already has addresses
-  const { data: existingAddresses = [] } = useQuery<any[]>({
+  const { data: existingAddresses = [], isLoading: addressesLoading } = useQuery<any[]>({
     queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`],
     enabled: isOpen,
   });
@@ -136,8 +136,8 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
     onClose();
   };
 
-  // Don't render if user already has addresses
-  if (existingAddresses.length > 0) {
+  // Don't render if loading addresses or user already has addresses
+  if (addressesLoading || existingAddresses.length > 0) {
     return null;
   }
 
