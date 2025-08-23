@@ -63,7 +63,7 @@ import {
   type SelectCustomerProfileUpdateNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, sum, count, or, ilike } from "drizzle-orm";
+import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
 
 export interface IStorage {
@@ -2120,11 +2120,14 @@ export class DatabaseStorage implements IStorage {
       })
       .from(products)
       .leftJoin(orderItems, eq(products.id, orderItems.productId))
-      .leftJoin(orders, and(
-        eq(orderItems.orderId, orders.id),
-        sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+      .leftJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(and(
+        eq(products.wholesalerId, wholesalerId),
+        or(
+          isNull(orders.id), // Products with no orders
+          sql`${orders.status} IN ('confirmed', 'paid', 'processing', 'shipped', 'fulfilled', 'completed')`
+        )
       ))
-      .where(eq(products.wholesalerId, wholesalerId))
       .groupBy(products.id)
       .orderBy(desc(count(orderItems.id)))
       .limit(limit);
