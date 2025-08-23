@@ -1330,7 +1330,8 @@ export default function CustomerPortal() {
           city: customerData.city,
           state: customerData.state,
           postalCode: customerData.postalCode,
-          country: customerData.country || 'United Kingdom'
+          country: customerData.country || 'United Kingdom',
+          selectedDeliveryAddress: customerData.selectedDeliveryAddress
         },
         items: cart.map(item => ({
           productId: item.product.id,
@@ -3998,12 +3999,14 @@ export default function CustomerPortal() {
                         wholesalerId={wholesaler.id}
                         onAddressSelected={(address) => {
                           console.log('🏠 Address selected in checkout:', address);
-                          // Update customer data with selected address
+                          // Update customer data with selected address and save full address object
                           setCustomerData(prev => ({
                             ...prev,
                             address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
                             city: address?.city || '',
-                            postalCode: address?.postalCode || ''
+                            postalCode: address?.postalCode || '',
+                            // Save complete delivery address object for order
+                            selectedDeliveryAddress: address
                           }));
                         }}
                         compact={true}

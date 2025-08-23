@@ -169,31 +169,33 @@ export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Function to handle order click and fetch delivery address
-  const handleOrderClick = async (order: Order) => {
+  // Function to handle order click and parse delivery address from saved order data
+  const handleOrderClick = (order: Order) => {
     setSelectedOrder(order);
     
-    // Fetch customer's delivery address for this order
-    if (order.retailer?.id) {
+    // Parse delivery address from the order data (saved when order was created)
+    if (order.deliveryAddress) {
       try {
-        const customerId = order.retailer.id;
-        const wholesalerId = user?.id;
+        // If it's already a parsed object, use it
+        if (typeof order.deliveryAddress === 'object') {
+          setCustomerDeliveryAddress(order.deliveryAddress);
+          return;
+        }
         
-        const response = await fetch(`/api/wholesaler/customer-delivery-addresses/${customerId}/${wholesalerId}`, {
-          credentials: 'include'
-        });
+        // If it's a JSON string, parse it
+        const parsed = JSON.parse(order.deliveryAddress);
         
-        if (response.ok) {
-          const addresses = await response.json();
-          // Get the default address or first address
-          const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0];
-          setCustomerDeliveryAddress(defaultAddress || null);
+        // Handle different address formats
+        if (parsed.addressLine1 || parsed.street) {
+          setCustomerDeliveryAddress(parsed);
         } else {
-          setCustomerDeliveryAddress(null);
+          // If it's just a plain address string, format it
+          setCustomerDeliveryAddress({ addressLine1: parsed.address || parsed });
         }
       } catch (error) {
-        console.error('Error fetching customer delivery address:', error);
-        setCustomerDeliveryAddress(null);
+        console.log('Could not parse delivery address, treating as plain text:', order.deliveryAddress);
+        // Fallback: treat as plain address string
+        setCustomerDeliveryAddress({ addressLine1: order.deliveryAddress });
       }
     } else {
       setCustomerDeliveryAddress(null);

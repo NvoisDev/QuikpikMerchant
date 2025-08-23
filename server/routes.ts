@@ -3599,7 +3599,7 @@ The Quikpik Team
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : customerAddress,
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
@@ -8635,13 +8635,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerName: customerData.name,
               customerEmail: customerData.email,
               customerPhone: customerData.phone,
-              customerAddress: JSON.stringify({
-                street: customerData.address,
-                city: customerData.city,
-                state: customerData.state,
-                postalCode: customerData.postalCode,
-                country: customerData.country
-              }),
+              customerAddress: customerData.selectedDeliveryAddress 
+                ? JSON.stringify(customerData.selectedDeliveryAddress) 
+                : JSON.stringify({
+                    street: customerData.address,
+                    city: customerData.city,
+                    state: customerData.state,
+                    postalCode: customerData.postalCode,
+                    country: customerData.country
+                  }),
               totalAmount: validatedTotalAmount.toString(),
               shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
@@ -8681,13 +8683,15 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               customerName: customerData.name,
               customerEmail: customerData.email,
               customerPhone: customerData.phone,
-              customerAddress: JSON.stringify({
-                street: customerData.address,
-                city: customerData.city,
-                state: customerData.state,
-                postalCode: customerData.postalCode,
-                country: customerData.country
-              }),
+              customerAddress: customerData.selectedDeliveryAddress 
+                ? JSON.stringify(customerData.selectedDeliveryAddress) 
+                : JSON.stringify({
+                    street: customerData.address,
+                    city: customerData.city,
+                    state: customerData.state,
+                    postalCode: customerData.postalCode,
+                    country: customerData.country
+                  }),
               totalAmount: validatedTotalAmount.toString(),
               shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
