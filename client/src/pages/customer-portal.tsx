@@ -3990,39 +3990,24 @@ export default function CustomerPortal() {
                     </div>
                   </div>
 
-                  {/* Delivery Address Form */}
-                  {customerData.shippingOption === 'delivery' && (
+                  {/* Delivery Address Selector */}
+                  {customerData.shippingOption === 'delivery' && wholesaler?.id && (
                     <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
                       <h4 className="font-medium">Delivery Address</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                          <Label htmlFor="address">Street Address</Label>
-                          <Input
-                            id="address"
-                            value={customerData.address}
-                            onChange={(e) => setCustomerData(prev => ({...prev, address: e.target.value}))}
-                            placeholder="Enter your street address"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="city">City</Label>
-                          <Input
-                            id="city"
-                            value={customerData.city}
-                            onChange={(e) => setCustomerData(prev => ({...prev, city: e.target.value}))}
-                            placeholder="Enter your city"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="postalCode">Postal Code</Label>
-                          <Input
-                            id="postalCode"
-                            value={customerData.postalCode}
-                            onChange={(e) => setCustomerData(prev => ({...prev, postalCode: e.target.value}))}
-                            placeholder="Enter postal code"
-                          />
-                        </div>
-                      </div>
+                      <AddressSelector
+                        wholesalerId={wholesaler.id}
+                        onAddressSelected={(address) => {
+                          console.log('🏠 Address selected in checkout:', address);
+                          // Update customer data with selected address
+                          setCustomerData(prev => ({
+                            ...prev,
+                            address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
+                            city: address?.city || '',
+                            postalCode: address?.postalCode || ''
+                          }));
+                        }}
+                        compact={true}
+                      />
                       
                       {/* Delivery Information Note */}
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
