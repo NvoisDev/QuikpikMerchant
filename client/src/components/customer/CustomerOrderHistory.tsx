@@ -242,9 +242,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 }
               })()}
               {order.deliveryAddressId && (
-                <div className="text-xs text-gray-500 mt-2">
-                  deliveryAddressId: {order.deliveryAddressId}
-                </div>
+                <DeliveryAddressDisplay addressId={order.deliveryAddressId} />
               )}
             </div>
           </div>
@@ -348,6 +346,66 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
         </div>
       </div>
     </DialogContent>
+  );
+};
+
+// Component to fetch and display delivery address details by ID
+const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
+  const { data: address, isLoading, error } = useQuery({
+    queryKey: [`/api/delivery-address/${addressId}`],
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+        <RefreshCw className="h-3 w-3 animate-spin" />
+        Loading address...
+      </div>
+    );
+  }
+
+  if (error || !address) {
+    return (
+      <div className="text-xs text-red-500 mt-2">
+        Unable to load delivery address
+      </div>
+    );
+  }
+
+  const Icon = getLabelIcon(address?.label);
+  
+  return (
+    <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+      <div className="text-xs text-blue-600 font-medium mb-1">📍 Selected Delivery Address:</div>
+      <div className="flex items-start gap-2">
+        <Icon className="h-4 w-4 text-green-600 mt-0.5" />
+        <div className="text-xs">
+          <div className="font-medium text-gray-900">{address?.addressLine1}</div>
+          {address?.addressLine2 && (
+            <div className="text-gray-700">{address.addressLine2}</div>
+          )}
+          <div className="text-gray-700">
+            {address?.city}
+            {address?.state && `, ${address.state}`}
+            {address?.postalCode && ` ${address.postalCode}`}
+          </div>
+          {address?.country && (
+            <div className="font-medium text-gray-900">{address.country}</div>
+          )}
+          {address?.label && (
+            <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded w-fit mt-1">
+              {address.label}
+            </div>
+          )}
+          {address?.instructions && (
+            <div className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-1">
+              <span className="font-medium">Instructions:</span> {address.instructions}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
