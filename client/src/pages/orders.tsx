@@ -1124,7 +1124,7 @@ export default function Orders() {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Items:</span>
-                            <span className="font-medium text-gray-900">{selectedOrder.items.length}</span>
+                            <span className="font-medium text-gray-900">{selectedOrder.items?.length || 0}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Fulfillment:</span>
@@ -1148,9 +1148,9 @@ export default function Orders() {
                   
                   {/* Enhanced Order Items Section */}
                   <div>
-                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items.length})</h3>
+                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items?.length || 0})</h3>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      {selectedOrder.items.map((item: any, index: number) => (
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items.map((item: any, index: number) => (
                         <div key={item.id || index} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
@@ -1166,7 +1166,12 @@ export default function Orders() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <p>No items found for this order</p>
+                          <p className="text-xs mt-1">This might be a data loading issue</p>
+                        </div>
+                      )}
 
                       {/* Order Summary */}
                       <div className="border-t border-gray-200 pt-3 mt-4">
