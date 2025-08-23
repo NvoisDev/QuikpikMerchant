@@ -24,16 +24,12 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  
+  // TEMPORARY: Use memory store to bypass full database
+  // TODO: Switch back to PostgreSQL once sessions table is cleared
   return session({
     secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
+    // Using default MemoryStore temporarily
     resave: true, // Force session save even if unmodified
     saveUninitialized: true, // Allow saving uninitialized sessions for customer auth
     cookie: {
