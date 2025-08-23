@@ -376,6 +376,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Temporary in-memory storage for delivery addresses (due to database size limits)
+  private deliveryAddressesStorage = new Map<string, DeliveryAddress[]>();
+  private nextAddressId = 1;
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -4560,22 +4564,36 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Delivery address operations (temporary workaround due to database size limits)
+  // Delivery address operations (temporary in-memory storage due to database size limits)
   async getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]> {
-    // Temporary: Return empty array as workaround for database size limit issue
-    // This allows the UI to function while database table creation is resolved
-    return [];
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    return addresses.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
   async getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined> {
-    // Temporary: Return undefined as workaround for database size limit issue
+    for (const addresses of this.deliveryAddressesStorage.values()) {
+      const address = addresses.find(addr => addr.id === id);
+      if (address) return address;
+    }
     return undefined;
   }
 
   async createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress> {
-    // Temporary: Create mock address object as workaround for database size limit issue
-    const mockAddress: DeliveryAddress = {
-      id: Date.now(), // Use timestamp as temporary ID
+    const key = `${address.customerId}_${address.wholesalerId}`;
+    const existingAddresses = this.deliveryAddressesStorage.get(key) || [];
+    
+    // If this is being set as default, unset all others
+    if (address.isDefault) {
+      existingAddresses.forEach(addr => addr.isDefault = false);
+    }
+    
+    const newAddress: DeliveryAddress = {
+      id: this.nextAddressId++,
       customerId: address.customerId,
       wholesalerId: address.wholesalerId,
       addressLine1: address.addressLine1,
@@ -4586,47 +4604,71 @@ export class DatabaseStorage implements IStorage {
       country: address.country,
       label: address.label || null,
       instructions: address.instructions || null,
-      isDefault: address.isDefault,
+      isDefault: address.isDefault || false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    return mockAddress;
+    
+    existingAddresses.push(newAddress);
+    this.deliveryAddressesStorage.set(key, existingAddresses);
+    return newAddress;
   }
 
   async updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress> {
-    // Temporary: Return mock updated address as workaround for database size limit issue
-    const mockAddress: DeliveryAddress = {
-      id: id,
-      customerId: updates.customerId || '',
-      wholesalerId: updates.wholesalerId || '',
-      addressLine1: updates.addressLine1 || '',
-      addressLine2: updates.addressLine2 || null,
-      city: updates.city || '',
-      state: updates.state || null,
-      postalCode: updates.postalCode || '',
-      country: updates.country || 'United Kingdom',
-      label: updates.label || null,
-      instructions: updates.instructions || null,
-      isDefault: updates.isDefault || false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    return mockAddress;
+    for (const [key, addresses] of this.deliveryAddressesStorage.entries()) {
+      const addressIndex = addresses.findIndex(addr => addr.id === id);
+      if (addressIndex !== -1) {
+        const existingAddress = addresses[addressIndex];
+        
+        // If setting as default, unset all others in this customer/wholesaler group
+        if (updates.isDefault) {
+          addresses.forEach(addr => addr.isDefault = false);
+        }
+        
+        const updatedAddress: DeliveryAddress = {
+          ...existingAddress,
+          ...updates,
+          updatedAt: new Date()
+        };
+        
+        addresses[addressIndex] = updatedAddress;
+        this.deliveryAddressesStorage.set(key, addresses);
+        return updatedAddress;
+      }
+    }
+    throw new Error(`Address with id ${id} not found`);
   }
 
   async deleteDeliveryAddress(id: number): Promise<void> {
-    // Temporary: No-op as workaround for database size limit issue
-    return;
+    for (const [key, addresses] of this.deliveryAddressesStorage.entries()) {
+      const addressIndex = addresses.findIndex(addr => addr.id === id);
+      if (addressIndex !== -1) {
+        addresses.splice(addressIndex, 1);
+        this.deliveryAddressesStorage.set(key, addresses);
+        return;
+      }
+    }
   }
 
   async setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void> {
-    // Temporary: No-op as workaround for database size limit issue
-    return;
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    
+    // Unset all defaults first
+    addresses.forEach(addr => addr.isDefault = false);
+    
+    // Set the specified address as default
+    const targetAddress = addresses.find(addr => addr.id === addressId);
+    if (targetAddress) {
+      targetAddress.isDefault = true;
+      this.deliveryAddressesStorage.set(key, addresses);
+    }
   }
 
   async getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
-    // Temporary: Return undefined as workaround for database size limit issue
-    return undefined;
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    return addresses.find(addr => addr.isDefault) || addresses[0];
   }
 
 }
