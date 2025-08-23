@@ -2337,6 +2337,39 @@ The Quikpik Team
     }
   });
 
+  // Get single order details with items - REQUIRES AUTHENTICATION
+  app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: 'Invalid order ID' });
+      }
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify the user has access to this order (data isolation)
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      if (order.wholesalerId !== userId && order.retailerId !== userId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      console.log(`📦 Retrieved order ${orderId} with ${order.items?.length || 0} items`);
+      res.json(order);
+    } catch (error) {
+      console.error(`❌ Error fetching order ${req.params.id}:`, error);
+      res.status(500).json({ 
+        message: "Failed to fetch order details",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
   // Paginated orders endpoint - REQUIRES AUTHENTICATION
   app.get('/api/orders-paginated', requireAuth, async (req: any, res) => {
     try {
