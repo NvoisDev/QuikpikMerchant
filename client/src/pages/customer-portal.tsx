@@ -352,6 +352,16 @@ const PaymentFormContent = ({
     // VALIDATION: Check delivery address is complete when delivery is selected
     if (customerData.shippingOption === 'delivery') {
       console.log('🚚 PAYMENT VALIDATION: Delivery selected, checking address fields...');
+      console.log('🚚 PAYMENT VALIDATION: Current customerData:', customerData);
+      console.log('🚚 PAYMENT VALIDATION: Address field values:', {
+        address: customerData.address,
+        city: customerData.city,
+        postalCode: customerData.postalCode,
+        addressTrimmed: customerData.address?.trim(),
+        cityTrimmed: customerData.city?.trim(),
+        postalCodeTrimmed: customerData.postalCode?.trim()
+      });
+      
       const missingFields = [];
       if (!customerData.address?.trim()) missingFields.push('Street Address');
       if (!customerData.city?.trim()) missingFields.push('City');
