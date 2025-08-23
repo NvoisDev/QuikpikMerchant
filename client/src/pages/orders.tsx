@@ -1580,15 +1580,14 @@ function OrderDetailsModal({ order }: { order: Order }) {
                                         )}
                                       </div>
                                     );
-                                  } else if (selectedOrder.deliveryAddress || selectedOrder.customerAddress) {
-                                    return (
-                                      <div className="text-sm text-gray-700">
-                                        {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
-                                      </div>
-                                    );
                                   } else {
+                                    // FALLBACK: For orders without specific delivery address ID, show default customer address
                                     return (
-                                      <div className="text-sm text-gray-500 italic">No delivery address provided</div>
+                                      <div className="text-sm text-gray-500 italic">
+                                        Address not tracked for this order. 
+                                        <br />
+                                        <span className="text-xs">Contact customer for delivery details.</span>
+                                      </div>
                                     );
                                   }
                                 })()}
