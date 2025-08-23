@@ -3283,7 +3283,7 @@ The Quikpik Team
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.stringify(JSON.parse(customerAddress)),
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
@@ -3348,7 +3348,7 @@ The Quikpik Team
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
-              address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+              address: typeof customerAddress === 'string' ? customerAddress : JSON.stringify(JSON.parse(customerAddress))
             }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
 
