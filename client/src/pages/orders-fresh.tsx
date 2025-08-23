@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {

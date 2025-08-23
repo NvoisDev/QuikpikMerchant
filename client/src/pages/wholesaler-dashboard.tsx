@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynamic-tooltip";
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
@@ -314,27 +315,45 @@ export default function WholesalerDashboard() {
         {/* Quick Actions Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Link href="/products">
-              <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25 flex-1 sm:flex-none" data-onboarding="add-product-button">
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">Add Product</span>
-                <span className="xs:hidden">Product</span>
-              </Button>
-            </Link>
-            <Link href="/campaigns">
-              <Button size="sm" variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700 flex-1 sm:flex-none">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">Create Campaign</span>
-                <span className="xs:hidden">Campaign</span>
-              </Button>
-            </Link>
-            <Link href="/customer-groups">
-              <Button size="sm" variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700 flex-1 sm:flex-none">
-                <Users className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">Add Customers</span>
-                <span className="xs:hidden">Customers</span>
-              </Button>
-            </Link>
+            <DynamicTooltip 
+              content="Add a new product to your catalog. You can set pricing, stock levels, MOQ, and upload images."
+              type="tip"
+              placement="bottom"
+            >
+              <Link href="/products">
+                <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25 flex-1 sm:flex-none" data-onboarding="add-product-button">
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden xs:inline">Add Product</span>
+                  <span className="xs:hidden">Product</span>
+                </Button>
+              </Link>
+            </DynamicTooltip>
+            <DynamicTooltip 
+              content="Send WhatsApp marketing campaigns to your customer groups. Include product promotions and updates."
+              type="feature"
+              placement="bottom"
+            >
+              <Link href="/campaigns">
+                <Button size="sm" variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700 flex-1 sm:flex-none">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  <span className="hidden xs:inline">Create Campaign</span>
+                  <span className="xs:hidden">Campaign</span>
+                </Button>
+              </Link>
+            </DynamicTooltip>
+            <DynamicTooltip 
+              content="Manage customer groups and add new customers. Organize customers for targeted marketing campaigns."
+              type="help"
+              placement="bottom"
+            >
+              <Link href="/customer-groups">
+                <Button size="sm" variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700 flex-1 sm:flex-none">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="hidden xs:inline">Add Customers</span>
+                  <span className="xs:hidden">Customers</span>
+                </Button>
+              </Link>
+            </DynamicTooltip>
             <Link href="/preview-store">
               <Button 
                 size="sm"
@@ -347,17 +366,23 @@ export default function WholesalerDashboard() {
                 <span className="xs:hidden">Preview</span>
               </Button>
             </Link>
-            <Button 
-              size="sm"
-              variant="outline" 
-              onClick={handleShareStore}
-              className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
-              title="Copy customer portal link to clipboard"
+            <DynamicTooltip 
+              content="Copy your customer portal link to share with customers. They can browse and order your products through this link."
+              type="success"
+              placement="bottom"
             >
-              <Share2 className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Share Store</span>
-              <span className="xs:hidden">Share</span>
-            </Button>
+              <Button 
+                size="sm"
+                variant="outline" 
+                onClick={handleShareStore}
+                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
+                title="Copy customer portal link to clipboard"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                <span className="hidden xs:inline">Share Store</span>
+                <span className="xs:hidden">Share</span>
+              </Button>
+            </DynamicTooltip>
           </div>
         </div>
 
@@ -406,60 +431,78 @@ export default function WholesalerDashboard() {
 
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm font-medium">Total Revenue</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">
-                      {(stats as any)?.revenueChange !== undefined 
-                        ? `${(stats as any).revenueChange >= 0 ? '+' : ''}${(stats as any).revenueChange.toFixed(1)}% from last month`
-                        : 'No change data'}
-                    </p>
+            <DynamicTooltip 
+              content="Your total revenue from all completed orders. This includes all successful payments from customers."
+              type="info"
+              placement="top"
+            >
+              <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/80 text-sm font-medium">Total Revenue</p>
+                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatCurrency((stats as any)?.totalRevenue || 0)}</p>
+                      <p className="text-white/80 text-xs mt-1">
+                        {(stats as any)?.revenueChange !== undefined 
+                          ? `${(stats as any).revenueChange >= 0 ? '+' : ''}${(stats as any).revenueChange.toFixed(1)}% from last month`
+                          : 'No change data'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <DollarSign className="h-6 w-6" />
+                    </div>
                   </div>
-                  <div className="bg-white/20 p-3 rounded-full">
-                    <DollarSign className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </DynamicTooltip>
 
-            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm font-medium">Total Orders</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">
-                      {(stats as any)?.ordersChange !== undefined 
-                        ? `${(stats as any).ordersChange >= 0 ? '+' : ''}${(stats as any).ordersChange.toFixed(1)}% from last month`
-                        : 'No change data'}
-                    </p>
+            <DynamicTooltip 
+              content="Total number of orders placed by your customers. Includes all order statuses - pending, paid, and fulfilled."
+              type="info"
+              placement="top"
+            >
+              <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/80 text-sm font-medium">Total Orders</p>
+                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.ordersCount || 0)}</p>
+                      <p className="text-white/80 text-xs mt-1">
+                        {(stats as any)?.ordersChange !== undefined 
+                          ? `${(stats as any).ordersChange >= 0 ? '+' : ''}${(stats as any).ordersChange.toFixed(1)}% from last month`
+                          : 'No change data'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <ShoppingCart className="h-6 w-6" />
+                    </div>
                   </div>
-                  <div className="bg-white/20 p-3 rounded-full">
-                    <ShoppingCart className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </DynamicTooltip>
 
-            <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/80 text-sm font-medium">Active Products</p>
-                    <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
-                    <p className="text-white/80 text-xs mt-1">
-                      {(alertsData as any)?.count > 0 ? `${(alertsData as any).count} low stock alerts` : 'Stock levels healthy'}
-                    </p>
+            <DynamicTooltip 
+              content="Number of products currently available in your catalog. Click on the bell icon to view low stock alerts."
+              type="info"
+              placement="top"
+            >
+              <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/80 text-sm font-medium">Active Products</p>
+                      <p className="text-3xl font-bold">{statsLoading ? '...' : formatNumber((stats as any)?.activeProducts || 0)}</p>
+                      <p className="text-white/80 text-xs mt-1">
+                        {(alertsData as any)?.count > 0 ? `${(alertsData as any).count} low stock alerts` : 'Stock levels healthy'}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <Package className="h-6 w-6" />
+                    </div>
                   </div>
-                  <div className="bg-white/20 p-3 rounded-full">
-                    <Package className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </DynamicTooltip>
 
             <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
               <CardContent className="p-6">

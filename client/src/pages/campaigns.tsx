@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { 
   MessageSquare, 
   Plus,

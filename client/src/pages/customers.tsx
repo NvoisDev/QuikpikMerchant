@@ -51,6 +51,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
+import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 
 // Form Schemas
 const customerGroupFormSchema = z.object({
@@ -1217,28 +1218,40 @@ export default function Customers() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                onClick={() => {
-                  // Set a default group for directory additions (or create a general one)
-                  setSelectedGroup({ id: 0, name: 'All Customers', description: 'General customer directory' } as CustomerGroup);
-                  setIsImportContactsDialogOpen(true);
-                }}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
+              <DynamicTooltip 
+                content="Import customers from your phone contacts or CSV file. Bulk add customers to save time."
+                type="help"
+                placement="bottom"
               >
-                <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Import Contacts</span>
-                <span className="sm:hidden">Import</span>
-              </Button>
+                <Button
+                  onClick={() => {
+                    // Set a default group for directory additions (or create a general one)
+                    setSelectedGroup({ id: 0, name: 'All Customers', description: 'General customer directory' } as CustomerGroup);
+                    setIsImportContactsDialogOpen(true);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm"
+                >
+                  <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Import Contacts</span>
+                  <span className="sm:hidden">Import</span>
+                </Button>
+              </DynamicTooltip>
               <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
-                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Add Customer</span>
-                    <span className="sm:hidden">Add</span>
-                  </Button>
-                </DialogTrigger>
+                <DynamicTooltip 
+                  content="Add a new customer manually with their contact information and details."
+                  type="tip"
+                  placement="bottom"
+                >
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
+                      <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Add Customer</span>
+                      <span className="sm:hidden">Add</span>
+                    </Button>
+                  </DialogTrigger>
+                </DynamicTooltip>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Customer</DialogTitle>
@@ -1400,13 +1413,18 @@ export default function Customers() {
                         </div>
                         
                         {/* Mobile Actions Dropdown */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                        <DynamicTooltip 
+                          content="More actions for this customer - view orders, edit details, add to groups, or delete."
+                          type="info"
+                          placement="left"
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleViewCustomerOrders(customer)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View Orders
@@ -1430,8 +1448,9 @@ export default function Customers() {
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </DynamicTooltip>
                       </div>
                       
                       {/* Desktop Stats & Actions */}
