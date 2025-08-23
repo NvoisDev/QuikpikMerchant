@@ -308,7 +308,6 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
         onSuccess={onSuccess} 
         totalAmount={totalAmount} 
         wholesaler={wholesaler}
-        customerData={customerData}
       />
     </Elements>
   );
@@ -318,13 +317,11 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
 const PaymentFormContent = ({ 
   onSuccess, 
   totalAmount, 
-  wholesaler,
-  customerData
+  wholesaler
 }: { 
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
-  customerData: CustomerData;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -347,42 +344,6 @@ const PaymentFormContent = ({
     if (!stripe || !elements || isProcessing || paymentSubmitted) {
       console.error('💳 Payment Error: Stripe/Elements not loaded or payment already in progress');
       return;
-    }
-
-    // VALIDATION: Check delivery address is complete when delivery is selected
-    if (customerData.shippingOption === 'delivery') {
-      console.log('🚚 PAYMENT VALIDATION: Delivery selected, checking address fields...');
-      console.log('🚚 PAYMENT VALIDATION: Current customerData:', customerData);
-      console.log('🚚 PAYMENT VALIDATION: Address field values:', {
-        address: customerData.address,
-        city: customerData.city,
-        postalCode: customerData.postalCode,
-        addressTrimmed: customerData.address?.trim(),
-        cityTrimmed: customerData.city?.trim(),
-        postalCodeTrimmed: customerData.postalCode?.trim()
-      });
-      
-      const missingFields = [];
-      if (!customerData.address?.trim()) missingFields.push('Street Address');
-      if (!customerData.city?.trim()) missingFields.push('City');
-      if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
-      
-      console.log('🚚 PAYMENT VALIDATION: Missing fields:', missingFields);
-      
-      if (missingFields.length > 0) {
-        console.log('🚚 PAYMENT VALIDATION: Blocking payment due to missing address fields');
-        toast({
-          title: "Delivery Address Required",
-          description: `Please fill in the following fields: ${missingFields.join(', ')}`,
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        setPaymentSubmitted(false);
-        return; // Stop payment process
-      }
-      console.log('🚚 PAYMENT VALIDATION: All delivery address fields complete, proceeding with payment...');
-    } else {
-      console.log('🚚 PAYMENT VALIDATION: Pickup selected, skipping address validation');
     }
 
     console.log('💳 Starting payment confirmation process...');
@@ -1325,13 +1286,6 @@ export default function CustomerPortal() {
   // Simplified payment intent creation - no shipping metadata needed
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
-    console.log('🚚 DEBUG: Current customer data:', {
-      shippingOption: customerData.shippingOption,
-      address: customerData.address,
-      city: customerData.city,
-      postalCode: customerData.postalCode
-    });
-    
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
@@ -1940,12 +1894,9 @@ export default function CustomerPortal() {
                   onClick={async () => {
                     if (cart.length > 0) {
                       console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
-                      // Use a short delay to ensure state has updated
-                      setTimeout(async () => {
-                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                        await createPaymentIntentForCheckout();
-                        setShowCheckout(true);
-                      }, 100);
+                      console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                      await createPaymentIntentForCheckout();
+                      setShowCheckout(true);
                     }
                   }}
                   size="sm"
