@@ -1363,6 +1363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerPhone: order.customerPhone,
           customerEmail: order.customerEmail,
           deliveryAddress: order.deliveryAddress,
+          deliveryAddressId: order.deliveryAddressId,
           paymentMethod: "Card Payment",
           paymentStatus: "paid",
           fulfillmentType: order.fulfillmentType,
