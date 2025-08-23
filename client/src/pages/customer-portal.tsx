@@ -1287,6 +1287,23 @@ export default function CustomerPortal() {
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     
+    // VALIDATION: Check delivery address is complete when delivery is selected
+    if (customerData.shippingOption === 'delivery') {
+      const missingFields = [];
+      if (!customerData.address?.trim()) missingFields.push('Street Address');
+      if (!customerData.city?.trim()) missingFields.push('City');
+      if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
+      
+      if (missingFields.length > 0) {
+        toast({
+          title: "Delivery Address Required",
+          description: `Please fill in the following fields: ${missingFields.join(', ')}`,
+          variant: "destructive",
+        });
+        return; // Stop checkout process
+      }
+    }
+    
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
       return;
