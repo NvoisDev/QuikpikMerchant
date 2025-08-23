@@ -65,7 +65,7 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   });
 
   // Check if user already has addresses
-  const { data: existingAddresses = [] } = useQuery({
+  const { data: existingAddresses = [] } = useQuery<any[]>({
     queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`],
     enabled: isOpen,
   });
@@ -80,12 +80,9 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   // Create address mutation
   const createAddressMutation = useMutation({
     mutationFn: async (addressData: AddressFormData) => {
-      return await apiRequest('/api/customer/delivery-addresses', {
-        method: 'POST',
-        body: JSON.stringify({
-          wholesalerId,
-          ...addressData,
-        }),
+      return await apiRequest('POST', '/api/customer/delivery-addresses', {
+        wholesalerId,
+        ...addressData,
       });
     },
     onSuccess: () => {
@@ -137,7 +134,7 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}> {/* Prevent closing by clicking overlay */}
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" closeDisabled>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         {step === 'intro' && (
           <>
             <DialogHeader>
