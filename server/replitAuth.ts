@@ -34,9 +34,8 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: false, // Only save session if modified
-    saveUninitialized: false, // Don't save empty sessions
-    rolling: true, // Reset session expiry on activity
+    resave: true, // Force session save even if unmodified
+    saveUninitialized: true, // Allow saving uninitialized sessions for customer auth
     cookie: {
       httpOnly: true,
       secure: false, // Allow cookies over HTTP for development

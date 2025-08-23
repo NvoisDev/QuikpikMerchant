@@ -20,62 +20,6 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Helper function to format address from JSON string or regular string
-const formatAddress = (addressData?: string): string => {
-  if (!addressData) return 'Address not provided';
-  
-  try {
-    // Try to parse as JSON first
-    const parsed = JSON.parse(addressData);
-    if (typeof parsed === 'object' && parsed !== null) {
-      // Show all available address fields, including empty ones with labels
-      const addressLines = [];
-      
-      // Add street/property if available
-      if (parsed.street || parsed.property || parsed.address1 || parsed.address) {
-        addressLines.push(parsed.street || parsed.property || parsed.address1 || parsed.address);
-      }
-      
-      // Add address line 2 if available
-      if (parsed.address2 && parsed.address2.trim()) {
-        addressLines.push(parsed.address2);
-      }
-      
-      // Add city/town if available
-      if (parsed.town || parsed.city) {
-        addressLines.push(parsed.town || parsed.city);
-      }
-      
-      // Add county/state if available
-      if (parsed.county || parsed.state) {
-        addressLines.push(parsed.county || parsed.state);
-      }
-      
-      // Add postcode if available
-      if (parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip) {
-        addressLines.push(parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip);
-      }
-      
-      // Add country if available
-      if (parsed.country && parsed.country.trim()) {
-        addressLines.push(parsed.country);
-      }
-      
-      // If we have any address parts, join them
-      if (addressLines.length > 0) {
-        return addressLines.join(', ');
-      } else {
-        // Show structured empty address info
-        return `Address incomplete - Country: ${parsed.country || 'Not specified'}`;
-      }
-    }
-    return addressData;
-  } catch {
-    // If parsing fails, return as regular string
-    return addressData;
-  }
-};
-
 interface Order {
   id: number;
   orderNumber?: string;
@@ -599,9 +543,6 @@ export default function OrdersFresh() {
                   <div><span className="font-medium">Email:</span> {selectedOrder.customerEmail}</div>
                   {selectedOrder.customerPhone && (
                     <div><span className="font-medium">Phone:</span> {selectedOrder.customerPhone}</div>
-                  )}
-                  {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
-                    <div><span className="font-medium">Delivery Address:</span> {formatAddress(selectedOrder.deliveryAddress)}</div>
                   )}
                 </div>
               </div>

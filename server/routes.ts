@@ -2385,35 +2385,8 @@ The Quikpik Team
 
       console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
       
-      // Add order items to each order
-      const ordersWithItems = await Promise.all(ordersResult.map(async (order) => {
-        const items = await db
-          .select({
-            id: orderItems.id,
-            quantity: orderItems.quantity,
-            unitPrice: orderItems.unitPrice,
-            total: orderItems.total,
-            product: {
-              id: products.id,
-              name: products.name,
-              imageUrl: products.imageUrl,
-              moq: products.moq
-            }
-          })
-          .from(orderItems)
-          .leftJoin(products, eq(orderItems.productId, products.id))
-          .where(eq(orderItems.orderId, order.id));
-
-        console.log(`📦 Order ${order.id} has ${items.length} items`);
-        
-        return {
-          ...order,
-          items: items
-        };
-      }));
-      
       res.json({
-        orders: ordersWithItems,
+        orders: ordersResult,
         currentPage: page,
         totalPages,
         total: totalOrders,
