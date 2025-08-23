@@ -151,15 +151,6 @@ export default function OrdersFresh() {
 
   // Use existing order data instead of making another API call
   const loadOrderDetails = (order: Order) => {
-    // DEBUG: Check items data when loading order details
-    console.log('🔍 Order items debug:', { 
-      orderId: order.id, 
-      orderNumber: order.orderNumber,
-      hasItems: !!order.items,
-      itemsLength: order.items?.length,
-      items: order.items 
-    });
-    
     // Set selected order directly from existing data - no API call needed!
     setSelectedOrder(order);
   };
