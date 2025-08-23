@@ -241,6 +241,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                   );
                 }
               })()}
+              {order.deliveryAddressId && (
+                <div className="text-xs text-gray-500 mt-2">
+                  deliveryAddressId: {order.deliveryAddressId}
+                </div>
+              )}
             </div>
           </div>
         )}
