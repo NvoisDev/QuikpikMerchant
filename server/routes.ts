@@ -1560,6 +1560,23 @@ The Quikpik Team
   // DELIVERY ADDRESS MANAGEMENT API ROUTES
   // ============================================================================
   
+  // Get specific delivery address by ID for order display
+  app.get('/api/delivery-address/:addressId', isAuthenticated, async (req, res) => {
+    try {
+      const { addressId } = req.params;
+      const address = await storage.getDeliveryAddress(parseInt(addressId));
+      
+      if (!address) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+      
+      res.json(address);
+    } catch (error) {
+      console.error("❌ Error fetching delivery address:", error);
+      res.status(500).json({ error: "Failed to fetch delivery address" });
+    }
+  });
+
   // Wholesaler endpoint: Get customer's delivery addresses for order fulfillment
   app.get('/api/wholesaler/customer-delivery-addresses/:customerId/:wholesalerId', isAuthenticated, async (req, res) => {
     try {
@@ -2985,7 +3002,7 @@ The Quikpik Team
     // Global payment processing lock to prevent ANY payment requests from overlapping
     const globalPaymentLock = 'global_payment_processing';
     try {
-      const { customerName, customerEmail, customerPhone, customerAddress, items, shippingInfo } = req.body;
+      const { customerName, customerEmail, customerPhone, customerAddress, selectedDeliveryAddress, items, shippingInfo } = req.body;
       
       // Global payment lock disabled - allow payment processing
       console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
@@ -3327,6 +3344,8 @@ The Quikpik Team
           customerEmail,
           customerPhone,
           customerAddress: JSON.stringify(customerAddress),
+          // CRITICAL: Store selected delivery address ID for exact order-address tracking
+          selectedDeliveryAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : '',
           productSubtotal: productSubtotal.toFixed(2),
           shippingCost: deliveryCost.toString(),
           customerTransactionFee: customerTransactionFee.toFixed(2),

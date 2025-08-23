@@ -45,6 +45,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerEmail,
     customerPhone,
     customerAddress,
+    selectedDeliveryAddressId,
     totalAmount,
     platformFee,
     transactionFee,
@@ -177,6 +178,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null,
+    // CRITICAL: Store selected delivery address ID for exact order-address tracking
+    deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' ? parseInt(selectedDeliveryAddressId) : null,
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
     deliveryCarrier: null, // No carrier needed for simplified delivery system

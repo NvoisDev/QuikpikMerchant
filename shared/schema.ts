@@ -409,6 +409,8 @@ export const orders = pgTable("orders", {
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
   deliveryAddress: text("delivery_address"),
+  // CRITICAL: Store exact delivery address ID used for this order
+  deliveryAddressId: integer("delivery_address_id").references(() => deliveryAddresses.id),
   notes: text("notes"),
   
   // New delivery and fulfillment options

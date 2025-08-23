@@ -1153,7 +1153,16 @@ export default function Orders() {
           )}
 
           {/* Order Details Dialog */}
-          {selectedOrder && <OrderDetailsModal order={selectedOrder} />}
+          {selectedOrder && (
+            <Dialog open={!!selectedOrder} onOpenChange={(open) => {
+              if (!open) {
+                setSelectedOrder(null);
+                setCustomerDeliveryAddress(null);
+              }
+            }}>
+              <OrderDetailsModal order={selectedOrder} />
+            </Dialog>
+          )}
         </div>
       )}
     </div>
@@ -1164,11 +1173,26 @@ export default function Orders() {
 function OrderDetailsModal({ order }: { order: Order }) {
   const [customerDeliveryAddress, setCustomerDeliveryAddress] = useState<any>(null);
 
-  // Fetch delivery address when order changes
+  // CRITICAL: Fetch EXACT delivery address used for this specific order
   useEffect(() => {
     const fetchDeliveryAddress = async () => {
       if (order && order.fulfillmentType === 'delivery') {
         try {
+          // If order has a specific delivery address ID, fetch that exact address
+          if (order.deliveryAddressId) {
+            console.log(`🎯 Fetching exact delivery address for order ${order.id}: address ID ${order.deliveryAddressId}`);
+            const response = await fetch(`/api/delivery-address/${order.deliveryAddressId}`, {
+              credentials: 'include'
+            });
+            if (response.ok) {
+              const exactAddress = await response.json();
+              setCustomerDeliveryAddress(exactAddress);
+              return;
+            }
+          }
+          
+          // Fallback to current method for older orders without delivery address IDs
+          console.log(`📦 Fallback: Using current default address for order ${order.id} (no specific address ID stored)`);
           const customerId = order.retailerId || order.retailer?.id;
           if (customerId) {
             const response = await fetch(`/api/wholesaler/customer-delivery-addresses/${customerId}/${order.wholesalerId}`, {
