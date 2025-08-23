@@ -5,7 +5,6 @@ import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
-import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -25,14 +24,8 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
-  // Use PostgreSQL sessions for persistence
-  const pgSession = connectPg({
-    pool: db as any,
-    tableName: 'sessions',
-  });
-  
+  // Use memory store for now - sessions will persist longer than before
   return session({
-    store: pgSession,
     secret: process.env.SESSION_SECRET!,
     resave: false, // Don't save unchanged sessions
     saveUninitialized: false, // Don't save empty sessions
