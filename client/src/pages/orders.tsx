@@ -40,7 +40,9 @@ import {
   RefreshCw,
   Grid,
   List,
-  ArrowUpDown
+  ArrowUpDown,
+  Home,
+  Building
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -92,6 +94,27 @@ const formatDeliveryAddress = (address: any): string => {
   ].filter(part => part && part.trim() !== '');
   
   return parts.join(', ');
+};
+
+// Helper function to parse delivery address JSON
+const parseDeliveryAddress = (address: string | undefined): any => {
+  if (!address) return null;
+  try {
+    const parsed = JSON.parse(address);
+    return typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+// Helper function to get appropriate icon for address label
+const getLabelIcon = (label?: string) => {
+  switch (label?.toLowerCase()) {
+    case 'home': return Home;
+    case 'office': return Building;
+    case 'warehouse': return Truck;
+    default: return MapPin;
+  }
 };
 
 interface Order {
@@ -1197,13 +1220,53 @@ export default function Orders() {
                                       </div>
                                     )}
                                   </div>
-                                ) : (selectedOrder.deliveryAddress || selectedOrder.customerAddress) ? (
-                                  <div className="text-sm text-gray-700">
-                                    {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500 italic">No delivery address provided</div>
-                                )}
+                                ) : (() => {
+                                  const deliveryAddr = parseDeliveryAddress(selectedOrder.deliveryAddress);
+                                  if (deliveryAddr) {
+                                    const Icon = getLabelIcon(deliveryAddr.label);
+                                    return (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <Icon className="h-4 w-4 text-green-600" />
+                                          <div className="text-sm">
+                                            <div className="font-medium">{deliveryAddr.addressLine1}</div>
+                                            {deliveryAddr.addressLine2 && (
+                                              <div>{deliveryAddr.addressLine2}</div>
+                                            )}
+                                            <div>
+                                              {deliveryAddr.city}
+                                              {deliveryAddr.state && `, ${deliveryAddr.state}`}
+                                              {deliveryAddr.postalCode && ` ${deliveryAddr.postalCode}`}
+                                            </div>
+                                            {deliveryAddr.country && (
+                                              <div className="font-medium">{deliveryAddr.country}</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {deliveryAddr.label && (
+                                          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
+                                            {deliveryAddr.label}
+                                          </div>
+                                        )}
+                                        {deliveryAddr.instructions && (
+                                          <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                            <span className="font-medium">Instructions:</span> {deliveryAddr.instructions}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } else if (selectedOrder.deliveryAddress || selectedOrder.customerAddress) {
+                                    return (
+                                      <div className="text-sm text-gray-700">
+                                        {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="text-sm text-gray-500 italic">No delivery address provided</div>
+                                    );
+                                  }
+                                })()}
                               </div>
                             </div>
                           </div>
