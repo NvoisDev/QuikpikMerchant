@@ -176,7 +176,7 @@ export default function Orders() {
     // Parse delivery address from the order data (saved when order was created)
     if (order.deliveryAddress) {
       try {
-        // If it's already a parsed object, use it
+        // If it's already a parsed object, use it directly
         if (typeof order.deliveryAddress === 'object') {
           setCustomerDeliveryAddress(order.deliveryAddress);
           return;
@@ -184,16 +184,31 @@ export default function Orders() {
         
         // If it's a JSON string, parse it
         const parsed = JSON.parse(order.deliveryAddress);
+        console.log('📍 Parsed delivery address:', parsed);
         
-        // Handle different address formats
-        if (parsed.addressLine1 || parsed.street) {
-          setCustomerDeliveryAddress(parsed);
+        // Handle different possible address formats
+        if (parsed.addressLine1 || parsed.street || parsed.line1) {
+          // Standard format: { addressLine1, addressLine2, city, state, postalCode, country, label, instructions }
+          setCustomerDeliveryAddress({
+            addressLine1: parsed.addressLine1 || parsed.street || parsed.line1,
+            addressLine2: parsed.addressLine2 || parsed.line2,
+            city: parsed.city || parsed.town,
+            state: parsed.state || parsed.county || parsed.region,
+            postalCode: parsed.postalCode || parsed.postcode || parsed.zipCode || parsed.zip,
+            country: parsed.country,
+            label: parsed.label || parsed.name,
+            instructions: parsed.instructions || parsed.notes
+          });
+        } else if (typeof parsed === 'string') {
+          // If the parsed result is still a string
+          setCustomerDeliveryAddress({ addressLine1: parsed });
         } else {
-          // If it's just a plain address string, format it
-          setCustomerDeliveryAddress({ addressLine1: parsed.address || parsed });
+          // If it's an object but doesn't have expected fields, try to extract any useful info
+          const addressText = parsed.address || parsed.fullAddress || Object.values(parsed).join(', ');
+          setCustomerDeliveryAddress({ addressLine1: addressText });
         }
       } catch (error) {
-        console.log('Could not parse delivery address, treating as plain text:', order.deliveryAddress);
+        console.log('Could not parse delivery address JSON, treating as plain text:', order.deliveryAddress);
         // Fallback: treat as plain address string
         setCustomerDeliveryAddress({ addressLine1: order.deliveryAddress });
       }
