@@ -3476,7 +3476,8 @@ The Quikpik Team
         customerTransactionFee,
         totalCustomerPays,
         wholesalerPlatformFee,
-        wholesalerReceives
+        wholesalerReceives,
+        selectedDeliveryAddressId
       } = paymentIntent.metadata;
 
       if (orderType === 'customer_portal') {
@@ -3648,6 +3649,7 @@ The Quikpik Team
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null,
+              deliveryAddressId: selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null,
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
