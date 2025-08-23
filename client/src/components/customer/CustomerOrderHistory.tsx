@@ -126,16 +126,16 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   const calculatedTotal = subtotal + transactionFee + deliveryCost;
   
   return (
-    <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
       <DialogHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <DialogTitle>Order {order.orderNumber}</DialogTitle>
-            <DialogDescription>Order ID: {order.id}</DialogDescription>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div className="flex-1">
+            <DialogTitle className="text-base sm:text-lg">Order {order.orderNumber}</DialogTitle>
+            <DialogDescription className="text-sm">Order ID: {order.id}</DialogDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:justify-end">
             <DialogClose asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 Close
               </Button>
             </DialogClose>
@@ -143,11 +143,11 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
         </div>
       </DialogHeader>
       
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
         {/* Order Status */}
         <div>
-          <h3 className="font-semibold mb-2">Status & Fulfillment</h3>
-          <div className="flex gap-2">
+          <h3 className="font-semibold mb-2 text-sm sm:text-base">Status & Fulfillment</h3>
+          <div className="flex flex-wrap gap-2">
             <Badge className={`${getStatusColor(order.status)} text-xs`}>
               {getStatusIcon(order.status)}
               <span className="ml-1 capitalize">{order.status}</span>
@@ -160,30 +160,30 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
         {/* Your Information */}
         <div>
-          <h3 className="font-medium mb-1 text-sm">Your Information</h3>
-          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
-            <div className="text-xs"><strong>Name:</strong> {order.customerName || 'Not available'}</div>
-            <div className="text-xs"><strong>Email:</strong> {order.customerEmail || 'Not available'}</div>
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Your Information</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
+            <div className="text-xs break-words"><strong>Name:</strong> {order.customerName || 'Not available'}</div>
+            <div className="text-xs break-all"><strong>Email:</strong> {order.customerEmail || 'Not available'}</div>
             <div className="text-xs"><strong>Phone:</strong> {order.customerPhone || 'Not available'}</div>
             {order.customerAddress && (
-              <div className="text-xs"><strong>Address:</strong> {formatAddress(order.customerAddress)}</div>
+              <div className="text-xs break-words"><strong>Address:</strong> {formatAddress(order.customerAddress)}</div>
             )}
           </div>
         </div>
 
         {/* Order Items */}
         <div>
-          <h3 className="font-medium mb-1 text-sm">Items ({order.items.length})</h3>
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Items ({order.items.length})</h3>
           <div className="space-y-2">
             {order.items.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                <div className="flex-1">
-                  <div className="font-medium text-xs">{item.productName}</div>
+              <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-xs break-words">{item.productName}</div>
                   <div className="text-xs text-gray-600">
                     Quantity: {item.quantity} units × {formatCurrency(item.unitPrice)}
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right flex-shrink-0">
                   <div className="font-medium text-xs">{formatCurrency(parseFloat(item.unitPrice) * item.quantity)}</div>
                 </div>
               </div>
@@ -193,20 +193,20 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
         {/* Payment Summary */}
         <div>
-          <h3 className="font-medium mb-1 text-sm">Payment Summary</h3>
-          <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+          <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
             <div className="flex justify-between text-xs">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span className="break-words">Subtotal:</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span>Transaction Fee (5.5% + £0.50):</span>
-              <span>{formatCurrency(transactionFee)}</span>
+              <span className="break-words">Transaction Fee (5.5% + £0.50):</span>
+              <span className="font-medium">{formatCurrency(transactionFee)}</span>
             </div>
             {deliveryCost > 0 && (
               <div className="flex justify-between text-xs">
-                <span>Delivery Cost:</span>
-                <span>{formatCurrency(deliveryCost)}</span>
+                <span className="break-words">Delivery Cost:</span>
+                <span className="font-medium">{formatCurrency(deliveryCost)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold border-t pt-1 text-sm">
@@ -218,42 +218,50 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
         {/* Order Timeline */}
         <div>
-          <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
-          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
-            <div className="flex items-center space-x-2 text-xs">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
-              <span className="font-medium">Payment processed successfully</span>
+          <h3 className="font-medium mb-2 text-sm sm:text-base">Order Timeline</h3>
+          <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-2">
+            <div className="flex items-start space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium break-words">Payment processed successfully</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 text-xs">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
-              <span className="font-medium">Order confirmation sent to you</span>
+            <div className="flex items-start space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium break-words">Order confirmation sent to you</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 text-xs">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-gray-600">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
-              <span className="font-medium">Wholesaler notified of your order</span>
+            <div className="flex items-start space-x-2 text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 block">{format(new Date(order.createdAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                <span className="font-medium break-words">Wholesaler notified of your order</span>
+              </div>
             </div>
             {order.status === 'fulfilled' ? (
-              <div className="flex items-center space-x-2 text-xs">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600">{format(new Date(order.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
-                <span className="font-medium">Order fulfilled - ready for {order.fulfillmentType}</span>
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">{format(new Date(order.updatedAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                  <span className="font-medium break-words">Order fulfilled - ready for {order.fulfillmentType}</span>
+                </div>
               </div>
             ) : (
               <>
-                <div className="flex items-center space-x-2 text-xs">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-gray-400">Awaiting wholesaler confirmation</span>
+                <div className="flex items-start space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                  <span className="text-gray-400 break-words">Awaiting wholesaler confirmation</span>
                 </div>
-                <div className="flex items-center space-x-2 text-xs">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-gray-400">Order preparation pending</span>
+                <div className="flex items-start space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                  <span className="text-gray-400 break-words">Order preparation pending</span>
                 </div>
-                <div className="flex items-center space-x-2 text-xs">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-gray-400">Fulfillment pending</span>
+                <div className="flex items-start space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                  <span className="text-gray-400 break-words">Fulfillment pending</span>
                 </div>
               </>
             )}
@@ -478,8 +486,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-3 sm:pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center space-x-2">
             <Package className="h-5 w-5" />
             <span className="text-lg font-semibold">Order History</span>
@@ -487,7 +495,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             {isFetching && (
               <div className="flex items-center space-x-1 text-xs text-gray-500">
                 <RefreshCw className="h-3 w-3 animate-spin" />
-                <span>Updating...</span>
+                <span className="hidden sm:inline">Updating...</span>
               </div>
             )}
           </div>
@@ -496,7 +504,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             variant="outline"
             size="sm"
             disabled={isRefreshing || isFetching}
-            className="h-8 px-2"
+            className="h-8 px-2 w-full sm:w-auto"
           >
             <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing || isFetching ? 'animate-spin' : ''}`} />
             <span className="text-xs">Refresh</span>
@@ -511,10 +519,10 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search orders by number, status, products, or date..."
+              placeholder="Search orders..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-10 h-10 text-base"
             />
           </div>
         </div>
@@ -532,80 +540,66 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
             console.log(`Rendering order ${index}:`, order);
             return (
             <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  {/* Left side - Order info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <div className="text-sm font-semibold">{order.orderNumber}</div>
-                      <Badge className={`${getStatusColor(order.status)} text-xs`}>
-                        {getStatusIcon(order.status)}
-                        <span className="ml-1 capitalize">{order.status}</span>
-                      </Badge>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}
-                      >
-                        {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-gray-600 mb-2 flex items-center space-x-2">
-                      <span>From</span>
-                      <Badge variant="outline" className="text-xs px-2 py-0.5">
-                        {order.wholesaler?.businessName || 'Unknown Business'}
-                      </Badge>
-                    </div>
-                    
-                    {/* Compact Items List */}
-                    <div className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="text-xs text-gray-700">
-                          <span className="font-medium">{item.productName}</span>
-                          <span className="text-gray-500 ml-1">
-                            {item.quantity} units × {formatCurrency(item.unitPrice)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Summary - Customer Payment Details */}
-                    <div className="mt-2 space-y-0.5">
-                      <div className="flex justify-between text-xs">
-                        <span>Subtotal:</span>
-                        <span>{formatCurrency(order.subtotal)}</span>
-                      </div>
-                      {parseFloat(order.deliveryCost || '0') > 0 && (
-                        <div className="flex justify-between text-xs">
-                          <span>Delivery Cost:</span>
-                          <span>{formatCurrency(order.deliveryCost || '0')}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-xs">
-                        <span>Transaction Fee:</span>
-                        <span>{formatCurrency((parseFloat(order.subtotal) * 0.055 + 0.50).toFixed(2))}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-semibold border-t border-gray-200 pt-1">
-                        <span>Total Paid:</span>
-                        <span className="text-green-700">{formatCurrency(order.total)}</span>
-                      </div>
-                    </div>
+              <CardContent className="p-3 sm:p-4">
+                <div className="space-y-3">
+                  {/* Order header with badges */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold">{order.orderNumber}</div>
+                    <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                      {getStatusIcon(order.status)}
+                      <span className="ml-1 capitalize">{order.status}</span>
+                    </Badge>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}
+                    >
+                      {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
+                    </Badge>
+                  </div>
+
+                  {/* Wholesaler info */}
+                  <div className="text-xs text-gray-600 flex flex-wrap items-center gap-2">
+                    <span>From</span>
+                    <Badge variant="outline" className="text-xs px-2 py-0.5 break-words">
+                      {order.wholesaler?.businessName || 'Unknown Business'}
+                    </Badge>
                   </div>
                   
-                  {/* Right side - Total Paid and actions */}
-                  <div className="flex-shrink-0 text-right ml-4">
-                    <div className="font-semibold text-lg text-green-700">{formatCurrency(order.total)}</div>
-                    <div className="text-xs text-gray-500">Total Paid</div>
-                    <div className="text-xs text-gray-500 flex items-center justify-end mt-1">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {format(new Date(order.date), 'MMM d, yyyy')}
+                  {/* Items list - mobile optimized */}
+                  <div className="space-y-1">
+                    {order.items.slice(0, 2).map((item, index) => (
+                      <div key={index} className="text-xs text-gray-700 break-words">
+                        <span className="font-medium">{item.productName}</span>
+                        <span className="text-gray-500 ml-1">
+                          {item.quantity} units × {formatCurrency(item.unitPrice)}
+                        </span>
+                      </div>
+                    ))}
+                    {order.items.length > 2 && (
+                      <div className="text-xs text-gray-500">
+                        +{order.items.length - 2} more items
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Mobile-friendly summary layout */}
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-3 w-3 flex-shrink-0" />
+                        <span>{format(new Date(order.date), 'MMM d, yyyy')}</span>
+                      </div>
+                      <div className="text-sm font-semibold text-green-600">
+                        {formatCurrency(parseFloat(order.total))}
+                      </div>
                     </div>
                     
                     {/* View Details Button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs mt-2">
+                        <Button variant="outline" size="sm" className="h-8 px-3 w-full sm:w-auto">
                           <Eye className="h-3 w-3 mr-1" />
-                          View Details
+                          <span className="text-xs">View Details</span>
                         </Button>
                       </DialogTrigger>
                       <OrderDetailsModal order={order} />
@@ -621,14 +615,14 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
 
         {/* Pagination Controls */}
         {filteredOrders.length > ordersPerPage && (
-          <div className="mt-6 space-y-4">
-            {/* Order count - on its own line on mobile */}
-            <div className="text-sm text-gray-600 text-center sm:text-left">
+          <div className="mt-6 space-y-3 sm:space-y-4">
+            {/* Order count - mobile friendly */}
+            <div className="text-sm text-gray-600 text-center">
               Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
             </div>
             
-            {/* Pagination controls - centered with proper spacing */}
-            <div className="flex items-center justify-center gap-2 flex-wrap">
+            {/* Pagination controls - mobile optimized */}
+            <div className="flex items-center justify-center gap-1 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -640,7 +634,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                 <span className="hidden sm:inline">Previous</span>
               </Button>
               
-              <div className="flex items-center gap-1">
+              {/* Page numbers - simplified on mobile */}
+              <div className="hidden sm:flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
                   // Show first page, last page, current page, and pages around current
                   const showPage = page === 1 || page === totalPages || 
@@ -666,6 +661,13 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                     </Button>
                   );
                 })}
+              </div>
+
+              {/* Mobile page indicator */}
+              <div className="sm:hidden flex items-center">
+                <span className="text-sm text-gray-600 px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
               </div>
               
               <Button
