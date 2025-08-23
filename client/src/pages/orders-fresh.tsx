@@ -544,6 +544,9 @@ export default function OrdersFresh() {
                   {selectedOrder.customerPhone && (
                     <div><span className="font-medium">Phone:</span> {selectedOrder.customerPhone}</div>
                   )}
+                  {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
+                    <div><span className="font-medium">Delivery Address:</span> {selectedOrder.deliveryAddress}</div>
+                  )}
                 </div>
               </div>
 
