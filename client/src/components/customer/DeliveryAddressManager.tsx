@@ -178,9 +178,7 @@ export function DeliveryAddressManager({
   // Set default address mutation
   const setDefaultMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/customer/delivery-addresses/${id}/set-default`, {
-        method: 'POST',
-      });
+      return await apiRequest('POST', `/api/customer/delivery-addresses/${id}/set-default`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
