@@ -351,12 +351,26 @@ const PaymentFormContent = ({
 
     // VALIDATION: Check delivery address is complete when delivery is selected
     if (customerData.shippingOption === 'delivery') {
+      console.log('🚚 PAYMENT VALIDATION: Delivery selected, checking address fields...');
+      console.log('🚚 PAYMENT VALIDATION: Current customerData:', customerData);
+      console.log('🚚 PAYMENT VALIDATION: Address field values:', {
+        address: customerData.address,
+        city: customerData.city,
+        postalCode: customerData.postalCode,
+        addressTrimmed: customerData.address?.trim(),
+        cityTrimmed: customerData.city?.trim(),
+        postalCodeTrimmed: customerData.postalCode?.trim()
+      });
+      
       const missingFields = [];
       if (!customerData.address?.trim()) missingFields.push('Street Address');
       if (!customerData.city?.trim()) missingFields.push('City');
       if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
       
+      console.log('🚚 PAYMENT VALIDATION: Missing fields:', missingFields);
+      
       if (missingFields.length > 0) {
+        console.log('🚚 PAYMENT VALIDATION: Blocking payment due to missing address fields');
         toast({
           title: "Delivery Address Required",
           description: `Please fill in the following fields: ${missingFields.join(', ')}`,
@@ -366,6 +380,9 @@ const PaymentFormContent = ({
         setPaymentSubmitted(false);
         return; // Stop payment process
       }
+      console.log('🚚 PAYMENT VALIDATION: All delivery address fields complete, proceeding with payment...');
+    } else {
+      console.log('🚚 PAYMENT VALIDATION: Pickup selected, skipping address validation');
     }
 
     console.log('💳 Starting payment confirmation process...');
@@ -1308,6 +1325,12 @@ export default function CustomerPortal() {
   // Simplified payment intent creation - no shipping metadata needed
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
+    console.log('🚚 DEBUG: Current customer data:', {
+      shippingOption: customerData.shippingOption,
+      address: customerData.address,
+      city: customerData.city,
+      postalCode: customerData.postalCode
+    });
     
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
@@ -1916,8 +1939,10 @@ export default function CustomerPortal() {
                 <Button
                   onClick={async () => {
                     if (cart.length > 0) {
+                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
                       // Use a short delay to ensure state has updated
                       setTimeout(async () => {
+                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
                         await createPaymentIntentForCheckout();
                         setShowCheckout(true);
                       }, 100);

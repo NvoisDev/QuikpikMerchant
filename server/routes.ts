@@ -2621,37 +2621,6 @@ The Quikpik Team
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
 
-      // SERVER-SIDE VALIDATION: Check delivery address for delivery orders
-      if (deliveryAddress && deliveryAddress.trim() !== '') {
-        console.log('🚚 ORDERS VALIDATION: Checking delivery address...');
-        
-        let addressObj;
-        try {
-          addressObj = typeof deliveryAddress === 'string' ? JSON.parse(deliveryAddress) : deliveryAddress;
-        } catch (e) {
-          // If it's not JSON, treat as plain string address
-          if (deliveryAddress === 'United Kingdom' || deliveryAddress.trim().length < 10) {
-            console.error('🚚 ORDERS VALIDATION: Incomplete delivery address detected');
-            throw new Error('Delivery address incomplete. Please provide full address details.');
-          }
-        }
-        
-        if (addressObj) {
-          const missingFields = [];
-          if (!addressObj?.street?.trim()) missingFields.push('Street Address');
-          if (!addressObj?.city?.trim()) missingFields.push('City');
-          if (!addressObj?.postalCode?.trim()) missingFields.push('Postal Code');
-          
-          if (missingFields.length > 0) {
-            console.error('🚚 ORDERS VALIDATION: Incomplete delivery address detected');
-            console.error('🚚 ORDERS VALIDATION: Missing fields:', missingFields);
-            throw new Error(`Delivery address incomplete. Missing: ${missingFields.join(', ')}`);
-          }
-        }
-        
-        console.log('🚚 ORDERS VALIDATION: Delivery address is valid, proceeding...');
-      }
-
       const orderData = insertOrderSchema.parse({
         orderNumber: `ORD-${Date.now()}`,
         wholesalerId,
@@ -3299,37 +3268,6 @@ The Quikpik Team
               : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2);
             
             console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
-
-            // SERVER-SIDE VALIDATION: Check delivery address is complete for delivery orders
-            if (fulfillmentType === 'delivery') {
-              console.log('🚚 ROUTES VALIDATION: Delivery order detected, validating address...');
-              
-              let addressObj;
-              try {
-                addressObj = typeof customerAddress === 'string' ? JSON.parse(customerAddress) : customerAddress;
-              } catch (e) {
-                console.error('🚚 ROUTES VALIDATION: Invalid address JSON format');
-                throw new Error('Invalid delivery address format');
-              }
-              
-              const missingFields = [];
-              if (!addressObj?.street?.trim()) missingFields.push('Street Address');
-              if (!addressObj?.city?.trim()) missingFields.push('City');
-              if (!addressObj?.postalCode?.trim()) missingFields.push('Postal Code');
-              
-              console.log('🚚 ROUTES VALIDATION: Address validation result:', {
-                addressObj,
-                missingFields
-              });
-              
-              if (missingFields.length > 0) {
-                console.error('🚚 ROUTES VALIDATION: Incomplete delivery address detected');
-                console.error('🚚 ROUTES VALIDATION: Missing fields:', missingFields);
-                throw new Error(`Delivery address incomplete. Missing: ${missingFields.join(', ')}`);
-              }
-              
-              console.log('🚚 ROUTES VALIDATION: Delivery address is complete, proceeding...');
-            }
 
             // Create order with customer details AND SHIPPING DATA
             const orderData = {
