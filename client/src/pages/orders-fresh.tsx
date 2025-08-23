@@ -20,6 +20,38 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+// Helper function to format address from JSON string or regular string
+const formatAddress = (addressData?: string): string => {
+  if (!addressData) return 'Address not provided';
+  
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(addressData);
+    if (typeof parsed === 'object' && parsed !== null) {
+      // Handle comprehensive address object with multiple possible field names
+      const addressParts = [
+        parsed.street || parsed.property || parsed.address1 || parsed.address,
+        parsed.address2,
+        parsed.town || parsed.city,
+        parsed.county || parsed.state,
+        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
+        parsed.country
+      ].filter(part => part && part.trim() !== '');
+      
+      if (addressParts.length > 0) {
+        return addressParts.join(', ');
+      } else {
+        // If all fields are empty, show a helpful message
+        return 'Delivery address not fully specified';
+      }
+    }
+    return addressData;
+  } catch {
+    // If parsing fails, return as regular string
+    return addressData;
+  }
+};
+
 interface Order {
   id: number;
   orderNumber?: string;
@@ -119,6 +151,15 @@ export default function OrdersFresh() {
 
   // Use existing order data instead of making another API call
   const loadOrderDetails = (order: Order) => {
+    // DEBUG: Check items data when loading order details
+    console.log('🔍 Order items debug:', { 
+      orderId: order.id, 
+      orderNumber: order.orderNumber,
+      hasItems: !!order.items,
+      itemsLength: order.items?.length,
+      items: order.items 
+    });
+    
     // Set selected order directly from existing data - no API call needed!
     setSelectedOrder(order);
   };
@@ -545,7 +586,7 @@ export default function OrdersFresh() {
                     <div><span className="font-medium">Phone:</span> {selectedOrder.customerPhone}</div>
                   )}
                   {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
-                    <div><span className="font-medium">Delivery Address:</span> {selectedOrder.deliveryAddress}</div>
+                    <div><span className="font-medium">Delivery Address:</span> {formatAddress(selectedOrder.deliveryAddress)}</div>
                   )}
                 </div>
               </div>
