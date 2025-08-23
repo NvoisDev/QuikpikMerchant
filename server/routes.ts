@@ -7,7 +7,7 @@ import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
-import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema } from "@shared/schema";
+import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
@@ -8983,6 +8983,80 @@ Please contact the customer to confirm this order.
     } catch (error) {
       console.error("Error creating marketplace order:", error);
       res.status(500).json({ message: "Failed to place order" });
+    }
+  });
+
+  // Bulk delete orders endpoint for wholesalers
+  app.delete("/api/orders/bulk-delete", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { 
+        deleteAll = false, 
+        orderIds = [], 
+        beforeDate = null, 
+        status = null 
+      } = req.body;
+
+      // Build the WHERE conditions for orders to delete
+      let whereConditions = [eq(orders.wholesalerId, userId)];
+      
+      if (!deleteAll && orderIds.length > 0) {
+        // Delete specific orders
+        whereConditions.push(inArray(orders.id, orderIds));
+      } else if (beforeDate) {
+        // Delete orders before a specific date
+        whereConditions.push(lt(orders.createdAt, new Date(beforeDate)));
+      }
+      
+      if (status) {
+        // Filter by status
+        whereConditions.push(eq(orders.status, status));
+      }
+
+      // First, get the orders that will be deleted to count them
+      const ordersToDelete = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(and(...whereConditions));
+
+      if (ordersToDelete.length === 0) {
+        return res.json({ 
+          message: "No orders found matching the criteria",
+          deletedCount: 0 
+        });
+      }
+
+      const orderIdsToDelete = ordersToDelete.map(order => order.id);
+
+      // Delete in the correct order to maintain referential integrity
+      // 1. Delete campaign orders first (if any exist)
+      try {
+        await db
+          .delete(campaignOrders)
+          .where(inArray(campaignOrders.orderId, orderIdsToDelete));
+      } catch (error) {
+        console.log('No campaign orders to delete or table not found:', error.message);
+      }
+
+      // 2. Delete order items
+      await db
+        .delete(orderItems)
+        .where(inArray(orderItems.orderId, orderIdsToDelete));
+
+      // 3. Finally delete the orders themselves
+      await db
+        .delete(orders)
+        .where(and(...whereConditions));
+
+      console.log(`🗑️ Bulk deleted ${orderIdsToDelete.length} orders and related data for wholesaler ${userId}`);
+
+      res.json({ 
+        message: `Successfully deleted ${orderIdsToDelete.length} orders and related data`,
+        deletedCount: orderIdsToDelete.length
+      });
+    } catch (error) {
+      console.error("Error bulk deleting orders:", error);
+      res.status(500).json({ message: "Failed to delete orders" });
     }
   });
 
