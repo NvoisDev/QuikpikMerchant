@@ -376,7 +376,9 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Database storage now available for delivery addresses
+  // Temporary in-memory storage for delivery addresses (due to database size limits)
+  private deliveryAddressesStorage = new Map<string, DeliveryAddress[]>();
+  private nextAddressId = 1;
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
@@ -4562,155 +4564,111 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Delivery address operations (using database storage)
+  // Delivery address operations (temporary in-memory storage due to database size limits)
   async getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]> {
-    const addresses = await db
-      .select()
-      .from(deliveryAddresses)
-      .where(
-        and(
-          eq(deliveryAddresses.customerId, customerId),
-          eq(deliveryAddresses.wholesalerId, wholesalerId)
-        )
-      )
-      .orderBy(desc(deliveryAddresses.isDefault), desc(deliveryAddresses.createdAt));
-    
-    return addresses;
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    return addresses.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
   async getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined> {
-    const [address] = await db
-      .select()
-      .from(deliveryAddresses)
-      .where(eq(deliveryAddresses.id, id));
-    
-    return address;
+    for (const addresses of this.deliveryAddressesStorage.values()) {
+      const address = addresses.find(addr => addr.id === id);
+      if (address) return address;
+    }
+    return undefined;
   }
 
   async createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress> {
-    // If this is being set as default, unset all others for this customer/wholesaler
+    const key = `${address.customerId}_${address.wholesalerId}`;
+    const existingAddresses = this.deliveryAddressesStorage.get(key) || [];
+    
+    // If this is being set as default, unset all others
     if (address.isDefault) {
-      await db
-        .update(deliveryAddresses)
-        .set({ isDefault: false })
-        .where(
-          and(
-            eq(deliveryAddresses.customerId, address.customerId),
-            eq(deliveryAddresses.wholesalerId, address.wholesalerId)
-          )
-        );
+      existingAddresses.forEach(addr => addr.isDefault = false);
     }
     
-    const [newAddress] = await db
-      .insert(deliveryAddresses)
-      .values({
-        customerId: address.customerId,
-        wholesalerId: address.wholesalerId,
-        addressLine1: address.addressLine1,
-        addressLine2: address.addressLine2 || null,
-        city: address.city,
-        state: address.state || null,
-        postalCode: address.postalCode,
-        country: address.country,
-        label: address.label || null,
-        instructions: address.instructions || null,
-        isDefault: address.isDefault || false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning();
+    const newAddress: DeliveryAddress = {
+      id: this.nextAddressId++,
+      customerId: address.customerId,
+      wholesalerId: address.wholesalerId,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 || null,
+      city: address.city,
+      state: address.state || null,
+      postalCode: address.postalCode,
+      country: address.country,
+      label: address.label || null,
+      instructions: address.instructions || null,
+      isDefault: address.isDefault || false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     
+    existingAddresses.push(newAddress);
+    this.deliveryAddressesStorage.set(key, existingAddresses);
     return newAddress;
   }
 
   async updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress> {
-    // Get the address first to find customerId and wholesalerId
-    const [existingAddress] = await db
-      .select()
-      .from(deliveryAddresses)
-      .where(eq(deliveryAddresses.id, id));
-    
-    if (!existingAddress) {
-      throw new Error(`Address with id ${id} not found`);
+    for (const [key, addresses] of this.deliveryAddressesStorage.entries()) {
+      const addressIndex = addresses.findIndex(addr => addr.id === id);
+      if (addressIndex !== -1) {
+        const existingAddress = addresses[addressIndex];
+        
+        // If setting as default, unset all others in this customer/wholesaler group
+        if (updates.isDefault) {
+          addresses.forEach(addr => addr.isDefault = false);
+        }
+        
+        const updatedAddress: DeliveryAddress = {
+          ...existingAddress,
+          ...updates,
+          updatedAt: new Date()
+        };
+        
+        addresses[addressIndex] = updatedAddress;
+        this.deliveryAddressesStorage.set(key, addresses);
+        return updatedAddress;
+      }
     }
-    
-    // If setting as default, unset all others in this customer/wholesaler group
-    if (updates.isDefault) {
-      await db
-        .update(deliveryAddresses)
-        .set({ isDefault: false })
-        .where(
-          and(
-            eq(deliveryAddresses.customerId, existingAddress.customerId),
-            eq(deliveryAddresses.wholesalerId, existingAddress.wholesalerId)
-          )
-        );
-    }
-    
-    const [updatedAddress] = await db
-      .update(deliveryAddresses)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(deliveryAddresses.id, id))
-      .returning();
-    
-    return updatedAddress;
+    throw new Error(`Address with id ${id} not found`);
   }
 
   async deleteDeliveryAddress(id: number): Promise<void> {
-    await db
-      .delete(deliveryAddresses)
-      .where(eq(deliveryAddresses.id, id));
+    for (const [key, addresses] of this.deliveryAddressesStorage.entries()) {
+      const addressIndex = addresses.findIndex(addr => addr.id === id);
+      if (addressIndex !== -1) {
+        addresses.splice(addressIndex, 1);
+        this.deliveryAddressesStorage.set(key, addresses);
+        return;
+      }
+    }
   }
 
   async setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void> {
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    
     // Unset all defaults first
-    await db
-      .update(deliveryAddresses)
-      .set({ isDefault: false })
-      .where(
-        and(
-          eq(deliveryAddresses.customerId, customerId),
-          eq(deliveryAddresses.wholesalerId, wholesalerId)
-        )
-      );
+    addresses.forEach(addr => addr.isDefault = false);
     
     // Set the specified address as default
-    await db
-      .update(deliveryAddresses)
-      .set({ isDefault: true })
-      .where(eq(deliveryAddresses.id, addressId));
+    const targetAddress = addresses.find(addr => addr.id === addressId);
+    if (targetAddress) {
+      targetAddress.isDefault = true;
+      this.deliveryAddressesStorage.set(key, addresses);
+    }
   }
 
   async getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
-    const [defaultAddress] = await db
-      .select()
-      .from(deliveryAddresses)
-      .where(
-        and(
-          eq(deliveryAddresses.customerId, customerId),
-          eq(deliveryAddresses.wholesalerId, wholesalerId),
-          eq(deliveryAddresses.isDefault, true)
-        )
-      );
-    
-    if (defaultAddress) {
-      return defaultAddress;
-    }
-    
-    // If no default, return the first address
-    const [firstAddress] = await db
-      .select()
-      .from(deliveryAddresses)
-      .where(
-        and(
-          eq(deliveryAddresses.customerId, customerId),
-          eq(deliveryAddresses.wholesalerId, wholesalerId)
-        )
-      )
-      .orderBy(desc(deliveryAddresses.createdAt))
-      .limit(1);
-    
-    return firstAddress;
+    const key = `${customerId}_${wholesalerId}`;
+    const addresses = this.deliveryAddressesStorage.get(key) || [];
+    return addresses.find(addr => addr.isDefault) || addresses[0];
   }
 
 }
