@@ -182,6 +182,9 @@ export interface IStorage {
   incrementSMSCodeAttempts(id: number): Promise<void>;
   cleanupExpiredSMSCodes(): Promise<void>;
   
+  // Session cleanup operations
+  cleanupExpiredSessions(): Promise<void>;
+  
   // Order item operations
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateProductStock(productId: number, newStock: number): Promise<void>;
@@ -3867,6 +3870,13 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(smsVerificationCodes)
       .where(sql`${smsVerificationCodes.expiresAt} < ${now}`);
+  }
+
+  async cleanupExpiredSessions(): Promise<void> {
+    const deletedCount = await db.execute(sql`
+      DELETE FROM sessions WHERE expire < NOW()
+    `);
+    console.log(`🧹 Cleaned up ${deletedCount.rowCount || 0} expired sessions`);
   }
 
   // Customer Address Book operations

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { log } from "./vite";
 import { validateDatabaseConnection } from "./health";
+import { startDatabaseMaintenance } from "./database-maintenance";
 
 // Set OAuth redirect URI for production deployment
 if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
@@ -99,6 +100,11 @@ app.use((req, res, next) => {
   }, () => {
     console.log(`✅ Server successfully started on port ${port}`);
     console.log(`🌐 Health check available at: http://localhost:${port}/api/health`);
+    
+    // Start automatic database maintenance
+    startDatabaseMaintenance();
+    console.log(`🧹 Database maintenance scheduler enabled`);
+    
     log(`serving on port ${port}`);
   });
   
