@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { useQuery } from "@tanstack/react-query";
 
 interface OrderItem {
   id: number;
@@ -31,9 +32,80 @@ interface Order {
   status: string;
   fulfillmentType?: string;
   deliveryAddress?: string;
+  deliveryAddressId?: number;
   createdAt: string;
   items?: OrderItem[];
 }
+
+// Component to fetch and display delivery address details by ID (wholesaler view)
+const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
+  const { data: address, isLoading, error } = useQuery({
+    queryKey: [`/api/wholesaler/delivery-address/${addressId}`],
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+        <RefreshCw className="h-3 w-3 animate-spin" />
+        Loading delivery address...
+      </div>
+    );
+  }
+
+  if (error || !address) {
+    return (
+      <div className="text-xs text-red-500 mt-2 flex items-center gap-1">
+        <MapPin className="h-3 w-3" />
+        Unable to load delivery address
+      </div>
+    );
+  }
+
+  const getLabelIcon = (label?: string) => {
+    switch (label?.toLowerCase()) {
+      case 'home': return Home;
+      case 'office': return Building;
+      case 'warehouse': return Truck;
+      default: return MapPin;
+    }
+  };
+
+  const Icon = getLabelIcon(address?.label);
+  
+  return (
+    <div className="mt-2 p-3 bg-green-50 rounded border border-green-200">
+      <div className="text-xs text-green-700 font-medium mb-1">📍 Customer's Selected Delivery Address:</div>
+      <div className="flex items-start gap-2">
+        <Icon className="h-4 w-4 text-green-600 mt-0.5" />
+        <div className="text-sm">
+          <div className="font-medium text-gray-900">{address?.addressLine1}</div>
+          {address?.addressLine2 && (
+            <div className="text-gray-700">{address.addressLine2}</div>
+          )}
+          <div className="text-gray-700">
+            {address?.city}
+            {address?.state && `, ${address.state}`}
+            {address?.postalCode && ` ${address.postalCode}`}
+          </div>
+          {address?.country && (
+            <div className="font-medium text-gray-900">{address.country}</div>
+          )}
+          {address?.label && (
+            <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded w-fit mt-1">
+              {address.label}
+            </div>
+          )}
+          {address?.instructions && (
+            <div className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-1">
+              <span className="font-medium">Delivery Instructions:</span> {address.instructions}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function OrdersFinal() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -399,7 +471,10 @@ export default function OrdersFinal() {
                     <Phone className="h-3 w-3" />
                     {selectedOrder.customerPhone || 'No phone'}
                   </p>
-                  {selectedOrder.deliveryAddress && (
+                  {selectedOrder.deliveryAddressId && (
+                    <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />
+                  )}
+                  {selectedOrder.deliveryAddress && !selectedOrder.deliveryAddressId && (
                     <p className="text-sm flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
                       {selectedOrder.deliveryAddress}

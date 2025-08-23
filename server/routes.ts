@@ -1606,6 +1606,35 @@ The Quikpik Team
     }
   });
 
+  // Wholesaler-specific endpoint to get delivery address for their orders
+  app.get('/api/wholesaler/delivery-address/:addressId', requireAuth, async (req: any, res) => {
+    try {
+      const { addressId } = req.params;
+      
+      // Use authenticated wholesaler ID for proper data isolation
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const address = await storage.getDeliveryAddress(parseInt(addressId));
+      
+      if (!address) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+      
+      // Verify the address belongs to a customer of this wholesaler
+      if (address.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ error: "Access denied - address not associated with your customers" });
+      }
+      
+      console.log(`🎯 Wholesaler ${wholesalerId} retrieved delivery address ${addressId}: ${address.addressLine1}, ${address.city}`);
+      res.json(address);
+    } catch (error) {
+      console.error("❌ Error fetching delivery address for wholesaler:", error);
+      res.status(500).json({ error: "Failed to fetch delivery address" });
+    }
+  });
+
   // Wholesaler endpoint: Get customer's delivery addresses for order fulfillment
   app.get('/api/wholesaler/customer-delivery-addresses/:customerId/:wholesalerId', isAuthenticated, async (req, res) => {
     try {
@@ -2594,6 +2623,7 @@ The Quikpik Team
           total: orders.total,
           status: orders.status,
           fulfillmentType: orders.fulfillmentType,
+          deliveryAddressId: orders.deliveryAddressId,
           createdAt: orders.createdAt
         })
         .from(orders)
