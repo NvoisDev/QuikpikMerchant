@@ -117,10 +117,31 @@ export default function OrdersFresh() {
     loadOrders(newPage, searchTerm);
   };
 
-  // Use existing order data instead of making another API call
-  const loadOrderDetails = (order: Order) => {
-    // Set selected order directly from existing data - no API call needed!
-    setSelectedOrder(order);
+  // Fetch detailed order information with items
+  const loadOrderDetails = async (order: Order) => {
+    try {
+      console.log(`🔍 Fetching detailed order information for order ${order.id}`);
+      
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const orderWithItems = await response.json();
+        console.log(`✅ Loaded order ${order.id} with ${orderWithItems.items?.length || 0} items`);
+        setSelectedOrder(orderWithItems);
+      } else {
+        console.error(`❌ Failed to fetch order details: ${response.status}`);
+        // Fall back to basic order data without items
+        setSelectedOrder(order);
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching order details:`, error);
+      // Fall back to basic order data without items
+      setSelectedOrder(order);
+    }
   };
 
   // Update order status to fulfilled
