@@ -290,13 +290,22 @@ export default function Customers() {
     gcTime: 15 * 60 * 1000, // Keep in memory longer
   });
 
-  // Only load stats when needed, with longer cache
-  const { data: stats } = useQuery<CustomerStats>({
-    queryKey: ['/api/customers/stats'],
-    staleTime: 15 * 60 * 1000, // 15 minutes cache
-    gcTime: 20 * 60 * 1000,
-    enabled: customers.length > 0, // Only fetch if we have customers
-  });
+  // Calculate stats from existing customer data instead of separate API call
+  const stats = useMemo(() => {
+    if (!customers.length) return null;
+    
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    return {
+      totalCustomers: customers.length,
+      activeCustomers: customers.filter(c => c.totalOrders > 0).length,
+      newCustomersThisMonth: customers.filter(c => 
+        new Date(c.createdAt || c.lastOrderDate || 0) >= thisMonth
+      ).length,
+      totalRevenue: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0)
+    };
+  }, [customers]);
 
   // Optimized search - use API for complex searches, local filter for simple ones
   const { data: searchResults = [] } = useQuery<Customer[]>({
@@ -1100,7 +1109,7 @@ export default function Customers() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Top Spenders</p>
-                      <p className="text-xl font-bold">{stats.topCustomers.length}</p>
+                      <p className="text-xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -2307,7 +2316,7 @@ export default function Customers() {
                     <div className="p-3 border-b bg-gray-50">
                       <h4 className="text-sm font-medium">Search Results</h4>
                     </div>
-                    {getMergeSearchResults().map(customer => {
+                    {mergeSearchResults.map(customer => {
                       const isSelected = selectedCustomersForMerge.find(c => c?.id === customer?.id);
                       return (
                         <div 
@@ -2342,7 +2351,7 @@ export default function Customers() {
                         </div>
                       );
                     })}
-                    {getMergeSearchResults().length === 0 && (
+                    {mergeSearchResults.length === 0 && (
                       <div className="p-4 text-center text-gray-500">
                         No customers found matching "{mergeSearchQuery}"
                       </div>
