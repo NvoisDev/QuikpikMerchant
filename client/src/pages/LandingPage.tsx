@@ -492,11 +492,9 @@ export default function LandingPage() {
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center space-x-3 mb-8">
-            <img 
-              src={quikpikLogo} 
-              alt="Quikpik Logo" 
-              className="w-8 h-8"
-            />
+            <div className="w-8 h-8 bg-green-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+              Q
+            </div>
             <h3 className="text-2xl font-bold">Quikpik Merchant</h3>
           </div>
           
