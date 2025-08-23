@@ -159,6 +159,37 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const orderNumber = await storage.generateOrderNumber(wholesalerId);
   console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
   
+  // SERVER-SIDE VALIDATION: Check delivery address is complete for delivery orders
+  if (fulfillmentType === 'delivery') {
+    console.log('🚚 SERVER VALIDATION: Delivery order detected, validating address...');
+    
+    let addressObj;
+    try {
+      addressObj = typeof customerAddress === 'string' ? JSON.parse(customerAddress) : customerAddress;
+    } catch (e) {
+      console.error('🚚 SERVER VALIDATION: Invalid address JSON format');
+      throw new Error('Invalid delivery address format');
+    }
+    
+    const missingFields = [];
+    if (!addressObj?.street?.trim()) missingFields.push('Street Address');
+    if (!addressObj?.city?.trim()) missingFields.push('City');
+    if (!addressObj?.postalCode?.trim()) missingFields.push('Postal Code');
+    
+    console.log('🚚 SERVER VALIDATION: Address validation result:', {
+      addressObj,
+      missingFields
+    });
+    
+    if (missingFields.length > 0) {
+      console.error('🚚 SERVER VALIDATION: Incomplete delivery address detected');
+      console.error('🚚 SERVER VALIDATION: Missing fields:', missingFields);
+      throw new Error(`Delivery address incomplete. Missing: ${missingFields.join(', ')}`);
+    }
+    
+    console.log('🚚 SERVER VALIDATION: Delivery address is complete, proceeding...');
+  }
+
   // Create order with customer details AND SHIPPING DATA
   const orderData = {
     orderNumber, // Use pre-generated atomic order number
