@@ -106,12 +106,9 @@ export function DeliveryAddressManager({
   // Create address mutation
   const createAddressMutation = useMutation({
     mutationFn: async (addressData: Partial<AddressFormData>) => {
-      return await apiRequest('/api/customer/delivery-addresses', {
-        method: 'POST',
-        body: JSON.stringify({
-          wholesalerId,
-          ...addressData,
-        }),
+      return await apiRequest('POST', '/api/customer/delivery-addresses', {
+        wholesalerId,
+        ...addressData,
       });
     },
     onSuccess: () => {
@@ -135,10 +132,7 @@ export function DeliveryAddressManager({
   // Update address mutation
   const updateAddressMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<AddressFormData> }) => {
-      return await apiRequest(`/api/customer/delivery-addresses/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('PUT', `/api/customer/delivery-addresses/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
@@ -161,9 +155,7 @@ export function DeliveryAddressManager({
   // Delete address mutation
   const deleteAddressMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/customer/delivery-addresses/${id}`, {
-        method: 'DELETE',
-      });
+      return await apiRequest('DELETE', `/api/customer/delivery-addresses/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
