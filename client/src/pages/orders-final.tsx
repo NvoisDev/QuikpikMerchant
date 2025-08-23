@@ -42,7 +42,6 @@ export default function OrdersFinal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
 
   const fetchOrdersSimple = async () => {
     try {
@@ -94,42 +93,6 @@ export default function OrdersFinal() {
       return () => clearTimeout(timer);
     }
   }, [searchTerm, statusFilter]);
-
-  // Function to fetch detailed order information with items
-  const fetchOrderDetails = async (orderId: number) => {
-    try {
-      setLoadingOrderDetails(true);
-      console.log(`🔍 Fetching details for order ${orderId}`);
-      
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        const orderWithItems = await response.json();
-        console.log(`✅ Loaded order ${orderId} with ${orderWithItems.items?.length || 0} items`);
-        setSelectedOrder(orderWithItems);
-      } else {
-        console.error(`❌ Failed to fetch order ${orderId}: ${response.status}`);
-        // Fall back to using the order from the list without items
-        const fallbackOrder = orders.find(o => o.id === orderId);
-        if (fallbackOrder) {
-          setSelectedOrder(fallbackOrder);
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Error fetching order details:`, error);
-      // Fall back to using the order from the list without items
-      const fallbackOrder = orders.find(o => o.id === orderId);
-      if (fallbackOrder) {
-        setSelectedOrder(fallbackOrder);
-      }
-    } finally {
-      setLoadingOrderDetails(false);
-    }
-  };
 
 
 
@@ -351,12 +314,11 @@ export default function OrdersFinal() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => fetchOrderDetails(order.id)}
-                          disabled={loadingOrderDetails}
+                          onClick={() => setSelectedOrder(order)}
                           className="flex items-center gap-1"
                         >
                           <Eye className="h-3 w-3" />
-                          {loadingOrderDetails ? 'Loading...' : 'View'}
+                          View
                         </Button>
                       </td>
                     </tr>

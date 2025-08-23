@@ -308,6 +308,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
         onSuccess={onSuccess} 
         totalAmount={totalAmount} 
         wholesaler={wholesaler}
+        customerData={customerData}
       />
     </Elements>
   );
@@ -317,11 +318,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
 const PaymentFormContent = ({ 
   onSuccess, 
   totalAmount, 
-  wholesaler
+  wholesaler,
+  customerData
 }: { 
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
+  customerData: CustomerData;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -344,6 +347,25 @@ const PaymentFormContent = ({
     if (!stripe || !elements || isProcessing || paymentSubmitted) {
       console.error('💳 Payment Error: Stripe/Elements not loaded or payment already in progress');
       return;
+    }
+
+    // VALIDATION: Check delivery address is complete when delivery is selected
+    if (customerData.shippingOption === 'delivery') {
+      const missingFields = [];
+      if (!customerData.address?.trim()) missingFields.push('Street Address');
+      if (!customerData.city?.trim()) missingFields.push('City');
+      if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
+      
+      if (missingFields.length > 0) {
+        toast({
+          title: "Delivery Address Required",
+          description: `Please fill in the following fields: ${missingFields.join(', ')}`,
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        setPaymentSubmitted(false);
+        return; // Stop payment process
+      }
     }
 
     console.log('💳 Starting payment confirmation process...');
@@ -1287,6 +1309,7 @@ export default function CustomerPortal() {
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     
+    
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
       return;
@@ -1893,10 +1916,11 @@ export default function CustomerPortal() {
                 <Button
                   onClick={async () => {
                     if (cart.length > 0) {
-                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
-                      console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                      await createPaymentIntentForCheckout();
-                      setShowCheckout(true);
+                      // Use a short delay to ensure state has updated
+                      setTimeout(async () => {
+                        await createPaymentIntentForCheckout();
+                        setShowCheckout(true);
+                      }, 100);
                     }
                   }}
                   size="sm"

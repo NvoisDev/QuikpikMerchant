@@ -57,18 +57,45 @@ const formatAddress = (addressData?: string): string => {
     // Try to parse as JSON first
     const parsed = JSON.parse(addressData);
     if (typeof parsed === 'object' && parsed !== null) {
-      // Handle comprehensive address object with multiple possible field names
-      const addressParts = [
-        parsed.street || parsed.property || parsed.address1 || parsed.address,
-        parsed.address2,
-        parsed.town || parsed.city,
-        parsed.county || parsed.state,
-        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
-        parsed.country
-      ].filter(part => part && part.trim() !== '');
+      // Show all available address fields, including empty ones with labels
+      const addressLines = [];
       
-      if (addressParts.length > 0) {
-        return addressParts.join(', ');
+      // Add street/property if available
+      if (parsed.street || parsed.property || parsed.address1 || parsed.address) {
+        addressLines.push(parsed.street || parsed.property || parsed.address1 || parsed.address);
+      }
+      
+      // Add address line 2 if available
+      if (parsed.address2 && parsed.address2.trim()) {
+        addressLines.push(parsed.address2);
+      }
+      
+      // Add city/town if available
+      if (parsed.town || parsed.city) {
+        addressLines.push(parsed.town || parsed.city);
+      }
+      
+      // Add county/state if available
+      if (parsed.county || parsed.state) {
+        addressLines.push(parsed.county || parsed.state);
+      }
+      
+      // Add postcode if available
+      if (parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip) {
+        addressLines.push(parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip);
+      }
+      
+      // Add country if available
+      if (parsed.country && parsed.country.trim()) {
+        addressLines.push(parsed.country);
+      }
+      
+      // If we have any address parts, join them
+      if (addressLines.length > 0) {
+        return addressLines.join(', ');
+      } else {
+        // Show structured empty address info
+        return `Address incomplete - Country: ${parsed.country || 'Not specified'}`;
       }
     }
     return addressData;
@@ -258,6 +285,18 @@ export default function Orders() {
           isArray: Array.isArray(ordersData),
           firstOrder: ordersData[0] ? { id: ordersData[0].id, orderNumber: ordersData[0].orderNumber } : 'No orders'
         });
+        
+        // DEBUG: Check items data specifically
+        if (ordersData && ordersData.length > 0) {
+          ordersData.forEach((order: any, index: number) => {
+            console.log(`🔍 Order ${order.orderNumber || order.id} items debug:`, {
+              hasItems: !!order.items,
+              itemsLength: order.items?.length || 0,
+              items: order.items,
+              deliveryAddress: order.deliveryAddress
+            });
+          });
+        }
         
         return ordersData;
       } catch (fetchError: any) {
@@ -1124,7 +1163,7 @@ export default function Orders() {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Items:</span>
-                            <span className="font-medium text-gray-900">{selectedOrder.items.length}</span>
+                            <span className="font-medium text-gray-900">{selectedOrder.items?.length || 0}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Fulfillment:</span>
@@ -1148,9 +1187,9 @@ export default function Orders() {
                   
                   {/* Enhanced Order Items Section */}
                   <div>
-                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items.length})</h3>
+                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items?.length || 0})</h3>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      {selectedOrder.items.map((item: any, index: number) => (
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items.map((item: any, index: number) => (
                         <div key={item.id || index} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
@@ -1166,7 +1205,12 @@ export default function Orders() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <p>No items found for this order</p>
+                          <p className="text-xs mt-1">This might be a data loading issue</p>
+                        </div>
+                      )}
 
                       {/* Order Summary */}
                       <div className="border-t border-gray-200 pt-3 mt-4">
