@@ -411,6 +411,14 @@ export const orders = pgTable("orders", {
   deliveryAddress: text("delivery_address"),
   // CRITICAL: Store exact delivery address ID used for this order
   deliveryAddressId: integer("delivery_address_id").references(() => deliveryAddresses.id),
+  // Order images uploaded by wholesaler for customer confidence
+  orderImages: jsonb("order_images").default([]).$type<Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>>(),
   notes: text("notes"),
   
   // New delivery and fulfillment options

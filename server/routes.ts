@@ -4237,6 +4237,73 @@ The Quikpik Team
     }
   });
 
+  // Upload image to order (wholesaler only)
+  app.post('/api/orders/:orderId/upload-image', requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      // Use authenticated wholesaler ID for proper data isolation
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      // Verify order belongs to this wholesaler
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order || order.wholesalerId !== wholesalerId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Generate presigned URL for image upload
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("❌ Error generating upload URL for order image:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Save uploaded image to order
+  app.post('/api/orders/:orderId/save-image', requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { imageUrl, filename, description } = req.body;
+      
+      // Use authenticated wholesaler ID for proper data isolation
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      // Verify order belongs to this wholesaler
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order || order.wholesalerId !== wholesalerId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Add image to order
+      const imageEntry = {
+        id: crypto.randomUUID(),
+        url: imageUrl,
+        filename: filename || 'order-image.jpg',
+        uploadedAt: new Date().toISOString(),
+        description: description || ''
+      };
+      
+      const currentImages = order.orderImages || [];
+      const updatedImages = [...currentImages, imageEntry];
+      
+      await storage.updateOrderImages(parseInt(orderId), updatedImages);
+      
+      console.log(`📸 Added image to order ${orderId}: ${filename}`);
+      res.json({ success: true, image: imageEntry });
+    } catch (error) {
+      console.error("❌ Error saving image to order:", error);
+      res.status(500).json({ error: "Failed to save image" });
+    }
+  });
+
   // Resend order confirmation email
   app.post('/api/orders/:id/resend-confirmation', requireAuth, async (req: any, res) => {
     try {

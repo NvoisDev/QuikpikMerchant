@@ -107,6 +107,13 @@ export interface IStorage {
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
   updateOrder(id: number, updates: Partial<Order>): Promise<Order>;
+  updateOrderImages(orderId: number, images: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>): Promise<Order | undefined>;
   updateOrderShippingInfo(id: number, shippingInfo: {
     shippingOrderId?: string;
     shippingHash?: string;
@@ -1125,6 +1132,21 @@ export class DatabaseStorage implements IStorage {
       .update(orders)
       .set(updates)
       .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+
+  async updateOrderImages(orderId: number, images: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>): Promise<Order | undefined> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ orderImages: images, updatedAt: new Date() })
+      .where(eq(orders.id, orderId))
       .returning();
     return updatedOrder;
   }

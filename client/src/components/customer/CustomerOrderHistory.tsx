@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -54,6 +54,13 @@ interface Order {
   paymentStatus?: string;
   createdAt: string;
   updatedAt: string;
+  orderImages?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>;
 }
 
 // Helper function to format address from JSON string or regular string
@@ -344,6 +351,33 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             )}
           </div>
         </div>
+        
+        {/* Product Images Section */}
+        {order.orderImages && order.orderImages.length > 0 && (
+          <div className="mt-4 border-t pt-4">
+            <h3 className="font-medium text-gray-900 mb-2 flex items-center text-sm sm:text-base">
+              <Camera className="h-4 w-4 mr-2 text-green-600" />
+              Product Photos
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {order.orderImages.map((image) => (
+                <div key={image.id} className="relative">
+                  <img
+                    src={image.url}
+                    alt={image.filename}
+                    className="w-full h-20 object-cover rounded border border-gray-200"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b">
+                    <div className="truncate">{image.description || image.filename}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Photos of your order items from {order.wholesaler.businessName}
+            </p>
+          </div>
+        )}
       </div>
     </DialogContent>
   );

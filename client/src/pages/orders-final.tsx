@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck, Camera, Upload } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrderItem {
   id: number;
@@ -35,6 +37,13 @@ interface Order {
   deliveryAddressId?: number;
   createdAt: string;
   items?: OrderItem[];
+  orderImages?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>;
 }
 
 // Component to fetch and display delivery address details by ID (wholesaler view)
@@ -115,6 +124,80 @@ export default function OrdersFinal() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Image upload mutation
+  const imageUploadMutation = useMutation({
+    mutationFn: async ({ orderId, imageUrl, filename }: { orderId: number; imageUrl: string; filename: string }) => {
+      const response = await fetch(`/api/orders/${orderId}/save-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ imageUrl, filename, description: 'Product photo' })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save image');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Image uploaded successfully",
+        description: "Product photo has been added to the order",
+      });
+      
+      // Update the selected order with the new image
+      if (selectedOrder && selectedOrder.id === variables.orderId) {
+        const newImage = data.image;
+        const updatedOrder = {
+          ...selectedOrder,
+          orderImages: [...(selectedOrder.orderImages || []), newImage]
+        };
+        setSelectedOrder(updatedOrder);
+      }
+      
+      // Refresh orders list
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleImageUpload = async () => {
+    if (!selectedOrder) return null;
+    
+    const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get upload URL');
+    }
+    
+    const { uploadURL } = await response.json();
+    return { method: 'PUT' as const, url: uploadURL };
+  };
+
+  const handleImageUploadComplete = (result: { successful: Array<{ url: string; name: string }> }) => {
+    if (result.successful.length > 0 && selectedOrder) {
+      const uploadedImage = result.successful[0];
+      imageUploadMutation.mutate({
+        orderId: selectedOrder.id,
+        imageUrl: uploadedImage.url,
+        filename: uploadedImage.name
+      });
+    }
+  };
 
   const fetchOrdersSimple = async () => {
     try {
@@ -507,6 +590,47 @@ export default function OrdersFinal() {
                   </div>
                 </div>
               )}
+              
+              {/* Order Images Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">Product Images</h4>
+                  <ObjectUploader
+                    maxNumberOfFiles={5}
+                    maxFileSize={5242880} // 5MB
+                    onGetUploadParameters={handleImageUpload}
+                    onComplete={handleImageUploadComplete}
+                    buttonClassName="text-xs"
+                    disabled={imageUploadMutation.isPending}
+                  >
+                    <Camera className="h-3 w-3 mr-1" />
+                    Add Photo
+                  </ObjectUploader>
+                </div>
+                
+                {selectedOrder.orderImages && selectedOrder.orderImages.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedOrder.orderImages.map((image) => (
+                      <div key={image.id} className="relative">
+                        <img
+                          src={image.url}
+                          alt={image.filename}
+                          className="w-full h-24 object-cover rounded border"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b">
+                          {image.filename}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 border-2 border-dashed border-gray-300 rounded">
+                    <Camera className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-500">No product photos yet</p>
+                    <p className="text-xs text-gray-400">Upload photos to show customers what they ordered</p>
+                  </div>
+                )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
