@@ -1220,6 +1220,30 @@ export const insertFinancialPerformanceSchema = createInsertSchema(financialPerf
 export type InsertFinancialPerformance = z.infer<typeof insertFinancialPerformanceSchema>;
 export type FinancialPerformance = typeof financialPerformance.$inferSelect;
 
+// Delivery addresses table for customer address management
+export const deliveryAddresses = pgTable("delivery_addresses", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Address details
+  addressLine1: varchar("address_line1").notNull(),
+  addressLine2: varchar("address_line2"),
+  city: varchar("city").notNull(),
+  state: varchar("state"),
+  postalCode: varchar("postal_code").notNull(),
+  country: varchar("country").notNull().default("United Kingdom"),
+  
+  // Metadata
+  label: varchar("label"), // e.g., "Home", "Office", "Warehouse"
+  instructions: text("instructions"), // Special delivery instructions
+  isDefault: boolean("is_default").default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Tab permissions types
 export const insertTabPermissionSchema = createInsertSchema(tabPermissions).omit({
   id: true,
@@ -1228,5 +1252,14 @@ export const insertTabPermissionSchema = createInsertSchema(tabPermissions).omit
 });
 export type InsertTabPermission = z.infer<typeof insertTabPermissionSchema>;
 export type TabPermission = typeof tabPermissions.$inferSelect;
+
+// Delivery addresses types
+export const insertDeliveryAddressSchema = createInsertSchema(deliveryAddresses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertDeliveryAddress = z.infer<typeof insertDeliveryAddressSchema>;
+export type DeliveryAddress = typeof deliveryAddresses.$inferSelect;
 
 

@@ -21,6 +21,7 @@ import {
   smsVerificationCodes,
   teamMembers,
   tabPermissions,
+  deliveryAddresses,
   type User,
   type UpsertUser,
   type Product,
@@ -61,6 +62,8 @@ import {
   type InsertSMSVerificationCode,
   type InsertCustomerProfileUpdateNotification,
   type SelectCustomerProfileUpdateNotification,
+  type DeliveryAddress,
+  type InsertDeliveryAddress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
@@ -361,6 +364,15 @@ export interface IStorage {
   markNotificationAsRead(notificationId: number): Promise<void>;
   updateCustomerProfileWithNotifications(customerId: string, updates: Partial<User>, notifyWholesalers?: boolean): Promise<User>;
   getWholesalersForCustomerProfile(customerId: string): Promise<string[]>;
+  
+  // Delivery address operations
+  getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]>;
+  getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined>;
+  createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
+  updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress>;
+  deleteDeliveryAddress(id: number): Promise<void>;
+  setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void>;
+  getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4546,6 +4558,87 @@ export class DatabaseStorage implements IStorage {
         date: lastMovement.createdAt
       } : undefined
     };
+  }
+
+  // Delivery address operations
+  async getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]> {
+    return await db
+      .select()
+      .from(deliveryAddresses)
+      .where(
+        and(
+          eq(deliveryAddresses.customerId, customerId),
+          eq(deliveryAddresses.wholesalerId, wholesalerId)
+        )
+      )
+      .orderBy(desc(deliveryAddresses.isDefault), desc(deliveryAddresses.createdAt));
+  }
+
+  async getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined> {
+    const [address] = await db
+      .select()
+      .from(deliveryAddresses)
+      .where(eq(deliveryAddresses.id, id));
+    return address;
+  }
+
+  async createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress> {
+    const [created] = await db
+      .insert(deliveryAddresses)
+      .values(address)
+      .returning();
+    return created;
+  }
+
+  async updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress> {
+    const [updated] = await db
+      .update(deliveryAddresses)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(deliveryAddresses.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDeliveryAddress(id: number): Promise<void> {
+    await db
+      .delete(deliveryAddresses)
+      .where(eq(deliveryAddresses.id, id));
+  }
+
+  async setDefaultDeliveryAddress(customerId: string, wholesalerId: string, addressId: number): Promise<void> {
+    // First, unset all default addresses for this customer and wholesaler
+    await db
+      .update(deliveryAddresses)
+      .set({ isDefault: false })
+      .where(
+        and(
+          eq(deliveryAddresses.customerId, customerId),
+          eq(deliveryAddresses.wholesalerId, wholesalerId)
+        )
+      );
+    
+    // Then set the specified address as default
+    await db
+      .update(deliveryAddresses)
+      .set({ isDefault: true })
+      .where(eq(deliveryAddresses.id, addressId));
+  }
+
+  async getDefaultDeliveryAddress(customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
+    const [address] = await db
+      .select()
+      .from(deliveryAddresses)
+      .where(
+        and(
+          eq(deliveryAddresses.customerId, customerId),
+          eq(deliveryAddresses.wholesalerId, wholesalerId),
+          eq(deliveryAddresses.isDefault, true)
+        )
+      );
+    return address;
   }
 
 }

@@ -1556,6 +1556,295 @@ The Quikpik Team
     }
   });
 
+  // ============================================================================
+  // DELIVERY ADDRESS MANAGEMENT API ROUTES
+  // ============================================================================
+
+  // Get customer's delivery addresses for a specific wholesaler
+  app.get('/api/customer/delivery-addresses/:wholesalerId', async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      // If session auth fails, try fallback cookie
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      if (customerAuth.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ error: "Access denied for this wholesaler" });
+      }
+      
+      const addresses = await storage.getDeliveryAddresses(customerAuth.customerId, wholesalerId);
+      console.log(`📍 Retrieved ${addresses.length} delivery addresses for customer ${customerAuth.customerId}`);
+      
+      res.json(addresses);
+    } catch (error) {
+      console.error("❌ Error fetching delivery addresses:", error);
+      res.status(500).json({ error: "Failed to fetch delivery addresses" });
+    }
+  });
+
+  // Create new delivery address
+  app.post('/api/customer/delivery-addresses', async (req, res) => {
+    try {
+      const { wholesalerId, addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Validate required fields
+      if (!wholesalerId || !addressLine1 || !city || !postalCode) {
+        return res.status(400).json({ error: "Missing required address fields" });
+      }
+      
+      // If this is being set as default, first unset any existing default
+      if (isDefault) {
+        await storage.setDefaultDeliveryAddress(customerAuth.customerId, wholesalerId, -1); // This will unset all defaults
+      }
+      
+      const newAddress = await storage.createDeliveryAddress({
+        customerId: customerAuth.customerId,
+        wholesalerId,
+        addressLine1,
+        addressLine2: addressLine2 || null,
+        city,
+        state: state || null,
+        postalCode,
+        country: country || 'United Kingdom',
+        label: label || null,
+        instructions: instructions || null,
+        isDefault: isDefault || false
+      });
+      
+      console.log(`📍 Created new delivery address ${newAddress.id} for customer ${customerAuth.customerId}`);
+      
+      res.status(201).json(newAddress);
+    } catch (error) {
+      console.error("❌ Error creating delivery address:", error);
+      res.status(500).json({ error: "Failed to create delivery address" });
+    }
+  });
+
+  // Update delivery address
+  app.put('/api/customer/delivery-addresses/:addressId', async (req, res) => {
+    try {
+      const { addressId } = req.params;
+      const { wholesalerId, addressLine1, addressLine2, city, state, postalCode, country, label, instructions, isDefault } = req.body;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Verify the customer owns this address
+      const existingAddress = await storage.getDeliveryAddress(parseInt(addressId));
+      if (!existingAddress || existingAddress.customerId !== customerAuth.customerId) {
+        return res.status(403).json({ error: "Address not found or access denied" });
+      }
+      
+      // If this is being set as default, first handle default switching
+      if (isDefault && !existingAddress.isDefault) {
+        await storage.setDefaultDeliveryAddress(customerAuth.customerId, existingAddress.wholesalerId, parseInt(addressId));
+      }
+      
+      const updates: any = {};
+      if (addressLine1) updates.addressLine1 = addressLine1;
+      if (addressLine2 !== undefined) updates.addressLine2 = addressLine2;
+      if (city) updates.city = city;
+      if (state !== undefined) updates.state = state;
+      if (postalCode) updates.postalCode = postalCode;
+      if (country) updates.country = country;
+      if (label !== undefined) updates.label = label;
+      if (instructions !== undefined) updates.instructions = instructions;
+      if (isDefault !== undefined) updates.isDefault = isDefault;
+      
+      const updatedAddress = await storage.updateDeliveryAddress(parseInt(addressId), updates);
+      
+      console.log(`📍 Updated delivery address ${addressId} for customer ${customerAuth.customerId}`);
+      
+      res.json(updatedAddress);
+    } catch (error) {
+      console.error("❌ Error updating delivery address:", error);
+      res.status(500).json({ error: "Failed to update delivery address" });
+    }
+  });
+
+  // Delete delivery address
+  app.delete('/api/customer/delivery-addresses/:addressId', async (req, res) => {
+    try {
+      const { addressId } = req.params;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Verify the customer owns this address
+      const existingAddress = await storage.getDeliveryAddress(parseInt(addressId));
+      if (!existingAddress || existingAddress.customerId !== customerAuth.customerId) {
+        return res.status(403).json({ error: "Address not found or access denied" });
+      }
+      
+      await storage.deleteDeliveryAddress(parseInt(addressId));
+      
+      console.log(`📍 Deleted delivery address ${addressId} for customer ${customerAuth.customerId}`);
+      
+      res.json({ success: true, message: "Delivery address deleted successfully" });
+    } catch (error) {
+      console.error("❌ Error deleting delivery address:", error);
+      res.status(500).json({ error: "Failed to delete delivery address" });
+    }
+  });
+
+  // Set default delivery address
+  app.post('/api/customer/delivery-addresses/:addressId/set-default', async (req, res) => {
+    try {
+      const { addressId } = req.params;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Verify the customer owns this address
+      const existingAddress = await storage.getDeliveryAddress(parseInt(addressId));
+      if (!existingAddress || existingAddress.customerId !== customerAuth.customerId) {
+        return res.status(403).json({ error: "Address not found or access denied" });
+      }
+      
+      await storage.setDefaultDeliveryAddress(customerAuth.customerId, existingAddress.wholesalerId, parseInt(addressId));
+      
+      console.log(`📍 Set address ${addressId} as default for customer ${customerAuth.customerId}`);
+      
+      res.json({ success: true, message: "Default address updated successfully" });
+    } catch (error) {
+      console.error("❌ Error setting default address:", error);
+      res.status(500).json({ error: "Failed to set default address" });
+    }
+  });
+
+  // Get default delivery address for customer and wholesaler
+  app.get('/api/customer/delivery-addresses/:wholesalerId/default', async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now() && cookieData.wholesalerId === wholesalerId) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const defaultAddress = await storage.getDefaultDeliveryAddress(customerAuth.customerId, wholesalerId);
+      
+      if (!defaultAddress) {
+        return res.status(404).json({ error: "No default address found" });
+      }
+      
+      console.log(`📍 Retrieved default address ${defaultAddress.id} for customer ${customerAuth.customerId}`);
+      
+      res.json(defaultAddress);
+    } catch (error) {
+      console.error("❌ Error fetching default address:", error);
+      res.status(500).json({ error: "Failed to fetch default address" });
+    }
+  });
+
 
 
   // Get customer profile update notifications for a wholesaler

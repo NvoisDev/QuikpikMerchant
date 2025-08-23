@@ -32,6 +32,9 @@ import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/component
 import Logo from "@/components/ui/logo";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import { ModernCustomerHome } from "@/components/customer/ModernCustomerHome";
+import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressManager";
+import { FirstTimeAddressSetup } from "@/components/customer/FirstTimeAddressSetup";
+import { AddressSelector } from "@/components/customer/AddressSelector";
 import { useOptimizedQuery, useCriticalQuery } from "@/hooks/useOptimizedQuery";
 import { LoadingSpinner, ProductGridSkeleton } from "@/components/ui/loading-spinner";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
@@ -635,6 +638,7 @@ export default function CustomerPortal() {
   // Customer authentication state - using server sessions
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
+  const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
 
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
@@ -1552,6 +1556,11 @@ export default function CustomerPortal() {
     setIsAuthenticated(true);
     setShowAuth(false);
     setIsGuestMode(false);
+    
+    // Show first-time address setup after a short delay
+    setTimeout(() => {
+      setShowFirstTimeAddressSetup(true);
+    }, 1000);
     
     // Refetch session to confirm it's saved
     refetchSession();
@@ -3606,6 +3615,27 @@ export default function CustomerPortal() {
                   </CardContent>
                 </Card>
 
+                {/* Delivery Addresses */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Delivery Addresses
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">
+                      Manage your delivery addresses for faster checkout
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    {wholesaler?.id && (
+                      <DeliveryAddressManager
+                        wholesalerId={wholesaler.id}
+                        showAddButton={true}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Theme Preferences */}
                 <Card>
                   <CardHeader>
@@ -4597,6 +4627,22 @@ export default function CustomerPortal() {
               )}
             </div>
           </div>
+        )}
+
+        {/* First Time Address Setup Popup */}
+        {wholesaler?.id && (
+          <FirstTimeAddressSetup
+            wholesalerId={wholesaler.id}
+            isOpen={showFirstTimeAddressSetup}
+            onClose={() => setShowFirstTimeAddressSetup(false)}
+            onSuccess={() => {
+              setShowFirstTimeAddressSetup(false);
+              toast({
+                title: "Address Setup Complete",
+                description: "Your delivery address has been saved successfully!",
+              });
+            }}
+          />
         )}
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
