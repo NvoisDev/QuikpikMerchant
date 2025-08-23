@@ -1924,9 +1924,12 @@ export default function CustomerPortal() {
                   onClick={async () => {
                     if (cart.length > 0) {
                       console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
-                      console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                      await createPaymentIntentForCheckout();
-                      setShowCheckout(true);
+                      // Use a short delay to ensure state has updated
+                      setTimeout(async () => {
+                        console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
+                        await createPaymentIntentForCheckout();
+                        setShowCheckout(true);
+                      }, 100);
                     }
                   }}
                   size="sm"
