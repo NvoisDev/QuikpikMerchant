@@ -308,6 +308,7 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
         onSuccess={onSuccess} 
         totalAmount={totalAmount} 
         wholesaler={wholesaler}
+        customerData={customerData}
       />
     </Elements>
   );
@@ -317,11 +318,13 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
 const PaymentFormContent = ({ 
   onSuccess, 
   totalAmount, 
-  wholesaler
+  wholesaler,
+  customerData
 }: { 
   onSuccess: (orderData?: any) => void;
   totalAmount: number;
   wholesaler: any;
+  customerData: CustomerData;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -344,6 +347,32 @@ const PaymentFormContent = ({
     if (!stripe || !elements || isProcessing || paymentSubmitted) {
       console.error('💳 Payment Error: Stripe/Elements not loaded or payment already in progress');
       return;
+    }
+
+    // VALIDATION: Check delivery address is complete when delivery is selected
+    if (customerData.shippingOption === 'delivery') {
+      console.log('🚚 PAYMENT VALIDATION: Delivery selected, checking address fields...');
+      const missingFields = [];
+      if (!customerData.address?.trim()) missingFields.push('Street Address');
+      if (!customerData.city?.trim()) missingFields.push('City');
+      if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
+      
+      console.log('🚚 PAYMENT VALIDATION: Missing fields:', missingFields);
+      
+      if (missingFields.length > 0) {
+        console.log('🚚 PAYMENT VALIDATION: Blocking payment due to missing address fields');
+        toast({
+          title: "Delivery Address Required",
+          description: `Please fill in the following fields: ${missingFields.join(', ')}`,
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        setPaymentSubmitted(false);
+        return; // Stop payment process
+      }
+      console.log('🚚 PAYMENT VALIDATION: All delivery address fields complete, proceeding with payment...');
+    } else {
+      console.log('🚚 PAYMENT VALIDATION: Pickup selected, skipping address validation');
     }
 
     console.log('💳 Starting payment confirmation process...');
@@ -1293,29 +1322,6 @@ export default function CustomerPortal() {
       postalCode: customerData.postalCode
     });
     
-    // VALIDATION: Check delivery address is complete when delivery is selected
-    if (customerData.shippingOption === 'delivery') {
-      console.log('🚚 VALIDATION: Delivery selected, checking address fields...');
-      const missingFields = [];
-      if (!customerData.address?.trim()) missingFields.push('Street Address');
-      if (!customerData.city?.trim()) missingFields.push('City');
-      if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
-      
-      console.log('🚚 VALIDATION: Missing fields:', missingFields);
-      
-      if (missingFields.length > 0) {
-        console.log('🚚 VALIDATION: Blocking checkout due to missing address fields');
-        toast({
-          title: "Delivery Address Required",
-          description: `Please fill in the following fields: ${missingFields.join(', ')}`,
-          variant: "destructive",
-        });
-        return; // Stop checkout process
-      }
-      console.log('🚚 VALIDATION: All delivery address fields complete, proceeding...');
-    } else {
-      console.log('🚚 VALIDATION: Pickup selected or no shipping option, skipping address validation');
-    }
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
