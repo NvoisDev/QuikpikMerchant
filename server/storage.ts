@@ -828,6 +828,7 @@ export class DatabaseStorage implements IStorage {
     
     // Get all order items in a single query using filtered results
     const orderIds = filteredOrderResults.map(o => o.id);
+    console.log(`🔍 Fetching items for order IDs: ${orderIds.join(', ')}`);
     const itemsResults = await db
       .select({
         orderItemId: orderItems.id,
@@ -847,6 +848,7 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${orderItems.orderId} IN (${sql.join(orderIds.map(id => sql`${id}`), sql`, `)})`);
     
     console.log(`📊 Order items query took ${Date.now() - startTime}ms total, found ${itemsResults.length} items`);
+    console.log(`🔍 First item result:`, itemsResults[0] || 'No items found');
     
     // Group items by order ID
     const itemsByOrderId = itemsResults.reduce((acc, item) => {
@@ -871,6 +873,7 @@ export class DatabaseStorage implements IStorage {
     }, {} as Record<number, any[]>);
     
     // Transform results using filtered results
+    console.log(`🔍 Items by order ID:`, Object.keys(itemsByOrderId).map(k => `${k}=${itemsByOrderId[k].length} items`));
     const ordersWithItems = filteredOrderResults.map(order => {
       const retailer = userMap[order.retailerId];
       const wholesaler = userMap[order.wholesalerId];
