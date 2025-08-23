@@ -86,12 +86,21 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
       });
     },
     onSuccess: () => {
+      // Invalidate queries to refresh address list
       queryClient.invalidateQueries({ queryKey: [`/api/customer/delivery-addresses/${wholesalerId}`] });
-      setStep('success');
+      
+      // Show success message and close popup
       toast({
-        title: "Address Added Successfully",
+        title: "Address Added Successfully", 
         description: "Your default delivery address has been set up.",
       });
+      
+      // Close popup immediately after successful save
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+        setStep('intro'); // Reset for next time
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
@@ -133,7 +142,11 @@ export function FirstTimeAddressSetup({ wholesalerId, isOpen, onClose, onSuccess
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}> {/* Prevent closing by clicking overlay */}
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         {step === 'intro' && (
           <>
