@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { performanceMiddleware } from "./middleware/performance";
 import { queryOptimizer, queryCache } from "./utils/connectionPool";
 import compression from "compression";
-import { setupAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema } from "@shared/schema";
 import { whatsappService } from "./whatsapp";
@@ -1559,6 +1559,27 @@ The Quikpik Team
   // ============================================================================
   // DELIVERY ADDRESS MANAGEMENT API ROUTES
   // ============================================================================
+  
+  // Wholesaler endpoint: Get customer's delivery addresses for order fulfillment
+  app.get('/api/wholesaler/customer-delivery-addresses/:customerId/:wholesalerId', isAuthenticated, async (req, res) => {
+    try {
+      const { customerId, wholesalerId } = req.params;
+      
+      // Verify the authenticated user is the wholesaler requesting the data
+      const authenticatedWholesalerId = (req.user as any)?.id;
+      if (authenticatedWholesalerId !== wholesalerId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const addresses = await storage.getDeliveryAddresses(customerId, wholesalerId);
+      console.log(`📍 Wholesaler ${wholesalerId} retrieved ${addresses.length} delivery addresses for customer ${customerId}`);
+      
+      res.json(addresses);
+    } catch (error) {
+      console.error("❌ Error fetching delivery addresses for wholesaler:", error);
+      res.status(500).json({ error: "Failed to fetch delivery addresses" });
+    }
+  });
 
   // Get customer's delivery addresses for a specific wholesaler
   app.get('/api/customer/delivery-addresses/:wholesalerId', async (req, res) => {

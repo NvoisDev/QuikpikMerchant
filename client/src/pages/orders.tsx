@@ -78,6 +78,22 @@ const formatAddress = (addressData?: string): string => {
   }
 };
 
+// Helper function to format delivery address object
+const formatDeliveryAddress = (address: any): string => {
+  if (!address) return 'No delivery address';
+  
+  const parts = [
+    address.addressLine1,
+    address.addressLine2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country
+  ].filter(part => part && part.trim() !== '');
+  
+  return parts.join(', ');
+};
+
 interface Order {
   id: number;
   retailerId: string;
@@ -145,12 +161,44 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [customerDeliveryAddress, setCustomerDeliveryAddress] = useState<any>(null);
   const [shippingModalOrder, setShippingModalOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("orders");
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [fulfillingOrders, setFulfillingOrders] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  // Function to handle order click and fetch delivery address
+  const handleOrderClick = async (order: Order) => {
+    setSelectedOrder(order);
+    
+    // Fetch customer's delivery address for this order
+    if (order.retailer?.id) {
+      try {
+        const customerId = order.retailer.id;
+        const wholesalerId = user?.id;
+        
+        const response = await fetch(`/api/wholesaler/customer-delivery-addresses/${customerId}/${wholesalerId}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const addresses = await response.json();
+          // Get the default address or first address
+          const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0];
+          setCustomerDeliveryAddress(defaultAddress || null);
+        } else {
+          setCustomerDeliveryAddress(null);
+        }
+      } catch (error) {
+        console.error('Error fetching customer delivery address:', error);
+        setCustomerDeliveryAddress(null);
+      }
+    } else {
+      setCustomerDeliveryAddress(null);
+    }
+  };
 
   // Update order status mutation
   const updateOrderStatusMutation = useMutation({
@@ -723,7 +771,7 @@ export default function Orders() {
                             <tr 
                               key={order.id} 
                               className="border-b hover:bg-gray-50 cursor-pointer"
-                              onClick={() => setSelectedOrder(order)}
+                              onClick={() => handleOrderClick(order)}
                             >
                               <td className="p-4">
                                 <div>
@@ -807,7 +855,7 @@ export default function Orders() {
                                     size="sm" 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSelectedOrder(order);
+                                      handleOrderClick(order);
                                     }}
                                     className="flex items-center gap-1"
                                   >
@@ -957,7 +1005,7 @@ export default function Orders() {
                       </div>
                       
                       <div className="ml-4 flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
+                        <Button variant="outline" size="sm" onClick={() => handleOrderClick(order)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </Button>
@@ -1066,7 +1114,12 @@ export default function Orders() {
 
           {/* Order Details Dialog */}
           {selectedOrder && (
-            <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+            <Dialog open={!!selectedOrder} onOpenChange={(open) => {
+              if (!open) {
+                setSelectedOrder(null);
+                setCustomerDeliveryAddress(null);
+              }
+            }}>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Details</DialogTitle>
@@ -1094,14 +1147,49 @@ export default function Orders() {
                               {(selectedOrder.customerPhone || selectedOrder.retailer?.phoneNumber) || 'N/A'}
                             </span>
                           </div>
-                          {(selectedOrder.deliveryAddress || selectedOrder.customerAddress) && (
-                            <div className="flex items-start pt-1">
-                              <span className="text-gray-600 w-16 mt-0.5">Address:</span>
-                              <span className="font-medium text-gray-900 flex-1">
-                                {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
-                              </span>
+                          {/* Delivery Address Section */}
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-start">
+                              <MapPin className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-900 block mb-1">Delivery Address</span>
+                                {customerDeliveryAddress ? (
+                                  <div className="space-y-1">
+                                    <div className="text-sm text-gray-700">
+                                      <div className="font-medium">{customerDeliveryAddress.addressLine1}</div>
+                                      {customerDeliveryAddress.addressLine2 && (
+                                        <div>{customerDeliveryAddress.addressLine2}</div>
+                                      )}
+                                      <div>
+                                        {customerDeliveryAddress.city}
+                                        {customerDeliveryAddress.state && `, ${customerDeliveryAddress.state}`}
+                                        {customerDeliveryAddress.postalCode && ` ${customerDeliveryAddress.postalCode}`}
+                                      </div>
+                                      {customerDeliveryAddress.country && (
+                                        <div className="font-medium">{customerDeliveryAddress.country}</div>
+                                      )}
+                                    </div>
+                                    {customerDeliveryAddress.label && (
+                                      <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
+                                        {customerDeliveryAddress.label}
+                                      </div>
+                                    )}
+                                    {customerDeliveryAddress.instructions && (
+                                      <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                        <span className="font-medium">Instructions:</span> {customerDeliveryAddress.instructions}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (selectedOrder.deliveryAddress || selectedOrder.customerAddress) ? (
+                                  <div className="text-sm text-gray-700">
+                                    {formatAddress(selectedOrder.deliveryAddress || selectedOrder.customerAddress)}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500 italic">No delivery address provided</div>
+                                )}
+                              </div>
                             </div>
-                          )}
+                          </div>
                         </div>
                       </div>
 
