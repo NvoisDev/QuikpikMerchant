@@ -48,6 +48,7 @@ interface Order {
   customerPhone?: string;
   customerAddress?: string;
   deliveryAddress?: string;
+  deliveryAddressId?: number;
   orderNotes?: string;
   paymentMethod?: string;
   paymentStatus?: string;

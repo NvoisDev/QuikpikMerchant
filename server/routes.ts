@@ -1561,15 +1561,43 @@ The Quikpik Team
   // ============================================================================
   
   // Get specific delivery address by ID for order display
-  app.get('/api/delivery-address/:addressId', isAuthenticated, async (req, res) => {
+  app.get('/api/delivery-address/:addressId', async (req, res) => {
     try {
       const { addressId } = req.params;
+      
+      // Get customer from session or fallback auth (same pattern as other customer endpoints)
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
       const address = await storage.getDeliveryAddress(parseInt(addressId));
       
       if (!address) {
         return res.status(404).json({ error: "Address not found" });
       }
       
+      // Verify the customer owns this address
+      if (address.customerId !== customerAuth.customerId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      console.log(`🎯 Retrieved exact delivery address ${addressId} for order display: ${address.addressLine1}, ${address.city}`);
       res.json(address);
     } catch (error) {
       console.error("❌ Error fetching delivery address:", error);

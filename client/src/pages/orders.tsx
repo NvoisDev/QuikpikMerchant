@@ -129,6 +129,7 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   deliveryAddress?: string;
+  deliveryAddressId?: number;
   notes?: string;
   fulfillmentType?: string; // Add fulfillment type field
   orderNumber?: string; // Add order number field
