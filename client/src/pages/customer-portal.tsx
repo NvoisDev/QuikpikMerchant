@@ -1286,15 +1286,25 @@ export default function CustomerPortal() {
   // Simplified payment intent creation - no shipping metadata needed
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
+    console.log('🚚 DEBUG: Current customer data:', {
+      shippingOption: customerData.shippingOption,
+      address: customerData.address,
+      city: customerData.city,
+      postalCode: customerData.postalCode
+    });
     
     // VALIDATION: Check delivery address is complete when delivery is selected
     if (customerData.shippingOption === 'delivery') {
+      console.log('🚚 VALIDATION: Delivery selected, checking address fields...');
       const missingFields = [];
       if (!customerData.address?.trim()) missingFields.push('Street Address');
       if (!customerData.city?.trim()) missingFields.push('City');
       if (!customerData.postalCode?.trim()) missingFields.push('Postal Code');
       
+      console.log('🚚 VALIDATION: Missing fields:', missingFields);
+      
       if (missingFields.length > 0) {
+        console.log('🚚 VALIDATION: Blocking checkout due to missing address fields');
         toast({
           title: "Delivery Address Required",
           description: `Please fill in the following fields: ${missingFields.join(', ')}`,
@@ -1302,6 +1312,9 @@ export default function CustomerPortal() {
         });
         return; // Stop checkout process
       }
+      console.log('🚚 VALIDATION: All delivery address fields complete, proceeding...');
+    } else {
+      console.log('🚚 VALIDATION: Pickup selected or no shipping option, skipping address validation');
     }
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
