@@ -69,6 +69,9 @@ const formatAddress = (addressData?: string): string => {
       
       if (addressParts.length > 0) {
         return addressParts.join(', ');
+      } else {
+        // If all fields are empty, show a helpful message
+        return 'Delivery address not fully specified';
       }
     }
     return addressData;
@@ -258,6 +261,18 @@ export default function Orders() {
           isArray: Array.isArray(ordersData),
           firstOrder: ordersData[0] ? { id: ordersData[0].id, orderNumber: ordersData[0].orderNumber } : 'No orders'
         });
+        
+        // DEBUG: Check items data specifically
+        if (ordersData && ordersData.length > 0) {
+          ordersData.forEach((order: any, index: number) => {
+            console.log(`🔍 Order ${order.orderNumber || order.id} items debug:`, {
+              hasItems: !!order.items,
+              itemsLength: order.items?.length || 0,
+              items: order.items,
+              deliveryAddress: order.deliveryAddress
+            });
+          });
+        }
         
         return ordersData;
       } catch (fetchError: any) {
