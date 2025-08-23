@@ -2337,6 +2337,39 @@ The Quikpik Team
     }
   });
 
+  // Get single order details with items - REQUIRES AUTHENTICATION
+  app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: 'Invalid order ID' });
+      }
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify the user has access to this order (data isolation)
+      const userId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      if (order.wholesalerId !== userId && order.retailerId !== userId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      console.log(`📦 Retrieved order ${orderId} with ${order.items?.length || 0} items`);
+      res.json(order);
+    } catch (error) {
+      console.error(`❌ Error fetching order ${req.params.id}:`, error);
+      res.status(500).json({ 
+        message: "Failed to fetch order details",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
   // Paginated orders endpoint - REQUIRES AUTHENTICATION
   app.get('/api/orders-paginated', requireAuth, async (req: any, res) => {
     try {
@@ -2385,35 +2418,8 @@ The Quikpik Team
 
       console.log(`📦 Found ${ordersResult.length} orders (page ${page}/${totalPages}, total: ${totalOrders})`);
       
-      // Add order items to each order
-      const ordersWithItems = await Promise.all(ordersResult.map(async (order) => {
-        const items = await db
-          .select({
-            id: orderItems.id,
-            quantity: orderItems.quantity,
-            unitPrice: orderItems.unitPrice,
-            total: orderItems.total,
-            product: {
-              id: products.id,
-              name: products.name,
-              imageUrl: products.imageUrl,
-              moq: products.moq
-            }
-          })
-          .from(orderItems)
-          .leftJoin(products, eq(orderItems.productId, products.id))
-          .where(eq(orderItems.orderId, order.id));
-
-        console.log(`📦 Order ${order.id} has ${items.length} items`);
-        
-        return {
-          ...order,
-          items: items
-        };
-      }));
-      
       res.json({
-        orders: ordersWithItems,
+        orders: ordersResult,
         currentPage: page,
         totalPages,
         total: totalOrders,
@@ -2620,37 +2626,6 @@ The Quikpik Team
       // Get wholesaler from first product
       const firstProduct = await storage.getProduct(items[0].productId);
       const wholesalerId = firstProduct!.wholesalerId;
-
-      // SERVER-SIDE VALIDATION: Check delivery address for delivery orders
-      if (deliveryAddress && deliveryAddress.trim() !== '') {
-        console.log('🚚 ORDERS VALIDATION: Checking delivery address...');
-        
-        let addressObj;
-        try {
-          addressObj = typeof deliveryAddress === 'string' ? JSON.parse(deliveryAddress) : deliveryAddress;
-        } catch (e) {
-          // If it's not JSON, treat as plain string address
-          if (deliveryAddress === 'United Kingdom' || deliveryAddress.trim().length < 10) {
-            console.error('🚚 ORDERS VALIDATION: Incomplete delivery address detected');
-            throw new Error('Delivery address incomplete. Please provide full address details.');
-          }
-        }
-        
-        if (addressObj) {
-          const missingFields = [];
-          if (!addressObj?.street?.trim()) missingFields.push('Street Address');
-          if (!addressObj?.city?.trim()) missingFields.push('City');
-          if (!addressObj?.postalCode?.trim()) missingFields.push('Postal Code');
-          
-          if (missingFields.length > 0) {
-            console.error('🚚 ORDERS VALIDATION: Incomplete delivery address detected');
-            console.error('🚚 ORDERS VALIDATION: Missing fields:', missingFields);
-            throw new Error(`Delivery address incomplete. Missing: ${missingFields.join(', ')}`);
-          }
-        }
-        
-        console.log('🚚 ORDERS VALIDATION: Delivery address is valid, proceeding...');
-      }
 
       const orderData = insertOrderSchema.parse({
         orderNumber: `ORD-${Date.now()}`,
@@ -3300,37 +3275,6 @@ The Quikpik Team
             
             console.log(`💰 Subtotal calculation: productSubtotal=${productSubtotal}, safeSubtotal=${safeSubtotal}, totalAmount=${totalAmount}`);
 
-            // SERVER-SIDE VALIDATION: Check delivery address is complete for delivery orders
-            if (fulfillmentType === 'delivery') {
-              console.log('🚚 ROUTES VALIDATION: Delivery order detected, validating address...');
-              
-              let addressObj;
-              try {
-                addressObj = typeof customerAddress === 'string' ? JSON.parse(customerAddress) : customerAddress;
-              } catch (e) {
-                console.error('🚚 ROUTES VALIDATION: Invalid address JSON format');
-                throw new Error('Invalid delivery address format');
-              }
-              
-              const missingFields = [];
-              if (!addressObj?.street?.trim()) missingFields.push('Street Address');
-              if (!addressObj?.city?.trim()) missingFields.push('City');
-              if (!addressObj?.postalCode?.trim()) missingFields.push('Postal Code');
-              
-              console.log('🚚 ROUTES VALIDATION: Address validation result:', {
-                addressObj,
-                missingFields
-              });
-              
-              if (missingFields.length > 0) {
-                console.error('🚚 ROUTES VALIDATION: Incomplete delivery address detected');
-                console.error('🚚 ROUTES VALIDATION: Missing fields:', missingFields);
-                throw new Error(`Delivery address incomplete. Missing: ${missingFields.join(', ')}`);
-              }
-              
-              console.log('🚚 ROUTES VALIDATION: Delivery address is complete, proceeding...');
-            }
-
             // Create order with customer details AND SHIPPING DATA
             const orderData = {
               orderNumber: wholesaleRef, // Use wholesale reference as order number for consistency
@@ -3345,7 +3289,7 @@ The Quikpik Team
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.stringify(JSON.parse(customerAddress)),
+              deliveryAddress: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address,
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
@@ -3410,7 +3354,7 @@ The Quikpik Team
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
-              address: typeof customerAddress === 'string' ? customerAddress : JSON.stringify(JSON.parse(customerAddress))
+              address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
             }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
 
