@@ -3753,22 +3753,6 @@ export default function CustomerPortal() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
                               <p className="font-medium">{item.product.name}</p>
-                              {/* Edit button for switching units/pallets */}
-                              {item.product.palletPrice && parseFloat(item.product.palletPrice.toString()) > 0 && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedProductForModal(item.product);
-                                    setModalStep('type');
-                                    setSelectedModalType(item.sellingType);
-                                    setModalQuantity(item.quantity);
-                                    setShowUnitSelectionModal(true);
-                                  }}
-                                  className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
-                                  title="Change units/pallets or quantity"
-                                >
-                                  Edit
-                                </button>
-                              )}
                             </div>
                             <p className="text-sm text-gray-600">
                               Qty: {item.quantity} {item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}
