@@ -533,26 +533,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe Connect endpoint
   app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
     try {
+      console.log('🔗 Stripe Connect request received');
+      console.log('📋 Stripe configured:', !!stripe);
+      console.log('🔑 Stripe key exists:', !!process.env.STRIPE_SECRET_KEY);
+      
       if (!stripe) {
-        return res.status(500).json({ message: "Stripe not configured" });
+        console.error('❌ Stripe not configured - missing STRIPE_SECRET_KEY');
+        return res.status(500).json({ message: "Stripe not configured - missing secret key" });
       }
 
       const user = req.user;
-      console.log('🔗 Creating Stripe Connect account for user:', user.id);
+      console.log('👤 Creating Stripe Connect account for user:', user.id);
+      console.log('📧 User email:', user.email);
+      console.log('🏢 User business name:', user.businessName || user.username);
 
       // Check if user already has a Connect account
       if (user.stripeAccountId) {
-        // Get account link for existing account
-        const accountLink = await stripe.accountLinks.create({
-          account: user.stripeAccountId,
-          refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
-          return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
-          type: 'account_onboarding',
-        });
-
-        return res.json({ url: accountLink.url, accountId: user.stripeAccountId });
+        console.log('🔄 User already has Stripe account:', user.stripeAccountId);
+        
+        try {
+          // Get account link for existing account
+          const accountLink = await stripe.accountLinks.create({
+            account: user.stripeAccountId,
+            refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
+            return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
+            type: 'account_onboarding',
+          });
+          
+          console.log('✅ Account link created for existing account');
+          return res.json({ url: accountLink.url, accountId: user.stripeAccountId });
+        } catch (linkError: any) {
+          console.error('❌ Error creating account link:', linkError.message);
+          throw new Error(`Failed to create account link: ${linkError.message}`);
+        }
       }
 
+      console.log('🆕 Creating new Stripe Express account');
+      
       // Create new Connect Express account
       const account = await stripe.accounts.create({
         type: 'express',
@@ -567,10 +584,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
+      console.log('✅ Stripe account created:', account.id);
+
       // Update user with Connect account ID
       await storage.updateUser(user.id, {
         stripeAccountId: account.id
       });
+      
+      console.log('✅ User updated with Stripe account ID');
 
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
@@ -580,12 +601,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'account_onboarding',
       });
 
-      console.log('✅ Stripe Connect account created:', account.id);
+      console.log('✅ Onboarding link created');
       
       res.json({ url: accountLink.url, accountId: account.id });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating Stripe Connect account:', error);
-      res.status(500).json({ message: "Failed to create Stripe Connect account" });
+      console.error('❌ Error details:', {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        statusCode: error.statusCode
+      });
+      
+      let errorMessage = "Failed to create Stripe Connect account";
+      if (error.message && error.message.includes('No such application')) {
+        errorMessage = "Stripe application not found - check your Stripe keys";
+      } else if (error.message && error.message.includes('Invalid API key')) {
+        errorMessage = "Invalid Stripe API key";
+      } else if (error.type === 'StripePermissionError') {
+        errorMessage = "Stripe permissions error - check your account settings";
+      } else if (error.message) {
+        errorMessage = `Stripe error: ${error.message}`;
+      }
+      
+      res.status(500).json({ message: errorMessage });
     }
   });
 
