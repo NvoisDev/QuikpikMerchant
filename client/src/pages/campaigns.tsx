@@ -55,7 +55,6 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
-import { CampaignPerformanceDashboard } from "@/components/CampaignPerformanceDashboard";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
 
 const campaignFormSchema = z.object({
@@ -240,7 +239,7 @@ export default function Campaigns() {
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
   const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'performance'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
@@ -726,17 +725,12 @@ export default function Campaigns() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns' | 'performance')}>
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'campaigns')}>
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="campaigns" className="flex items-center gap-2 px-2 sm:px-4">
             <MessageSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Campaign Management</span>
             <span className="sm:hidden">Campaigns</span>
-          </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2 px-2 sm:px-4">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Performance Analytics</span>
-            <span className="sm:hidden">Analytics</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1747,12 +1741,6 @@ export default function Campaigns() {
 
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-6">
-          <CampaignPerformanceDashboard 
-            campaigns={campaigns}
-            onRefresh={refetchCampaigns}
-          />
-        </TabsContent>
       </Tabs>
 
       {/* Subscription Upgrade Modal */}
