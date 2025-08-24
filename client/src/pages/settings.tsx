@@ -118,12 +118,27 @@ export default function Settings() {
   const handleStripeDashboard = async () => {
     setIsConnectingStripe(true);
     try {
+      console.log('🔗 Requesting Stripe dashboard...');
       const response = await apiRequest('POST', '/api/stripe/dashboard');
+      console.log('📊 Dashboard response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Dashboard API error:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('📄 Dashboard response data:', data);
       
       if (data.url) {
+        console.log('🚀 Opening dashboard URL:', data.url);
         // Open Stripe dashboard in new window
-        window.open(data.url, '_blank');
+        const newWindow = window.open(data.url, '_blank');
+        if (!newWindow) {
+          throw new Error("Pop-up blocked. Please allow pop-ups for this site.");
+        }
+        
         toast({
           title: "Stripe Dashboard",
           description: "Opening your Stripe account dashboard in a new window.",
@@ -133,12 +148,15 @@ export default function Settings() {
         setTimeout(() => {
           refetchStripeStatus();
         }, 2000);
+      } else {
+        console.error('❌ No URL in response:', data);
+        throw new Error("Dashboard URL not provided");
       }
-    } catch (error) {
-      console.error('Error opening Stripe dashboard:', error);
+    } catch (error: any) {
+      console.error('❌ Error opening Stripe dashboard:', error);
       toast({
         title: "Dashboard Error",
-        description: "Unable to open Stripe dashboard. Please try again.",
+        description: error.message || "Unable to open Stripe dashboard. Please try again.",
         variant: "destructive",
       });
     } finally {
