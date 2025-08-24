@@ -4237,32 +4237,6 @@ The Quikpik Team
     }
   });
 
-  // TEST: Upload image to order (temporarily without auth for testing)
-  app.post('/api/orders/:orderId/upload-image-test', async (req: any, res) => {
-    try {
-      const { orderId } = req.params;
-      
-      // For testing - use a default wholesaler ID
-      const defaultWholesalerId = "104871691614680693123"; // Surulere Foods Wholesale for testing
-      
-      // Verify order exists (simplified for testing)
-      const order = await storage.getOrder(parseInt(orderId));
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-      
-      // Generate presigned URL for image upload
-      const { ObjectStorageService } = await import('./objectStorage.js');
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      
-      res.json({ uploadURL });
-    } catch (error) {
-      console.error("❌ Error generating upload URL for order image (test):", error);
-      res.status(500).json({ error: "Failed to generate upload URL" });
-    }
-  });
-
   // Upload image to order (wholesaler only)
   app.post('/api/orders/:orderId/upload-image', requireAuth, async (req: any, res) => {
     try {
@@ -4304,81 +4278,6 @@ The Quikpik Team
         return res.sendStatus(404);
       }
       return res.sendStatus(500);
-    }
-  });
-
-  // TEST: Save uploaded image to order (temporarily without auth for testing)
-  app.post('/api/orders/:orderId/save-image-test', async (req: any, res) => {
-    try {
-      const { orderId } = req.params;
-      const { imageUrl, filename, description } = req.body;
-      
-      // For testing - use a default wholesaler ID
-      const defaultWholesalerId = "104871691614680693123";
-      
-      // Verify order exists (simplified for testing)
-      const order = await storage.getOrder(parseInt(orderId));
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-      
-      // Add image to order - normalize the URL for serving
-      const { ObjectStorageService } = await import('./objectStorage.js');
-      const objectStorageService = new ObjectStorageService();
-      const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
-      
-      const imageEntry = {
-        id: crypto.randomUUID(),
-        url: normalizedPath, // Use normalized path for serving
-        filename: filename || 'order-image.jpg',
-        uploadedAt: new Date().toISOString(),
-        description: description || ''
-      };
-      
-      const currentImages = order.orderImages || [];
-      const updatedImages = [...currentImages, imageEntry];
-      
-      await storage.updateOrderImages(parseInt(orderId), updatedImages);
-      
-      console.log(`📸 Added test image to order ${orderId}: ${filename}`);
-      
-      // Send email notification to customer about new photos
-      try {
-        // Get customer and wholesaler info for email
-        const customer = await storage.getUser(order.retailerId);
-        const wholesaler = await storage.getUser(order.wholesalerId);
-        
-        if (customer?.email && wholesaler) {
-          const { sendOrderPhotoNotificationEmail } = await import('./sendgrid-service.js');
-          
-          const customerName = customer.firstName && customer.lastName 
-            ? `${customer.firstName} ${customer.lastName}` 
-            : customer.firstName || customer.businessName || 'Customer';
-            
-          const wholesalerName = wholesaler.businessName || wholesaler.firstName || 'Your Wholesaler';
-          const orderNumber = order.orderNumber || `#${order.id}`;
-          
-          // Send photo notification email
-          await sendOrderPhotoNotificationEmail({
-            customerEmail: customer.email,
-            customerName: customerName,
-            orderNumber: orderNumber,
-            wholesalerName: wholesalerName,
-            photoCount: 1, // Single photo added
-            orderPortalUrl: `https://quikpik.app/customer/${order.wholesalerId}`
-          });
-          
-          console.log(`📧 Photo notification email sent to ${customer.email}`);
-        }
-      } catch (emailError) {
-        console.error('📧 Failed to send photo notification email:', emailError);
-        // Don't fail the whole request if email fails
-      }
-      
-      res.json({ success: true, image: imageEntry });
-    } catch (error) {
-      console.error("❌ Error saving test image to order:", error);
-      res.status(500).json({ error: "Failed to save image" });
     }
   });
 

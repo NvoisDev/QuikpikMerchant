@@ -180,13 +180,14 @@ export default function OrdersFresh() {
     }
   };
 
-  // Upload photo function (using test endpoint temporarily)
+  // Upload photo function
   const handlePhotoUpload = async () => {
     if (!selectedOrder) return;
     
     try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image-test`, {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
       
@@ -212,8 +213,9 @@ export default function OrdersFresh() {
     
     try {
       const uploadedImage = result.successful[0];
-      const response = await fetch(`/api/orders/${selectedOrder.id}/save-image-test`, {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/save-image`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageUrl: uploadedImage.url,
