@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -64,7 +65,15 @@ interface OrderItem {
 
 // Component to fetch and display delivery address details by ID for wholesaler
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
-  const { data: address, isLoading, error } = useQuery({
+  const { data: address, isLoading, error } = useQuery<{
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    postalCode: string;
+    country?: string;
+    label?: string;
+    instructions?: string;
+  }>({
     queryKey: [`/api/wholesaler/delivery-address/${addressId}`],
     retry: false,
   });
@@ -95,36 +104,21 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
     }
   };
 
-  const Icon = getAddressIcon(address?.label);
+  const Icon = getAddressIcon(address?.label || '');
   
   return (
-    <div className="bg-gray-50 p-3 rounded-lg border">
-      <div className="flex items-start gap-3">
-        <Icon />
-        <div className="flex-1 min-w-0">
-          {address?.label && (
-            <div className="font-medium text-sm text-gray-900 mb-1">
-              {address.label}
-            </div>
-          )}
-          <div className="text-xs space-y-1 text-gray-700">
-            {address?.addressLine1 && (
-              <div>{address.addressLine1}</div>
-            )}
-            {address?.addressLine2 && (
-              <div>{address.addressLine2}</div>
-            )}
-            <div className="flex gap-2">
-              {address?.city && <span>{address.city}</span>}
-              {address?.postalCode && <span>{address.postalCode}</span>}
-            </div>
-          </div>
-          {address?.instructions && (
-            <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-              <span className="font-medium">Instructions:</span> {address.instructions}
-            </div>
-          )}
-        </div>
+    <div className="bg-white p-3 rounded border border-blue-200 mt-3">
+      <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
+      <div className="text-sm text-gray-700">
+        <div>{address?.addressLine1}</div>
+        {address?.addressLine2 && (
+          <div>{address.addressLine2}</div>
+        )}
+        <div>{address?.city}</div>
+        <div>{address?.postalCode}</div>
+        {address?.country && (
+          <div>{address.country}</div>
+        )}
       </div>
     </div>
   );
@@ -251,8 +245,10 @@ export default function OrdersFresh() {
   };
 
   // Upload photo function
-  const handlePhotoUpload = async () => {
-    if (!selectedOrder) return;
+  const handlePhotoUpload = async (): Promise<{ method: "PUT"; url: string }> => {
+    if (!selectedOrder) {
+      throw new Error('No order selected for photo upload');
+    }
     
     try {
       const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image`, {
@@ -783,33 +779,18 @@ export default function OrdersFresh() {
                             };
 
                             return (
-                              <div className="bg-gray-50 p-3 rounded-lg border">
-                                <div className="flex items-start gap-3">
-                                  {getAddressIcon(parsedAddress.label)}
-                                  <div className="flex-1 min-w-0">
-                                    {parsedAddress.label && (
-                                      <div className="font-medium text-sm text-gray-900 mb-1">
-                                        {parsedAddress.label}
-                                      </div>
-                                    )}
-                                    <div className="text-xs space-y-1 text-gray-700">
-                                      {parsedAddress.addressLine1 && (
-                                        <div>{parsedAddress.addressLine1}</div>
-                                      )}
-                                      {parsedAddress.addressLine2 && (
-                                        <div>{parsedAddress.addressLine2}</div>
-                                      )}
-                                      <div className="flex gap-2">
-                                        {parsedAddress.city && <span>{parsedAddress.city}</span>}
-                                        {parsedAddress.postalCode && <span>{parsedAddress.postalCode}</span>}
-                                      </div>
-                                    </div>
-                                    {parsedAddress.deliveryInstructions && (
-                                      <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                        <span className="font-medium">Instructions:</span> {parsedAddress.deliveryInstructions}
-                                      </div>
-                                    )}
-                                  </div>
+                              <div className="bg-white p-3 rounded border border-blue-200 mt-3">
+                                <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
+                                <div className="text-sm text-gray-700">
+                                  <div>{parsedAddress.addressLine1}</div>
+                                  {parsedAddress.addressLine2 && (
+                                    <div>{parsedAddress.addressLine2}</div>
+                                  )}
+                                  <div>{parsedAddress.city}</div>
+                                  <div>{parsedAddress.postalCode}</div>
+                                  {parsedAddress.country && (
+                                    <div>{parsedAddress.country}</div>
+                                  )}
                                 </div>
                               </div>
                             );

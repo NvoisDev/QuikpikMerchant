@@ -397,7 +397,15 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
 
 // Component to fetch and display delivery address details by ID
 const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
-  const { data: address, isLoading, error } = useQuery({
+  const { data: address, isLoading, error } = useQuery<{
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    postalCode: string;
+    country?: string;
+    label?: string;
+    instructions?: string;
+  }>({
     queryKey: [`/api/delivery-address/${addressId}`],
     retry: false,
   });
@@ -422,31 +430,18 @@ const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
   const Icon = getLabelIcon(address?.label);
   
   return (
-    <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-      <div className="text-xs text-blue-600 font-medium mb-1">📍 Selected Delivery Address:</div>
-      <div className="flex items-start gap-2">
-        <Icon className="h-4 w-4 text-green-600 mt-0.5" />
-        <div className="text-xs">
-          <div className="font-medium text-gray-900">{address?.addressLine1}</div>
-          {address?.addressLine2 && (
-            <div className="text-gray-700">{address.addressLine2}</div>
-          )}
-          <div className="text-gray-700">
-            {address?.city}
-            {address?.state && `, ${address.state}`}
-            {address?.postalCode && ` ${address.postalCode}`}
-          </div>
-          {address?.label && (
-            <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded w-fit mt-1">
-              {address.label}
-            </div>
-          )}
-          {address?.instructions && (
-            <div className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-1">
-              <span className="font-medium">Instructions:</span> {address.instructions}
-            </div>
-          )}
-        </div>
+    <div className="bg-white p-3 rounded border border-blue-200 mt-3">
+      <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
+      <div className="text-sm text-gray-700">
+        <div>{address?.addressLine1}</div>
+        {address?.addressLine2 && (
+          <div>{address.addressLine2}</div>
+        )}
+        <div>{address?.city}</div>
+        <div>{address?.postalCode}</div>
+        {address?.country && (
+          <div>{address.country}</div>
+        )}
       </div>
     </div>
   );
