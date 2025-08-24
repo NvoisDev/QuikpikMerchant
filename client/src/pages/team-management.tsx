@@ -289,9 +289,14 @@ export default function TeamManagement() {
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogTrigger asChild>
             <Button 
-              onClick={() => !canAddMembers && setShowUpgradeModal(true)}
+              onClick={() => {
+                // Only show upgrade modal if user is on free plan
+                if (simpleTier === 'free') {
+                  setShowUpgradeModal(true);
+                }
+              }}
               className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!canAddMembers && simpleTier !== 'premium'}
+              disabled={simpleTier === 'free'}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Invite Team Member
@@ -598,14 +603,15 @@ export default function TeamManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Upgrade Modal */}
-      <SubscriptionUpgradeModal 
-        open={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        feature="team management"
-        currentUsage={currentTeamCount}
-        limit={teamLimit}
-      />
+      {/* Only show upgrade modal if user is not already on premium */}
+      {simpleTier !== 'premium' && (
+        <SubscriptionUpgradeModal 
+          open={showUpgradeModal}
+          onOpenChange={setShowUpgradeModal}
+          reason="team_member_limit"
+          currentPlan={simpleTier}
+        />
+      )}
 
       {/* Role Edit Dialog */}
       <Dialog open={isRoleEditOpen} onOpenChange={setIsRoleEditOpen}>
