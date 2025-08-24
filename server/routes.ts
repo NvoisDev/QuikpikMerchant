@@ -11149,6 +11149,8 @@ https://quikpik.app`;
       });
 
       console.log(`✅ Created Stripe checkout session for ${targetTier} upgrade: ${session.id}`);
+      console.log(`🔗 Session metadata:`, JSON.stringify(session.metadata, null, 2));
+      console.log(`🔗 Webhook should receive upgrade request for user ${userId} to ${targetTier}`);
 
       res.json({
         success: true,

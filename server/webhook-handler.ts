@@ -7,7 +7,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-06-30.basil",
+  apiVersion: "2023-10-16",
 });
 
 export function registerWebhookRoutes(app: Express) {
@@ -25,7 +25,7 @@ export function registerWebhookRoutes(app: Express) {
         console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
         
         const userId = session?.metadata?.userId;
-        const tier = session?.metadata?.tier || session?.metadata?.targetTier;
+        const tier = session?.metadata?.targetTier || session?.metadata?.tier;
         
         if (userId && tier) {
           console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
@@ -63,7 +63,7 @@ export function registerWebhookRoutes(app: Express) {
         console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
         
         const userId = paymentIntent?.metadata?.userId;
-        const tier = paymentIntent?.metadata?.tier || paymentIntent?.metadata?.targetTier;
+        const tier = paymentIntent?.metadata?.targetTier || paymentIntent?.metadata?.tier;
         const orderType = paymentIntent?.metadata?.orderType;
         
         // Handle subscription upgrades
