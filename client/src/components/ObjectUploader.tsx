@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, X, Image as ImageIcon, Check } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Check, Camera, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ObjectUploaderProps {
@@ -35,6 +35,11 @@ export function ObjectUploader({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
   const handleFileSelect = (files: FileList | null) => {
@@ -130,6 +135,81 @@ export function ObjectUploader({
     }
   };
 
+  // Camera functionality
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      setCameraStream(stream);
+      setShowCamera(true);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      toast({
+        title: "Camera Error",
+        description: "Could not access camera. Please check permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+    setCapturedImage(null);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      if (context) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedImage(imageDataUrl);
+      }
+    }
+  };
+
+  const useCapturedPhoto = () => {
+    if (capturedImage && canvasRef.current) {
+      canvasRef.current.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setSelectedFiles(prev => [...prev, file].slice(0, maxNumberOfFiles));
+          stopCamera();
+        }
+      }, 'image/jpeg', 0.8);
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedImage(null);
+  };
+
+  // Close modal handler
+  const closeModal = () => {
+    setShowModal(false);
+    stopCamera();
+    setSelectedFiles([]);
+    setUploadProgress({});
+  };
+
   return (
     <>
       <Button 
@@ -140,46 +220,116 @@ export function ObjectUploader({
         {children}
       </Button>
 
-      <Dialog open={showModal} onOpenChange={setShowModal}>
+      <Dialog open={showModal} onOpenChange={closeModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Upload Images</DialogTitle>
+            <DialogTitle>
+              {showCamera ? (capturedImage ? "Photo Captured" : "Take Photo") : "Upload Images"}
+            </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* File Drop Zone */}
-            <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors"
-              onDrop={(e) => {
-                e.preventDefault();
-                handleFileSelect(e.dataTransfer.files);
-              }}
-              onDragOver={(e) => e.preventDefault()}
-            >
-              <ImageIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm text-gray-600 mb-2">
-                Drag and drop images here, or click to select
-              </p>
-              <input
-                type="file"
-                multiple={maxNumberOfFiles > 1}
-                accept="image/*"
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
-                id="file-upload"
-              />
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => document.getElementById('file-upload')?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Select Images
-              </Button>
-            </div>
+            {showCamera ? (
+              // Camera interface
+              <div className="space-y-4">
+                {!capturedImage ? (
+                  // Live camera view
+                  <div className="relative">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-64 object-cover rounded-lg bg-black"
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                  </div>
+                ) : (
+                  // Captured photo preview
+                  <div className="relative">
+                    <img
+                      src={capturedImage}
+                      alt="Captured photo"
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+                
+                <div className="flex justify-center gap-2">
+                  {!capturedImage ? (
+                    <>
+                      <Button variant="outline" onClick={stopCamera}>
+                        Cancel
+                      </Button>
+                      <Button onClick={capturePhoto} className="bg-green-600 hover:bg-green-700">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={retakePhoto}>
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Retake
+                      </Button>
+                      <Button onClick={useCapturedPhoto} className="bg-green-600 hover:bg-green-700">
+                        <Check className="h-4 w-4 mr-2" />
+                        Use Photo
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // File selection interface
+              <>
+                {/* File Drop Zone */}
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors"
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleFileSelect(e.dataTransfer.files);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  <ImageIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600 mb-3">
+                    Drag and drop images here, or use the options below
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <input
+                      type="file"
+                      multiple={maxNumberOfFiles > 1}
+                      accept="image/*"
+                      onChange={(e) => handleFileSelect(e.target.files)}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                      className="text-xs"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Select Images
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={startCamera}
+                      className="text-xs"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Take Photo
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* Selected Files */}
-            {selectedFiles.length > 0 && (
+            {/* Selected Files - Only show when not in camera mode */}
+            {!showCamera && selectedFiles.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium">Selected Files:</h4>
                 {selectedFiles.map((file, index) => (
@@ -211,23 +361,25 @@ export function ObjectUploader({
               </div>
             )}
 
-            {/* Upload Button */}
-            <div className="flex justify-end gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowModal(false)}
-                disabled={isUploading}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={uploadFiles}
-                disabled={selectedFiles.length === 0 || isUploading}
-              >
-                {isUploading ? "Uploading..." : `Upload ${selectedFiles.length} Image${selectedFiles.length > 1 ? 's' : ''}`}
-              </Button>
-            </div>
+            {/* Upload Button - Only show when not in camera mode */}
+            {!showCamera && (
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={closeModal}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={uploadFiles}
+                  disabled={selectedFiles.length === 0 || isUploading}
+                >
+                  {isUploading ? "Uploading..." : `Upload ${selectedFiles.length} Image${selectedFiles.length > 1 ? 's' : ''}`}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
