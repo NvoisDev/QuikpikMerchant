@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Check, Crown, Package, Users, MessageSquare, TrendingUp, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Check, Crown, Package, Users, MessageSquare, TrendingUp, AlertCircle, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,6 +45,7 @@ export default function SubscriptionSettings() {
   const [canceling, setCanceling] = useState(false);
   const [downgradeModalOpen, setDowngradeModalOpen] = useState(false);
   const [targetDowngradePlan, setTargetDowngradePlan] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Debug logging to see what data we're getting
   console.log("🐛 Subscription page data:", {
@@ -59,6 +60,44 @@ export default function SubscriptionSettings() {
     currentTier,
     isActive
   });
+
+  // Manual subscription refresh mutation
+  const refreshSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/subscription/refresh", {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Subscription Updated",
+          description: data.message,
+        });
+        // Refresh all subscription-related queries
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      } else {
+        toast({
+          title: "No Changes Found",
+          description: data.message,
+          variant: "default",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Refresh Failed",
+        description: error.message || "Failed to refresh subscription data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRefreshSubscription = () => {
+    setIsRefreshing(true);
+    refreshSubscriptionMutation.mutate();
+    setTimeout(() => setIsRefreshing(false), 2000);
+  };
 
   // PERMANENT FIX: Force Premium for specific user account
   const isPremiumAccount = user?.email === 'michael@nvois.co';
@@ -460,10 +499,33 @@ export default function SubscriptionSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Subscription & Billing</h1>
-        <p className="text-gray-600 mt-2">
-          Manage your subscription plan and billing information
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Subscription & Billing</h1>
+            <p className="text-gray-600 mt-2">
+              Manage your subscription plan and billing information
+            </p>
+          </div>
+          
+          <Button
+            onClick={handleRefreshSubscription}
+            disabled={isRefreshing || refreshSubscriptionMutation.isPending}
+            variant="outline"
+            className="ml-4"
+          >
+            {isRefreshing || refreshSubscriptionMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Subscription Data
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Current Plan Status - Modernized */}

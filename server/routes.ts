@@ -6951,6 +6951,93 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // WhatsApp status endpoint for priority alert
+  // Manual subscription refresh endpoint
+  app.post("/api/subscription/refresh", requireAuth, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+      }
+      
+      const userId = req.user.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      console.log(`🔄 Manual subscription refresh for user: ${userId}`);
+      
+      // Search for recent payment intents for this user
+      const paymentIntents = await stripe.paymentIntents.list({
+        limit: 10,
+      });
+      
+      let foundSubscription = null;
+      
+      for (const pi of paymentIntents.data) {
+        if (pi.metadata?.userId === userId && pi.status === 'succeeded') {
+          const tier = pi.metadata?.targetTier || pi.metadata?.tier;
+          if (tier) {
+            foundSubscription = { tier, paymentIntent: pi.id };
+            console.log(`📋 Found successful payment: ${pi.id} for tier: ${tier}`);
+            break;
+          }
+        }
+      }
+      
+      // Also check checkout sessions
+      if (!foundSubscription) {
+        const sessions = await stripe.checkout.sessions.list({
+          limit: 10,
+        });
+        
+        for (const session of sessions.data) {
+          if (session.metadata?.userId === userId && session.payment_status === 'paid') {
+            const tier = session.metadata?.targetTier || session.metadata?.tier;
+            if (tier) {
+              foundSubscription = { tier, session: session.id };
+              console.log(`📋 Found successful checkout: ${session.id} for tier: ${tier}`);
+              break;
+            }
+          }
+        }
+      }
+      
+      if (foundSubscription) {
+        const tier = foundSubscription.tier;
+        const productLimit = tier === 'premium' ? -1 : (tier === 'standard' ? 10 : 3);
+        
+        // Update user subscription
+        await storage.updateUser(userId, {
+          subscriptionTier: tier,
+          subscriptionStatus: 'active',
+          productLimit: productLimit,
+          subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        });
+        
+        console.log(`✅ Manual refresh complete: ${userId} → ${tier}`);
+        
+        res.json({
+          success: true,
+          message: `Subscription updated to ${tier}`,
+          tier,
+          productLimit,
+          source: foundSubscription.paymentIntent ? 'payment_intent' : 'checkout_session'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "No recent successful payments found",
+          currentTier: user.subscriptionTier || 'free'
+        });
+      }
+      
+    } catch (error: any) {
+      console.error("Error refreshing subscription:", error);
+      res.status(500).json({ error: "Failed to refresh subscription: " + error.message });
+    }
+  });
+
   app.get("/api/whatsapp/status", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
