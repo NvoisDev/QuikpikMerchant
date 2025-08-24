@@ -200,7 +200,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     productId: item.productId,
     quantity: item.quantity,
     unitPrice: parseFloat(item.unitPrice).toFixed(2),
-    total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+    total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
+    sellingType: item.sellingType || 'units' // Default to 'units' if not specified
   }));
 
   // CRITICAL FIX: Check if order already exists for this payment intent to prevent duplicates

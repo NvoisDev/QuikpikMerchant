@@ -447,6 +447,7 @@ export const orderItems = pgTable("order_items", {
   quantity: integer("quantity").notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  sellingType: varchar("selling_type", { length: 10 }).default('units'), // 'units' or 'pallets'
 });
 
 export const negotiations = pgTable("negotiations", {
