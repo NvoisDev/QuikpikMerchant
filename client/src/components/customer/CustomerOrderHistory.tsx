@@ -259,9 +259,6 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                   return null;
                 }
               })()}
-              {order.deliveryAddressId && (
-                <DeliveryAddressDisplay addressId={order.deliveryAddressId} />
-              )}
             </div>
           </div>
         )}
