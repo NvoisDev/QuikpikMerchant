@@ -65,6 +65,8 @@ interface OrderItem {
 
 // Component to fetch and display delivery address details by ID for wholesaler
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
+  console.log('🏠 WholesalerDeliveryAddressDisplay rendering for addressId:', addressId);
+  
   const { data: address, isLoading, error } = useQuery<{
     addressLine1: string;
     addressLine2?: string;
@@ -77,6 +79,8 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
     queryKey: [`/api/wholesaler/delivery-address/${addressId}`],
     retry: false,
   });
+
+  console.log('🏠 Address query state:', { isLoading, error: error?.message, address });
 
   if (isLoading) {
     return (
@@ -759,8 +763,14 @@ export default function OrdersFresh() {
                   </h3>
                   <div className="space-y-2">
                     {(() => {
+                      console.log('🔍 Order delivery data:', { 
+                        deliveryAddressId: selectedOrder.deliveryAddressId, 
+                        deliveryAddress: selectedOrder.deliveryAddress 
+                      });
+                      
                       // First check if we have a delivery address ID to fetch from API
                       if (selectedOrder.deliveryAddressId) {
+                        console.log('✅ Using delivery address ID:', selectedOrder.deliveryAddressId);
                         return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
                       }
                       
