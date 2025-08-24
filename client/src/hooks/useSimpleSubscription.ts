@@ -12,7 +12,8 @@ export function useSimpleSubscription() {
       });
       
       if (!res.ok) {
-        // Return safe defaults
+        console.log("⚠️ Subscription API failed:", res.status, res.statusText);
+        // Return safe defaults but log the issue
         return {
           tier: 'free',
           status: 'inactive',
@@ -21,10 +22,13 @@ export function useSimpleSubscription() {
         };
       }
       
-      return res.json();
+      const data = await res.json();
+      console.log("✅ Subscription data received:", data);
+      return data;
     },
     enabled: !!user,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 5000, // Reduced cache time for more frequent updates
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
 
   const currentTier = subscription?.tier || user?.subscriptionTier || 'free';
