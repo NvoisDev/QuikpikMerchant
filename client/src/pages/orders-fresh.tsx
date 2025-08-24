@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useToast } from "@/hooks/use-toast";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {
@@ -35,6 +37,13 @@ interface Order {
   subtotal?: string;
   deliveryCost?: string;
   items?: OrderItem[];
+  orderImages?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    description?: string;
+  }>;
 }
 
 interface OrderItem {
@@ -64,6 +73,7 @@ export default function OrdersFresh() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const ordersPerPage = 20;
+  const { toast } = useToast();
 
   const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
@@ -167,6 +177,78 @@ export default function OrdersFresh() {
       console.error('Failed to update order status:', error);
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  // Upload photo function
+  const handlePhotoUpload = async () => {
+    if (!selectedOrder) return;
+    
+    try {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/upload-image`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+      
+      const data = await response.json();
+      return { method: "PUT" as const, url: data.uploadURL };
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to prepare photo upload",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  // Save uploaded photo
+  const handlePhotoComplete = async (result: { successful: Array<{ url: string; name: string }> }) => {
+    if (!selectedOrder || !result.successful.length) return;
+    
+    try {
+      const uploadedImage = result.successful[0];
+      const response = await fetch(`/api/orders/${selectedOrder.id}/save-image`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: uploadedImage.url,
+          filename: uploadedImage.name,
+          description: 'Order photo'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save photo');
+      }
+      
+      const data = await response.json();
+      
+      // Update selected order with new image
+      if (data.image) {
+        const updatedOrder = {
+          ...selectedOrder,
+          orderImages: [...(selectedOrder.orderImages || []), data.image]
+        };
+        setSelectedOrder(updatedOrder);
+        
+        toast({
+          title: "Photo Added",
+          description: "Order photo uploaded successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save photo to order",
+        variant: "destructive"
+      });
     }
   };
 
@@ -609,6 +691,55 @@ export default function OrdersFresh() {
                   <div className="text-xs text-gray-500 mt-1">
                     Amount you receive after platform fee deduction
                   </div>
+                </div>
+              </div>
+
+              {/* Order Photos Section */}
+              <div>
+                <h3 className="font-medium mb-2 text-sm flex items-center">
+                  <Camera className="h-4 w-4 mr-2 text-green-600" />
+                  Order Photos
+                </h3>
+                
+                <div className="space-y-3">
+                  {/* Upload Button */}
+                  <div>
+                    <ObjectUploader
+                      maxNumberOfFiles={5}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={handlePhotoUpload}
+                      onComplete={handlePhotoComplete}
+                      buttonClassName="w-full text-xs"
+                    >
+                      <Camera className="h-3 w-3 mr-2" />
+                      Add Photo
+                    </ObjectUploader>
+                  </div>
+                  
+                  {/* Display existing photos */}
+                  {selectedOrder.orderImages && selectedOrder.orderImages.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedOrder.orderImages.map((image) => (
+                        <div key={image.id} className="relative">
+                          <img
+                            src={image.url}
+                            alt={image.filename}
+                            className="w-full h-20 object-cover rounded border"
+                          />
+                          <div className="text-xs text-gray-500 mt-1 truncate">
+                            {image.filename}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-dashed">
+                      <div className="flex items-center justify-center">
+                        <ImageIcon className="h-4 w-4 mr-2 text-gray-400" />
+                        No photos uploaded yet
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
