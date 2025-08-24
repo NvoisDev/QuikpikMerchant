@@ -3942,12 +3942,38 @@ export default function CustomerPortal() {
                         checked={customerData.shippingOption === 'delivery'}
                         onChange={async () => {
                           console.log('🚚 RADIO BUTTON: User clicked delivery option');
-                          setCustomerData(prev => {
-                            console.log('🚚 STATE UPDATE: Setting shippingOption to delivery, prev state:', prev);
-                            const newState = {...prev, shippingOption: 'delivery'};
-                            console.log('🚚 STATE UPDATE: New state will be:', newState);
-                            return newState;
-                          });
+                          
+                          // Auto-select default delivery address if none is selected
+                          if (!customerData.selectedDeliveryAddress && wholesaler?.id && authenticatedCustomer?.id) {
+                            try {
+                              const response = await fetch(`/api/customer/delivery-addresses/${wholesaler.id}`, {
+                                credentials: 'include'
+                              });
+                              if (response.ok) {
+                                const addresses = await response.json();
+                                const defaultAddress = addresses.find((addr: any) => addr.isDefault);
+                                if (defaultAddress) {
+                                  console.log('🏠 Auto-selecting default delivery address:', defaultAddress);
+                                  setCustomerData(prev => ({
+                                    ...prev,
+                                    shippingOption: 'delivery',
+                                    address: defaultAddress ? `${defaultAddress.addressLine1}${defaultAddress.addressLine2 ? ', ' + defaultAddress.addressLine2 : ''}` : '',
+                                    city: defaultAddress?.city || '',
+                                    postalCode: defaultAddress?.postalCode || '',
+                                    selectedDeliveryAddress: defaultAddress
+                                  }));
+                                } else {
+                                  setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
+                                }
+                              }
+                            } catch (error) {
+                              console.error('🏠 Error fetching delivery addresses:', error);
+                              setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
+                            }
+                          } else {
+                            setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
+                          }
+                          
                           // Save to backend if customer is authenticated
                           if (authenticatedCustomer?.id) {
                             try {
