@@ -357,24 +357,32 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           <div className="mt-4 border-t pt-4">
             <h3 className="font-medium text-gray-900 mb-2 flex items-center text-sm sm:text-base">
               <Camera className="h-4 w-4 mr-2 text-green-600" />
-              Product Photos
+              Product Photos ({order.orderImages.length})
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {order.orderImages.map((image) => (
-                <div key={image.id} className="relative">
+              {order.orderImages.map((image, index) => (
+                <div 
+                  key={image.id || index} 
+                  className="relative cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => window.open(image.url, '_blank')}
+                >
                   <img
                     src={image.url}
-                    alt={image.filename}
-                    className="w-full h-20 object-cover rounded border border-gray-200"
+                    alt={image.filename || `Order photo ${index + 1}`}
+                    className="w-full h-20 object-cover rounded border border-gray-200 hover:scale-105 transition-transform"
+                    onError={(e) => {
+                      console.error('🖼️ Image failed to load:', image.url);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 rounded-b">
-                    <div className="truncate">{image.description || image.filename}</div>
+                    <div className="truncate">{image.description || image.filename || `Photo ${index + 1}`}</div>
                   </div>
                 </div>
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Photos of your order items from {order.wholesaler.businessName}
+              Click photos to view full size • Photos from {order.wholesaler?.businessName || 'your wholesaler'}
             </p>
           </div>
         )}

@@ -4298,10 +4298,16 @@ The Quikpik Team
         return res.status(404).json({ error: "Order not found" });
       }
       
-      // Add image to order
+      // Add image to order - normalize the URL for serving
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
+      
+      console.log(`🔧 Image URL normalization: ${imageUrl} → ${normalizedPath}`);
+      
       const imageEntry = {
         id: crypto.randomUUID(),
-        url: imageUrl,
+        url: normalizedPath, // Use normalized path for serving
         filename: filename || 'order-image.jpg',
         uploadedAt: new Date().toISOString(),
         description: description || ''
@@ -4351,6 +4357,37 @@ The Quikpik Team
     } catch (error) {
       console.error("❌ Error saving image to order:", error);
       res.status(500).json({ error: "Failed to save image" });
+    }
+  });
+
+  // Delete uploaded image from order
+  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, async (req: any, res) => {
+    try {
+      const { orderId, imageId } = req.params;
+      
+      // Use authenticated wholesaler ID for proper data isolation
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      // Verify order belongs to this wholesaler
+      const order = await storage.getOrder(parseInt(orderId));
+      if (!order || order.wholesalerId !== wholesalerId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Remove image from order
+      const currentImages = order.orderImages || [];
+      const updatedImages = currentImages.filter(img => img.id !== imageId);
+      
+      await storage.updateOrderImages(parseInt(orderId), updatedImages);
+      
+      console.log(`🗑️ Deleted image ${imageId} from order ${orderId}`);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("❌ Error deleting image from order:", error);
+      res.status(500).json({ error: "Failed to delete image" });
     }
   });
 

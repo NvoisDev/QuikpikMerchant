@@ -252,6 +252,40 @@ export default function OrdersFresh() {
     }
   };
 
+  // Delete photo function
+  const handleDeletePhoto = async (imageId: string) => {
+    if (!selectedOrder) return;
+    
+    try {
+      const response = await fetch(`/api/orders/${selectedOrder.id}/delete-image/${imageId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+      
+      // Update selected order by removing the image
+      const updatedOrder = {
+        ...selectedOrder,
+        orderImages: selectedOrder.orderImages?.filter(img => img.id !== imageId) || []
+      };
+      setSelectedOrder(updatedOrder);
+      
+      toast({
+        title: "Photo Deleted",
+        description: "Photo removed successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete photo",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800",
@@ -720,12 +754,20 @@ export default function OrdersFresh() {
                   {selectedOrder.orderImages && selectedOrder.orderImages.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
                       {selectedOrder.orderImages.map((image) => (
-                        <div key={image.id} className="relative">
+                        <div key={image.id} className="relative group">
                           <img
                             src={image.url}
                             alt={image.filename}
-                            className="w-full h-20 object-cover rounded border"
+                            className="w-full h-20 object-cover rounded border cursor-pointer hover:opacity-90"
+                            onClick={() => window.open(image.url, '_blank')}
                           />
+                          <button
+                            onClick={() => handleDeletePhoto(image.id)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title="Delete photo"
+                          >
+                            ×
+                          </button>
                           <div className="text-xs text-gray-500 mt-1 truncate">
                             {image.filename}
                           </div>
