@@ -113,15 +113,37 @@ export function useOnboarding() {
     },
   });
 
-  // Auto-start onboarding for new users
+  // Auto-start onboarding for new users and persist across navigation
   useEffect(() => {
     if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
-      // Start onboarding with a small delay to ensure the page is fully loaded
-      setTimeout(() => {
+      // Check if onboarding was previously active in sessionStorage
+      const savedOnboardingState = sessionStorage.getItem('onboarding-active');
+      const savedStepIndex = sessionStorage.getItem('onboarding-step');
+      
+      if (savedOnboardingState === 'true') {
         setIsActive(true);
-      }, 1000);
+        setCurrentStepIndex(savedStepIndex ? parseInt(savedStepIndex) : 0);
+        setIsPlaying(true);
+      } else {
+        // Start onboarding with a small delay to ensure the page is fully loaded
+        setTimeout(() => {
+          setIsActive(true);
+          setCurrentStepIndex(0);
+        }, 1000);
+      }
     }
   }, [user]);
+
+  // Persist onboarding state across navigation
+  useEffect(() => {
+    if (isActive) {
+      sessionStorage.setItem('onboarding-active', 'true');
+      sessionStorage.setItem('onboarding-step', currentStepIndex.toString());
+    } else {
+      sessionStorage.removeItem('onboarding-active');
+      sessionStorage.removeItem('onboarding-step');
+    }
+  }, [isActive, currentStepIndex]);
 
   const nextStep = () => {
     if (currentStepIndex < ONBOARDING_STEPS.length - 1) {
@@ -158,11 +180,17 @@ export function useOnboarding() {
   const skipOnboarding = () => {
     updateOnboardingMutation.mutate({ skipped: true });
     setIsActive(false);
+    // Clear session storage
+    sessionStorage.removeItem('onboarding-active');
+    sessionStorage.removeItem('onboarding-step');
   };
 
   const completeOnboarding = () => {
     updateOnboardingMutation.mutate({ completed: true });
     setIsActive(false);
+    // Clear session storage
+    sessionStorage.removeItem('onboarding-active');
+    sessionStorage.removeItem('onboarding-step');
   };
 
   const startOnboarding = () => {
