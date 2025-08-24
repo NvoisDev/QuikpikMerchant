@@ -77,8 +77,7 @@ const formatAddress = (addressData?: string): string => {
         parsed.address2,
         parsed.town || parsed.city,
         parsed.county || parsed.state,
-        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
-        parsed.country
+        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip
       ].filter(part => part && part.trim() !== '');
       
       if (addressParts.length > 0) {
@@ -222,9 +221,6 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                             {deliveryAddr.state && `, ${deliveryAddr.state}`}
                             {deliveryAddr.postalCode && ` ${deliveryAddr.postalCode}`}
                           </div>
-                          {deliveryAddr.country && (
-                            <div className="font-medium">{deliveryAddr.country}</div>
-                          )}
                         </div>
                       </div>
                       {deliveryAddr.label && (
