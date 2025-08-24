@@ -3267,9 +3267,15 @@ The Quikpik Team
 
       // Comprehensive validation to prevent NaN values and ensure integer amounts for Stripe
       const stripeAmount = Math.round(totalCustomerPays * 100);
+      const stripeWholesalerAmount = Math.round(wholesalerReceives * 100);
+      const stripeApplicationFee = Math.round(wholesalerPlatformFee * 100);
       
+      // Enhanced validation for all Stripe amounts
       if (isNaN(productSubtotal) || isNaN(deliveryCost) || isNaN(totalCustomerPays) || 
-          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
+          isNaN(wholesalerReceives) || isNaN(wholesalerPlatformFee) ||
+          totalCustomerPays <= 0 || !Number.isInteger(stripeAmount) || stripeAmount <= 0 ||
+          !Number.isInteger(stripeWholesalerAmount) || stripeWholesalerAmount < 0 ||
+          !Number.isInteger(stripeApplicationFee) || stripeApplicationFee < 0) {
         console.error('❌ Invalid calculation values:', {
           productSubtotal,
           deliveryCost,
@@ -3279,7 +3285,11 @@ The Quikpik Team
           wholesalerPlatformFee,
           wholesalerReceives,
           stripeAmount,
+          stripeWholesalerAmount,
+          stripeApplicationFee,
           stripeAmountIsInteger: Number.isInteger(stripeAmount),
+          stripeWholesalerAmountIsInteger: Number.isInteger(stripeWholesalerAmount),
+          stripeApplicationFeeIsInteger: Number.isInteger(stripeApplicationFee),
           totalCustomerPaysIsValid: !isNaN(totalCustomerPays) && totalCustomerPays > 0
         });
         return res.status(400).json({ 
@@ -3288,7 +3298,9 @@ The Quikpik Team
             productSubtotal: isNaN(productSubtotal) ? 'NaN' : productSubtotal,
             deliveryCost: isNaN(deliveryCost) ? 'NaN' : deliveryCost,
             totalCustomerPays: isNaN(totalCustomerPays) ? 'NaN' : totalCustomerPays,
-            stripeAmount: isNaN(stripeAmount) ? 'NaN' : stripeAmount
+            wholesalerReceives: isNaN(wholesalerReceives) ? 'NaN' : wholesalerReceives,
+            stripeAmount: isNaN(stripeAmount) ? 'NaN' : stripeAmount,
+            stripeWholesalerAmount: isNaN(stripeWholesalerAmount) ? 'NaN' : stripeWholesalerAmount
           }
         });
       }
@@ -3317,7 +3329,7 @@ The Quikpik Team
       
       // Check if wholesaler has Stripe Connect account FIRST
       const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
-      const applicationFeeAmount = useConnect ? Math.round(wholesalerPlatformFee * 100) : 0;
+      const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
       // Create stable idempotency key including Connect configuration to prevent conflicts
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
@@ -3367,7 +3379,7 @@ The Quikpik Team
           stripeAccountId: wholesaler.stripeAccountId,
           useConnect,
           applicationFeeAmount,
-          wholesalerReceives: Math.round(wholesalerReceives * 100)
+          wholesalerReceives: stripeWholesalerAmount
         });
 
         const paymentConfig: any = {
@@ -3383,7 +3395,7 @@ The Quikpik Team
         if (useConnect) {
           paymentConfig.transfer_data = {
             destination: wholesaler.stripeAccountId,
-            amount: Math.round(wholesalerReceives * 100) // Amount wholesaler receives (platform keeps the rest)
+            amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
           };
           paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
           console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
