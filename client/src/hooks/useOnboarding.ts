@@ -106,10 +106,7 @@ export function useOnboarding() {
 
   const updateOnboardingMutation = useMutation({
     mutationFn: async (data: { completed?: boolean; skipped?: boolean; step?: number }) => {
-      return apiRequest("/api/user/onboarding", {
-        method: "POST",
-        body: data,
-      });
+      return apiRequest("PATCH", "/api/user/onboarding", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

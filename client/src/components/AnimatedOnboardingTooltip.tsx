@@ -24,7 +24,7 @@ interface OnboardingStep {
   target: string;
   action?: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  animation?: 'pulse' | 'bounce' | 'shake' | 'glow';
+  animation?: 'pulse' | 'bounce' | 'shake' | 'glow' | 'highlight';
   interactive?: boolean;
   customIcon?: React.ReactNode;
 }
@@ -61,6 +61,15 @@ const stepAnimations = {
       "0 0 5px rgba(34, 197, 94, 0.5)"
     ],
     transition: { duration: 2, repeat: Infinity }
+  },
+  highlight: {
+    scale: [1, 1.05, 1],
+    boxShadow: [
+      "0 0 10px rgba(34, 197, 94, 0.6)",
+      "0 0 20px rgba(34, 197, 94, 0.9)",
+      "0 0 10px rgba(34, 197, 94, 0.6)"
+    ],
+    transition: { duration: 1.5, repeat: Infinity }
   }
 };
 
@@ -257,7 +266,7 @@ export function AnimatedOnboardingTooltip({
             animate={{ 
               opacity: 1, 
               scale: 1,
-              ...stepAnimations[step.animation || 'bounce']
+              ...(step.animation ? stepAnimations[step.animation as keyof typeof stepAnimations] : stepAnimations.bounce)
             }}
             exit={{ opacity: 0, scale: 0 }}
             transition={{ duration: 0.3 }}

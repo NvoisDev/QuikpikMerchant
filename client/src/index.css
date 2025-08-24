@@ -11,12 +11,35 @@
   background-color: rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 25px rgba(0, 0, 0, 0.15) !important;
   animation: onboarding-pulse 2s infinite !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 @keyframes onboarding-pulse {
   0% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 25px rgba(0, 0, 0, 0.15); }
   50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.7), 0 12px 30px rgba(0, 0, 0, 0.2); }
   100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 25px rgba(0, 0, 0, 0.15); }
+}
+
+/* Ensure onboarding buttons are fully clickable */
+[data-onboarding] button,
+.onboarding-welcome button,
+.onboarding-tooltip button {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 10002 !important;
+  cursor: pointer !important;
+}
+
+/* Fix modal overlay z-index conflicts */
+.onboarding-welcome {
+  position: relative !important;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+}
+
+.onboarding-welcome * {
+  pointer-events: auto !important;
 }
 
 /* Customer Theme System */
