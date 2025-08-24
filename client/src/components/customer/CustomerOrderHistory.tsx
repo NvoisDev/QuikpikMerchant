@@ -240,12 +240,23 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                     </div>
                   );
                 } else {
-                  return (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-green-600" />
-                      <div className="text-xs">{formatAddress(order.deliveryAddress)}</div>
-                    </div>
-                  );
+                  // Don't show fallback if we have a delivery address ID that will show full details
+                  if (order.deliveryAddressId) {
+                    return null;
+                  }
+                  
+                  // Only show fallback if it's not just country information
+                  const addressText = formatAddress(order.deliveryAddress);
+                  if (addressText && addressText !== "United Kingdom" && addressText !== "UK") {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-green-600" />
+                        <div className="text-xs">{addressText}</div>
+                      </div>
+                    );
+                  }
+                  
+                  return null;
                 }
               })()}
               {order.deliveryAddressId && (
