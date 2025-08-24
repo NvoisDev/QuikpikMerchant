@@ -440,9 +440,6 @@ const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
             {address?.state && `, ${address.state}`}
             {address?.postalCode && ` ${address.postalCode}`}
           </div>
-          {address?.country && (
-            <div className="font-medium text-gray-900">{address.country}</div>
-          )}
           {address?.label && (
             <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded w-fit mt-1">
               {address.label}
