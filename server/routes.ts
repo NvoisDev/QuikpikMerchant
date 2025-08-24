@@ -4297,6 +4297,40 @@ The Quikpik Team
       await storage.updateOrderImages(parseInt(orderId), updatedImages);
       
       console.log(`📸 Added image to order ${orderId}: ${filename}`);
+      
+      // Send email notification to customer about new photos
+      try {
+        // Get customer and wholesaler info for email
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        
+        if (customer?.email && wholesaler) {
+          const { sendOrderPhotoNotificationEmail } = await import('./sendgrid-service.js');
+          
+          const customerName = customer.firstName && customer.lastName 
+            ? `${customer.firstName} ${customer.lastName}` 
+            : customer.firstName || customer.businessName || 'Customer';
+            
+          const wholesalerName = wholesaler.businessName || wholesaler.firstName || 'Your Wholesaler';
+          const orderNumber = order.orderNumber || `#${order.id}`;
+          
+          // Send photo notification email
+          await sendOrderPhotoNotificationEmail({
+            customerEmail: customer.email,
+            customerName: customerName,
+            orderNumber: orderNumber,
+            wholesalerName: wholesalerName,
+            photoCount: 1, // Single photo added
+            orderPortalUrl: `https://quikpik.app/customer/${order.wholesalerId}`
+          });
+          
+          console.log(`📧 Photo notification email sent to ${customer.email}`);
+        }
+      } catch (emailError) {
+        console.error('📧 Failed to send photo notification email:', emailError);
+        // Don't fail the whole request if email fails
+      }
+      
       res.json({ success: true, image: imageEntry });
     } catch (error) {
       console.error("❌ Error saving image to order:", error);

@@ -144,4 +144,69 @@ export async function sendOrderConfirmationEmail(orderData: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail };
+// Order photo notification email template
+export async function sendOrderPhotoNotificationEmail(orderData: {
+  customerEmail: string;
+  customerName: string;
+  orderNumber: string;
+  wholesalerName: string;
+  photoCount: number;
+  orderPortalUrl?: string;
+}): Promise<boolean> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>New Photos Added - ${orderData.orderNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #10B981; margin-bottom: 5px;">📸 New Photos Added!</h1>
+        <p style="color: #666; font-size: 16px;">Photos have been added to your order</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Order Details</h2>
+        <p><strong>Order Number:</strong> ${orderData.orderNumber}</p>
+        <p><strong>From:</strong> ${orderData.wholesalerName}</p>
+        <p><strong>Photos Added:</strong> ${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's' : ''}</p>
+      </div>
+
+      <div style="background: #f0f9ff; border: 1px solid #10B981; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+        <h3 style="color: #0f766e; margin-top: 0;">📱 View Your Order Photos</h3>
+        <p style="margin: 10px 0; color: #0f766e;">Your wholesaler has added ${orderData.photoCount} new photo${orderData.photoCount > 1 ? 's' : ''} to show your order items.</p>
+        ${orderData.orderPortalUrl ? `
+          <a href="${orderData.orderPortalUrl}" style="display: inline-block; background: #10B981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 10px 0;">
+            View Order Photos
+          </a>
+        ` : `
+          <p style="color: #666; font-size: 14px; margin: 10px 0;">Log into your customer portal to view the photos</p>
+        `}
+      </div>
+
+      <div style="background: #fff7ed; border: 1px solid #fb923c; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <p style="margin: 0; color: #ea580c;"><strong>📋 What are these photos?</strong> Your wholesaler has added photos to document your order items before ${orderData.orderNumber.includes('delivery') ? 'delivery' : 'collection'}.</p>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #666; margin-bottom: 5px;">Questions about your order?</p>
+        <p style="color: #10B981; font-weight: bold;">Contact ${orderData.wholesalerName}</p>
+        <p style="font-size: 12px; color: #999; margin-top: 20px;">
+          This notification was sent to ${orderData.customerEmail}<br>
+          Powered by Quikpik
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({
+    to: orderData.customerEmail,
+    from: 'noreply@quikpik.co',
+    subject: `📸 New Photos Added to Order ${orderData.orderNumber}`,
+    html: html
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail };
