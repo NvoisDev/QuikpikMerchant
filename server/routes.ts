@@ -2099,10 +2099,22 @@ The Quikpik Team
       (req.session as any).userId = user.id;
       (req.session as any).user = user;
       
-      console.log(`🔐 Google auth session created for user ${user.email}`);
+      console.log(`🔐 Google auth session created for user ${user.email}`, {
+        isFirstLogin: user.isFirstLogin,
+        hasBusinessName: !!user.businessName,
+        hasAddress: !!(user.streetAddress || user.city)
+      });
       
-      // Redirect to dashboard for authenticated users
-      res.redirect('/dashboard');
+      // Check if this is a new user who needs to complete signup
+      if (user.isFirstLogin || !user.businessName || user.businessName.includes("'s Business")) {
+        console.log(`👋 New user detected, redirecting to complete signup profile`);
+        // Redirect new users to complete their profile
+        res.redirect('/signup-complete');
+      } else {
+        // Redirect returning users with complete profiles to dashboard
+        console.log(`✅ Returning user with complete profile, redirecting to dashboard`);
+        res.redirect('/dashboard');
+      }
     } catch (error) {
       console.error('Google auth callback error:', error);
       res.redirect('/login?error=auth_failed');
@@ -2117,6 +2129,75 @@ The Quikpik Team
       isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
       user: req.user ? { id: req.user.id, email: req.user.email } : null
     });
+  });
+
+  // Profile completion endpoint for Google OAuth users
+  app.put('/api/auth/complete-profile', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const {
+        businessName,
+        businessDescription,
+        businessPhone,
+        businessType,
+        estimatedMonthlyVolume,
+        streetAddress,
+        city,
+        state,
+        postalCode,
+        country,
+        preferredCurrency,
+        isFirstLogin
+      } = req.body;
+
+      console.log(`🔄 Completing profile for user ${userId}:`, {
+        businessName,
+        hasAddress: !!(streetAddress || city),
+        currency: preferredCurrency
+      });
+
+      // Update user profile
+      const updateData: any = {
+        isFirstLogin: isFirstLogin || false, // Mark profile as completed
+        updatedAt: new Date()
+      };
+
+      if (businessName) updateData.businessName = businessName;
+      if (businessDescription) updateData.businessDescription = businessDescription;
+      if (businessPhone) updateData.businessPhone = businessPhone;
+      if (businessType) updateData.businessType = businessType;
+      if (estimatedMonthlyVolume) updateData.estimatedMonthlyVolume = estimatedMonthlyVolume;
+      if (streetAddress) updateData.streetAddress = streetAddress;
+      if (city) updateData.city = city;
+      if (state) updateData.state = state;
+      if (postalCode) updateData.postalCode = postalCode;
+      if (country) updateData.country = country;
+      if (preferredCurrency) updateData.defaultCurrency = preferredCurrency;
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      console.log(`✅ Profile completed successfully for ${updatedUser.email}`);
+
+      // Update session with new user data
+      (req.session as any).user = {
+        ...req.user,
+        ...updatedUser,
+        isFirstLogin: false
+      };
+
+      res.json({
+        success: true,
+        message: 'Profile completed successfully',
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error('Profile completion error:', error);
+      res.status(500).json({ success: false, message: 'Failed to complete profile' });
+    }
   });
 
   // Authentication recovery endpoint for Surulere Foods Wholesale

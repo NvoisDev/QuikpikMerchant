@@ -40,6 +40,7 @@ import StockAlerts from "@/pages/stock-alerts";
 import TeamManagement from "@/pages/team-management";
 import TeamInvitation from "@/pages/team-invitation";
 import Signup from "@/pages/signup";
+import SignupComplete from "@/pages/signup-complete";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
@@ -62,6 +63,7 @@ function PublicRoutes() {
       <Route path="/customer/payment-success" component={PaymentSuccess} />
       <Route path="/team-invitation" component={TeamInvitation} />
       <Route path="/signup" component={Signup} />
+      <Route path="/signup-complete" component={SignupComplete} />
       <Route path="/login" component={Login} />
       <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/advertising-preview" component={AdvertisingPreview} />
