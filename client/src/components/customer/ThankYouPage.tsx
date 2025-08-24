@@ -34,6 +34,13 @@ interface ThankYouPageProps {
       serviceName: string;
       price: number;
     };
+    selectedDeliveryAddress?: {
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      postalCode: string;
+      country?: string;
+    };
   };
   totalAmount: number;
   subtotal: number;
