@@ -226,7 +226,8 @@ export function AnimatedOnboardingTooltip({
       {/* Overlay */}
       <motion.div
         ref={overlayRef}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+        className="onboarding-overlay fixed inset-0 bg-black/60 backdrop-blur-sm"
+        style={{ zIndex: 99998 }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -281,10 +282,11 @@ export function AnimatedOnboardingTooltip({
       {/* Tooltip */}
       <motion.div
         ref={tooltipRef}
-        className="fixed z-[10000]"
+        className="onboarding-tooltip fixed"
         style={{
           top: tooltipPosition.top,
           left: tooltipPosition.left,
+          zIndex: 100000,
         }}
         initial={{ opacity: 0, scale: 0.8, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

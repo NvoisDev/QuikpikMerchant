@@ -5,7 +5,7 @@
 /* Onboarding highlight styles */
 .onboarding-highlight {
   position: relative !important;
-  z-index: 9999 !important;
+  z-index: 9997 !important;
   transition: all 0.3s ease-in-out !important;
   border-radius: 8px !important;
   background-color: rgba(255, 255, 255, 0.95) !important;
@@ -21,24 +21,50 @@
   100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 25px rgba(0, 0, 0, 0.15); }
 }
 
-/* Ensure onboarding buttons are fully clickable */
-[data-onboarding] button,
-.onboarding-welcome button,
-.onboarding-tooltip button {
+/* Fix z-index hierarchy for onboarding system */
+/* 1. Overlay - blocks interaction with background */
+.onboarding-overlay {
+  z-index: 99998 !important;
+}
+
+/* 2. Highlighted elements - visible through overlay */
+.onboarding-highlight {
+  z-index: 99999 !important;
+}
+
+/* 3. Tutorial modal/tooltip - always on top */
+.onboarding-modal,
+.onboarding-tooltip {
+  z-index: 100000 !important;
+  position: fixed !important;
+}
+
+/* 4. Modal content and buttons - highest priority */
+.onboarding-modal *,
+.onboarding-tooltip *,
+.onboarding-welcome *,
+[data-onboarding] button {
   pointer-events: auto !important;
-  position: relative !important;
-  z-index: 10002 !important;
+  z-index: inherit !important;
   cursor: pointer !important;
 }
 
-/* Fix modal overlay z-index conflicts */
-.onboarding-welcome {
-  position: relative !important;
-  z-index: 10001 !important;
-  pointer-events: auto !important;
+/* Ensure no other elements interfere during onboarding */
+body.onboarding-active {
+  overflow: hidden !important;
 }
 
-.onboarding-welcome * {
+body.onboarding-active * {
+  pointer-events: none !important;
+}
+
+body.onboarding-active .onboarding-highlight,
+body.onboarding-active .onboarding-modal,
+body.onboarding-active .onboarding-tooltip,
+body.onboarding-active .onboarding-welcome,
+body.onboarding-active .onboarding-modal *,
+body.onboarding-active .onboarding-tooltip *,
+body.onboarding-active .onboarding-welcome * {
   pointer-events: auto !important;
 }
 
