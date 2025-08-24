@@ -9,7 +9,7 @@ export function OnboardingWelcome() {
   const { user, startOnboarding, skipOnboarding, isLoading } = useOnboarding();
 
   return (
-    <Card className="onboarding-welcome border-2 border-green-200 bg-green-50">
+    <Card className="onboarding-welcome border-2 border-green-200 bg-green-50" style={{ zIndex: 100001 }}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -22,50 +22,33 @@
 }
 
 /* Fix z-index hierarchy for onboarding system */
-/* 1. Overlay - blocks interaction with background */
 .onboarding-overlay {
   z-index: 99998 !important;
 }
 
-/* 2. Highlighted elements - visible through overlay */
 .onboarding-highlight {
   z-index: 99999 !important;
 }
 
-/* 3. Tutorial modal/tooltip - always on top */
-.onboarding-modal,
 .onboarding-tooltip {
   z-index: 100000 !important;
   position: fixed !important;
 }
 
-/* 4. Modal content and buttons - highest priority */
-.onboarding-modal *,
-.onboarding-tooltip *,
+/* Ensure onboarding welcome modal and its content are always interactive */
+.onboarding-welcome {
+  z-index: 100001 !important;
+  position: relative !important;
+}
+
+.onboarding-welcome,
 .onboarding-welcome *,
-[data-onboarding] button {
+.onboarding-tooltip,
+.onboarding-tooltip *,
+.onboarding-welcome button,
+.onboarding-tooltip button {
   pointer-events: auto !important;
-  z-index: inherit !important;
   cursor: pointer !important;
-}
-
-/* Ensure no other elements interfere during onboarding */
-body.onboarding-active {
-  overflow: hidden !important;
-}
-
-body.onboarding-active * {
-  pointer-events: none !important;
-}
-
-body.onboarding-active .onboarding-highlight,
-body.onboarding-active .onboarding-modal,
-body.onboarding-active .onboarding-tooltip,
-body.onboarding-active .onboarding-welcome,
-body.onboarding-active .onboarding-modal *,
-body.onboarding-active .onboarding-tooltip *,
-body.onboarding-active .onboarding-welcome * {
-  pointer-events: auto !important;
 }
 
 /* Customer Theme System */
