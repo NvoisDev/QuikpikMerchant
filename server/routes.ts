@@ -10930,6 +10930,31 @@ https://quikpik.app`;
   // Manual subscription upgrade endpoint for successful payments
   // Duplicate removed - manual upgrades handled by /api/subscription/upgrade
 
+  // Get user subscription info by ID (admin endpoint)
+  app.get('/api/admin/user/:userId/subscription', async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({
+        userId: user.id,
+        email: user.email,
+        businessName: user.businessName,
+        subscriptionTier: user.subscriptionTier || 'free',
+        subscriptionStatus: user.subscriptionStatus || 'inactive', 
+        productLimit: user.productLimit || 3,
+        subscriptionEndsAt: user.subscriptionEndsAt
+      });
+    } catch (error: any) {
+      console.error('Error fetching user subscription:', error);
+      res.status(500).json({ error: 'Failed to fetch subscription data' });
+    }
+  });
+
   // Manual subscription data refresh endpoint
   // Duplicate removed - refresh functionality integrated into main endpoints
 
