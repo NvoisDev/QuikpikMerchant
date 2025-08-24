@@ -130,15 +130,21 @@ export default function SignupComplete() {
     
     setIsSubmitting(true);
     try {
-      const response = await apiRequest('/api/auth/complete-profile', {
+      const response = await fetch('/api/auth/complete-profile', {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
         body: JSON.stringify({
           ...data,
           isFirstLogin: false // Mark as profile completed
         }),
       });
 
-      if (response.success) {
+      const result = await response.json();
+
+      if (result.success) {
         toast({
           title: "Profile Completed!",
           description: "Your business profile has been set up successfully. Welcome to Quikpik!",
@@ -150,7 +156,7 @@ export default function SignupComplete() {
           window.location.href = '/dashboard';
         }, 1500);
       } else {
-        throw new Error(response.message || 'Failed to complete profile');
+        throw new Error(result.message || 'Failed to complete profile');
       }
     } catch (error) {
       console.error('Profile completion error:', error);
