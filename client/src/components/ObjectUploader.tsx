@@ -171,9 +171,19 @@ export function ObjectUploader({
       setCameraStream(stream);
       setShowCamera(true);
       
-      // Set video source
+      // Set video source and ensure it plays
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // Wait for video to load metadata, then play
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().catch(err => {
+              console.error('❌ Video play failed:', err);
+            });
+          }
+        };
+        
         console.log('✅ Video element connected to stream');
       }
     } catch (error) {
@@ -281,7 +291,19 @@ export function ObjectUploader({
                       ref={videoRef}
                       autoPlay
                       playsInline
+                      muted
                       className="w-full h-64 object-cover rounded-lg bg-black"
+                      onCanPlay={() => {
+                        console.log('✅ Video can play');
+                        if (videoRef.current) {
+                          videoRef.current.play().catch(err => {
+                            console.error('❌ Video autoplay failed:', err);
+                          });
+                        }
+                      }}
+                      onError={(e) => {
+                        console.error('❌ Video error:', e);
+                      }}
                     />
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
