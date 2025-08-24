@@ -88,19 +88,19 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 
   const getAddressIcon = (label: string) => {
     switch (label?.toLowerCase()) {
-      case 'home': return <Home className="h-4 w-4 text-green-600" />;
-      case 'office': case 'work': return <Building className="h-4 w-4 text-blue-600" />;
-      case 'warehouse': return <Warehouse className="h-4 w-4 text-purple-600" />;
-      default: return <MapPin className="h-4 w-4 text-gray-600" />;
+      case 'home': return Home;
+      case 'office': case 'work': return Building;
+      case 'warehouse': return Warehouse;
+      default: return MapPin;
     }
   };
 
-  const Icon = getAddressIcon(address?.label);
+  const IconComponent = getAddressIcon(address?.label || '');
   
   return (
     <div className="bg-gray-50 p-3 rounded-lg border">
       <div className="flex items-start gap-3">
-        <Icon />
+        <IconComponent className="h-4 w-4 text-gray-600 mt-0.5" />
         <div className="flex-1 min-w-0">
           {address?.label && (
             <div className="font-medium text-sm text-gray-900 mb-1">
