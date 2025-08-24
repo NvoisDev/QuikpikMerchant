@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -199,63 +199,64 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
         </div>
 
         {/* Delivery Address */}
-        {order.deliveryAddress && (
+        {(order.deliveryAddressId || order.deliveryAddress) && (
           <div>
-            <h3 className="font-medium mb-1 text-sm sm:text-base">Delivery Address</h3>
-            <div className="bg-gray-50 p-2 sm:p-3 rounded-lg">
-              {(() => {
-                const deliveryAddr = parseDeliveryAddress(order.deliveryAddress);
-                if (deliveryAddr) {
-                  const Icon = getLabelIcon(deliveryAddr.label);
-                  return (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-green-600" />
-                        <div className="text-xs">
-                          <div className="font-medium">{deliveryAddr.addressLine1}</div>
-                          {deliveryAddr.addressLine2 && (
-                            <div>{deliveryAddr.addressLine2}</div>
-                          )}
-                          <div>
-                            {deliveryAddr.city}
-                            {deliveryAddr.state && `, ${deliveryAddr.state}`}
-                            {deliveryAddr.postalCode && ` ${deliveryAddr.postalCode}`}
+            {order.deliveryAddressId ? (
+              <DeliveryAddressDisplay addressId={order.deliveryAddressId} />
+            ) : (
+              <>
+                <h3 className="font-medium mb-1 text-sm sm:text-base">Delivery Address</h3>
+                <div className="bg-gray-50 p-2 sm:p-3 rounded-lg">
+                  {(() => {
+                    const deliveryAddr = parseDeliveryAddress(order.deliveryAddress!);
+                    if (deliveryAddr) {
+                      const Icon = getLabelIcon(deliveryAddr.label);
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-green-600" />
+                            <div className="text-xs">
+                              <div className="font-medium">{deliveryAddr.addressLine1}</div>
+                              {deliveryAddr.addressLine2 && (
+                                <div>{deliveryAddr.addressLine2}</div>
+                              )}
+                              <div>
+                                {deliveryAddr.city}
+                                {deliveryAddr.state && `, ${deliveryAddr.state}`}
+                                {deliveryAddr.postalCode && ` ${deliveryAddr.postalCode}`}
+                              </div>
+                            </div>
                           </div>
+                          {deliveryAddr.label && (
+                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
+                              {deliveryAddr.label}
+                            </div>
+                          )}
+                          {deliveryAddr.instructions && (
+                            <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                              <span className="font-medium">Instructions:</span> {deliveryAddr.instructions}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      {deliveryAddr.label && (
-                        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
-                          {deliveryAddr.label}
-                        </div>
-                      )}
-                      {deliveryAddr.instructions && (
-                        <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                          <span className="font-medium">Instructions:</span> {deliveryAddr.instructions}
-                        </div>
-                      )}
-                    </div>
-                  );
-                } else {
-                  // Don't show fallback if we have a delivery address ID that will show full details
-                  if (order.deliveryAddressId) {
-                    return null;
-                  }
-                  
-                  // Only show fallback if it's not just country information
-                  const addressText = formatAddress(order.deliveryAddress);
-                  if (addressText && addressText !== "United Kingdom" && addressText !== "UK") {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-green-600" />
-                        <div className="text-xs">{addressText}</div>
-                      </div>
-                    );
-                  }
-                  
-                  return null;
-                }
-              })()}
-            </div>
+                      );
+                    } else {
+                      // Only show fallback if it's not just country information
+                      const addressText = formatAddress(order.deliveryAddress!);
+                      if (addressText && addressText !== "United Kingdom" && addressText !== "UK") {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-green-600" />
+                            <div className="text-xs">{addressText}</div>
+                          </div>
+                        );
+                      }
+                      
+                      return null;
+                    }
+                  })()}
+                </div>
+              </>
+            )}
           </div>
         )}
 
