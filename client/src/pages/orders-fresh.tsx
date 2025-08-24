@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
+import { Home, Building, Warehouse } from "lucide-react";
 // Simple currency formatter
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', {
@@ -34,6 +35,7 @@ interface Order {
   createdAt: string;
   fulfillmentType?: string;
   deliveryAddress?: string;
+  deliveryAddressId?: number;
   subtotal?: string;
   deliveryCost?: string;
   items?: OrderItem[];
@@ -683,6 +685,75 @@ export default function OrdersFresh() {
                   )}
                 </div>
               </div>
+
+              {/* Delivery Address Section */}
+              {selectedOrder.fulfillmentType === 'delivery' && (
+                <div>
+                  <h3 className="font-medium mb-2 text-sm flex items-center">
+                    <Truck className="h-4 w-4 mr-2 text-green-600" />
+                    Delivery Address
+                  </h3>
+                  <div className="space-y-2">
+                    {(() => {
+                      // Try to parse the delivery address JSON for detailed info
+                      if (selectedOrder.deliveryAddress) {
+                        try {
+                          const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
+                          if (parsedAddress && typeof parsedAddress === 'object') {
+                            const getAddressIcon = (label: string) => {
+                              switch (label?.toLowerCase()) {
+                                case 'home': return <Home className="h-4 w-4 text-green-600" />;
+                                case 'office': case 'work': return <Building className="h-4 w-4 text-blue-600" />;
+                                case 'warehouse': return <Warehouse className="h-4 w-4 text-purple-600" />;
+                                default: return <MapPin className="h-4 w-4 text-gray-600" />;
+                              }
+                            };
+
+                            return (
+                              <div className="bg-gray-50 p-3 rounded-lg border">
+                                <div className="flex items-start gap-3">
+                                  {getAddressIcon(parsedAddress.label)}
+                                  <div className="flex-1 min-w-0">
+                                    {parsedAddress.label && (
+                                      <div className="font-medium text-sm text-gray-900 mb-1">
+                                        {parsedAddress.label}
+                                      </div>
+                                    )}
+                                    <div className="text-xs space-y-1 text-gray-700">
+                                      {parsedAddress.addressLine1 && (
+                                        <div>{parsedAddress.addressLine1}</div>
+                                      )}
+                                      {parsedAddress.addressLine2 && (
+                                        <div>{parsedAddress.addressLine2}</div>
+                                      )}
+                                      <div className="flex gap-2">
+                                        {parsedAddress.city && <span>{parsedAddress.city}</span>}
+                                        {parsedAddress.postalCode && <span>{parsedAddress.postalCode}</span>}
+                                      </div>
+                                      {parsedAddress.country && parsedAddress.country !== "United Kingdom" && (
+                                        <div>{parsedAddress.country}</div>
+                                      )}
+                                    </div>
+                                    {parsedAddress.deliveryInstructions && (
+                                      <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                        <span className="font-medium">Instructions:</span> {parsedAddress.deliveryInstructions}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        } catch (e) {
+                          // JSON parsing failed, treat as plain text
+                        }
+                      }
+                      
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Order Items */}
               <div>
