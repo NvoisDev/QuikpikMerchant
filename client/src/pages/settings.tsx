@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -14,6 +15,19 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("account");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
+
+  // Get Stripe Connect status
+  const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
+    isConnected: boolean;
+    accountId?: string;
+    hasPayoutsEnabled?: boolean;
+    requiresInfo?: boolean;
+    accountStatus?: 'not_connected' | 'incomplete_setup' | 'pending_verification' | 'active' | 'error';
+  }>({
+    queryKey: ["/api/stripe/connect/status"],
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [isEditingBusiness, setIsEditingBusiness] = useState(false);
   const [accountForm, setAccountForm] = useState({
@@ -81,8 +95,13 @@ export default function Settings() {
         window.open(data.url, '_blank');
         toast({
           title: "Stripe Connect",
-          description: "Opening Stripe account setup in a new window.",
+          description: "Opening Stripe account setup in a new window. Complete all steps to start accepting payments.",
         });
+        
+        // Refresh status when user returns (after a delay)
+        setTimeout(() => {
+          refetchStripeStatus();
+        }, 3000);
       }
     } catch (error) {
       console.error('Error connecting to Stripe:', error);
@@ -109,6 +128,11 @@ export default function Settings() {
           title: "Stripe Dashboard",
           description: "Opening your Stripe account dashboard in a new window.",
         });
+        
+        // Refresh status when user returns
+        setTimeout(() => {
+          refetchStripeStatus();
+        }, 2000);
       }
     } catch (error) {
       console.error('Error opening Stripe dashboard:', error);
@@ -799,15 +823,61 @@ export default function Settings() {
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                          <span className="text-sm text-gray-500">
-                            Status: {user?.stripeAccountId ? 'Connected' : 'Ready to connect'}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            {stripeStatus?.accountStatus === 'active' && (
+                              <>
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <span className="text-sm text-green-700 font-medium">Connected</span>
+                              </>
+                            )}
+                            {stripeStatus?.accountStatus === 'incomplete_setup' && (
+                              <>
+                                <AlertCircle className="h-4 w-4 text-orange-500" />
+                                <span className="text-sm text-orange-700 font-medium">Setup Required</span>
+                              </>
+                            )}
+                            {stripeStatus?.accountStatus === 'pending_verification' && (
+                              <>
+                                <Clock className="h-4 w-4 text-blue-500" />
+                                <span className="text-sm text-blue-700 font-medium">Pending Verification</span>
+                              </>
+                            )}
+                            {(!stripeStatus?.accountStatus || stripeStatus?.accountStatus === 'not_connected') && (
+                              <>
+                                <AlertCircle className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">Ready to connect</span>
+                              </>
+                            )}
+                            {stripeStatus?.accountStatus === 'error' && (
+                              <>
+                                <AlertCircle className="h-4 w-4 text-red-500" />
+                                <span className="text-sm text-red-700 font-medium">Setup Error</span>
+                              </>
+                            )}
+                          </div>
                           <button 
-                            onClick={user?.stripeAccountId ? handleStripeDashboard : handleStripeConnect}
+                            onClick={() => {
+                              // For incomplete setup or new connections, always use Connect flow
+                              if (stripeStatus?.accountStatus === 'active') {
+                                handleStripeDashboard();
+                              } else {
+                                handleStripeConnect();
+                              }
+                            }}
                             disabled={isConnectingStripe}
-                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                            className={`px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${
+                              stripeStatus?.accountStatus === 'active' 
+                                ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
                           >
-                            <span className="text-sm sm:text-base">{isConnectingStripe ? 'Connecting...' : (user?.stripeAccountId ? 'Manage Account' : 'Connect Stripe')}</span>
+                            <span className="text-sm sm:text-base">
+                              {isConnectingStripe ? 'Connecting...' : 
+                               stripeStatus?.accountStatus === 'active' ? 'Manage Account' :
+                               stripeStatus?.accountStatus === 'incomplete_setup' ? 'Complete Setup' :
+                               stripeStatus?.accountStatus === 'pending_verification' ? 'View Status' :
+                               'Connect Stripe'}
+                            </span>
                             {!isConnectingStripe && <ExternalLink className="h-4 w-4" />}
                           </button>
                         </div>

@@ -10,6 +10,7 @@ interface StripeConnectStatus {
   accountId?: string;
   hasPayoutsEnabled?: boolean;
   requiresInfo?: boolean;
+  accountStatus?: 'not_connected' | 'incomplete_setup' | 'pending_verification' | 'active' | 'error';
 }
 
 export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
@@ -27,7 +28,7 @@ export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
   }
 
   // Only show if Stripe is not properly connected
-  if (stripeStatus?.isConnected && stripeStatus?.hasPayoutsEnabled) {
+  if (stripeStatus?.accountStatus === 'active') {
     return null;
   }
 
@@ -49,7 +50,12 @@ export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
               </span>
             </div>
             <p className="text-sm mb-3">
-              Connect your Stripe account to accept customer payments and receive payouts. This is essential for processing orders and managing your revenue.
+              {stripeStatus?.accountStatus === 'incomplete_setup' 
+                ? 'Complete your Stripe Connect setup to start accepting payments. Finish the verification process to activate your account.'
+                : stripeStatus?.accountStatus === 'pending_verification'
+                ? 'Your Stripe account is pending verification. This usually takes 1-2 business days.'
+                : 'Connect your Stripe account to accept customer payments and receive payouts. This is essential for processing orders and managing your revenue.'
+              }
             </p>
             <div className="flex flex-wrap gap-2">
               <Link href="/settings?tab=integrations">
@@ -58,7 +64,7 @@ export function StripeSetupAlert({ onDismiss }: { onDismiss?: () => void }) {
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Settings className="h-4 w-4 mr-2" />
-                  Set Up Payments
+                  {stripeStatus?.accountStatus === 'incomplete_setup' ? 'Complete Setup' : 'Set Up Payments'}
                 </Button>
               </Link>
               <Button 
@@ -96,7 +102,7 @@ export function StripeStatusIndicator() {
     return <div className="animate-pulse bg-gray-200 h-4 w-16 rounded"></div>;
   }
 
-  if (stripeStatus?.isConnected && stripeStatus?.hasPayoutsEnabled) {
+  if (stripeStatus?.accountStatus === 'active') {
     return (
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -105,10 +111,21 @@ export function StripeStatusIndicator() {
     );
   }
 
+  if (stripeStatus?.accountStatus === 'pending_verification') {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+        <span className="text-sm text-blue-700">Pending Verification</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-      <span className="text-sm text-orange-700">Setup Required</span>
+      <span className="text-sm text-orange-700">
+        {stripeStatus?.accountStatus === 'incomplete_setup' ? 'Complete Setup' : 'Setup Required'}
+      </span>
     </div>
   );
 }

@@ -6888,22 +6888,57 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ error: "User not found" });
       }
 
+      let isConnected = false;
+      let hasPayoutsEnabled = false;
+      let requiresInfo = false;
+      let accountStatus = 'not_connected';
+
       // Check if Stripe Connect is properly configured
-      const hasStripeConnect = !!(user.stripeAccountId);
+      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY && stripe);
       
-      // For a marketplace, we need BOTH platform keys AND Connect account
-      const hasStripeKeys = !!(process.env.STRIPE_SECRET_KEY);
-      const isConnected = hasStripeConnect; // Connect account is required
-      const hasPayoutsEnabled = hasStripeConnect;
+      if (user.stripeAccountId && hasStripeKeys) {
+        try {
+          // Get the actual account status from Stripe
+          const account = await stripe!.accounts.retrieve(user.stripeAccountId);
+          
+          // Check if account can receive payouts
+          hasPayoutsEnabled = account.payouts_enabled;
+          isConnected = account.charges_enabled && account.payouts_enabled;
+          requiresInfo = !account.details_submitted;
+          
+          if (!account.details_submitted) {
+            accountStatus = 'incomplete_setup';
+          } else if (!isConnected) {
+            accountStatus = 'pending_verification';
+          } else {
+            accountStatus = 'active';
+          }
+          
+          console.log(`🔍 Stripe Connect status for user ${userId}:`, {
+            accountId: user.stripeAccountId,
+            chargesEnabled: account.charges_enabled,
+            payoutsEnabled: account.payouts_enabled,
+            detailsSubmitted: account.details_submitted,
+            isConnected,
+            accountStatus
+          });
+          
+        } catch (error: any) {
+          console.error(`❌ Error checking Stripe account ${user.stripeAccountId}:`, error);
+          // Account might be deleted or invalid
+          accountStatus = 'error';
+        }
+      }
       
       res.json({
         isConnected,
         hasStripeKeys,
-        hasStripeConnect,
+        hasStripeConnect: !!(user.stripeAccountId),
         accountId: user.stripeAccountId,
         hasPayoutsEnabled,
-        requiresInfo: false,
-        paymentProcessingType: hasStripeConnect ? 'connect' : 'direct'
+        requiresInfo,
+        accountStatus,
+        paymentProcessingType: user.stripeAccountId ? 'connect' : 'direct'
       });
     } catch (error) {
       console.error("Error fetching Stripe Connect status:", error);
