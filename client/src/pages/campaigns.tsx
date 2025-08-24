@@ -1724,10 +1724,10 @@ export default function Campaigns() {
 
       {/* Subscription Upgrade Modal */}
       <SubscriptionUpgradeModal 
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        feature="broadcast_limit"
-        currentTier={subscription?.tier || "free"}
+        open={isUpgradeModalOpen}
+        onOpenChange={setIsUpgradeModalOpen}
+        reason="broadcast_limit"
+        currentPlan={subscription?.tier || "free"}
       />
     </div>
   );
