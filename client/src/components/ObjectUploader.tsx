@@ -138,23 +138,65 @@ export function ObjectUploader({
   // Camera functionality
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
+      // Check if camera API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not available in this browser');
+      }
+
+      console.log('🎥 Starting camera...');
+      
+      // Try with basic constraints first, then fallback
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment', // Use back camera on mobile
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+      } catch (err) {
+        console.log('🎥 Back camera failed, trying front camera...', err);
+        // Fallback to front camera
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+      }
+      
+      console.log('✅ Camera stream obtained');
       setCameraStream(stream);
       setShowCamera(true);
       
+      // Set video source
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        console.log('✅ Video element connected to stream');
       }
     } catch (error) {
+      console.error('❌ Camera error:', error);
+      
+      let errorMessage = "Could not access camera. ";
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          errorMessage += "Please allow camera permissions and try again.";
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          errorMessage += "No camera found on this device.";
+        } else if (error.name === 'NotSupportedError' || error.name === 'ConstraintNotSatisfiedError') {
+          errorMessage += "Camera format not supported.";
+        } else if (error.message.includes('API not available')) {
+          errorMessage += "Camera not supported in this browser. Please use Chrome, Firefox, or Safari.";
+        } else {
+          errorMessage += `Error: ${error.message}`;
+        }
+      }
+      
       toast({
         title: "Camera Error",
-        description: "Could not access camera. Please check permissions.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -317,7 +359,10 @@ export function ObjectUploader({
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={startCamera}
+                      onClick={() => {
+                        console.log('📷 Camera button clicked');
+                        startCamera();
+                      }}
                       className="text-xs"
                     >
                       <Camera className="h-4 w-4 mr-2" />
