@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useSimpleSubscription } from "@/hooks/useSimpleSubscription";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import TabPermissionsManager from "@/components/TabPermissionsManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,6 +85,7 @@ export default function TeamManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { subscription } = useSubscription();
+  const { currentTier: simpleTier, isActive: simpleIsActive } = useSimpleSubscription();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedMemberForRoleEdit, setSelectedMemberForRoleEdit] = useState<TeamMember | null>(null);
@@ -195,8 +197,8 @@ export default function TeamManagement() {
     },
   });
 
-  const currentTier = subscription?.subscriptionTier || 'free';
-  const teamLimit = getSubscriptionLimit(currentTier);
+  // Using simpleTier from useSimpleSubscription for accurate current plan data
+  const teamLimit = getSubscriptionLimit(simpleTier);
   const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
   const canAddMembers = currentTeamCount < teamLimit;
 
@@ -289,7 +291,7 @@ export default function TeamManagement() {
             <Button 
               onClick={() => !canAddMembers && setShowUpgradeModal(true)}
               className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={!canAddMembers && currentTier !== 'premium'}
+              disabled={!canAddMembers && simpleTier !== 'premium'}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Invite Team Member
@@ -420,13 +422,13 @@ export default function TeamManagement() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div>
               <p className="text-sm text-gray-600">
-                Current Plan: <span className="font-semibold capitalize">{currentTier}</span>
+                Current Plan: <span className="font-semibold capitalize">{simpleTier}</span>
               </p>
               <p className="text-sm text-gray-600">
                 Team Members: {currentTeamCount} / {teamLimit === -1 ? "unlimited" : teamLimit}
               </p>
             </div>
-            {currentTier === 'free' && (
+            {simpleTier === 'free' && (
               <Button 
                 onClick={() => setShowUpgradeModal(true)}
                 variant="outline"
@@ -465,12 +467,12 @@ export default function TeamManagement() {
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
               <p className="text-gray-600 mb-4">
-                {currentTier === 'free' 
+                {simpleTier === 'free' 
                   ? "Upgrade your plan to invite team members and collaborate on your wholesale platform."
                   : "Invite team members to help manage your wholesale platform."
                 }
               </p>
-              {currentTier !== 'free' && (
+              {simpleTier !== 'free' && (
                 <Button 
                   onClick={() => setIsInviteDialogOpen(true)}
                   className="bg-emerald-600 hover:bg-emerald-700"
