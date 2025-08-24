@@ -10885,78 +10885,60 @@ https://quikpik.app`;
     }
   });
 
-  // Auto-refresh user session after successful payment (no auth required for this specific case)
-  app.post('/api/subscription/success-refresh', async (req: any, res) => {
+  // Simple subscription upgrade endpoint
+  app.post('/api/subscription/upgrade', requireAuth, async (req: any, res) => {
     try {
-      const { sessionId } = req.body;
-      
-      if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID required' });
+      if (!stripe) {
+        return res.status(500).json({ error: 'Payment processing unavailable' });
       }
 
-      // Retrieve the checkout session from Stripe to get user metadata
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      const userId = session.metadata?.userId;
+      const { planId } = req.body;
+      const userId = req.session?.userId;
 
-      if (!userId) {
-        return res.status(400).json({ error: 'No user ID found in session metadata' });
+      if (!planId || !['premium'].includes(planId)) {
+        return res.status(400).json({ error: 'Invalid plan ID' });
       }
 
-      // Get fresh user data from database
-      const freshUser = await storage.getUser(userId);
-      
-      if (!freshUser) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Update the session with fresh user data
-      (req.session as any).userId = freshUser.id;
-      (req.session as any).user = freshUser;
-
-      console.log(`✅ Auto-refreshed session for user ${freshUser.email} after successful payment`);
-
-      res.json({ 
-        success: true, 
-        message: 'Session refreshed successfully',
-        subscriptionTier: freshUser.subscriptionTier,
-        subscriptionStatus: freshUser.subscriptionStatus
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer_email: req.user.email,
+        line_items: [{
+          price: 'price_1QKtRRE1OGOy5pQzJqCNlYed', // Premium plan price ID
+          quantity: 1,
+        }],
+        success_url: `${req.headers.origin}/simple-subscription?success=true&plan=${planId}`,
+        cancel_url: `${req.headers.origin}/simple-subscription?canceled=true`,
+        metadata: {
+          userId: userId,
+          planId: planId,
+        },
       });
+
+      res.json({ checkoutUrl: session.url });
     } catch (error: any) {
-      console.error('❌ Error auto-refreshing session:', error);
-      res.status(500).json({ error: 'Failed to refresh session' });
+      console.error('❌ Subscription upgrade error:', error);
+      res.status(500).json({ error: 'Failed to create checkout session' });
     }
   });
 
-  // Manual subscription upgrade endpoint for successful payments
-  // Duplicate removed - manual upgrades handled by /api/subscription/upgrade
-
-  // Get user subscription info by ID (admin endpoint)
-  app.get('/api/admin/user/:userId/subscription', async (req: any, res) => {
+  // Simple subscription status endpoint
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
-      const { userId } = req.params;
-      
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
+      const user = req.user;
+      const productCount = await storage.getUserProductCount(user.id);
 
       res.json({
-        userId: user.id,
-        email: user.email,
-        businessName: user.businessName,
-        subscriptionTier: user.subscriptionTier || 'free',
-        subscriptionStatus: user.subscriptionStatus || 'inactive', 
-        productLimit: user.productLimit || 3,
-        subscriptionEndsAt: user.subscriptionEndsAt
+        tier: user.subscriptionTier || 'free',
+        status: user.subscriptionStatus || 'inactive',
+        productCount,
+        productLimit: user.productLimit || 3
       });
     } catch (error: any) {
-      console.error('Error fetching user subscription:', error);
-      res.status(500).json({ error: 'Failed to fetch subscription data' });
+      console.error('❌ Error fetching subscription status:', error);
+      res.status(500).json({ error: 'Failed to fetch subscription status' });
     }
   });
-
-  // Manual subscription data refresh endpoint
-  // Duplicate removed - refresh functionality integrated into main endpoints
 
   // Subscription audit log endpoints
   app.get('/api/subscription/audit-logs', requireAuth, async (req: any, res) => {

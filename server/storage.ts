@@ -228,6 +228,7 @@ export interface IStorage {
     productLimit: number;
   }): Promise<User>;
   checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }>;
+  getUserProductCount(userId: string): Promise<number>;
   
   // Marketplace operations
   getMarketplaceProducts(filters: {
@@ -2294,6 +2295,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  async getUserProductCount(userId: string): Promise<number> {
+    const products = await db
+      .select()
+      .from(products)
+      .where(eq(products.wholesalerId, userId));
+    return products.length;
   }
 
   async checkProductLimit(userId: string): Promise<{ canAdd: boolean; currentCount: number; limit: number; tier: string }> {
