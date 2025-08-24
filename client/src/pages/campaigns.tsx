@@ -50,6 +50,7 @@ import {
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
+import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
@@ -256,6 +257,12 @@ export default function Campaigns() {
   // Fetch customer groups for campaign sending
   const { data: customerGroups = [] } = useQuery({
     queryKey: ["/api/customer-groups"],
+  });
+
+  // Check WhatsApp connection status
+  const { data: whatsappStatus } = useQuery({
+    queryKey: ["/api/whatsapp/status"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const form = useForm<CampaignFormData>({
@@ -734,6 +741,18 @@ export default function Campaigns() {
         </TabsList>
 
         <TabsContent value="campaigns" className="space-y-6">
+          {/* WhatsApp Connection Status */}
+          <div className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5 text-green-600" />
+              <h3 className="font-medium text-gray-900">WhatsApp Integration</h3>
+              <WhatsAppStatusIndicator />
+            </div>
+          </div>
+          
+          {/* WhatsApp Setup Alert */}
+          <WhatsAppSetupAlert />
+
           {/* Broadcast Dashboard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
@@ -843,7 +862,16 @@ export default function Campaigns() {
           {/* AI components removed as requested by user */}
           <Button 
             className="flex items-center space-x-2"
+            disabled={!(whatsappStatus as any)?.isConfigured}
             onClick={() => {
+              if (!(whatsappStatus as any)?.isConfigured) {
+                toast({
+                  title: "WhatsApp Not Connected",
+                  description: "Please connect WhatsApp before creating campaigns",
+                  variant: "destructive",
+                });
+                return;
+              }
               setEditingCampaign(null);
               setCampaignType('single');
               form.reset({
@@ -858,7 +886,12 @@ export default function Campaigns() {
             }}
           >
             <Plus className="h-4 w-4" />
-            <span>Create Broadcast</span>
+            <span>
+              {(whatsappStatus as any)?.isConfigured 
+                ? "Create Broadcast" 
+                : "WhatsApp Required"
+              }
+            </span>
           </Button>
         </div>
       </div>
