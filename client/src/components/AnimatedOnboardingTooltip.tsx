@@ -23,7 +23,7 @@ interface OnboardingStep {
   description: string;
   target: string;
   action?: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   animation?: 'pulse' | 'bounce' | 'shake' | 'glow';
   interactive?: boolean;
   customIcon?: React.ReactNode;

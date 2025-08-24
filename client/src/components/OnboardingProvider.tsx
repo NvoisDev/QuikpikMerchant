@@ -22,7 +22,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [isOnboardingActive, setIsOnboardingActive] = useState(false);
   const [canStartOnboarding, setCanStartOnboarding] = useState(false);
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<{
+    onboardingCompleted?: boolean;
+    onboardingSkipped?: boolean;
+    onboardingStep?: number;
+    [key: string]: any;
+  }>({
     queryKey: ["/api/auth/user"],
   });
 

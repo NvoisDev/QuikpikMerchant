@@ -1484,7 +1484,8 @@ export default function ProductManagement() {
                   promotionalOffers: [],
                 });
                 setIsDialogOpen(true);
-              }}>
+              }}
+              data-onboarding="add-product-button">
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="hidden xs:inline">Add Product</span>
                 <span className="xs:hidden">Add</span>

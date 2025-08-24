@@ -18,32 +18,72 @@ export interface OnboardingStep {
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Quikpik Merchant!",
-    description: "Let's get you started with adding your first product to your wholesale platform.",
+    title: "Welcome to Quikpik Merchant! 🎉",
+    description: "Let's take a quick tour to help you get started with your wholesale platform. We'll show you the key features and how to set up your business for success.",
     target: "dashboard-header",
     position: "center",
     animation: "glow",
     order: 1
   },
   {
+    id: "orders",
+    title: "Orders Management",
+    description: "Monitor and manage all your customer orders here. You can view order details, update fulfillment status, and track your sales performance.",
+    target: "orders",
+    position: "right",
+    animation: "bounce",
+    action: "focus",
+    order: 2
+  },
+  {
+    id: "products",
+    title: "Products & Catalog",
+    description: "Build your product catalog here. Add products with pricing, stock levels, images, and descriptions to create an attractive wholesale offering for your customers.",
+    target: "products-list",
+    position: "right",
+    animation: "bounce",
+    action: "focus",
+    order: 3
+  },
+  {
+    id: "customers",
+    title: "Customer Management",
+    description: "Manage your wholesale customers here. You can organize customers into groups, set different pricing tiers, and track their order history.",
+    target: "customer-groups",
+    position: "right",
+    animation: "pulse",
+    action: "focus",
+    order: 4
+  },
+  {
+    id: "campaigns",
+    title: "Marketing & Campaigns",
+    description: "Create WhatsApp campaigns and promotional messages to engage your customers. Send product updates, special offers, and order notifications directly to their WhatsApp.",
+    target: "campaigns",
+    position: "right",
+    animation: "pulse",
+    action: "focus",
+    order: 5
+  },
+  {
     id: "add-product",
     title: "Add Your First Product",
-    description: "Start by adding your wholesale products. Click this button to create your first product listing with pricing, stock levels, and descriptions.",
-    target: "add-product-button", 
+    description: "Ready to add your first product? Click this button to create your first product listing. You'll be able to set wholesale pricing, minimum order quantities, and upload product images.",
+    target: "add-product-button",
     position: "bottom",
     animation: "bounce",
     action: "click",
     interactive: true,
-    order: 2
+    order: 6
   },
   {
     id: "complete",
-    title: "You're All Set!",
-    description: "Great! You now know how to add products to your wholesale platform. You can explore other features like customer groups, campaigns, and analytics when you're ready.",
+    title: "You're All Set! 🚀",
+    description: "Congratulations! You've completed the tour. Start by adding your first products, then invite customers to place orders through your personalized customer portal. Need help? Check the Help section anytime.",
     target: "dashboard-header",
     position: "center",
     animation: "glow",
-    order: 3
+    order: 10
   }
 ];
 
@@ -55,7 +95,12 @@ export function useOnboarding() {
   
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<{
+    onboardingCompleted?: boolean;
+    onboardingSkipped?: boolean;
+    onboardingStep?: number;
+    [key: string]: any;
+  }>({
     queryKey: ["/api/auth/user"],
   });
 
@@ -71,13 +116,15 @@ export function useOnboarding() {
     },
   });
 
-  // Auto-start onboarding disabled to prevent interference with normal operations
-  // Users can manually start the tour via help section
-  // useEffect(() => {
-  //   if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
-  //     setIsActive(true);
-  //   }
-  // }, [user]);
+  // Auto-start onboarding for new users
+  useEffect(() => {
+    if (user && !user.onboardingCompleted && !user.onboardingSkipped) {
+      // Start onboarding with a small delay to ensure the page is fully loaded
+      setTimeout(() => {
+        setIsActive(true);
+      }, 1000);
+    }
+  }, [user]);
 
   const nextStep = () => {
     if (currentStepIndex < ONBOARDING_STEPS.length - 1) {
