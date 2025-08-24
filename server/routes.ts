@@ -10885,6 +10885,48 @@ https://quikpik.app`;
     }
   });
 
+  // Auto-refresh user session after successful payment (no auth required for this specific case)
+  app.post('/api/subscription/success-refresh', async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID required' });
+      }
+
+      // Retrieve the checkout session from Stripe to get user metadata
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const userId = session.metadata?.userId;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'No user ID found in session metadata' });
+      }
+
+      // Get fresh user data from database
+      const freshUser = await storage.getUser(userId);
+      
+      if (!freshUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Update the session with fresh user data
+      (req.session as any).userId = freshUser.id;
+      (req.session as any).user = freshUser;
+
+      console.log(`✅ Auto-refreshed session for user ${freshUser.email} after successful payment`);
+
+      res.json({ 
+        success: true, 
+        message: 'Session refreshed successfully',
+        subscriptionTier: freshUser.subscriptionTier,
+        subscriptionStatus: freshUser.subscriptionStatus
+      });
+    } catch (error: any) {
+      console.error('❌ Error auto-refreshing session:', error);
+      res.status(500).json({ error: 'Failed to refresh session' });
+    }
+  });
+
   // Manual subscription upgrade endpoint for successful payments
   // Duplicate removed - manual upgrades handled by /api/subscription/upgrade
 
@@ -11003,7 +11045,7 @@ https://quikpik.app`;
             },
           ],
           mode: 'payment',
-          success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}`,
+          success_url: `${req.headers.origin}/subscription-settings?success=true&plan=${targetTier}&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${req.headers.origin}/subscription-settings?canceled=true`,
           customer_email: user.email,
           metadata: {

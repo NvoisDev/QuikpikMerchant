@@ -23,15 +23,39 @@ export default function SubscriptionSettings() {
   // Auto-refresh subscription data when component mounts to catch recent upgrades
   useEffect(() => {
     const autoRefreshSubscription = async () => {
-      // Only auto-refresh if user is authenticated and no URL params (not coming from Stripe)
       const urlParams = new URLSearchParams(window.location.search);
-      const hasStripeParams = urlParams.get('success') || urlParams.get('canceled');
+      const isSuccess = urlParams.get('success') === 'true';
+      const successPlan = urlParams.get('plan');
       
-      if (user && !hasStripeParams) {
+      if (user) {
         try {
-          // Refresh subscription data silently
+          // Always refresh subscription data, especially after successful payments
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           await queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+          
+          // If coming back from successful Stripe payment, refresh session and show success message
+          if (isSuccess && successPlan) {
+            const sessionId = urlParams.get('session_id');
+            
+            // Try to auto-refresh the session first
+            if (sessionId) {
+              try {
+                await apiRequest("POST", "/api/subscription/success-refresh", { sessionId });
+                console.log("✅ Session auto-refreshed after successful payment");
+              } catch (error) {
+                console.log("Session auto-refresh failed, user will see normal refresh options");
+              }
+            }
+            
+            toast({
+              title: "🎉 Subscription Upgraded!",
+              description: `Welcome to ${successPlan.charAt(0).toUpperCase() + successPlan.slice(1)} plan! Your account has been updated.`,
+              duration: 5000,
+            });
+            
+            // Clean the URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
         } catch (error) {
           console.log("Silent refresh failed:", error);
         }
@@ -39,7 +63,7 @@ export default function SubscriptionSettings() {
     };
 
     autoRefreshSubscription();
-  }, [user, queryClient]);
+  }, [user, queryClient, toast]);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [canceling, setCanceling] = useState(false);
