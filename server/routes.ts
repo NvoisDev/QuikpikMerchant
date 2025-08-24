@@ -4291,6 +4291,22 @@ The Quikpik Team
     }
   });
 
+  // Serve private objects/images (for displaying uploaded images)
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving object:", error);
+      if (error.name === 'ObjectNotFoundError') {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   // TEST: Save uploaded image to order (temporarily without auth for testing)
   app.post('/api/orders/:orderId/save-image-test', async (req: any, res) => {
     try {
@@ -4306,10 +4322,14 @@ The Quikpik Team
         return res.status(404).json({ error: "Order not found" });
       }
       
-      // Add image to order
+      // Add image to order - normalize the URL for serving
+      const { ObjectStorageService } = await import('./objectStorage.js');
+      const objectStorageService = new ObjectStorageService();
+      const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
+      
       const imageEntry = {
         id: crypto.randomUUID(),
-        url: imageUrl,
+        url: normalizedPath, // Use normalized path for serving
         filename: filename || 'order-image.jpg',
         uploadedAt: new Date().toISOString(),
         description: description || ''
