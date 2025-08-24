@@ -62,6 +62,74 @@ interface OrderItem {
   };
 }
 
+// Component to fetch and display delivery address details by ID for wholesaler
+const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
+  const { data: address, isLoading, error } = useQuery({
+    queryKey: [`/api/wholesaler/delivery-address/${addressId}`],
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-xs text-gray-500 flex items-center gap-2">
+        <RefreshCw className="h-3 w-3 animate-spin" />
+        Loading address...
+      </div>
+    );
+  }
+
+  if (error || !address) {
+    return (
+      <div className="text-xs text-red-500">
+        Unable to load delivery address
+      </div>
+    );
+  }
+
+  const getAddressIcon = (label: string) => {
+    switch (label?.toLowerCase()) {
+      case 'home': return <Home className="h-4 w-4 text-green-600" />;
+      case 'office': case 'work': return <Building className="h-4 w-4 text-blue-600" />;
+      case 'warehouse': return <Warehouse className="h-4 w-4 text-purple-600" />;
+      default: return <MapPin className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const Icon = getAddressIcon(address?.label);
+  
+  return (
+    <div className="bg-gray-50 p-3 rounded-lg border">
+      <div className="flex items-start gap-3">
+        <Icon />
+        <div className="flex-1 min-w-0">
+          {address?.label && (
+            <div className="font-medium text-sm text-gray-900 mb-1">
+              {address.label}
+            </div>
+          )}
+          <div className="text-xs space-y-1 text-gray-700">
+            {address?.addressLine1 && (
+              <div>{address.addressLine1}</div>
+            )}
+            {address?.addressLine2 && (
+              <div>{address.addressLine2}</div>
+            )}
+            <div className="flex gap-2">
+              {address?.city && <span>{address.city}</span>}
+              {address?.postalCode && <span>{address.postalCode}</span>}
+            </div>
+          </div>
+          {address?.instructions && (
+            <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+              <span className="font-medium">Instructions:</span> {address.instructions}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function OrdersFresh() {
   const { user, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -695,7 +763,12 @@ export default function OrdersFresh() {
                   </h3>
                   <div className="space-y-2">
                     {(() => {
-                      // Try to parse the delivery address JSON for detailed info
+                      // First check if we have a delivery address ID to fetch from API
+                      if (selectedOrder.deliveryAddressId) {
+                        return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
+                      }
+                      
+                      // Otherwise, try to parse the delivery address JSON for detailed info
                       if (selectedOrder.deliveryAddress) {
                         try {
                           const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
@@ -730,9 +803,6 @@ export default function OrdersFresh() {
                                         {parsedAddress.city && <span>{parsedAddress.city}</span>}
                                         {parsedAddress.postalCode && <span>{parsedAddress.postalCode}</span>}
                                       </div>
-                                      {parsedAddress.country && parsedAddress.country !== "United Kingdom" && (
-                                        <div>{parsedAddress.country}</div>
-                                      )}
                                     </div>
                                     {parsedAddress.deliveryInstructions && (
                                       <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
@@ -749,7 +819,11 @@ export default function OrdersFresh() {
                         }
                       }
                       
-                      return null;
+                      return (
+                        <div className="text-xs text-gray-500 italic">
+                          No delivery address information available
+                        </div>
+                      );
                     })()}
                   </div>
                 </div>
