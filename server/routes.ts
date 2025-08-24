@@ -4816,12 +4816,16 @@ The Quikpik Team
       const groupLimit = getCustomerGroupLimit(effectiveSubscriptionTier);
       
       if (groupLimit !== -1 && groups.length >= groupLimit) {
+        const tierName = effectiveSubscriptionTier === 'free' ? 'Free' : 
+                         effectiveSubscriptionTier === 'standard' ? 'Standard' : 'Premium';
+        
         return res.status(403).json({ 
-          error: "Customer group limit reached",
-          message: `You've reached your limit of ${groupLimit} customer groups. Upgrade your plan to create more.`,
+          error: "Upgrade Required",
+          message: `You've reached your ${tierName} plan limit of ${groupLimit} customer groups. Upgrade to create additional groups and organize more customers.`,
           currentCount: groups.length,
           limit: groupLimit,
-          tier: user?.subscriptionTier || 'free'
+          tier: user?.subscriptionTier || 'free',
+          userFriendly: true
         });
       }
       
