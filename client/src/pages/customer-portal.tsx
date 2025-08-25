@@ -1963,9 +1963,9 @@ export default function CustomerPortal() {
                 <Button
                   onClick={async () => {
                     if (cart.length > 0) {
-                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout');
+                      console.log('🚚 HEADER CART CHECKOUT: User clicked header cart checkout - NO early payment intent');
                       console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                      await createPaymentIntentForCheckout();
+                      // ✅ FIX: Don't create payment intent until user selects shipping
                       setShowCheckout(true);
                     }
                   }}
@@ -2264,9 +2264,9 @@ export default function CustomerPortal() {
                 <div className="bg-white rounded-lg p-4 border personalized-card welcome-stat animate-fade-in-delayed cursor-pointer" 
                      onClick={async () => {
                        if (!isPreviewMode && cart.length > 0) {
-                         console.log('🚚 CART STATS CHECKOUT: User clicked cart stats to checkout');
+                         console.log('🚚 CART STATS CHECKOUT: User clicked cart stats to checkout - NO early payment intent');
                          console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                         await createPaymentIntentForCheckout();
+                         // ✅ FIX: Don't create payment intent until user selects shipping
                          setShowCheckout(true);
                        }
                      }}>
@@ -2656,9 +2656,9 @@ export default function CustomerPortal() {
                     variant="outline"
                     onClick={async () => {
                       if (cart.length > 0) {
-                        console.log('🚚 QUICK ACTIONS CHECKOUT: User clicked checkout in quick actions');
+                        console.log('🚚 QUICK ACTIONS CHECKOUT: User clicked checkout in quick actions - NO early payment intent');
                         console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
-                        await createPaymentIntentForCheckout();
+                        // ✅ FIX: Don't create payment intent until user selects shipping
                         setShowCheckout(true);
                       } else {
                         setActiveTab("products");
@@ -4026,10 +4026,17 @@ export default function CustomerPortal() {
                               });
                               if (response.ok) {
                                 console.log('🚚 Successfully saved pickup choice to backend');
+                                // ✅ CRITICAL FIX: Create payment intent AFTER pickup selection is confirmed
+                                console.log('🚚 Creating payment intent with pickup option after successful save');
+                                await createPaymentIntentForCheckout();
                               }
                             } catch (error) {
                               console.error('🚚 Error saving pickup choice:', error);
                             }
+                          } else {
+                            // ✅ CRITICAL FIX: Create payment intent for guest users too  
+                            console.log('🚚 Creating payment intent with pickup option for guest user');
+                            await createPaymentIntentForCheckout();
                           }
                         }}
                         className="w-4 h-4 text-emerald-600"
@@ -4092,10 +4099,17 @@ export default function CustomerPortal() {
                               });
                               if (response.ok) {
                                 console.log('🚚 Successfully saved delivery choice to backend');
+                                // ✅ CRITICAL FIX: Create payment intent AFTER shipping selection is confirmed
+                                console.log('🚚 Creating payment intent with delivery option after successful save');
+                                await createPaymentIntentForCheckout();
                               }
                             } catch (error) {
                               console.error('🚚 Error saving delivery choice:', error);
                             }
+                          } else {
+                            // ✅ CRITICAL FIX: Create payment intent for guest users too
+                            console.log('🚚 Creating payment intent with delivery option for guest user');
+                            await createPaymentIntentForCheckout();
                           }
                           
                           console.log('🚚 DEBUG: customerData.shippingOption AFTER setting to delivery:', customerData.shippingOption);
@@ -4264,12 +4278,10 @@ export default function CustomerPortal() {
                     {/* Quick Checkout */}
                     <Button
                       onClick={async () => {
-                        console.log('🚚 CHECKOUT BUTTON: User clicked checkout button');
+                        console.log('🚚 CHECKOUT BUTTON: User clicked checkout button - NO early payment intent');
                         console.log('🚚 CURRENT SHIPPING OPTION:', customerData.shippingOption);
                         
-                        // Create payment intent with current shipping option before showing checkout
-                        await createPaymentIntentForCheckout();
-                        
+                        // ✅ FIX: Don't create payment intent until user selects shipping
                         setShowCheckout(true);
                         setQuickActionExpanded(false);
                       }}
