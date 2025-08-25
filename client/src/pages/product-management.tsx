@@ -1318,7 +1318,10 @@ export default function ProductManagement() {
                   variant="outline"
                   size="sm"
                   className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
-                  onClick={() => window.open('/preview-store', '_blank')}
+                  onClick={() => {
+                    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+                    window.open(`/customer/${effectiveUserId}`, '_blank');
+                  }}
                 >
                   <Package className="mr-2 h-4 w-4" />
                   <span className="hidden xs:inline">Preview Store</span>

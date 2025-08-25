@@ -346,7 +346,7 @@ export default function WholesalerDashboard() {
               type="help"
               placement="bottom"
             >
-              <Link href="/customer-groups">
+              <Link href="/customers?tab=groups">
                 <Button size="sm" variant="outline" className="border-2 border-purple-200 hover:bg-purple-50 hover:text-purple-800 text-purple-700 flex-1 sm:flex-none">
                   <Users className="h-4 w-4 mr-2" />
                   <span className="hidden xs:inline">Add Customers</span>
@@ -354,18 +354,20 @@ export default function WholesalerDashboard() {
                 </Button>
               </Link>
             </DynamicTooltip>
-            <Link href="/preview-store">
-              <Button 
-                size="sm"
-                variant="outline" 
-                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
-                data-onboarding="preview-store"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">Preview Store</span>
-                <span className="xs:hidden">Preview</span>
-              </Button>
-            </Link>
+            <Button 
+              size="sm"
+              variant="outline" 
+              className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
+              data-onboarding="preview-store"
+              onClick={() => {
+                const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+                window.open(`/customer/${effectiveUserId}`, '_blank');
+              }}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              <span className="hidden xs:inline">Preview Store</span>
+              <span className="xs:hidden">Preview</span>
+            </Button>
             <DynamicTooltip 
               content="Copy your customer portal link to share with customers. They can browse and order your products through this link."
               type="success"
