@@ -4190,6 +4190,15 @@ export default function CustomerPortal() {
                       // Clear the cart after successful payment
                       setCart([]);
                       
+                      // 🔄 RESET SHIPPING OPTION: Always reset to pickup for next order to prevent errors
+                      console.log('🚚 Resetting shipping option to pickup for next order...');
+                      setCustomerData(prev => ({
+                        ...prev,
+                        shippingOption: 'pickup',
+                        selectedDeliveryAddress: undefined,
+                        selectedShippingService: undefined
+                      }));
+                      
                       // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
                       console.log('🔄 Refreshing product data to show updated stock levels...');
                       refetchProducts();
