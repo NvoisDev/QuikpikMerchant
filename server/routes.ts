@@ -2887,6 +2887,42 @@ The Quikpik Team
     }
   });
 
+  // Reset all promotional pricing for wholesaler's products
+  app.post('/api/products/reset-promotions', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.id;
+      
+      // Get all products for this wholesaler
+      const userProducts = await storage.getProducts(wholesalerId);
+      
+      // Reset promotional pricing for all products
+      const resetPromises = userProducts.map(async (product) => {
+        await db
+          .update(products)
+          .set({ 
+            promoActive: false,
+            promoPrice: null,
+            promotionalOffers: [],
+            updatedAt: new Date() 
+          })
+          .where(eq(products.id, product.id));
+      });
+      
+      await Promise.all(resetPromises);
+      
+      console.log(`✅ Reset promotional pricing for ${userProducts.length} products for wholesaler ${wholesalerId}`);
+      
+      res.json({ 
+        success: true, 
+        message: `Reset promotional pricing for ${userProducts.length} products`,
+        productsUpdated: userProducts.length
+      });
+    } catch (error) {
+      console.error("Error resetting promotions:", error);
+      res.status(500).json({ message: "Failed to reset promotions" });
+    }
+  });
+
   // Orders endpoint (no authentication required for seamless access)
   // Lightweight orders endpoint for frontend UI - fast response with essential data only
   app.get('/api/orders-light', requireAuth, async (req: any, res) => {
