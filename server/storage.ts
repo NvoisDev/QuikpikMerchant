@@ -1098,28 +1098,67 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(eq(products.id, item.productId));
         
-        // STOCK DECREMENTING: Reduce product stock based on ordered quantity
+        // STOCK DECREMENTING: Reduce product stock based on ordered quantity and selling type
         if (currentProduct) {
-          const currentStock = currentProduct.stock || 0;
           const orderedQuantity = item.quantity;
-          const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
+          const sellingType = item.sellingType || 'units'; // Default to units if not specified
           
-          // Update product stock
-          await tx
-            .update(products)
-            .set({ stock: newStock })
-            .where(eq(products.id, item.productId));
-          
-          console.log(`📦 Stock reduced for product ${item.productId}: ${currentStock} → ${newStock} units (${orderedQuantity} ordered)`);
-          
-          // Log low stock warning
-          if (newStock <= (currentProduct.lowStockThreshold || 10)) {
-            console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newStock} units remaining`);
-          }
-          
-          // Log out of stock warning  
-          if (newStock === 0) {
-            console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of stock`);
+          if (sellingType === 'pallets') {
+            // For pallet orders, reduce pallet_stock
+            const currentPalletStock = currentProduct.palletStock || 0;
+            const newPalletStock = Math.max(0, currentPalletStock - orderedQuantity); // Prevent negative stock
+            
+            await tx
+              .update(products)
+              .set({ palletStock: newPalletStock })
+              .where(eq(products.id, item.productId));
+            
+            console.log(`📦 PALLET Stock reduced for product ${item.productId}: ${currentPalletStock} → ${newPalletStock} pallets (${orderedQuantity} ordered)`);
+            
+            // Log low stock warning for pallets
+            if (newPalletStock <= ((currentProduct as any).palletLowStockThreshold || 5)) {
+              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newPalletStock} pallets remaining`);
+            }
+            
+            // Log out of stock warning for pallets
+            if (newPalletStock === 0) {
+              console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name}) has no pallets remaining`);
+            }
+            
+            // Also reduce total unit stock based on pallets sold
+            const unitsPerPallet = (currentProduct as any).unitsPerPallet || 48; // Default 48 units per pallet
+            const unitsOrdered = orderedQuantity * unitsPerPallet;
+            const currentUnitStock = currentProduct.stock || 0;
+            const newUnitStock = Math.max(0, currentUnitStock - unitsOrdered);
+            
+            await tx
+              .update(products)
+              .set({ stock: newUnitStock })
+              .where(eq(products.id, item.productId));
+              
+            console.log(`📦 UNIT Stock also reduced for pallet order: ${currentUnitStock} → ${newUnitStock} units (${unitsOrdered} units from ${orderedQuantity} pallets)`);
+            
+          } else {
+            // For unit orders, reduce regular stock
+            const currentStock = currentProduct.stock || 0;
+            const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
+            
+            await tx
+              .update(products)
+              .set({ stock: newStock })
+              .where(eq(products.id, item.productId));
+            
+            console.log(`📦 UNIT Stock reduced for product ${item.productId}: ${currentStock} → ${newStock} units (${orderedQuantity} ordered)`);
+            
+            // Log low stock warning
+            if (newStock <= (currentProduct.lowStockThreshold || 10)) {
+              console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newStock} units remaining`);
+            }
+            
+            // Log out of stock warning  
+            if (newStock === 0) {
+              console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of stock`);
+            }
           }
         } else {
           console.log(`⚠️ Product ${item.productId} not found - cannot reduce stock`);
