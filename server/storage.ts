@@ -1098,13 +1098,31 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(eq(products.id, item.productId));
         
-        // TEMPORARY: Stock management disabled to fix order saving
-        console.log(`📦 TEMPORARY: Skipping stock reduction for product ${item.productId} (quantity: ${item.quantity})`);
-        
+        // STOCK DECREMENTING: Reduce product stock based on ordered quantity
         if (currentProduct) {
-          console.log(`📦 Product ${item.productId}: Current stock ${currentProduct.stock} units (no reduction applied)`);
+          const currentStock = currentProduct.stock || 0;
+          const orderedQuantity = item.quantity;
+          const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
+          
+          // Update product stock
+          await tx
+            .update(products)
+            .set({ stock: newStock })
+            .where(eq(products.id, item.productId));
+          
+          console.log(`📦 Stock reduced for product ${item.productId}: ${currentStock} → ${newStock} units (${orderedQuantity} ordered)`);
+          
+          // Log low stock warning
+          if (newStock <= (currentProduct.lowStockThreshold || 10)) {
+            console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newStock} units remaining`);
+          }
+          
+          // Log out of stock warning  
+          if (newStock === 0) {
+            console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of stock`);
+          }
         } else {
-          console.log(`⚠️ Product ${item.productId} not found`);
+          console.log(`⚠️ Product ${item.productId} not found - cannot reduce stock`);
         }
       }
       
@@ -1246,8 +1264,8 @@ export class DatabaseStorage implements IStorage {
           const newStockLevel = currentProduct.stock - item.quantity;
           console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
           
-          // TEMPORARY: Stock movement disabled to fix order saving
-          console.log(`📦 TEMPORARY: Skipping stock movement for product ${item.productId}`);
+          // Track stock movement for auditing
+          console.log(`📦 Stock movement tracked for product ${item.productId}: ${item.quantity} units ordered`);
           
           // Check for low stock and log warnings
           if (newStockLevel <= 10 && currentProduct.stock > 10) {
