@@ -10977,15 +10977,15 @@ https://quikpik.app`;
     }
   });
 
-  // Simple subscription upgrade endpoint (bypass auth for testing)
-  app.post('/api/subscription/upgrade', async (req: any, res) => {
+  // Subscription upgrade endpoint (with proper authentication)
+  app.post('/api/subscription/upgrade', requireAuth, async (req: any, res) => {
     try {
       if (!stripe) {
         return res.status(500).json({ error: 'Payment processing unavailable' });
       }
 
       const { planId } = req.body;
-      const userId = '104871691614680693123'; // Fixed for testing
+      const userId = req.user.id || req.user.claims?.sub;
       const user = await storage.getUser(userId);
 
       if (!user) {
@@ -11066,10 +11066,10 @@ https://quikpik.app`;
     }
   });
 
-  // Simple subscription status endpoint (bypass auth for testing)
-  app.get('/api/subscription/status', async (req: any, res) => {
+  // Subscription status endpoint (with proper authentication)
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
-      const userId = '104871691614680693123'; // Fixed for testing
+      const userId = req.user.id || req.user.claims?.sub;
       const user = await storage.getUser(userId);
       
       if (!user) {
