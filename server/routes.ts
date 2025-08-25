@@ -1496,6 +1496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total: orderItems.total,
             productId: products.id,
             productName: products.name,
+            sellingType: orderItems.sellingType, // CRITICAL FIX: Include selling type in query
           })
           .from(orderItems)
           .leftJoin(products, eq(orderItems.productId, products.id))
@@ -1516,7 +1517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             productName: item.productName,
             quantity: item.quantity,
             unitPrice: item.unitPrice || "0",
-            total: item.total || "0"
+            total: item.total || "0",
+            sellingType: item.sellingType || "units" // CRITICAL FIX: Include selling type in response
           })),
           wholesaler: wholesalerDetails ? {
             id: order.wholesalerId,
@@ -4250,7 +4252,8 @@ The Quikpik Team
           productName: product?.name || `Product #${item.productId}`,
           quantity: item.quantity,
           unitPrice: item.unitPrice || '0.00',
-          total: item.total || (parseFloat(item.unitPrice || '0') * item.quantity).toFixed(2)
+          total: item.total || (parseFloat(item.unitPrice || '0') * item.quantity).toFixed(2),
+          sellingType: item.sellingType || 'units' // CRITICAL FIX: Include selling type
         };
       }));
 
