@@ -4333,7 +4333,10 @@ export default function CustomerPortal() {
                       className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-emerald-500 bg-emerald-50"
                       onClick={() => {
                         setSelectedModalType('units');
-                        setModalQuantity(selectedProductForModal.moq || 1);
+                        // Set quantity to available stock if it's less than MOQ, otherwise use MOQ
+                        const availableStock = selectedProductForModal.stock || 0;
+                        const minQuantity = selectedProductForModal.moq || 1;
+                        setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                         setModalStep('quantity');
                       }}
                     >
@@ -4363,7 +4366,10 @@ export default function CustomerPortal() {
                       className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors border-blue-500 bg-blue-50"
                       onClick={() => {
                         setSelectedModalType('pallets');
-                        setModalQuantity((selectedProductForModal as any).palletMoq || 1);
+                        // Set quantity to available stock if it's less than MOQ, otherwise use MOQ
+                        const availableStock = Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                        const minQuantity = (selectedProductForModal as any).palletMoq || 1;
+                        setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                         setModalStep('quantity');
                       }}
                     >
@@ -4423,7 +4429,10 @@ export default function CustomerPortal() {
                         onClick={() => {
                           setModalStep('type');
                           setSelectedModalType(null);
-                          setModalQuantity(selectedProductForModal.moq || 1);
+                          // Reset to initial appropriate quantity
+                          const availableStock = selectedProductForModal.stock || 0;
+                          const minQuantity = selectedProductForModal.moq || 1;
+                          setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                         }}
                         className="text-blue-600 hover:text-blue-800 font-medium underline"
                       >
@@ -4618,8 +4627,14 @@ export default function CustomerPortal() {
                       onClick={() => {
                         setModalStep('type');
                         setSelectedModalType(null);
-                        // Reset quantity to default MOQ when going back
-                        setModalQuantity(selectedProductForModal.moq || 1);
+                        // Reset quantity to available stock if less than MOQ, otherwise MOQ
+                        const availableStock = selectedModalType === 'units' 
+                          ? selectedProductForModal.stock 
+                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                        const minQuantity = selectedModalType === 'units' 
+                          ? (selectedProductForModal.moq || 1)
+                          : ((selectedProductForModal as any).palletMoq || 1);
+                        setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                       }}
                       className="flex-1"
                     >
