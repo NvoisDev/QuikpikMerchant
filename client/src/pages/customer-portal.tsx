@@ -203,6 +203,13 @@ interface Product {
   promoActive?: boolean;
   deliveryExcluded?: boolean; // New field for delivery exclusion
   
+  // Pallet support fields
+  palletPrice?: string;
+  palletMoq?: number;
+  palletStock?: number;
+  sellingFormat?: "units" | "pallets" | "both";
+  lowStockThreshold?: number;
+  
   // Flexible unit system
   packQuantity?: number;
   unitOfMeasure?: string;
@@ -247,6 +254,8 @@ interface CustomerData {
   country: string;
   notes: string;
   shippingOption: "pickup" | "delivery" | undefined;
+  selectedDeliveryAddress?: any;
+  selectedShippingService?: any;
 }
 
 // Stripe Checkout Form Component
@@ -1361,7 +1370,7 @@ export default function CustomerPortal() {
       
       console.log('🚚 PAYMENT REQUEST: Sending payment intent request with payload:', JSON.stringify(requestPayload, null, 2));
       
-      const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", requestPayload);
+      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
       
       if (response.ok) {
         const data = await response.json();
