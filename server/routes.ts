@@ -4007,7 +4007,7 @@ The Quikpik Team
             });
 
             // Create order items with orderId for storage
-            const orderItems = items.map((item: any) => ({
+            const orderItemsData = items.map((item: any) => ({
               orderId: 0, // Will be set after order creation
               productId: item.productId,
               quantity: item.quantity,
@@ -4017,7 +4017,7 @@ The Quikpik Team
             }));
 
             // Use transaction-aware storage method with integrity check
-            const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
+            const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
             
             // 🔒 DATA INTEGRITY: Verify all items were saved correctly
             const savedItems = await trx.select().from(orderItems).where(eq(orderItems.orderId, createdOrder.id));
