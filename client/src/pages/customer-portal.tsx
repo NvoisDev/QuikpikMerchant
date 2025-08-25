@@ -1282,9 +1282,14 @@ export default function CustomerPortal() {
       return;
     }
     
-    // Validate quantity meets MOQ requirements
+    // Validate quantity meets MOQ requirements (unless stock is less than MOQ)
     const minQuantity = sellingType === "pallets" ? ((product as any).palletMoq || 1) : (product.moq || 1);
-    if (quantity < minQuantity) {
+    const availableStock = sellingType === "pallets" 
+      ? Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))
+      : (product.stock || 0);
+    
+    // Allow purchasing remaining stock if it's less than MOQ
+    if (quantity < minQuantity && availableStock >= minQuantity) {
       toast({
         title: "Minimum Order Required",
         description: `Minimum order for ${product.name} is ${minQuantity} ${sellingType === "pallets" ? "pallets" : "units"}`,
@@ -2935,7 +2940,11 @@ export default function CustomerPortal() {
                                 {/* MOQ Helper Message */}
                                 {product.moq && product.moq > 1 && (
                                   <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
-                                    💡 Minimum order: {product.moq} units required to add to cart
+                                    {product.stock < product.moq ? (
+                                      <>💡 Last {product.stock} units available (normally {product.moq} min)</>
+                                    ) : (
+                                      <>💡 Minimum order: {product.moq} units required to add to cart</>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -4548,11 +4557,11 @@ export default function CustomerPortal() {
                               ? selectedProductForModal.stock 
                               : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
                             
-                            // Case 1: Stock is less than MOQ - show critical warning
+                            // Case 1: Stock is less than MOQ - allow purchasing remaining stock
                             if (availableStock < minQuantity) {
                               return (
-                                <p className="text-red-600 font-medium">
-                                  ⚠️ Insufficient stock! Only {availableStock} available but minimum order is {minQuantity}
+                                <p className="text-amber-600 font-medium">
+                                  ⭐ Last {availableStock} units available! (normally {minQuantity} minimum)
                                 </p>
                               );
                             }
@@ -4648,9 +4657,15 @@ export default function CustomerPortal() {
                         } else {
                           // Add new item to cart
                           if (availableStock < minQuantity) {
+                            // Stock is less than MOQ - allow purchasing all remaining stock
                             const finalQuantity = availableStock;
                             addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
+                            toast({
+                              title: "Last Units Added!",
+                              description: `Added all remaining ${finalQuantity} ${selectedModalType === 'pallets' ? 'pallets' : 'units'} of ${selectedProductForModal.name}`,
+                            });
                           } else {
+                            // Normal case - enforce MOQ
                             const requestedQuantity = Math.max(modalQuantity || minQuantity, minQuantity);
                             const finalQuantity = Math.min(requestedQuantity, availableStock);
                             addToCart(selectedProductForModal, finalQuantity, selectedModalType!);
