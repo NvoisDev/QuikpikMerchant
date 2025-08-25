@@ -36,6 +36,7 @@ interface Order {
     businessName: string;
     firstName: string;
     lastName: string;
+    businessAddress?: string;
   };
   fulfillmentType: string;
   deliveryCarrier: string;
@@ -270,14 +271,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 <div className="text-xs">
                   <div className="font-medium text-blue-900">Pickup from Wholesaler</div>
                   <div className="text-blue-700">
-                    {order.wholesalerBusinessName || 'Business Address Not Set'}
+                    {order.wholesaler.businessName || 'Business Address Not Set'}
                   </div>
-                  {order.wholesalerBusinessAddress && (
+                  {order.wholesaler.businessAddress && (
                     <div className="mt-1 text-blue-600">
-                      {order.wholesalerBusinessAddress}
+                      {order.wholesaler.businessAddress}
                     </div>
                   )}
-                  {!order.wholesalerBusinessAddress && (
+                  {!order.wholesaler.businessAddress && (
                     <div className="mt-1 text-amber-600 text-xs bg-amber-50 px-2 py-1 rounded border border-amber-200">
                       ⚠️ Wholesaler needs to set business address in Settings
                     </div>
