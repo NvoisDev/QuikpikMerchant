@@ -1044,10 +1044,28 @@ export class DatabaseStorage implements IStorage {
         console.log(`🔢 ATOMIC: Generated order number ${orderNumber} for ${wholesaler[0]?.businessName} (current max: ${businessPrefix}-${maxNumber.toString().padStart(3, '0')})`);
       }
       
-      const [newOrder] = await tx.insert(orders).values({
+      // CRITICAL DEBUG: Add detailed logging to identify SQL syntax error
+      console.log(`🔍 DEBUG: About to insert order with data:`, {
         ...order,
         orderNumber
-      }).returning();
+      });
+      
+      let newOrder;
+      try {
+        [newOrder] = await tx.insert(orders).values({
+          ...order,
+          orderNumber
+        }).returning();
+        
+        console.log(`✅ Order inserted successfully:`, newOrder);
+      } catch (error) {
+        console.error(`❌ CRITICAL: Order insertion failed:`, error);
+        console.error(`❌ Order data that failed:`, {
+          ...order,
+          orderNumber
+        });
+        throw error;
+      }
       
       // Insert order items and reduce stock within transaction
       for (const item of items) {
