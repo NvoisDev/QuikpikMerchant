@@ -1045,24 +1045,44 @@ export class DatabaseStorage implements IStorage {
       }
       
       // CRITICAL DEBUG: Add detailed logging to identify SQL syntax error
-      console.log(`🔍 DEBUG: About to insert order with data:`, {
+      const orderData = {
         ...order,
         orderNumber
-      });
+      };
+      
+      console.log(`🔍 DEBUG: About to insert order with data:`, orderData);
+      console.log(`🔍 DEBUG: Order data keys:`, Object.keys(orderData));
+      console.log(`🔍 DEBUG: Order data values:`, Object.values(orderData));
+      
+      // Try to insert each field explicitly to isolate the problem
+      const cleanOrderData = {
+        orderNumber: orderData.orderNumber,
+        wholesalerId: orderData.wholesalerId,
+        retailerId: orderData.retailerId,
+        subtotal: orderData.subtotal,
+        platformFee: orderData.platformFee,
+        total: orderData.total,
+        deliveryAddress: orderData.deliveryAddress,
+        notes: orderData.notes,
+        status: orderData.status || 'confirmed'
+      };
+      
+      console.log(`🔍 DEBUG: Clean order data:`, cleanOrderData);
       
       let newOrder;
       try {
-        [newOrder] = await tx.insert(orders).values({
-          ...order,
-          orderNumber
-        }).returning();
+        [newOrder] = await tx.insert(orders).values(cleanOrderData).returning();
         
         console.log(`✅ Order inserted successfully:`, newOrder);
       } catch (error) {
         console.error(`❌ CRITICAL: Order insertion failed:`, error);
-        console.error(`❌ Order data that failed:`, {
-          ...order,
-          orderNumber
+        console.error(`❌ Clean order data that failed:`, cleanOrderData);
+        console.error(`❌ Full error details:`, {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          position: error.position,
+          code: error.code
         });
         throw error;
       }
