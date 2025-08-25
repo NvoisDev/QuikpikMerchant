@@ -3279,12 +3279,18 @@ The Quikpik Team
           });
         }
 
-        // Use promotional price if active, otherwise regular price
-        const effectivePrice = product.promoActive && product.promoPrice 
-          ? parseFloat(product.promoPrice) 
-          : parseFloat(product.price);
+        // CRITICAL FIX: Use promotional pricing calculator to match payment processing
+        const basePrice = parseFloat(product.price);
+        const promotionalPricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          basePrice,
+          item.quantity,
+          product.promotionalOffers || [],
+          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+          product.promoActive
+        );
         
-        const itemTotal = effectivePrice * item.quantity;
+        const effectivePrice = promotionalPricing.effectivePrice;
+        const itemTotal = promotionalPricing.totalCost;
         subtotal += itemTotal;
 
         orderItems.push({
