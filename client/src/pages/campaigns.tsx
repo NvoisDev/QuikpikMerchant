@@ -1524,7 +1524,7 @@ export default function Campaigns() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
+        <DialogContent className="max-w-[90vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               WhatsApp Message Preview
@@ -1544,24 +1544,24 @@ export default function Campaigns() {
             </DialogTitle>
           </DialogHeader>
           {selectedCampaign && (
-            <div className="space-y-4">
-              <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="space-y-4 max-w-full">
+              <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200 max-w-full overflow-hidden">
                 <div className="flex items-center mb-2">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
                     <MessageSquare className="h-4 w-4 text-white" />
                   </div>
                   <span className="font-medium">WhatsApp Message</span>
                 </div>
-                <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="bg-white p-3 rounded-lg shadow-sm max-w-full">
                   {isEditingMessage ? (
                     <Textarea
                       value={editableMessage}
                       onChange={(e) => setEditableMessage(e.target.value)}
                       placeholder="Edit your WhatsApp message..."
-                      className="min-h-[200px] font-mono text-xs sm:text-sm resize-none w-full"
+                      className="min-h-[200px] font-mono text-xs sm:text-sm resize-none w-full max-w-full"
                     />
                   ) : (
-                    <pre className="whitespace-pre-wrap text-xs sm:text-sm break-words overflow-wrap-anywhere">{generatePreviewMessage(selectedCampaign)}</pre>
+                    <pre className="whitespace-pre-wrap text-xs sm:text-sm break-words overflow-wrap-anywhere leading-relaxed max-w-full overflow-hidden">{generatePreviewMessage(selectedCampaign)}</pre>
                   )}
                 </div>
               </div>
@@ -1575,11 +1575,11 @@ export default function Campaigns() {
                 </div>
               )}
               
-              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
-                <div className="text-xs sm:text-sm text-gray-500">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 max-w-full">
+                <div className="text-xs sm:text-sm text-gray-500 truncate">
                   Character count: {(isEditingMessage ? editableMessage : generatePreviewMessage(selectedCampaign)).length}
                 </div>
-                <div className="flex space-x-2 w-full sm:w-auto">
+                <div className="flex space-x-2 w-full sm:w-auto flex-shrink-0">
                   {isEditingMessage && (
                     <Button 
                       variant="outline" 
