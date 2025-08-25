@@ -4190,6 +4190,15 @@ export default function CustomerPortal() {
                       // Clear the cart after successful payment
                       setCart([]);
                       
+                      // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
+                      console.log('🔄 Refreshing product data to show updated stock levels...');
+                      refetchProducts();
+                      
+                      // Also refresh featured product if it exists
+                      if (featuredProductId) {
+                        refetchFeaturedProduct();
+                      }
+                      
                       // Close checkout modal and show thank you page
                       setShowCheckout(false);
                       setShowThankYou(true);
