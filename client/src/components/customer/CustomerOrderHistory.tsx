@@ -260,6 +260,34 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         )}
 
+        {/* Collection/Pickup Address - Show wholesaler address for pickup orders */}
+        {order.fulfillmentType === 'pickup' || order.fulfillmentType === 'collection' ? (
+          <div>
+            <h3 className="font-medium mb-1 text-sm sm:text-base">Collection Address</h3>
+            <div className="bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-blue-600" />
+                <div className="text-xs">
+                  <div className="font-medium text-blue-900">Pickup from Wholesaler</div>
+                  <div className="text-blue-700">
+                    {order.wholesalerBusinessName || 'Business Address Not Set'}
+                  </div>
+                  {order.wholesalerBusinessAddress && (
+                    <div className="mt-1 text-blue-600">
+                      {order.wholesalerBusinessAddress}
+                    </div>
+                  )}
+                  {!order.wholesalerBusinessAddress && (
+                    <div className="mt-1 text-amber-600 text-xs bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                      ⚠️ Wholesaler needs to set business address in Settings
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Order Items */}
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Items ({order.items.length})</h3>
