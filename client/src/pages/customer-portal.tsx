@@ -51,7 +51,7 @@ import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
 import { StockIndicator } from "@/components/ui/stock-indicator";
-import { Package2 } from "lucide-react";
+import { Package2, Hash } from "lucide-react";
 
 // Extended Product type that includes all schema fields for customer portal
 type ExtendedProduct = ProductType;
@@ -2394,12 +2394,11 @@ export default function CustomerPortal() {
                               {/* Stock Availability */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <StockIndicator 
-                                    stock={product.stock} 
-                                    lowStockThreshold={product.lowStockThreshold || 50}
-                                    size="sm"
-                                    variant="badge"
-                                  />
+                                  {/* Units Stock Indicator */}
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-green-50 border-green-200 text-green-700">
+                                    <Hash className="w-3 h-3" />
+                                    {product.stock || 0} units
+                                  </span>
                                   {/* Pallet Count Indicator */}
                                   {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
@@ -2939,12 +2938,14 @@ export default function CustomerPortal() {
                                 </div>
                                 {/* Stock Availability Indicator */}
                                 <div className="mb-2 flex items-center gap-3">
-                                  <StockIndicator 
-                                    stock={product.stock} 
-                                    lowStockThreshold={product.lowStockThreshold || 50}
-                                    size="sm"
-                                    variant="inline"
-                                  />
+                                  {/* Units Stock Indicator */}
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                                    <span className="font-medium text-green-700 text-xs">
+                                      <Hash className="w-3 h-3 inline mr-1" />
+                                      {product.stock || 0} units
+                                    </span>
+                                  </div>
                                   {/* Pallet Count Indicator */}
                                   {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
                                     <div className="flex items-center gap-1.5">
