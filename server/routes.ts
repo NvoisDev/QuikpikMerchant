@@ -1523,7 +1523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
             email: wholesalerDetails.wholesalerEmail || '',
             phone: wholesalerDetails.wholesalerPhone || '',
-            businessAddress: wholesalerUser.businessAddress || null,
+            businessAddress: wholesalerUser?.businessAddress || null,
           } : null
         };
       }));
