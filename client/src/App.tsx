@@ -177,6 +177,11 @@ function Router() {
     location.startsWith('/customer/') || 
     location.startsWith('/store/') || // Add /store/ routes as public
     publicRoutes.includes(location);
+
+  // Force landing page to always show LandingPage regardless of auth status
+  if (location === '/landing') {
+    return <PublicRoutes />;
+  }
   
   // Show loading while checking authentication
   if (isLoading) {
