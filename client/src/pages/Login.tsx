@@ -8,6 +8,7 @@ import { LogIn, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +18,12 @@ export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { backToHome } = useAuth();
+
+  const handleBackToHome = () => {
+    // Clear any existing session and go to landing page
+    backToHome();
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -148,9 +155,12 @@ export default function Login() {
             Your B2B wholesale marketplace platform
           </p>
           <p className="mt-1 text-sm text-gray-500">
-            <Link href="/" className="text-primary hover:underline">
+            <button 
+              onClick={handleBackToHome}
+              className="text-primary hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit"
+            >
               ← Back to Home
-            </Link>
+            </button>
           </p>
         </div>
 
