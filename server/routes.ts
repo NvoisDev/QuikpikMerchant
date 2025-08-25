@@ -9354,6 +9354,35 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
       
+      // Enhanced validation and logging for Stripe amounts
+      console.log('💰 PAYMENT DEBUG - Amount calculations:', {
+        validatedTotalAmount,
+        shippingCost,
+        customerTransactionFee,
+        totalAmountWithFee,
+        platformFee,
+        stripeAmount: Math.round(totalAmountWithFee * 100),
+        stripeAmountIsValid: !isNaN(Math.round(totalAmountWithFee * 100)),
+        stripeAmountIsInteger: Number.isInteger(Math.round(totalAmountWithFee * 100))
+      });
+      
+      // Validate Stripe amounts before payment intent creation
+      const stripeAmount = Math.round(totalAmountWithFee * 100);
+      const stripePlatformFee = Math.round(platformFee * 100);
+      
+      if (isNaN(stripeAmount) || !Number.isInteger(stripeAmount) || stripeAmount <= 0) {
+        console.error('❌ Invalid Stripe amount calculation:', {
+          totalAmountWithFee,
+          stripeAmount,
+          isNaN: isNaN(stripeAmount),
+          isInteger: Number.isInteger(stripeAmount)
+        });
+        return res.status(400).json({ 
+          message: 'Invalid payment amount. Please refresh and try again.',
+          error: 'amount_calculation_error'
+        });
+      }
+      
       // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
       // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
       const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
@@ -9373,9 +9402,9 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         try {
           // Create payment intent with Stripe Connect and 3.3% platform fee
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + transaction fee
+            amount: stripeAmount, // Customer pays product total + transaction fee (validated)
             currency: 'gbp', // Always use GBP for platform
-            application_fee_amount: Math.round(platformFee * 100), // 3.3% platform fee in cents
+            application_fee_amount: stripePlatformFee, // 3.3% platform fee in cents (validated)
             transfer_data: {
               destination: wholesaler.stripeAccountId, // Wholesaler receives 96.7%
             },
@@ -9425,7 +9454,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           
           // Fallback to regular payment intent for demo/test purposes
           paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+            amount: stripeAmount, // Customer pays product total + transaction fee (validated)
             currency: 'gbp', // Always use GBP for platform
             receipt_email: customerData.email, // ✅ Automatically send Stripe receipt to customer
             metadata: {
@@ -9471,7 +9500,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       } else {
         // Create regular payment intent when no Connect account
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(totalAmountWithFee * 100), // Customer pays product total + £6 platform fee
+          amount: stripeAmount, // Customer pays product total + transaction fee (validated)
           currency: 'gbp', // Always use GBP for platform
           metadata: {
             orderType: 'customer_portal',
