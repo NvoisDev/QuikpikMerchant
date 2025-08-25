@@ -1460,7 +1460,7 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsPreviewOpen(true);
                     }}
-                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
+                    className="flex-1 min-w-[60px] px-2 text-xs"
                     title={generatePreviewMessage(campaign)}
                   >
                     <span className="truncate">Preview</span>
@@ -1469,7 +1469,7 @@ export default function Campaigns() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleEditCampaign(campaign)}
-                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
+                    className="flex-1 min-w-[60px] px-2 text-xs"
                   >
                     <Edit3 className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Edit</span>
@@ -1480,7 +1480,7 @@ export default function Campaigns() {
                       setSelectedCampaign(campaign);
                       setIsSendOpen(true);
                     }}
-                    className="flex-1 min-w-[60px] px-2 text-xs sm:text-sm"
+                    className="flex-1 min-w-[60px] px-2 text-xs"
                   >
                     <Send className="h-3 w-3 mr-1 hidden xs:inline" />
                     <span className="truncate">Send</span>
