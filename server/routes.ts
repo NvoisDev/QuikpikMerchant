@@ -3913,14 +3913,17 @@ The Quikpik Team
         
         console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
-        // SIMPLIFIED: Get customer's saved shipping choice
-        const customerShippingChoice = await storage.getCustomerShippingChoice(customer.id);
-        const fulfillmentType = customerShippingChoice || 'pickup';
+        // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
+        const shippingInfoJson = paymentIntent.metadata.shippingInfo;
+        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
-        console.log('🚚 MARKETPLACE ROUTE: Retrieved customer shipping choice:', {
+        // Use actual order shipping choice, not saved customer preference
+        const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
+        
+        console.log('🚚 MARKETPLACE ROUTE: Using actual order shipping choice:', {
           customerId: customer.id,
           customerName: `${customer.firstName} ${customer.lastName}`,
-          savedShippingChoice: customerShippingChoice,
+          orderShippingOption: shippingInfo.option,
           finalFulfillmentType: fulfillmentType,
           willCreateDeliveryOrder: fulfillmentType === 'delivery'
         });
@@ -3933,10 +3936,6 @@ The Quikpik Team
 
         // Use the correct total from metadata instead of recalculating
         const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0')).toFixed(2);
-
-        // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
-        const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
         console.log('🚚 COMPETING SYSTEM DEBUG: Processing shipping metadata:', {
           hasShippingInfo: !!shippingInfoJson,
@@ -4132,7 +4131,7 @@ The Quikpik Team
               customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
               wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
               shippingTotal: '0.00',
-              fulfillmentType: 'pickup',
+              fulfillmentType: shippingInfo && shippingInfo.option === 'delivery' ? 'delivery' : 'pickup',
               items: enrichedItemsForEmail,
               wholesaler: {
                 businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
