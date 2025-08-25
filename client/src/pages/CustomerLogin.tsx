@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Store, Search, Check, ShoppingBag, Package, TrendingUp, Clock, Star, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty, CommandGroup } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,12 @@ export default function CustomerLogin() {
   const [isLoadingWholesalers, setIsLoadingWholesalers] = useState(false);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { backToHome } = useAuth();
+
+  const handleBackToHome = () => {
+    // Clear any existing session and go to landing page
+    backToHome();
+  };
   
   // Extract wholesaler ID from URL if accessing directly via /customer/:id
   const wholesalerIdFromUrl = location.includes('/customer/') ? location.split('/customer/')[1]?.split('?')[0] : null;
@@ -180,10 +187,13 @@ export default function CustomerLogin() {
         <div className="w-full max-w-md mx-auto">
           {/* Back to Home Link */}
           <div className="mb-8">
-            <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors group">
+            <button 
+              onClick={handleBackToHome}
+              className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors group bg-transparent border-none p-0 font-inherit cursor-pointer"
+            >
               <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
               Back to Home
-            </Link>
+            </button>
           </div>
 
           {/* Logo and welcome */}
