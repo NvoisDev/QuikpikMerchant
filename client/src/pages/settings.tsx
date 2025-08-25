@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, Loader2 } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
@@ -14,10 +15,25 @@ import { WhatsAppSetupModal } from "@/components/WhatsAppSetupModal";
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("account");
+  const [location] = useLocation();
+  
+  // Get tab from URL parameter or default to "account"
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const tabFromUrl = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "account");
+  
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const tabFromUrl = urlParams.get('tab');
+    if (tabFromUrl && ['account', 'notifications', 'integrations'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [location]);
 
   // Get Stripe Connect status
   const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
