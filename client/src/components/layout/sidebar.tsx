@@ -28,8 +28,7 @@ import {
   Truck,
   Book,
   Contact,
-  Megaphone,
-  Home
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -51,7 +50,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const { user, logout, backToHome } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { currentTier } = useSubscription();
@@ -59,10 +58,6 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     logout();
-  };
-
-  const handleBackToHome = () => {
-    backToHome();
   };
 
   return (
@@ -186,15 +181,6 @@ export default function Sidebar() {
                 Settings
               </Button>
             </Link>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              onClick={handleBackToHome}
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Back to Home
-            </Button>
             <Button 
               variant="ghost" 
               size="sm" 
