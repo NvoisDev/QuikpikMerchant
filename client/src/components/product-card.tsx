@@ -11,6 +11,7 @@ const formatNumber = (num: number | string): string => {
   return number.toLocaleString();
 };
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   MoreHorizontal, 
   Edit, 
@@ -84,17 +85,8 @@ export default function ProductCard({
   const [showStockTracker, setShowStockTracker] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
 
-  // Fetch subscription status
-  const { data: subscription } = useQuery({
-    queryKey: ["/api/subscription/status"],
-    queryFn: async () => {
-      const response = await fetch("/api/subscription/status", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch subscription");
-      return response.json();
-    },
-  });
+  // Get subscription data from authenticated user (no separate API call needed)
+  const { user } = useAuth();
 
   // Note: formatCurrency is imported from @/lib/currencies
 
@@ -145,7 +137,7 @@ export default function ProductCard({
 
   // Get edit limit information based on subscription tier
   const getEditLimitInfo = () => {
-    const tier = subscription?.subscriptionTier || "free";
+    const tier = user?.subscriptionTier || "free";
     const currentEdits = product.editCount || 0;
 
     switch (tier) {
