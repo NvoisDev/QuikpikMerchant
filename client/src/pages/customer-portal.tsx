@@ -2392,12 +2392,20 @@ export default function CustomerPortal() {
 
                               {/* Stock Availability */}
                               <div className="flex items-center justify-between">
-                                <StockIndicator 
-                                  stock={product.stock} 
-                                  lowStockThreshold={product.lowStockThreshold || 50}
-                                  size="sm"
-                                  variant="badge"
-                                />
+                                <div className="flex items-center gap-2">
+                                  <StockIndicator 
+                                    stock={product.stock} 
+                                    lowStockThreshold={product.lowStockThreshold || 50}
+                                    size="sm"
+                                    variant="badge"
+                                  />
+                                  {/* Pallet Count Indicator */}
+                                  {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
+                                      📦 {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Quick Order Controls */}
@@ -2928,13 +2936,22 @@ export default function CustomerPortal() {
                                   )}
                                 </div>
                                 {/* Stock Availability Indicator */}
-                                <div className="mb-2">
+                                <div className="mb-2 flex items-center gap-3">
                                   <StockIndicator 
                                     stock={product.stock} 
                                     lowStockThreshold={product.lowStockThreshold || 50}
                                     size="sm"
                                     variant="inline"
                                   />
+                                  {/* Pallet Count Indicator */}
+                                  {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                      <span className="font-medium text-blue-700 text-sm">
+                                        📦 {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets available
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 {/* MOQ Helper Message */}
