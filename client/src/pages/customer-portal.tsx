@@ -4187,73 +4187,194 @@ export default function CustomerPortal() {
                   />
                 </div>
 
-                {/* Payment Form */}
+                {/* Conditional Checkout Form */}
                 <div className="border-t pt-6">
                   {/* Debug current shipping option when checkout modal opens */}
                   {console.log('🚚 CHECKOUT MODAL: Opening with shipping option:', customerData.shippingOption)}
                   {console.log('🚚 CHECKOUT MODAL: Client secret exists:', !!clientSecret)}
                   
-                  <StripeCheckoutForm
-                    cart={cart}
-                    customerData={customerData}
-                    wholesaler={wholesaler}
-                    clientSecret={clientSecret}
-                    totalAmount={(() => {
-                      const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
-                      const shipping = 0; // Delivery arranged directly by supplier
-                      const beforeFees = subtotal + shipping;
-                      const transactionFee = (beforeFees * 0.055) + 0.50;
-                      return beforeFees + transactionFee;
-                    })()}
-                    onSuccess={(orderData) => {
-                      console.log('🛒 Payment successful, received order data:', orderData);
+                  {customerData.shippingOption === 'delivery' ? (
+                    // DELIVERY ORDER: Show payment form
+                    <StripeCheckoutForm
+                      cart={cart}
+                      customerData={customerData}
+                      wholesaler={wholesaler}
+                      clientSecret={clientSecret}
+                      totalAmount={(() => {
+                        const subtotal = cartStats.subtotal; // Use pure product subtotal (no shipping)
+                        const shipping = 0; // Delivery arranged directly by supplier
+                        const beforeFees = subtotal + shipping;
+                        const transactionFee = (beforeFees * 0.055) + 0.50;
+                        return beforeFees + transactionFee;
+                      })()}
+                      onSuccess={(orderData) => {
+                        console.log('🛒 Payment successful, received order data:', orderData);
+                        
+                        // Set completed order data for thank you page with current cart state
+                        const subtotal = cartStats.subtotal;
+                        const shipping = 0; // Delivery arranged directly by supplier
+                        const beforeFees = subtotal + shipping;
+                        const transactionFee = (beforeFees * 0.055) + 0.50;
+                        const totalAmount = beforeFees + transactionFee;
+                        
+                        const orderDataWithCart = {
+                          ...orderData,
+                          cart: cart,
+                          customerData: customerData,
+                          wholesaler: wholesaler,
+                          // Financial breakdown for ThankYouPage
+                          subtotal: subtotal,
+                          transactionFee: transactionFee,
+                          shippingCost: shipping,
+                          totalAmount: totalAmount
+                        };
+                        setCompletedOrder(orderDataWithCart);
+                        
+                        // Clear the cart after successful payment
+                        setCart([]);
+                        
+                        // 🔄 RESET SHIPPING OPTION: Always reset to pickup for next order to prevent errors
+                        console.log('🚚 Resetting shipping option to pickup for next order...');
+                        setCustomerData(prev => ({
+                          ...prev,
+                          shippingOption: 'pickup',
+                          selectedDeliveryAddress: undefined,
+                          selectedShippingService: undefined
+                        }));
+                        
+                        // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
+                        console.log('🔄 Refreshing product data to show updated stock levels...');
+                        refetchProducts();
+                        
+                        // Also refresh featured product if it exists
+                        if (featuredProductId) {
+                          refetchFeaturedProduct();
+                        }
+                        
+                        // Close checkout modal and show thank you page
+                        setShowCheckout(false);
+                        setShowThankYou(true);
+                      }}
+                    />
+                  ) : (
+                    // PICKUP ORDER: Show confirmation form (no payment)
+                    <div className="space-y-6">
+                      {/* Order Summary */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-green-800 mb-2">Collection Order</h4>
+                        <p className="text-sm text-green-700">
+                          Your order will be prepared for collection. No payment required now - you can pay when you collect.
+                        </p>
+                      </div>
                       
-                      // Set completed order data for thank you page with current cart state
-                      const subtotal = cartStats.subtotal;
-                      const shipping = 0; // Delivery arranged directly by supplier
-                      const beforeFees = subtotal + shipping;
-                      const transactionFee = (beforeFees * 0.055) + 0.50;
-                      const totalAmount = beforeFees + transactionFee;
-                      
-                      const orderDataWithCart = {
-                        ...orderData,
-                        cart: cart,
-                        customerData: customerData,
-                        wholesaler: wholesaler,
-                        // Financial breakdown for ThankYouPage
-                        subtotal: subtotal,
-                        transactionFee: transactionFee,
-                        shippingCost: shipping,
-                        totalAmount: totalAmount
-                      };
-                      setCompletedOrder(orderDataWithCart);
-                      
-                      // Clear the cart after successful payment
-                      setCart([]);
-                      
-                      // 🔄 RESET SHIPPING OPTION: Always reset to pickup for next order to prevent errors
-                      console.log('🚚 Resetting shipping option to pickup for next order...');
-                      setCustomerData(prev => ({
-                        ...prev,
-                        shippingOption: 'pickup',
-                        selectedDeliveryAddress: undefined,
-                        selectedShippingService: undefined
-                      }));
-                      
-                      // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
-                      console.log('🔄 Refreshing product data to show updated stock levels...');
-                      refetchProducts();
-                      
-                      // Also refresh featured product if it exists
-                      if (featuredProductId) {
-                        refetchFeaturedProduct();
-                      }
-                      
-                      // Close checkout modal and show thank you page
-                      setShowCheckout(false);
-                      setShowThankYou(true);
-                    }}
-                  />
+                      {/* Confirm Order Button */}
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <div className="text-lg font-semibold mb-2">Order Total: £{cartStats.subtotal.toFixed(2)}</div>
+                          <div className="text-sm text-gray-600 mb-4">Pay when you collect</div>
+                        </div>
+                        
+                        <Button
+                          onClick={async () => {
+                            console.log('🛒 Confirming pickup order directly...');
+                            
+                            try {
+                              // Create order directly (no payment processing)
+                              const orderPayload = {
+                                wholesalerId: wholesaler.id,
+                                items: cart.map(item => ({
+                                  productId: item.product.id,
+                                  quantity: item.quantity,
+                                  price: parseFloat(
+                                    item.sellingType === 'units' 
+                                      ? item.product.price 
+                                      : (item.product as any).palletPrice?.toString() || '0'
+                                  ),
+                                  sellingType: item.sellingType
+                                })),
+                                customerInfo: {
+                                  firstName: customerData.firstName,
+                                  lastName: customerData.lastName,
+                                  email: customerData.email,
+                                  phone: customerData.phone,
+                                  address: customerData.address,
+                                  city: customerData.city,
+                                  postalCode: customerData.postalCode,
+                                  notes: customerData.notes || ''
+                                },
+                                shippingInfo: {
+                                  option: 'pickup',
+                                  address: null
+                                }
+                              };
+                              
+                              const response = await apiRequest('POST', '/api/marketplace/create-order', orderPayload);
+                              const result = await response.json();
+                              
+                              if (!response.ok || !result.success) {
+                                throw new Error(result.message || 'Failed to create order');
+                              }
+                              
+                              console.log('✅ Pickup order created successfully:', result);
+                              
+                              // Set completed order data for thank you page
+                              const orderDataWithCart = {
+                                orderNumber: result.orderNumber,
+                                cart: cart,
+                                customerData: customerData,
+                                wholesaler: wholesaler,
+                                // Financial breakdown for ThankYouPage (no fees for pickup)
+                                subtotal: cartStats.subtotal,
+                                transactionFee: 0,
+                                shippingCost: 0,
+                                totalAmount: cartStats.subtotal
+                              };
+                              setCompletedOrder(orderDataWithCart);
+                              
+                              // Clear the cart after successful order creation
+                              setCart([]);
+                              
+                              // 🔄 RESET SHIPPING OPTION: Always reset to pickup for next order
+                              setCustomerData(prev => ({
+                                ...prev,
+                                shippingOption: 'pickup',
+                                selectedDeliveryAddress: undefined,
+                                selectedShippingService: undefined
+                              }));
+                              
+                              // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
+                              refetchProducts();
+                              
+                              // Also refresh featured product if it exists
+                              if (featuredProductId) {
+                                refetchFeaturedProduct();
+                              }
+                              
+                              // Close checkout modal and show thank you page
+                              setShowCheckout(false);
+                              setShowThankYou(true);
+                              
+                              toast({
+                                title: "Order Confirmed!",
+                                description: `Your collection order ${result.orderNumber} has been confirmed.`,
+                              });
+                              
+                            } catch (error) {
+                              console.error('❌ Failed to create pickup order:', error);
+                              toast({
+                                title: "Order Failed",
+                                description: error instanceof Error ? error.message : 'Failed to create order. Please try again.',
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          className="w-full h-12 text-lg font-semibold bg-green-600 hover:bg-green-700"
+                        >
+                          Confirm Collection Order
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
