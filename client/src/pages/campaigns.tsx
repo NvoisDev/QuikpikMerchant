@@ -52,7 +52,7 @@ import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { WhatsAppSetupAlert, WhatsAppStatusIndicator } from "@/components/WhatsAppSetupAlert";
 import { useSubscription } from "@/hooks/useSubscription";
-import { PromotionalOffersManager } from "@/components/PromotionalOffersManager";
+// Removed PromotionalOffersManager - promotions managed at product level
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { getCampaignOfferIndicators, formatPromotionalOffersWithEmojis } from "@shared/promotional-offer-utils";
 import type { Product, CustomerGroup, PromotionalOffer, PromotionalOfferType } from "@shared/schema";
@@ -164,30 +164,16 @@ interface Campaign {
   }>;
 }
 
-// Helper functions for promotional offers
+// Helper functions for promotional offers (now uses product-level offers only)
 const hasPromotionalOffers = (campaign: Campaign) => {
   if (campaign.campaignType === 'single') {
-    // Check if single product has promotional offers
-    return campaign.promotionalOffers && campaign.promotionalOffers.length > 0;
+    // Check if product has promotional offers
+    return campaign.product && campaign.product.promotionalOffers && campaign.product.promotionalOffers.length > 0;
   } else {
-    // Check if any products in multi-product campaign have promotional offers
+    // Check if any products have promotional offers
     return campaign.products?.some((productItem: any) => 
-      productItem.promotionalOffers && productItem.promotionalOffers.length > 0
+      productItem.product && productItem.product.promotionalOffers && productItem.product.promotionalOffers.length > 0
     ) || false;
-  }
-};
-
-const getAllPromotionalOffers = (campaign: Campaign): any[] => {
-  if (campaign.campaignType === 'single') {
-    return campaign.promotionalOffers || [];
-  } else {
-    const allOffers: any[] = [];
-    campaign.products?.forEach((productItem: any) => {
-      if (productItem.promotionalOffers) {
-        allOffers.push(...productItem.promotionalOffers);
-      }
-    });
-    return allOffers;
   }
 };
 
@@ -200,7 +186,7 @@ export default function Campaigns() {
       quantity,
       product.promotionalOffers || [],
       product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-      product.promoActive
+      product.promoActive || false
     );
   };
 
@@ -235,10 +221,10 @@ export default function Campaigns() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [campaignType, setCampaignType] = useState<'single' | 'multi'>('single');
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string; promotionalOffers?: PromotionalOffer[]}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number; quantity: number; specialPrice?: string}>>([]);
   const [editableMessage, setEditableMessage] = useState<string>("");
   const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
-  const [singleProductOffers, setSingleProductOffers] = useState<PromotionalOffer[]>([]);
+  // Removed campaign-level promotional offers - now managed at product level only
   const [activeTab, setActiveTab] = useState<'campaigns'>('campaigns');
 
   // Fetch campaigns (unified broadcasts and templates)
@@ -445,7 +431,7 @@ export default function Campaigns() {
         ...updated[index], 
         [field]: value,
         quantity: selectedProduct?.stock || 1,
-        promotionalOffers: existingOffers.offers || []
+        // promotionalOffers removed - managed at product level
       };
     } else {
       updated[index] = { ...updated[index], [field]: value };
@@ -544,14 +530,14 @@ export default function Campaigns() {
       const basePrice = campaign.specialPrice ? parseFloat(campaign.specialPrice) : parseFloat(campaign.product.price) || 0;
       const promoPrice = campaign.product.promoPrice ? parseFloat(campaign.product.promoPrice) : undefined;
       
-      // Calculate promotional pricing using the same logic as backend
-      const promotionalOffers = (campaign as any).promotionalOffers || [];
+      // Use product's own promotional offers (not campaign-level offers)
+      const promotionalOffers = campaign.product.promotionalOffers || [];
       const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
         basePrice,
         1,
         promotionalOffers,
         promoPrice,
-        campaign.product.promoActive
+        campaign.product.promoActive || false
       );
       
       // Format price display with promotional pricing
@@ -586,14 +572,14 @@ export default function Campaigns() {
         const basePrice = item.specialPrice ? parseFloat(item.specialPrice) : parseFloat(item.product.price) || 0;
         const promoPrice = item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined;
         
-        // Calculate promotional pricing for this product
-        const promotionalOffers = item.promotionalOffers || [];
+        // Use product's own promotional offers (not campaign-level offers)
+        const promotionalOffers = item.product.promotionalOffers || [];
         const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
           basePrice,
           1,
           promotionalOffers,
           promoPrice,
-          item.product.promoActive
+          item.product.promoActive || false
         );
         
         // Format price display with promotional pricing
@@ -646,7 +632,7 @@ export default function Campaigns() {
     const payload = {
       ...data,
       campaignType,
-      promotionalOffers: campaignType === 'single' ? singleProductOffers : undefined,
+      // Remove campaign-level promotional offers - now managed at product level
       products: campaignType === 'multi' ? selectedProducts.filter(p => p.productId > 0) : undefined
     };
 
@@ -674,16 +660,11 @@ export default function Campaigns() {
       includePurchaseLink: campaign.includePurchaseLink,
       campaignType: campaign.campaignType,
       productId: campaign.campaignType === 'single' ? campaign.product?.id : undefined,
-      quantity: campaign.quantity || 1,
+      quantity: 1, // Default quantity for campaigns
       specialPrice: campaign.specialPrice || "",
     });
 
-    // Set up promotional offers for single product campaigns
-    if (campaign.campaignType === 'single' && (campaign as any).promotionalOffers) {
-      setSingleProductOffers((campaign as any).promotionalOffers || []);
-    } else {
-      setSingleProductOffers([]);
-    }
+    // Promotional offers are now managed at the product level only
 
     // Set up products for multi-product campaigns
     if (campaign.campaignType === 'multi' && campaign.products) {
@@ -958,7 +939,7 @@ export default function Campaigns() {
                               
                               // Populate existing promotional offers when product is selected
                               const existingOffers = getProductExistingOffers(productId);
-                              setSingleProductOffers(existingOffers.offers || []);
+                              // No longer managing campaign-level promotional offers
                             }}>
                               <FormControl>
                                 <SelectTrigger>
@@ -1066,17 +1047,15 @@ export default function Campaigns() {
                         )}
                       />
                       
-                      {/* Promotional Offers Manager for Single Product */}
+                      {/* Note: Promotional offers are now managed at the product level only */}
                       {form.watch('productId') && (
-                        <PromotionalOffersManager
-                          offers={singleProductOffers}
-                          onOffersChange={setSingleProductOffers}
-                          productPrice={parseFloat(
-                            (products as Product[]).find(p => p.id === form.watch('productId'))?.price || '0'
-                          )}
-                          currency={user?.defaultCurrency || 'GBP'}
-                          className="mt-6"
-                        />
+                        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <h4 className="font-medium text-green-800 mb-2">Promotional Offers</h4>
+                          <p className="text-sm text-green-700">
+                            This product's promotional offers are managed in the Product Management section. 
+                            Any active promotions will automatically be included in this campaign.
+                          </p>
+                        </div>
                       )}
                     </TabsContent>
 
@@ -1183,15 +1162,14 @@ export default function Campaigns() {
                               return null;
                             })()}
                             
-                            {/* Promotional Offers for Multi-Product Campaign */}
+                            {/* Note: Promotional offers are managed at product level */}
                             {selectedProduct && (
-                              <PromotionalOffersManager
-                                offers={item.promotionalOffers || []}
-                                onOffersChange={(offers) => updateProduct(index, 'promotionalOffers', offers)}
-                                productPrice={parseFloat(selectedProduct.price)}
-                                currency={user?.defaultCurrency || 'GBP'}
-                                className="mt-4"
-                              />
+                              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-xs text-green-700">
+                                  Promotional offers for this product are managed in Product Management. 
+                                  Any active promotions will be included automatically.
+                                </p>
+                              </div>
                             )}
                           </div>
                         );
