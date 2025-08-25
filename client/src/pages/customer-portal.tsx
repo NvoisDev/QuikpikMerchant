@@ -1340,10 +1340,23 @@ export default function CustomerPortal() {
       return;
     }
 
+    // For pickup orders, skip payment processing and show confirmation
+    if (shippingOption === 'pickup') {
+      console.log('🚚 PICKUP ORDER: Skipping payment processing, proceeding to confirmation');
+      setIsCreatingIntent(false);
+      setShowPaymentModal(true); // Show confirmation modal instead
+      toast({
+        title: "Ready for Collection",
+        description: "Review your order and confirm for pickup",
+        variant: "default",
+      });
+      return;
+    }
+
     setIsCreatingIntent(true);
     
     try {
-      // Calculate total amount for cart
+      // Calculate total amount for cart (delivery orders only)
       const totalAmount = cart.reduce((total, item) => {
         const unitPrice = (() => {
           if (item.sellingType === 'pallets') {
