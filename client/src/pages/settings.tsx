@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, Loader2 } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
@@ -281,13 +282,44 @@ export default function Settings() {
     staleTime: 30 * 1000, // 30 seconds
   });
 
-  const handleWhatsAppConfig = () => {
-    // For new wholesalers, we'll explain the simple setup process
-    toast({
-      title: "WhatsApp Ready to Use!",
-      description: "Your WhatsApp messaging is already configured via our Twilio integration. You can start sending campaigns immediately!",
-      variant: "default",
-    });
+  const handleWhatsAppActivation = async () => {
+    try {
+      setIsConnectingWhatsApp(true);
+      
+      // Check if user already has WhatsApp activated
+      const whatsappStatus = whatsappStatus as any;
+      if (user?.whatsappEnabled) {
+        toast({
+          title: "WhatsApp Already Active",
+          description: "Your WhatsApp messaging is already active and ready to use for campaigns.",
+        });
+        return;
+      }
+      
+      // For new users, activate platform integration (Twilio)
+      const response = await apiRequest('POST', '/api/whatsapp/activate', {
+        provider: 'platform' // Use platform Twilio integration
+      });
+      
+      if (response.success) {
+        await refetchWhatsApp(); // Refresh status
+        toast({
+          title: "WhatsApp Activated!",
+          description: "Your WhatsApp messaging is now active. You can start sending campaigns to customers.",
+        });
+      } else {
+        throw new Error(response.message || 'Failed to activate WhatsApp');
+      }
+    } catch (error: any) {
+      console.error('Error activating WhatsApp:', error);
+      toast({
+        title: "Activation Failed",
+        description: error.message || "Unable to activate WhatsApp. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingWhatsApp(false);
+    }
   };
 
   return (
@@ -793,15 +825,15 @@ export default function Settings() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
-                          {(whatsappStatus as any)?.isConfigured ? (
+                          {user?.whatsappEnabled ? (
                             <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
                               <CheckCircle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Ready</span>
+                              <span className="text-xs font-medium">Active</span>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
-                              <AlertTriangle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Setup Available</span>
+                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                              <MessageSquare className="h-3 w-3" />
+                              <span className="text-xs font-medium">Activate Now</span>
                             </div>
                           )}
                         </div>
@@ -810,15 +842,15 @@ export default function Settings() {
                           Send product promotions, order confirmations, and customer communications via WhatsApp.
                         </p>
                         
-                        {(whatsappStatus as any)?.isConfigured ? (
-                          // Already configured - show success state
+                        {user?.whatsappEnabled ? (
+                          // User has activated WhatsApp - show success state
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
                             <div className="flex items-start gap-3">
                               <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                               <div className="flex-1">
-                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Ready!</h5>
+                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Active!</h5>
                                 <p className="text-green-800 text-sm mb-2">
-                                  Your WhatsApp messaging is configured via {(whatsappStatus as any)?.serviceProvider}. 
+                                  Your WhatsApp messaging is active via {(whatsappStatus as any)?.serviceProvider}. 
                                   You can now:
                                 </p>
                                 <ul className="text-green-800 text-sm space-y-1">
@@ -827,7 +859,7 @@ export default function Settings() {
                                   <li>• Share promotional offers directly</li>
                                 </ul>
                                 <p className="text-green-700 text-xs mt-2">
-                                  Using phone: {(whatsappStatus as any)?.twilioPhoneNumber || 'Configured'}
+                                  Using phone: {(whatsappStatus as any)?.twilioPhoneNumber || 'Platform Number'}
                                 </p>
                               </div>
                             </div>
@@ -843,13 +875,13 @@ export default function Settings() {
                                   <div className="flex items-center gap-2 mb-1">
                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                     <span className="font-medium text-blue-900 text-sm">Platform Integration (Recommended)</span>
-                                    <Badge variant="outline" className="text-green-700 border-green-200 text-xs">Ready Now</Badge>
+                                    <Badge variant="outline" className="text-green-700 border-green-200 text-xs">Click to Activate</Badge>
                                   </div>
                                   <p className="text-blue-800 text-sm mb-2">
-                                    ✅ WhatsApp messaging is already set up and ready to use through our platform integration.
+                                    ⚡ WhatsApp messaging capability is available - just needs activation for your account.
                                   </p>
                                   <p className="text-blue-700 text-xs">
-                                    No additional setup required • Start sending campaigns immediately
+                                    One-click setup • Uses our managed WhatsApp service • No external accounts needed
                                   </p>
                                 </div>
                                 
@@ -874,24 +906,26 @@ export default function Settings() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Status:</span>
-                            {(whatsappStatus as any)?.isConfigured ? (
+                            {user?.whatsappEnabled ? (
                               <span className="text-green-600 font-medium text-sm">
-                                ✅ Connected via {(whatsappStatus as any)?.serviceProvider}
+                                ✅ Active via {(whatsappStatus as any)?.serviceProvider || 'Platform Integration'}
                               </span>
                             ) : (
-                              <span className="text-orange-600 font-medium text-sm">
-                                ⚡ Platform integration available
+                              <span className="text-blue-600 font-medium text-sm">
+                                ⚡ Ready to activate - no setup required
                               </span>
                             )}
                           </div>
                           <button 
-                            onClick={handleWhatsAppConfig}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
+                            onClick={handleWhatsAppActivation}
+                            disabled={isConnectingWhatsApp}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="text-sm sm:text-base">
-                              {(whatsappStatus as any)?.isConfigured ? 'View Details' : 'Get Started'}
+                              {isConnectingWhatsApp ? 'Activating...' : (user?.whatsappEnabled ? 'Manage WhatsApp' : 'Activate WhatsApp')}
                             </span>
-                            <MessageSquare className="h-4 w-4" />
+                            {!isConnectingWhatsApp && <MessageSquare className="h-4 w-4" />}
+                            {isConnectingWhatsApp && <Loader2 className="h-4 w-4 animate-spin" />}
                           </button>
                         </div>
                       </div>

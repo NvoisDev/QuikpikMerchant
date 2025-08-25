@@ -712,6 +712,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple WhatsApp activation endpoint for platform integration
+  app.post('/api/whatsapp/activate', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { provider } = req.body;
+      
+      console.log('⚡ Activating WhatsApp for user:', user.id, 'provider:', provider);
+
+      // For platform integration, just enable WhatsApp with Twilio provider
+      if (provider === 'platform') {
+        await storage.updateUser(user.id, {
+          whatsappEnabled: true,
+          whatsappProvider: 'twilio',
+          // No need to store credentials - uses global environment credentials
+        });
+
+        console.log('✅ WhatsApp activated for user:', user.id, 'via platform integration');
+        
+        res.json({ 
+          success: true, 
+          message: "WhatsApp messaging activated! You can now send campaigns to customers.",
+          provider: 'platform'
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: "Invalid provider. Use 'platform' for quick setup." 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error activating WhatsApp:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to activate WhatsApp" 
+      });
+    }
+  });
+
   // WhatsApp Connect endpoint
   app.post('/api/whatsapp/connect', requireAuth, async (req: any, res) => {
     try {
