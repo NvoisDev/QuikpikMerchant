@@ -207,44 +207,23 @@ export default function Settings() {
   };
 
   const handleSaveBusiness = async () => {
-    console.log('🔄 Attempting to save business settings:', businessForm);
-    
     try {
       const response = await apiRequest('PUT', '/api/user/profile', businessForm);
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ Business settings saved successfully');
         toast({
           title: "Business Updated",
           description: "Your business information has been saved successfully.",
         });
         setIsEditingBusiness(false);
-        
-        // Trigger a refetch instead of full page reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        console.error('❌ Business save failed:', data);
-        toast({
-          title: "Update Failed",
-          description: data.message || "Unable to save business information.",
-          variant: "destructive",
-        });
+        window.location.reload(); // Refresh to show updated data
       }
     } catch (error) {
-      console.error('❌ Error saving business settings:', error);
-      
-      // Check if it's an authentication error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isAuthError = errorMessage.includes('Unauthorized') || errorMessage.includes('401');
-      
+      console.error('Error updating business:', error);
       toast({
-        title: isAuthError ? "Session Expired" : "Update Failed",
-        description: isAuthError 
-          ? "Please refresh the page and try again." 
-          : "Unable to update business information. Please try again.",
+        title: "Update Failed",
+        description: "Unable to update business information. Please try again.",
         variant: "destructive",
       });
     }
