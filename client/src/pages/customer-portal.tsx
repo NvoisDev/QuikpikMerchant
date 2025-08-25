@@ -955,7 +955,9 @@ export default function CustomerPortal() {
         name: authenticatedCustomer.name || 'Michael Ogunjemilua',
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
         phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550',
-        businessName: authenticatedCustomer.businessName || ''
+        businessName: authenticatedCustomer.businessName || '',
+        // CRITICAL FIX: Explicitly preserve shipping selection to prevent override
+        shippingOption: prevData.shippingOption || 'pickup'
       }));
     }
   }, [authenticatedCustomer]); // CRITICAL FIX: Remove customerData fields from dependency array to prevent loops
