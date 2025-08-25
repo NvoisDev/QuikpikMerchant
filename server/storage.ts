@@ -1083,11 +1083,12 @@ export class DatabaseStorage implements IStorage {
               wholesalerId: currentProduct.wholesalerId,
               movementType: 'purchase',
               quantity: -item.quantity,
+              unitType: 'pallets', // CRITICAL FIX: Add required unitType field for pallets
               stockBefore: currentProduct.palletStock || 0,
               stockAfter: newPalletStockLevel,
               reason: 'Customer purchase (pallets)',
               orderId: newOrder.id,
-              customerName: order.retailerId,
+              customerName: order.customerName || order.retailerId, // Use customer name if available
             });
             
             // Check for low pallet stock
@@ -1115,11 +1116,12 @@ export class DatabaseStorage implements IStorage {
               wholesalerId: currentProduct.wholesalerId,
               movementType: 'purchase',
               quantity: -item.quantity, // negative for stock reduction
+              unitType: 'units', // CRITICAL FIX: Add required unitType field
               stockBefore: currentProduct.stock,
               stockAfter: newStockLevel,
               reason: 'Customer purchase',
               orderId: newOrder.id,
-              customerName: order.retailerId, // This will be improved when we have customer details
+              customerName: order.customerName || order.retailerId, // Use customer name if available
             });
             
             // Check for low stock and log warnings
@@ -1278,11 +1280,12 @@ export class DatabaseStorage implements IStorage {
             wholesalerId: currentProduct.wholesalerId,
             movementType: 'purchase',
             quantity: -item.quantity, // negative for stock reduction
+            unitType: 'units', // CRITICAL FIX: Add required unitType field
             stockBefore: currentProduct.stock,
             stockAfter: newStockLevel,
             reason: 'Customer purchase',
             orderId: newOrder.id,
-            customerName: orderData.retailerId, // This will be improved when we have customer details
+            customerName: orderData.customerName || orderData.retailerId, // Use customer name if available
           });
           
           // Check for low stock and log warnings
