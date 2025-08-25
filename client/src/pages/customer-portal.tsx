@@ -1323,13 +1323,15 @@ export default function CustomerPortal() {
   }, [toast, isPreviewMode]);
 
   // Simplified payment intent creation - no shipping metadata needed
-  const createPaymentIntentForCheckout = useCallback(async () => {
+  const createPaymentIntentForCheckout = useCallback(async (explicitShippingOption?: 'pickup' | 'delivery') => {
+    const shippingOption = explicitShippingOption || customerData.shippingOption;
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
-    console.log('🚚 DEBUG: customerData.shippingOption at payment creation:', customerData.shippingOption);
+    console.log('🚚 CRITICAL FIX: Using explicit shipping option:', explicitShippingOption, 'or current state:', customerData.shippingOption);
+    console.log('🚚 FINAL SHIPPING OPTION USED:', shippingOption);
     console.log('🚚 DEBUG: Full customerData at payment creation:', JSON.stringify({
       name: customerData.name,
       phone: customerData.phone,
-      shippingOption: customerData.shippingOption,
+      shippingOption: shippingOption,
       selectedDeliveryAddress: customerData.selectedDeliveryAddress
     }, null, 2));
     
@@ -1397,7 +1399,7 @@ export default function CustomerPortal() {
           sellingType: item.sellingType
         })),
         shippingInfo: {
-          option: customerData.shippingOption || 'pickup'
+          option: shippingOption || 'pickup'
         }
       };
       
@@ -4028,7 +4030,7 @@ export default function CustomerPortal() {
                                 console.log('🚚 Successfully saved pickup choice to backend');
                                 // ✅ CRITICAL FIX: Create payment intent AFTER pickup selection is confirmed
                                 console.log('🚚 Creating payment intent with pickup option after successful save');
-                                await createPaymentIntentForCheckout();
+                                await createPaymentIntentForCheckout('pickup');
                               }
                             } catch (error) {
                               console.error('🚚 Error saving pickup choice:', error);
@@ -4036,7 +4038,7 @@ export default function CustomerPortal() {
                           } else {
                             // ✅ CRITICAL FIX: Create payment intent for guest users too  
                             console.log('🚚 Creating payment intent with pickup option for guest user');
-                            await createPaymentIntentForCheckout();
+                            await createPaymentIntentForCheckout('pickup');
                           }
                         }}
                         className="w-4 h-4 text-emerald-600"
@@ -4101,7 +4103,7 @@ export default function CustomerPortal() {
                                 console.log('🚚 Successfully saved delivery choice to backend');
                                 // ✅ CRITICAL FIX: Create payment intent AFTER shipping selection is confirmed
                                 console.log('🚚 Creating payment intent with delivery option after successful save');
-                                await createPaymentIntentForCheckout();
+                                await createPaymentIntentForCheckout('delivery');
                               }
                             } catch (error) {
                               console.error('🚚 Error saving delivery choice:', error);
@@ -4109,7 +4111,7 @@ export default function CustomerPortal() {
                           } else {
                             // ✅ CRITICAL FIX: Create payment intent for guest users too
                             console.log('🚚 Creating payment intent with delivery option for guest user');
-                            await createPaymentIntentForCheckout();
+                            await createPaymentIntentForCheckout('delivery');
                           }
                           
                           console.log('🚚 DEBUG: customerData.shippingOption AFTER setting to delivery:', customerData.shippingOption);
