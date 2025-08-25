@@ -139,14 +139,17 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
   const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
 
-  // SIMPLIFIED: Get shipping choice from customer data instead of Stripe metadata
-  const customerShippingChoice = await storage.getCustomerShippingChoice(customer.id);
-  const fulfillmentType = customerShippingChoice || 'pickup';
+  // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
+  const shippingInfoJson = paymentIntent.metadata.shippingInfo;
+  const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
   
-  console.log('🚚 SIMPLIFIED RETRIEVAL: Using customer shipping choice:', {
+  // Use actual order shipping choice, not saved customer preference
+  const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
+  
+  console.log('🚚 ORDER-PROCESSOR: Using actual order shipping choice:', {
     customerId: customer.id,
     customerName: customer.firstName + ' ' + customer.lastName,
-    savedShippingChoice: customerShippingChoice,
+    orderShippingOption: shippingInfo.option,
     finalFulfillmentType: fulfillmentType,
     willCreateDeliveryOrder: fulfillmentType === 'delivery'
   });
