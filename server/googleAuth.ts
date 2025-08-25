@@ -144,7 +144,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     // Wait a brief moment for session to populate (fixes racing condition)
     if ((!req.session || (!(req.session as any)?.user && !(req.session as any)?.userId)) && req.headers.cookie) {
       console.log('⏳ Session not ready, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // If session is still missing after wait, log detailed info
       if (!req.session) {
@@ -153,6 +153,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           sessionID: req.sessionID,
           url: req.url
         });
+        return res.status(401).json({ error: 'Session establishment failed' });
       }
     }
 

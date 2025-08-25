@@ -3801,7 +3801,7 @@ export default function CustomerPortal() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Building className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Business: {wholesaler?.businessName || 'Surulere Foods Wholesale'}</span>
+                      <span className="text-sm">Business: {wholesaler?.businessName || 'Business Name Not Set'}</span>
                     </div>
                   </CardContent>
                 </Card>
