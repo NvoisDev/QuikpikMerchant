@@ -210,9 +210,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             ) : order.deliveryAddress ? (
               <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                 {(() => {
-                  console.log('🏠 DEBUG - Raw delivery address data:', order.deliveryAddress);
                   const deliveryAddr = parseDeliveryAddress(order.deliveryAddress!);
-                  console.log('🏠 DEBUG - Parsed delivery address:', deliveryAddr);
                   
                   if (deliveryAddr) {
                     const Icon = getLabelIcon(deliveryAddr.label);
@@ -252,14 +250,15 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                   } else {
                     // Enhanced fallback handling
                     const addressText = formatAddress(order.deliveryAddress!);
-                    console.log('🏠 DEBUG - Formatted address text:', addressText);
                     
                     // Show address if it's meaningful (not just empty quotes, UK, or other minimal data)
                     if (addressText && 
                         addressText.trim() !== "" && 
                         addressText !== "\"\"" &&
+                        addressText !== '""' &&
                         addressText !== "United Kingdom" && 
                         addressText !== "UK" &&
+                        !addressText.match(/^["']*["']*$/) && // Catch any quote variations
                         addressText.length > 3) {
                       return (
                         <div className="flex items-start gap-2">
