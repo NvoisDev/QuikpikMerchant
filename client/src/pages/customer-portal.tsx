@@ -117,7 +117,7 @@ const PriceDisplay = ({
           <div className="text-center">
             <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
             <Button 
-              onClick={() => window.location.href = '/customer-landing'}
+              onClick={() => window.location.href = '/landing'}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
             >
@@ -1855,7 +1855,7 @@ export default function CustomerPortal() {
               {/* Contact Wholesaler button for guests */}
               {isGuestMode && (
                 <Button
-                  onClick={() => window.location.href = '/customer-landing'}
+                  onClick={() => window.location.href = '/landing'}
                   variant="outline"
                   size="sm"
                   className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
@@ -2099,7 +2099,7 @@ export default function CustomerPortal() {
                 </p>
                 <div className="flex items-center space-x-4">
                   <Button
-                    onClick={() => window.location.href = '/customer-landing'}
+                    onClick={() => window.location.href = '/landing'}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Contact Wholesaler
