@@ -3746,21 +3746,14 @@ The Quikpik Team
           wholesalerBusinessName: wholesaler.businessName || 'Quikpik Wholesaler',
           orderType: 'customer_portal',
           connectAccountUsed: useConnect ? 'true' : 'false',
+          // CRITICAL FIX: Store shipping info to determine delivery vs pickup
+          shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
           items: JSON.stringify(validatedItems.map(item => ({
             productId: item.product.id,
             productName: item.product.name,
             quantity: item.quantity,
             unitPrice: parseFloat(item.unitPrice)
-          }))),
-          shippingInfo: JSON.stringify(shippingInfo ? {
-            option: shippingInfo.option,
-            service: shippingInfo.service ? {
-              serviceId: shippingInfo.service.serviceId,
-              serviceName: shippingInfo.service.serviceName,
-              price: shippingInfo.service.price
-            } : null
-          } : { option: 'pickup' }),
-          autoPayDelivery: shippingInfo?.option === 'delivery' && shippingInfo?.service ? 'true' : 'false'
+          })))
         }
       }, {
         idempotencyKey: idempotencyKey
