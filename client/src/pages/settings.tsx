@@ -211,64 +211,27 @@ export default function Settings() {
     }
   };
 
+  // Simplified WhatsApp setup - just activate the platform integration
   const handleWhatsAppConnect = async () => {
-    // Show configuration dialog
-    const accessToken = prompt(
-      "Enter your WhatsApp Business API Access Token\n\n" +
-      "You can get this from:\n" +
-      "1. Go to Meta Business Manager\n" +
-      "2. Navigate to System Users\n" +
-      "3. Generate a permanent access token with whatsapp_business_messaging permissions"
-    );
-
-    if (!accessToken) return;
-
-    const phoneNumberId = prompt(
-      "Enter your WhatsApp Business Phone Number ID\n\n" +
-      "You can find this in:\n" +
-      "1. Meta Business Manager\n" +
-      "2. WhatsApp Manager\n" +
-      "3. Phone Numbers section\n" +
-      "4. Copy the Phone Number ID (not the actual phone number)"
-    );
-
-    if (!phoneNumberId) return;
-
-    const businessName = prompt(
-      "Enter your WhatsApp Business Display Name (optional)\n\n" +
-      "This will appear in WhatsApp messages to customers"
-    );
-
-    const businessPhone = prompt(
-      "Enter your WhatsApp Business Phone Number (optional)\n\n" +
-      "Format: +44XXXXXXXXXX"
-    );
-
     setIsConnectingWhatsApp(true);
     try {
-      const response = await apiRequest('POST', '/api/whatsapp/connect', {
-        accessToken,
-        phoneNumberId,
-        businessName: businessName || undefined,
-        businessPhone: businessPhone || undefined
-      });
-      
+      const response = await apiRequest('POST', '/api/whatsapp/activate');
       const data = await response.json();
       
       if (data.success) {
+        await refetchWhatsApp(); // Refresh WhatsApp status
         toast({
-          title: "WhatsApp Connected",
-          description: "WhatsApp Business API configured successfully. You can now send broadcasts to customers.",
+          title: "WhatsApp Activated!",
+          description: "Your WhatsApp messaging is now active. You can start sending campaigns to customers.",
         });
-        window.location.reload();
       } else {
-        throw new Error(data.message || "Configuration failed");
+        throw new Error(data.message || "Activation failed");
       }
     } catch (error) {
-      console.error('Error connecting WhatsApp:', error);
+      console.error('Error activating WhatsApp:', error);
       toast({
-        title: "Configuration Failed",
-        description: "Unable to configure WhatsApp. Please check your credentials and try again.",
+        title: "Activation Failed",
+        description: "Unable to activate WhatsApp messaging. Please try again or contact support.",
         variant: "destructive",
       });
     } finally {
@@ -940,7 +903,7 @@ export default function Settings() {
                             )}
                           </div>
                           <button 
-                            onClick={handleWhatsAppActivation}
+                            onClick={handleWhatsAppConnect}
                             disabled={isConnectingWhatsApp || !(whatsappStatus as any)?.platformCapable}
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >

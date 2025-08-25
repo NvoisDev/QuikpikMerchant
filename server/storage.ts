@@ -128,7 +128,7 @@ export interface IStorage {
   getCustomerGroups(wholesalerId: string): Promise<CustomerGroup[]>;
   getCustomerGroupsByUser(wholesalerId: string): Promise<CustomerGroup[]>;
   createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup>;
-  updateCustomerGroup(id: number, updates: { whatsappGroupId?: string }): Promise<CustomerGroup>;
+  updateCustomerGroup(id: number, updates: any): Promise<CustomerGroup>;
   deleteCustomerGroup(id: number): Promise<void>;
   getGroupMembers(groupId: number): Promise<User[]>;
   searchGroupMembers(groupId: number, searchTerm: string): Promise<User[]>;
@@ -1644,7 +1644,7 @@ export class DatabaseStorage implements IStorage {
     return newGroup;
   }
 
-  async updateCustomerGroup(id: number, updates: { whatsappGroupId?: string; name?: string; description?: string }): Promise<CustomerGroup> {
+  async updateCustomerGroup(id: number, updates: any): Promise<CustomerGroup> {
     const [customerGroup] = await db
       .update(customerGroups)
       .set(updates)
@@ -2637,25 +2637,15 @@ export class DatabaseStorage implements IStorage {
         state: wholesaler.state,
         postalCode: wholesaler.postal_code,
         country: wholesaler.country,
-        twilioPhoneNumber: wholesaler.twilio_phone_number,
-        twilioAccountSid: wholesaler.twilio_account_sid,
-        twilioAuthToken: wholesaler.twilio_auth_token,
-        whatsappEnabled: wholesaler.whatsapp_enabled,
+        whatsappEnabled: wholesaler.whatsapp_enabled || false,
         logoUrl: wholesaler.logo_url,
         logoType: wholesaler.logo_type,
-        whatsappBusinessPhone: wholesaler.whatsapp_business_phone,
-        whatsappApiToken: wholesaler.whatsapp_api_token,
-        whatsappBusinessName: wholesaler.whatsapp_business_name,
         onboardingCompleted: wholesaler.onboarding_completed,
         onboardingStep: wholesaler.onboarding_step,
         onboardingSkipped: wholesaler.onboarding_skipped,
         googleId: wholesaler.google_id,
         isFirstLogin: wholesaler.is_first_login,
         storeTagline: wholesaler.store_tagline,
-        whatsappProvider: wholesaler.whatsapp_provider,
-        whatsappBusinessPhoneId: wholesaler.whatsapp_business_phone_id,
-        whatsappAccessToken: wholesaler.whatsapp_access_token,
-        whatsappAppId: wholesaler.whatsapp_app_id,
         showPricesToWholesalers: wholesaler.show_prices_to_wholesalers,
         defaultLowStockThreshold: wholesaler.default_low_stock_threshold,
         businessDescription: wholesaler.business_description,
