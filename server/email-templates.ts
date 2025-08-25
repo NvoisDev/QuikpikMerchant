@@ -103,7 +103,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
                 ${data.items.map(item => `
                 <tr>
                     <td><strong>${item.productName}</strong></td>
-                    <td>${item.quantity}</td>
+                    <td>${item.quantity} ${item.sellingType === 'pallets' ? 'pallet(s)' : 'units'}</td>
                     <td>£${item.unitPrice}</td>
                     <td><strong>£${item.total}</strong></td>
                 </tr>
@@ -170,7 +170,7 @@ Phone: ${data.customerPhone}
 ${data.customerAddress ? `Address: ${typeof data.customerAddress === 'string' && data.customerAddress.includes('{') ? data.customerAddress.replace(/[{}":]/g, '').replace(/,/g, ', ') : data.customerAddress}` : ''}
 
 🛍️ ORDER ITEMS
-${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
+${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} ${item.sellingType === 'pallets' ? 'pallet(s)' : 'units'} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
 
 💰 PAYMENT BREAKDOWN
 Product Subtotal: £${data.subtotal}

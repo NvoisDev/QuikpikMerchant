@@ -3444,9 +3444,10 @@ The Quikpik Team
           product.promoActive
         );
         
-        // Determine if this is a pallet, unit, or promotional order based on calculated promotional price
-        const isUnitOrder = parseFloat(item.unitPrice) === promotionalPricing.effectivePrice;
-        const isPalletOrder = product.palletPrice && parseFloat(item.unitPrice) === parseFloat(product.palletPrice);
+        // CRITICAL FIX: Use the sellingType field sent from frontend instead of guessing from price
+        const sellingType = item.sellingType || 'units'; // Default to units if not specified
+        const isPalletOrder = sellingType === 'pallets';
+        const isUnitOrder = sellingType === 'units' && parseFloat(item.unitPrice) === promotionalPricing.effectivePrice;
         const isPromotionalOrder = isUnitOrder && promotionalPricing.effectivePrice !== basePrice;
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
@@ -3794,7 +3795,8 @@ The Quikpik Team
             productId: item.product.id,
             productName: item.product.name,
             quantity: item.quantity,
-            unitPrice: parseFloat(item.unitPrice)
+            unitPrice: parseFloat(item.unitPrice),
+            sellingType: item.sellingType || 'units' // CRITICAL: Preserve selling type for order creation
           })))
         }
       }, {
