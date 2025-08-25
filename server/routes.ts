@@ -7145,11 +7145,18 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if WhatsApp is configured (either Twilio or Direct)
-      const isConfigured = !!(
-        (user.twilioAccountSid && user.twilioAuthToken && user.twilioPhoneNumber) ||
-        (user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId)
-      );
+      // Check if WhatsApp is configured (either Twilio global credentials or user Direct credentials)
+      const twilioConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+      const directWhatsappConfigured = !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId);
+      
+      const isConfigured = twilioConfigured || directWhatsappConfigured;
+      
+      console.log('📞 WhatsApp Configuration Check:', {
+        twilioConfigured,
+        directWhatsappConfigured,
+        isConfigured,
+        userId: user.id
+      });
 
       const provider = user.whatsappProvider || 'twilio';
       
@@ -7157,15 +7164,19 @@ Write a professional, sales-focused description that highlights the key benefits
         isConfigured,
         provider,
         serviceProvider: provider === 'twilio' ? 'Twilio WhatsApp' : 'WhatsApp Business API',
-        twilioAccountSid: user.twilioAccountSid ? "configured" : null,
-        twilioAuthToken: user.twilioAuthToken ? "configured" : null, 
-        twilioPhoneNumber: user.twilioPhoneNumber,
+        // Global Twilio credentials (environment-based)
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? "configured" : null,
+        twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ? "configured" : null, 
+        twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+        // User-specific Direct WhatsApp credentials
         whatsappBusinessPhoneId: user.whatsappBusinessPhoneId,
         whatsappAccessToken: user.whatsappAccessToken ? "configured" : null,
         whatsappAppId: user.whatsappAppId,
         whatsappBusinessPhone: user.whatsappBusinessPhone,
         whatsappBusinessName: user.whatsappBusinessName,
-        whatsappProvider: user.whatsappProvider
+        whatsappProvider: user.whatsappProvider,
+        // Debug info
+        configurationSource: twilioConfigured ? 'global_twilio' : (directWhatsappConfigured ? 'user_direct' : 'not_configured')
       });
     } catch (error) {
       console.error("Error fetching WhatsApp status:", error);
