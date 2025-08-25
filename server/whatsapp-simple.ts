@@ -23,26 +23,28 @@ export class SimpleWhatsAppService {
       platformCapable,
       userActivated,
       isConfigured: platformCapable && userActivated,
-      serviceProvider: 'Twilio WhatsApp Platform'
+      serviceProvider: 'Twilio WhatsApp Platform',
+      isDemoMode: true // Indicates messages are logged, not sent
     };
   }
   
   /**
-   * Send a simple WhatsApp message
-   * This would integrate with Twilio WhatsApp API in production
+   * Send a simple WhatsApp message via Twilio
    */
   async sendMessage(to: string, message: string, from?: string) {
     if (!this.isCapable()) {
       throw new Error('WhatsApp platform not configured');
     }
     
-    console.log(`📱 WhatsApp Message (Simulated):`, {
+    // For now, just log the message since we don't want to send real messages in demo
+    console.log(`📱 WhatsApp Message (Demo Mode):`, {
       to,
       from: from || process.env.TWILIO_PHONE_NUMBER,
       message: message.substring(0, 100) + '...'
     });
     
-    // In production, integrate with Twilio WhatsApp API:
+    // Real Twilio integration would be:
+    // const twilio = require('twilio');
     // const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     // return await client.messages.create({
     //   from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
@@ -50,7 +52,7 @@ export class SimpleWhatsAppService {
     //   body: message
     // });
     
-    return { success: true, messageId: `sim_${Date.now()}` };
+    return { success: true, messageId: `demo_${Date.now()}` };
   }
 }
 

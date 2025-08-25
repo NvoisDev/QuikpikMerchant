@@ -803,9 +803,9 @@ export default function Settings() {
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
                           {(whatsappStatus as any)?.userActivated ? (
-                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
-                              <CheckCircle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Active</span>
+                            <div className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
+                              <AlertCircle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Demo Mode</span>
                             </div>
                           ) : (whatsappStatus as any)?.platformCapable ? (
                             <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
@@ -830,16 +830,19 @@ export default function Settings() {
                             <div className="flex items-start gap-3">
                               <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                               <div className="flex-1">
-                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Active!</h5>
+                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Ready (Demo Mode)</h5>
                                 <p className="text-green-800 text-sm mb-2">
-                                  Your WhatsApp messaging is active via {(whatsappStatus as any)?.serviceProvider}. 
-                                  You can now:
+                                  Your WhatsApp integration is configured via {(whatsappStatus as any)?.serviceProvider}, but currently in demonstration mode. 
+                                  Features available:
                                 </p>
                                 <ul className="text-green-800 text-sm space-y-1">
-                                  <li>• Send product campaigns to customer groups</li>
-                                  <li>• Notify customers about order updates</li>
-                                  <li>• Share promotional offers directly</li>
+                                  <li>• Send product campaigns to customer groups (demo mode)</li>
+                                  <li>• Notify customers about order updates (demo mode)</li>
+                                  <li>• Share promotional offers directly (demo mode)</li>
                                 </ul>
+                                <p className="text-orange-700 text-xs mt-2 font-medium">
+                                  📋 Note: Messages are currently logged for demonstration - no actual WhatsApp messages are sent.
+                                </p>
                                 <p className="text-green-700 text-xs mt-2">
                                   Using phone: {(whatsappStatus as any)?.twilioPhoneNumber || 'Platform Number'}
                                 </p>
@@ -889,8 +892,8 @@ export default function Settings() {
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Status:</span>
                             {(whatsappStatus as any)?.userActivated ? (
-                              <span className="text-green-600 font-medium text-sm">
-                                ✅ Active via {(whatsappStatus as any)?.serviceProvider || 'Platform Integration'}
+                              <span className="text-orange-600 font-medium text-sm">
+                                🧪 Demo Mode via {(whatsappStatus as any)?.serviceProvider || 'Platform Integration'}
                               </span>
                             ) : (whatsappStatus as any)?.platformCapable ? (
                               <span className="text-blue-600 font-medium text-sm">
@@ -908,7 +911,7 @@ export default function Settings() {
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="text-sm sm:text-base">
-                              {isConnectingWhatsApp ? 'Activating...' : ((whatsappStatus as any)?.userActivated ? 'Manage WhatsApp' : 'Activate WhatsApp')}
+                              {isConnectingWhatsApp ? 'Activating...' : ((whatsappStatus as any)?.userActivated ? 'WhatsApp Demo Mode' : 'Activate WhatsApp')}
                             </span>
                             {!isConnectingWhatsApp && <MessageSquare className="h-4 w-4" />}
                             {isConnectingWhatsApp && <Loader2 className="h-4 w-4 animate-spin" />}
