@@ -3256,20 +3256,33 @@ The Quikpik Team
           productPromoActive: product.promoActive,
           productMoq: product.moq,
           productPalletMoq: product.palletMoq,
+          productStock: product.stock,
           isUnitOrder,
           isPalletOrder,
-          isPromotionalOrder
+          isPromotionalOrder,
+          allowSmartMOQ: product.stock < product.moq
         });
         
-        // Validate against appropriate MOQ
+        // Smart MOQ validation: Allow purchasing remaining stock even if below MOQ
         if ((isUnitOrder || isPromotionalOrder) && item.quantity < product.moq) {
-          return res.status(400).json({ 
-            message: `Minimum order quantity for ${product.name} is ${product.moq} units` 
-          });
+          // Smart MOQ: If stock is below MOQ, allow customer to buy all remaining stock
+          if (product.stock >= product.moq) {
+            return res.status(400).json({ 
+              message: `Minimum order quantity for ${product.name} is ${product.moq} units` 
+            });
+          } else {
+            console.log(`🧠 SMART MOQ: Allowing ${item.quantity} units of ${product.name} (MOQ: ${product.moq}, Stock: ${product.stock})`);
+          }
         } else if (isPalletOrder && product.palletMoq && item.quantity < product.palletMoq) {
-          return res.status(400).json({ 
-            message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
-          });
+          // Smart MOQ for pallets: If pallet stock is below pallet MOQ, allow customer to buy remaining pallets
+          const palletStock = Math.floor(product.stock / (product.palletSize || 48)); // Default pallet size 48
+          if (palletStock >= product.palletMoq) {
+            return res.status(400).json({ 
+              message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
+            });
+          } else {
+            console.log(`🧠 SMART PALLET MOQ: Allowing ${item.quantity} pallets of ${product.name} (MOQ: ${product.palletMoq}, Available: ${palletStock})`);
+          }
         } else if (!isUnitOrder && !isPalletOrder && !isPromotionalOrder) {
           return res.status(400).json({ 
             message: `Invalid unit price for ${product.name}. Expected: £${product.price}${product.promoActive && product.promoPrice ? ` or £${product.promoPrice} (promo)` : ''}${product.palletPrice ? ` or £${product.palletPrice} (pallet)` : ''}` 
