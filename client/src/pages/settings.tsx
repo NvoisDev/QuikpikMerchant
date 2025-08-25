@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { User, Settings2, Building2, Bell, Puzzle, ExternalLink, Upload, Image, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { SiWhatsapp, SiStripe } from "react-icons/si";
