@@ -967,6 +967,14 @@ export default function CustomerPortal() {
     console.log('🚚 FRONTEND: customerData.shippingOption changed to:', customerData.shippingOption);
   }, [customerData.shippingOption]);
 
+  // Auto-create payment intent when checkout opens with pre-selected shipping
+  useEffect(() => {
+    if (showCheckout && customerData.shippingOption && !clientSecret && !isCreatingIntent && cart.length > 0) {
+      console.log('🚚 AUTO-CREATING: Payment intent on checkout open with pre-selected shipping:', customerData.shippingOption);
+      createPaymentIntentForCheckout(customerData.shippingOption);
+    }
+  }, [showCheckout, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
+
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
