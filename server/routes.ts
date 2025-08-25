@@ -3244,20 +3244,25 @@ The Quikpik Team
         // Determine if this is a pallet or unit order based on unit price
         const isUnitOrder = parseFloat(item.unitPrice) === parseFloat(product.price);
         const isPalletOrder = product.palletPrice && parseFloat(item.unitPrice) === parseFloat(product.palletPrice);
+        // CRITICAL: Also check for promotional pricing
+        const isPromotionalOrder = product.promoActive && product.promoPrice && parseFloat(item.unitPrice) === parseFloat(product.promoPrice);
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
           itemQuantity: item.quantity,
           itemUnitPrice: item.unitPrice,
           productPrice: product.price,
           productPalletPrice: product.palletPrice,
+          productPromoPrice: product.promoPrice,
+          productPromoActive: product.promoActive,
           productMoq: product.moq,
           productPalletMoq: product.palletMoq,
           isUnitOrder,
-          isPalletOrder
+          isPalletOrder,
+          isPromotionalOrder
         });
         
         // Validate against appropriate MOQ
-        if (isUnitOrder && item.quantity < product.moq) {
+        if ((isUnitOrder || isPromotionalOrder) && item.quantity < product.moq) {
           return res.status(400).json({ 
             message: `Minimum order quantity for ${product.name} is ${product.moq} units` 
           });
@@ -3265,9 +3270,9 @@ The Quikpik Team
           return res.status(400).json({ 
             message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
           });
-        } else if (!isUnitOrder && !isPalletOrder) {
+        } else if (!isUnitOrder && !isPalletOrder && !isPromotionalOrder) {
           return res.status(400).json({ 
-            message: `Invalid unit price for ${product.name}` 
+            message: `Invalid unit price for ${product.name}. Expected: £${product.price}${product.promoActive && product.promoPrice ? ` or £${product.promoPrice} (promo)` : ''}${product.palletPrice ? ` or £${product.palletPrice} (pallet)` : ''}` 
           });
         }
 
@@ -3277,7 +3282,7 @@ The Quikpik Team
           });
         }
 
-        // CRITICAL FIX: Calculate pricing based on whether this is a pallet or unit order
+        // CRITICAL FIX: Calculate pricing based on whether this is a pallet, unit, or promotional order
         let pricing;
         let calculationPrice;
         
@@ -3295,7 +3300,7 @@ The Quikpik Team
             totalQuantity: item.quantity
           };
         } else {
-          // For unit orders, apply promotional pricing
+          // For unit and promotional orders, apply promotional pricing calculations
           const { PromotionalPricingCalculator } = await import('../shared/promotional-pricing');
           calculationPrice = parseFloat(product.price);
           
@@ -3312,6 +3317,7 @@ The Quikpik Team
           productName: product.name,
           isUnitOrder,
           isPalletOrder,
+          isPromotionalOrder,
           calculationPrice,
           sentUnitPrice: item.unitPrice,
           quantity: item.quantity,
