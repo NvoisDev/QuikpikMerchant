@@ -118,8 +118,13 @@ const PriceDisplay = ({
             <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
             <Button 
               onClick={() => {
-                // Clear any existing authentication session
-                window.location.href = '/api/logout';
+                // Clear all cookies and authentication session
+                document.cookie.split(";").forEach(cookie => {
+                  const eqPos = cookie.indexOf("=");
+                  const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                  document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                });
+                window.location.href = '/landing';
               }}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
@@ -1859,8 +1864,13 @@ export default function CustomerPortal() {
               {isGuestMode && (
                 <Button
                   onClick={() => {
-                    // Clear any existing authentication session
-                    window.location.href = '/api/logout';
+                    // Clear all cookies and authentication session
+                    document.cookie.split(";").forEach(cookie => {
+                      const eqPos = cookie.indexOf("=");
+                      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                    });
+                    window.location.href = '/landing';
                   }}
                   variant="outline"
                   size="sm"
@@ -2106,8 +2116,13 @@ export default function CustomerPortal() {
                 <div className="flex items-center space-x-4">
                   <Button
                     onClick={() => {
-                      // Clear any existing authentication session
-                      window.location.href = '/api/logout';
+                      // Clear all cookies and authentication session
+                      document.cookie.split(";").forEach(cookie => {
+                        const eqPos = cookie.indexOf("=");
+                        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                      });
+                      window.location.href = '/landing';
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
