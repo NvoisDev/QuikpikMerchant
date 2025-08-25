@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -167,6 +168,12 @@ export default function Customers() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  
+  // Get tab from URL parameter or default to "groups"
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const tabFromUrl = urlParams.get('tab');
+  const defaultTab = tabFromUrl && ['groups', 'address-book'].includes(tabFromUrl) ? tabFromUrl : 'groups';
   
   // Group management state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -832,7 +839,7 @@ export default function Customers() {
         </div>
       </div>
 
-      <Tabs defaultValue="groups" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="groups" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />

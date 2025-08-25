@@ -605,7 +605,7 @@ export default function WholesalerDashboard() {
                 <TooltipTrigger asChild>
                   <div>
                     <InteractiveActionCard
-                      href="/customer-groups"
+                      href="/customers?tab=groups"
                       icon={Users}
                       title="Customer Groups"
                       description="Organize your customers"
