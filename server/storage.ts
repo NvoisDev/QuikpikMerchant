@@ -3088,11 +3088,21 @@ export class DatabaseStorage implements IStorage {
 
   // Stock Movement operations
   async createStockMovement(movement: InsertStockMovement): Promise<StockMovement> {
-    const [stockMovement] = await db
-      .insert(stockMovements)
-      .values(movement)
-      .returning();
-    return stockMovement;
+    console.log(`🔍 DEBUG: About to create stock movement:`, movement);
+    
+    try {
+      const [stockMovement] = await db
+        .insert(stockMovements)
+        .values(movement)
+        .returning();
+      
+      console.log(`✅ Stock movement created successfully:`, stockMovement);
+      return stockMovement;
+    } catch (error) {
+      console.error(`❌ CRITICAL: Stock movement creation failed:`, error);
+      console.error(`❌ Movement data that failed:`, movement);
+      throw error;
+    }
   }
 
   async getStockMovements(productId: number): Promise<StockMovement[]> {
