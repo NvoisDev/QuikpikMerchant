@@ -1835,23 +1835,67 @@ function OrderDetailsModal({ order }: { order: Order }) {
                     </div>
                   </div>
                     
-                    {/* Fulfillment Information moved under Order Items */}
-                    {selectedOrder.fulfillmentType === 'delivery' && selectedOrder.deliveryAddress && (
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          Delivery Address
+                    {/* Enhanced Fulfillment Information */}
+                    {selectedOrder.fulfillmentType === 'delivery' && (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+                          <Truck className="h-4 w-4" />
+                          Delivery Details
                         </h4>
-                        <p className="text-sm text-blue-800">{formatAddress(selectedOrder.deliveryAddress)}</p>
+                        {customerDeliveryAddress ? (
+                          <div className="space-y-2">
+                            <div className="text-sm text-blue-800">
+                              <div className="font-medium">{customerDeliveryAddress.fullName}</div>
+                              <div>{customerDeliveryAddress.addressLine1}</div>
+                              {customerDeliveryAddress.addressLine2 && <div>{customerDeliveryAddress.addressLine2}</div>}
+                              <div>{customerDeliveryAddress.city}, {customerDeliveryAddress.postcode}</div>
+                              <div>{customerDeliveryAddress.country}</div>
+                            </div>
+                            {customerDeliveryAddress.instructions && (
+                              <div className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded border border-blue-300 mt-2">
+                                <span className="font-medium">Instructions:</span> {customerDeliveryAddress.instructions}
+                              </div>
+                            )}
+                          </div>
+                        ) : selectedOrder.deliveryAddress ? (
+                          <p className="text-sm text-blue-800">{formatAddress(selectedOrder.deliveryAddress)}</p>
+                        ) : (
+                          <p className="text-sm text-blue-800 italic">Delivery address will be confirmed with customer</p>
+                        )}
+                        {selectedOrder.deliveryCost && parseFloat(selectedOrder.deliveryCost) > 0 && (
+                          <div className="text-xs text-blue-700 mt-2">
+                            <span className="font-medium">Delivery Cost:</span> {formatCurrency(parseFloat(selectedOrder.deliveryCost), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                          </div>
+                        )}
                       </div>
                     )}
                     {(selectedOrder.fulfillmentType === 'collection' || selectedOrder.fulfillmentType === 'pickup') && (
-                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                        <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+                      <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h4 className="font-medium text-green-900 mb-3 flex items-center gap-2">
                           <Hand className="h-4 w-4" />
-                          Collection Information
+                          Collection Address
                         </h4>
-                        <p className="text-sm text-green-800">This order is available for collection from your business location.</p>
+                        <div className="space-y-2">
+                          {selectedOrder.wholesaler?.pickupAddress ? (
+                            <div className="text-sm text-green-800">
+                              <div className="font-medium">{selectedOrder.wholesaler.businessName}</div>
+                              <div className="whitespace-pre-line">{selectedOrder.wholesaler.pickupAddress}</div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-green-800">
+                              <div className="font-medium">{selectedOrder.wholesaler?.businessName || 'Your Business'}</div>
+                              <div className="italic">Collection address to be confirmed</div>
+                            </div>
+                          )}
+                          {selectedOrder.wholesaler?.pickupInstructions && (
+                            <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded border border-green-300 mt-2">
+                              <span className="font-medium">Pickup Instructions:</span> {selectedOrder.wholesaler.pickupInstructions}
+                            </div>
+                          )}
+                          <div className="text-xs text-green-700 mt-2">
+                            <span className="font-medium">Contact:</span> {selectedOrder.wholesaler?.email || 'Contact details in customer info'}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
