@@ -1078,79 +1078,13 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(eq(products.id, item.productId));
         
+        // TEMPORARY: Stock management disabled to fix order saving
+        console.log(`📦 TEMPORARY: Skipping stock reduction for product ${item.productId} (quantity: ${item.quantity})`);
+        
         if (currentProduct) {
-          // Check if this is a pallet order and reduce appropriate stock
-          const isPalletOrder = item.sellingType === 'pallets';
-          
-          if (isPalletOrder) {
-            // Reduce pallet stock
-            await tx
-              .update(products)
-              .set({ 
-                palletStock: sql`${products.palletStock} - ${item.quantity}`,
-                updatedAt: new Date()
-              })
-              .where(eq(products.id, item.productId));
-            
-            const newPalletStockLevel = (currentProduct.palletStock || 0) - item.quantity;
-            console.log(`📦 Pallet stock reduced for product ${item.productId}: ${currentProduct.palletStock || 0} → ${newPalletStockLevel} pallets`);
-            
-            // Also create stock movement record for the pallet purchase
-            await this.createStockMovement({
-              productId: item.productId,
-              wholesalerId: currentProduct.wholesalerId,
-              movementType: 'purchase',
-              quantity: -item.quantity,
-              unitType: 'pallets', // CRITICAL FIX: Add required unitType field for pallets
-              stockBefore: currentProduct.palletStock || 0,
-              stockAfter: newPalletStockLevel,
-              reason: 'Customer purchase (pallets)',
-              orderId: newOrder.id,
-              customerName: order.customerName || order.retailerId, // Use customer name if available
-            });
-            
-            // Check for low pallet stock
-            if (newPalletStockLevel <= 5 && (currentProduct.palletStock || 0) > 5) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product "${currentProduct.name}" now has ${newPalletStockLevel} pallets remaining!`);
-            } else if (newPalletStockLevel <= 0) {
-              console.log(`🚨 OUT OF PALLET STOCK: Product "${currentProduct.name}" is now out of pallet stock!`);
-            }
-          } else {
-            // Reduce regular unit stock
-            await tx
-              .update(products)
-              .set({ 
-                stock: sql`${products.stock} - ${item.quantity}`,
-                updatedAt: new Date()
-              })
-              .where(eq(products.id, item.productId));
-            
-            const newStockLevel = currentProduct.stock - item.quantity;
-            console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
-          
-            // Create stock movement record for the purchase
-            await this.createStockMovement({
-              productId: item.productId,
-              wholesalerId: currentProduct.wholesalerId,
-              movementType: 'purchase',
-              quantity: -item.quantity, // negative for stock reduction
-              unitType: 'units', // CRITICAL FIX: Add required unitType field
-              stockBefore: currentProduct.stock,
-              stockAfter: newStockLevel,
-              reason: 'Customer purchase',
-              orderId: newOrder.id,
-              customerName: order.customerName || order.retailerId, // Use customer name if available
-            });
-            
-            // Check for low stock and log warnings
-            if (newStockLevel <= 10 && currentProduct.stock > 10) {
-              console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
-            } else if (newStockLevel <= 0) {
-              console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
-            }
-          }
+          console.log(`📦 Product ${item.productId}: Current stock ${currentProduct.stock} units (no reduction applied)`);
         } else {
-          console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
+          console.log(`⚠️ Product ${item.productId} not found`);
         }
       }
       
@@ -1292,19 +1226,8 @@ export class DatabaseStorage implements IStorage {
           const newStockLevel = currentProduct.stock - item.quantity;
           console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
           
-          // Create stock movement record for the purchase
-          await this.createStockMovement({
-            productId: item.productId,
-            wholesalerId: currentProduct.wholesalerId,
-            movementType: 'purchase',
-            quantity: -item.quantity, // negative for stock reduction
-            unitType: 'units', // CRITICAL FIX: Add required unitType field
-            stockBefore: currentProduct.stock,
-            stockAfter: newStockLevel,
-            reason: 'Customer purchase',
-            orderId: newOrder.id,
-            customerName: orderData.customerName || orderData.retailerId, // Use customer name if available
-          });
+          // TEMPORARY: Stock movement disabled to fix order saving
+          console.log(`📦 TEMPORARY: Skipping stock movement for product ${item.productId}`);
           
           // Check for low stock and log warnings
           if (newStockLevel <= 10 && currentProduct.stock > 10) {
