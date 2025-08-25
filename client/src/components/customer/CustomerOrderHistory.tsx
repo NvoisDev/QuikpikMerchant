@@ -210,7 +210,10 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
             ) : order.deliveryAddress ? (
               <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                 {(() => {
+                  console.log('🏠 DEBUG - Raw delivery address data:', order.deliveryAddress);
                   const deliveryAddr = parseDeliveryAddress(order.deliveryAddress!);
+                  console.log('🏠 DEBUG - Parsed delivery address:', deliveryAddr);
+                  
                   if (deliveryAddr) {
                     const Icon = getLabelIcon(deliveryAddr.label);
                     return (
@@ -247,17 +250,34 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                       </div>
                     );
                   } else {
-                    // Only show fallback if it's not just country information
+                    // Enhanced fallback handling
                     const addressText = formatAddress(order.deliveryAddress!);
-                    if (addressText && addressText !== "United Kingdom" && addressText !== "UK") {
+                    console.log('🏠 DEBUG - Formatted address text:', addressText);
+                    
+                    // Show address if it's meaningful (not just empty quotes, UK, or other minimal data)
+                    if (addressText && 
+                        addressText.trim() !== "" && 
+                        addressText !== "\"\"" &&
+                        addressText !== "United Kingdom" && 
+                        addressText !== "UK" &&
+                        addressText.length > 3) {
                       return (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-blue-600" />
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div className="text-sm text-blue-800">{addressText}</div>
                         </div>
                       );
                     }
-                    return null;
+                    
+                    // If no meaningful address data, show a helpful message
+                    return (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-blue-800 italic">
+                          Delivery address will be confirmed with supplier
+                        </div>
+                      </div>
+                    );
                   }
                 })()}
               </div>
@@ -463,17 +483,31 @@ const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
   const Icon = getLabelIcon(address?.label);
   
   return (
-    <div className="bg-white p-3 rounded border border-blue-200 mt-3">
-      <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
-      <div className="text-sm text-gray-700">
-        <div>{address?.addressLine1}</div>
-        {address?.addressLine2 && (
-          <div>{address.addressLine2}</div>
+    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+      <div className="space-y-2">
+        <div className="flex items-start gap-2">
+          <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-800">
+            <div className="font-medium">{address.addressLine1}</div>
+            {address.addressLine2 && (
+              <div>{address.addressLine2}</div>
+            )}
+            <div>{address.city}</div>
+            <div>{address.postalCode}</div>
+            {address.country && (
+              <div>{address.country}</div>
+            )}
+          </div>
+        </div>
+        {address.label && (
+          <div className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded w-fit border border-blue-300">
+            {address.label}
+          </div>
         )}
-        <div>{address?.city}</div>
-        <div>{address?.postalCode}</div>
-        {address?.country && (
-          <div>{address.country}</div>
+        {address.instructions && (
+          <div className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded border border-blue-300">
+            <span className="font-medium">Instructions:</span> {address.instructions}
+          </div>
         )}
       </div>
     </div>
