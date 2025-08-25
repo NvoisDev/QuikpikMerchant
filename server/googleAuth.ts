@@ -131,8 +131,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     // Enhanced debug session information
     console.log('🔍 Auth Debug:', {
       sessionExists: !!req.session,
-      sessionUser: req.session?.user ? 'exists' : 'missing',
-      sessionUserId: req.session?.userId || 'missing',
+      sessionUser: (req.session as any)?.user ? 'exists' : 'missing',
+      sessionUserId: (req.session as any)?.userId || 'missing',
       isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : 'no_method',
       headers: req.headers.cookie ? 'has_cookies' : 'no_cookies',
       sessionId: req.sessionID || 'no_session_id',
@@ -148,7 +148,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Check for session user object (primary method for email/password auth)
-    const sessionUser = req.session?.user;
+    const sessionUser = (req.session as any)?.user;
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
@@ -170,7 +170,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Check for legacy session userId (fallback)
-    const sessionUserId = req.session?.userId;
+    const sessionUserId = (req.session as any)?.userId;
     if (sessionUserId) {
       const user = await storage.getUser(sessionUserId);
       if (user) {
@@ -191,7 +191,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     }
 
     // ENHANCED: Try to recover session for known user (temporary fix for session issues)
-    if (req.headers.cookie && (!req.session || (!req.session.user && !req.session.userId))) {
+    if (req.headers.cookie && (!req.session || (!(req.session as any).user && !(req.session as any).userId))) {
       console.log('🔄 Attempting session recovery...');
       try {
         // Look for a known active user (this is a temporary workaround)
