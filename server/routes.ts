@@ -2795,9 +2795,9 @@ The Quikpik Team
         targetUserId
       });
       
-      // TEMPORARY: Allow unlimited edits for testing (bypassing subscription limits)
-      if (subscriptionTier !== "premium") {
-        let editLimit = subscriptionTier === "standard" ? 10 : 3;
+      // Check edit limits based on subscription tier
+      if (subscriptionTier === "free") {
+        let editLimit = 3;
         if (currentEditCount >= editLimit) {
           console.log('❌ Backend: Edit limit reached for', subscriptionTier);
           return res.status(403).json({ 
@@ -2808,7 +2808,7 @@ The Quikpik Team
           });
         }
       } else {
-        console.log('✅ Backend: Premium user - unlimited edits allowed');
+        console.log('✅ Backend: Standard/Premium user - unlimited edits allowed');
       }
 
       // Debug: Log the incoming request body

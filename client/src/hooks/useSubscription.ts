@@ -73,7 +73,7 @@ export function useSubscription() {
     });
     
     if (editLimit === -1) {
-      return true; // Unlimited for premium
+      return true; // Unlimited for standard and premium
     }
     
     return editCount < editLimit;
@@ -107,9 +107,9 @@ export function useSubscription() {
       case 'free':
         return 3;
       case 'standard':
-        return 10; // 10 edits for standard
+        return -1; // Unlimited edits for standard (as advertised)
       case 'premium':
-        return -1; // Unlimited for premium only
+        return -1; // Unlimited for premium
       default:
         return 3;
     }
