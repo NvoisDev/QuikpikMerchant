@@ -275,10 +275,18 @@ export default function Settings() {
     }
   };
 
+  // Query WhatsApp status
+  const { data: whatsappStatus, refetch: refetchWhatsApp } = useQuery({
+    queryKey: ["/api/whatsapp/status"],
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
   const handleWhatsAppConfig = () => {
+    // For new wholesalers, we'll explain the simple setup process
     toast({
-      title: "WhatsApp Configuration",
-      description: "WhatsApp setup will be available in the next update. Contact support for early access.",
+      title: "WhatsApp Ready to Use!",
+      description: "Your WhatsApp messaging is already configured via our Twilio integration. You can start sending campaigns immediately!",
+      variant: "default",
     });
   };
 
@@ -774,7 +782,7 @@ export default function Settings() {
                     <p className="text-gray-600 text-sm sm:text-base">Connect your business with WhatsApp and Stripe to streamline operations.</p>
                   </div>
                   
-                  {/* WhatsApp Integration */}
+                  {/* WhatsApp Integration - New User Friendly Version */}
                   <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
                       <div className="flex-shrink-0 self-center sm:self-start">
@@ -783,33 +791,107 @@ export default function Settings() {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">WhatsApp Business API</h4>
-                        <p className="text-gray-600 mb-4 text-sm sm:text-base">Connect WhatsApp to send order updates and communicate with customers directly.</p>
-                        
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
-                          <h5 className="font-medium text-blue-900 mb-2 text-sm sm:text-base">Setup Instructions:</h5>
-                          <ol className="list-decimal list-inside text-xs sm:text-sm text-blue-800 space-y-1">
-                            <li>Apply for WhatsApp Business API at <a href="https://business.whatsapp.com/products/business-api" target="_blank" rel="noopener noreferrer" className="underline">business.whatsapp.com</a></li>
-                            <li>Get approved by Meta and receive your WhatsApp Business Account ID</li>
-                            <li>Generate a permanent access token from your Meta Business account</li>
-                            <li>Add your phone number and verify it with WhatsApp Business</li>
-                            <li>Configure webhook URL in Meta Developer Console: <code className="bg-blue-100 px-1 rounded text-xs break-all">https://quikpik.app/api/webhooks/whatsapp</code></li>
-                            <li>Set webhook fields: messages, message_deliveries, message_reads</li>
-                            <li>Test with a template message to verify the connection</li>
-                          </ol>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
+                          {(whatsappStatus as any)?.isConfigured ? (
+                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                              <CheckCircle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Ready</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
+                              <AlertTriangle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Setup Available</span>
+                            </div>
+                          )}
                         </div>
                         
+                        <p className="text-gray-600 mb-4 text-sm sm:text-base">
+                          Send product promotions, order confirmations, and customer communications via WhatsApp.
+                        </p>
+                        
+                        {(whatsappStatus as any)?.isConfigured ? (
+                          // Already configured - show success state
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Ready!</h5>
+                                <p className="text-green-800 text-sm mb-2">
+                                  Your WhatsApp messaging is configured via {(whatsappStatus as any)?.serviceProvider}. 
+                                  You can now:
+                                </p>
+                                <ul className="text-green-800 text-sm space-y-1">
+                                  <li>• Send product campaigns to customer groups</li>
+                                  <li>• Notify customers about order updates</li>
+                                  <li>• Share promotional offers directly</li>
+                                </ul>
+                                <p className="text-green-700 text-xs mt-2">
+                                  Using phone: {(whatsappStatus as any)?.twilioPhoneNumber || 'Configured'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          // Not configured - show simple setup options
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
+                            <div className="flex items-start gap-3">
+                              <MessageSquare className="h-5 w-5 text-blue-600 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-medium text-blue-900 mb-2">Quick Setup Available</h5>
+                                <div className="bg-white border border-blue-200 rounded p-3 mb-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span className="font-medium text-blue-900 text-sm">Platform Integration (Recommended)</span>
+                                    <Badge variant="outline" className="text-green-700 border-green-200 text-xs">Ready Now</Badge>
+                                  </div>
+                                  <p className="text-blue-800 text-sm mb-2">
+                                    ✅ WhatsApp messaging is already set up and ready to use through our platform integration.
+                                  </p>
+                                  <p className="text-blue-700 text-xs">
+                                    No additional setup required • Start sending campaigns immediately
+                                  </p>
+                                </div>
+                                
+                                <div className="bg-white border border-blue-200 rounded p-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                    <span className="font-medium text-blue-900 text-sm">Custom WhatsApp Business API</span>
+                                    <Badge variant="outline" className="text-orange-700 border-orange-200 text-xs">Advanced</Badge>
+                                  </div>
+                                  <p className="text-blue-800 text-sm mb-1">
+                                    Use your own WhatsApp Business API account (requires Meta approval process)
+                                  </p>
+                                  <p className="text-blue-700 text-xs">
+                                    For businesses with specific compliance or branding requirements
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                          <span className="text-sm text-gray-500">
-                            Status: {user?.whatsappEnabled ? 'Connected' : 'Not configured'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">Status:</span>
+                            {(whatsappStatus as any)?.isConfigured ? (
+                              <span className="text-green-600 font-medium text-sm">
+                                ✅ Connected via {(whatsappStatus as any)?.serviceProvider}
+                              </span>
+                            ) : (
+                              <span className="text-orange-600 font-medium text-sm">
+                                ⚡ Platform integration available
+                              </span>
+                            )}
+                          </div>
                           <button 
-                            onClick={handleWhatsAppConnect}
-                            disabled={isConnectingWhatsApp}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                            onClick={handleWhatsAppConfig}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
                           >
-                            <span className="text-sm sm:text-base">{isConnectingWhatsApp ? 'Connecting...' : (user?.whatsappEnabled ? 'Reconfigure' : 'Configure WhatsApp')}</span>
-                            {!isConnectingWhatsApp && <ExternalLink className="h-4 w-4" />}
+                            <span className="text-sm sm:text-base">
+                              {(whatsappStatus as any)?.isConfigured ? 'View Details' : 'Get Started'}
+                            </span>
+                            <MessageSquare className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
