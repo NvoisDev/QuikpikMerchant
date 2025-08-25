@@ -34,7 +34,7 @@ export function StockIndicator({
         return {
           icon: XCircle,
           text: 'Out of Stock',
-          shortText: 'Out',
+          shortText: 'Out of Stock',
           color: 'text-red-600',
           bgColor: 'bg-red-50',
           borderColor: 'border-red-200',
