@@ -3904,6 +3904,9 @@ The Quikpik Team
         
         console.log(`✅ Order #${order.id} (Wholesale Ref: ${wholesaleRef}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
+        // Get wholesaler data for emails and notifications
+        const wholesaler = await storage.getWholesalerProfile(wholesalerId);
+
         // Send customer confirmation email and Stripe invoice
         if (wholesaler && customerEmail) {
           try {
