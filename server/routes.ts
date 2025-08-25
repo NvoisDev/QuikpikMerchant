@@ -3876,7 +3876,8 @@ The Quikpik Team
               productId: item.productId,
               quantity: item.quantity,
               unitPrice: parseFloat(item.unitPrice).toFixed(2),
-              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2)
+              total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
+              sellingType: item.sellingType || 'units' // Add missing sellingType column
             }));
 
             // Use transaction-aware storage method
