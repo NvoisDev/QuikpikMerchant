@@ -141,19 +141,23 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
     });
 
-    // Wait a brief moment for session to populate (fixes racing condition)
+    // Handle session timing issues with longer wait for certain requests
     if ((!req.session || (!(req.session as any)?.user && !(req.session as any)?.userId)) && req.headers.cookie) {
-      console.log('⏳ Session not ready, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('⏳ Session not ready, waiting longer for', req.method, req.url);
       
-      // If session is still missing after wait, log detailed info
+      // Wait longer for PUT/POST requests that might need more session processing time
+      const waitTime = (req.method === 'PUT' || req.method === 'POST') ? 1000 : 500;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // If session is still not available, this is likely a real auth failure
       if (!req.session) {
-        console.log('🚨 Session completely missing after wait:', {
+        console.log('🚨 Session still missing after wait:', {
           cookies: req.headers.cookie ? 'present' : 'missing',
           sessionID: req.sessionID,
-          url: req.url
+          url: req.url,
+          method: req.method
         });
-        return res.status(401).json({ error: 'Session establishment failed' });
+        return res.status(401).json({ error: 'Authentication required' });
       }
     }
 
