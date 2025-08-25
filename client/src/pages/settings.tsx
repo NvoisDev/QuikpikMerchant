@@ -287,7 +287,6 @@ export default function Settings() {
       setIsConnectingWhatsApp(true);
       
       // Check if user already has WhatsApp activated
-      const whatsappStatus = whatsappStatus as any;
       if (user?.whatsappEnabled) {
         toast({
           title: "WhatsApp Already Active",
@@ -301,14 +300,19 @@ export default function Settings() {
         provider: 'platform' // Use platform Twilio integration
       });
       
-      if (response.success) {
-        await refetchWhatsApp(); // Refresh status
-        toast({
-          title: "WhatsApp Activated!",
-          description: "Your WhatsApp messaging is now active. You can start sending campaigns to customers.",
-        });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          await refetchWhatsApp(); // Refresh WhatsApp status
+          toast({
+            title: "WhatsApp Activated!",
+            description: "Your WhatsApp messaging is now active. You can start sending campaigns to customers.",
+          });
+        } else {
+          throw new Error(result.message || 'Failed to activate WhatsApp');
+        }
       } else {
-        throw new Error(response.message || 'Failed to activate WhatsApp');
+        throw new Error('Network error during activation');
       }
     } catch (error: any) {
       console.error('Error activating WhatsApp:', error);
