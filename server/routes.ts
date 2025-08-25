@@ -68,20 +68,40 @@ async function generateOrderNumber(wholesalerId: string, trx?: any) {
     ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
     : 'WS';
   
+  console.log(`🔍 DEBUG generateOrderNumber: wholesalerId=${wholesalerId}, businessPrefix=${businessPrefix}`);
+  
   const dbConnection = trx || db;
-  const result = await dbConnection.execute(sql`
-    SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-    FROM orders 
-    WHERE wholesaler_id = ${wholesalerId} 
-    AND order_number LIKE ${businessPrefix + '-%'}
-  `);
   
-  const maxNumber = result.rows[0]?.max_number || 0;
-  const nextNumber = parseInt(maxNumber.toString()) + 1;
-  const orderNumber = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+  // CRITICAL FIX: Fix SQL syntax error by properly handling LIKE pattern
+  const likePattern = `${businessPrefix}-%`;
+  console.log(`🔍 DEBUG: LIKE pattern = "${likePattern}"`);
   
-  console.log(`🏢 Generated order number: ${orderNumber} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
-  return orderNumber;
+  try {
+    const result = await dbConnection.execute(sql`
+      SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+      FROM orders 
+      WHERE wholesaler_id = ${wholesalerId} 
+      AND order_number LIKE ${likePattern}
+    `);
+    
+    const maxNumber = result.rows[0]?.max_number || 0;
+    const nextNumber = parseInt(maxNumber.toString()) + 1;
+    const orderNumber = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+    
+    console.log(`🏢 Generated order number: ${orderNumber} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+    return orderNumber;
+  } catch (error: any) {
+    console.error(`❌ CRITICAL: generateOrderNumber SQL error:`, {
+      error: error.message,
+      wholesalerId,
+      businessPrefix,
+      likePattern,
+      errorCode: error.code,
+      errorPosition: error.position,
+      fullError: error
+    });
+    throw error;
+  }
 }
 
 // Function to create and send Stripe invoice to customer
