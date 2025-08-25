@@ -11036,6 +11036,8 @@ https://quikpik.app`;
         metadata: {
           userId: userId,
           planId: planId,
+          tier: planId, // Add for webhook compatibility
+          targetTier: planId, // Add for webhook compatibility
         },
       });
 
@@ -11215,6 +11217,7 @@ https://quikpik.app`;
           metadata: {
             userId: userId,
             targetTier: targetTier,
+            tier: targetTier, // Add for webhook compatibility
             upgradeFromTier: user.subscriptionTier || 'free'
           },
         });
@@ -11442,6 +11445,7 @@ https://quikpik.app`;
         metadata: {
           userId: userId,
           targetTier: targetTier,
+          tier: targetTier, // Add for webhook compatibility
           upgradeFromTier: user.subscriptionTier
         }
       });

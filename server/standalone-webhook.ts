@@ -39,7 +39,10 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       console.log(`🏷️ Metadata:`, JSON.stringify(session?.metadata, null, 2));
       
       const userId = session?.metadata?.userId;
-      const tier = session?.metadata?.targetTier || session?.metadata?.tier;
+      // Handle all possible tier metadata field names for maximum compatibility
+      const tier = session?.metadata?.targetTier || 
+                   session?.metadata?.tier || 
+                   session?.metadata?.planId;
       
       if (userId && tier) {
         console.log(`🔄 Processing upgrade: ${userId} → ${tier}`);
@@ -86,7 +89,10 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
       console.log(`🏷️ Metadata:`, JSON.stringify(paymentIntent?.metadata, null, 2));
       
       const userId = paymentIntent?.metadata?.userId;
-      const tier = paymentIntent?.metadata?.targetTier || paymentIntent?.metadata?.tier;
+      // Handle all possible tier metadata field names for maximum compatibility
+      const tier = paymentIntent?.metadata?.targetTier || 
+                   paymentIntent?.metadata?.tier || 
+                   paymentIntent?.metadata?.planId;
       
       const orderType = paymentIntent?.metadata?.orderType;
       
