@@ -119,13 +119,7 @@ const PriceDisplay = ({
             <Button 
               onClick={() => {
                 // Clear any existing authentication session
-                fetch('/api/auth/logout', { method: 'POST' })
-                  .then(() => {
-                    window.location.href = '/landing';
-                  })
-                  .catch(() => {
-                    window.location.href = '/landing';
-                  });
+                window.location.href = '/api/logout';
               }}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
@@ -1866,13 +1860,7 @@ export default function CustomerPortal() {
                 <Button
                   onClick={() => {
                     // Clear any existing authentication session
-                    fetch('/api/auth/logout', { method: 'POST' })
-                      .then(() => {
-                        window.location.href = '/landing';
-                      })
-                      .catch(() => {
-                        window.location.href = '/landing';
-                      });
+                    window.location.href = '/api/logout';
                   }}
                   variant="outline"
                   size="sm"
@@ -2119,13 +2107,7 @@ export default function CustomerPortal() {
                   <Button
                     onClick={() => {
                       // Clear any existing authentication session
-                      fetch('/api/auth/logout', { method: 'POST' })
-                        .then(() => {
-                          window.location.href = '/landing';
-                        })
-                        .catch(() => {
-                          window.location.href = '/landing';
-                        });
+                      window.location.href = '/api/logout';
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
