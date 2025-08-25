@@ -3062,24 +3062,29 @@ The Quikpik Team
       const totalOrders = totalCountQuery[0].count;
       const totalPages = Math.ceil(totalOrders / limit);
       
-      // Get paginated orders
-      let orderQuery = db
-        .select()
-        .from(orders)
-        .where(eq(orders.wholesalerId, wholesalerId));
+      // Get paginated orders with properly combined where conditions
+      let orderQuery;
       
-      // Apply search filter
+      // Apply search filter - combine all conditions in single where clause
       if (search && search.trim()) {
         const searchValue = `%${search.trim()}%`;
-        orderQuery = orderQuery.where(and(
-          eq(orders.wholesalerId, wholesalerId),
-          or(
-            sql`${orders.orderNumber} ILIKE ${searchValue}`,
-            sql`${orders.customerName} ILIKE ${searchValue}`,
-            sql`${orders.customerEmail} ILIKE ${searchValue}`,
-            sql`${orders.customerPhone} ILIKE ${searchValue}`
-          )
-        ));
+        orderQuery = db
+          .select()
+          .from(orders)
+          .where(and(
+            eq(orders.wholesalerId, wholesalerId),
+            or(
+              sql`${orders.orderNumber} ILIKE ${searchValue}`,
+              sql`${orders.customerName} ILIKE ${searchValue}`,
+              sql`${orders.customerEmail} ILIKE ${searchValue}`,
+              sql`${orders.customerPhone} ILIKE ${searchValue}`
+            )
+          ));
+      } else {
+        orderQuery = db
+          .select()
+          .from(orders)
+          .where(eq(orders.wholesalerId, wholesalerId));
       }
       
       const ordersResult = await orderQuery
