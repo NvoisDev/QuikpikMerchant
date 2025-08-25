@@ -583,11 +583,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('🔄 User already has Stripe account:', user.stripeAccountId);
         
         try {
+          // Get proper base URL with protocol
+          const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+            ? (process.env.REPLIT_DEV_DOMAIN.startsWith('http') 
+              ? process.env.REPLIT_DEV_DOMAIN 
+              : `https://${process.env.REPLIT_DEV_DOMAIN}`)
+            : 'https://quikpik.app';
+            
+          console.log('🔗 Using Stripe redirect base URL:', baseUrl);
+            
           // Get account link for existing account
           const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
-            return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
+            refresh_url: `${baseUrl}/settings?tab=integrations`,
+            return_url: `${baseUrl}/settings?tab=integrations&stripe=connected`,
             type: 'account_onboarding',
           });
           
@@ -624,11 +633,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('✅ User updated with Stripe account ID');
 
+      // Get proper base URL with protocol
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? (process.env.REPLIT_DEV_DOMAIN.startsWith('http') 
+          ? process.env.REPLIT_DEV_DOMAIN 
+          : `https://${process.env.REPLIT_DEV_DOMAIN}`)
+        : 'https://quikpik.app';
+        
+      console.log('🔗 Using Stripe redirect base URL:', baseUrl);
+        
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
         account: account.id,
-        refresh_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations`,
-        return_url: `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/settings?tab=integrations&stripe=connected`,
+        refresh_url: `${baseUrl}/settings?tab=integrations`,
+        return_url: `${baseUrl}/settings?tab=integrations&stripe=connected`,
         type: 'account_onboarding',
       });
 
