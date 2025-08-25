@@ -590,13 +590,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : `https://${process.env.REPLIT_DEV_DOMAIN}`)
             : 'https://quikpik.app';
             
+          const refreshUrl = `${baseUrl}/settings?tab=integrations`;
+          const returnUrl = `${baseUrl}/settings?tab=integrations&stripe=connected`;
+          
           console.log('🔗 Using Stripe redirect base URL:', baseUrl);
+          console.log('🔗 Stripe refresh URL:', refreshUrl);
+          console.log('🔗 Stripe return URL:', returnUrl);
             
           // Get account link for existing account
           const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `${baseUrl}/settings?tab=integrations`,
-            return_url: `${baseUrl}/settings?tab=integrations&stripe=connected`,
+            refresh_url: refreshUrl,
+            return_url: returnUrl,
             type: 'account_onboarding',
           });
           
@@ -640,13 +645,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : `https://${process.env.REPLIT_DEV_DOMAIN}`)
         : 'https://quikpik.app';
         
+      const refreshUrl = `${baseUrl}/settings?tab=integrations`;
+      const returnUrl = `${baseUrl}/settings?tab=integrations&stripe=connected`;
+      
       console.log('🔗 Using Stripe redirect base URL:', baseUrl);
+      console.log('🔗 Stripe refresh URL:', refreshUrl);
+      console.log('🔗 Stripe return URL:', returnUrl);
         
       // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
         account: account.id,
-        refresh_url: `${baseUrl}/settings?tab=integrations`,
-        return_url: `${baseUrl}/settings?tab=integrations&stripe=connected`,
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
         type: 'account_onboarding',
       });
 
