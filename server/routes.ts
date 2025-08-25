@@ -3818,11 +3818,6 @@ The Quikpik Team
 
       if (orderType === 'customer_portal') {
         const items = JSON.parse(itemsJson);
-        
-        // 🐛 DEBUG: Log all items from payment intent
-        console.log('🔍 ITEMS DEBUG - Raw itemsJson from payment:', itemsJson);
-        console.log('🔍 ITEMS DEBUG - Parsed items array:', JSON.stringify(items, null, 2));
-        console.log(`🔍 ITEMS DEBUG - Total items count: ${items.length}`);
 
         // Create customer if doesn't exist or update existing one
         let customer = await storage.getUserByPhone(customerPhone);
@@ -3995,25 +3990,18 @@ The Quikpik Team
               total: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
               sellingType: item.sellingType || 'units' // Add missing sellingType column
             }));
-            
-            // 🐛 DEBUG: Log order items being created
-            console.log(`🔍 ORDER ITEMS DEBUG - Creating ${orderItems.length} order items:`);
-            orderItems.forEach((item, index) => {
-              console.log(`🔍 ORDER ITEM ${index + 1}: productId=${item.productId}, quantity=${item.quantity}, unitPrice=${item.unitPrice}, total=${item.total}`);
-            });
 
-            // Use transaction-aware storage method
-            console.log(`🔍 TRANSACTION DEBUG - About to create order with ${orderItems.length} items`);
+            // Use transaction-aware storage method with integrity check
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
-            console.log(`🔍 TRANSACTION DEBUG - Order created with ID: ${createdOrder.id}`);
             
-            // 🐛 DEBUG: Verify items were actually saved
+            // 🔒 DATA INTEGRITY: Verify all items were saved correctly
             const savedItems = await trx.select().from(orderItems).where(eq(orderItems.orderId, createdOrder.id));
-            console.log(`🔍 VERIFICATION DEBUG - Found ${savedItems.length} saved items for order ${createdOrder.id}:`);
-            savedItems.forEach((item, index) => {
-              console.log(`🔍 SAVED ITEM ${index + 1}: productId=${item.productId}, quantity=${item.quantity}, unitPrice=${item.unitPrice}, total=${item.total}`);
-            });
+            if (savedItems.length !== items.length) {
+              console.error(`❌ DATA INTEGRITY ALERT: Expected ${items.length} items, but only saved ${savedItems.length} for order ${createdOrder.id}`);
+              throw new Error(`Data integrity failure: Expected ${items.length} items, saved ${savedItems.length}`);
+            }
             
+            console.log(`✅ Order #${createdOrder.id} created with ${savedItems.length}/${items.length} items verified`);
             return { order: createdOrder, wholesaleRef };
           });
           

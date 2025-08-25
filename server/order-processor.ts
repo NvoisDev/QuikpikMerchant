@@ -213,7 +213,14 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   const order = await storage.createOrder(orderData, orderItems);
   
-  console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created successfully for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
+  // 🔒 DATA INTEGRITY: Verify all items were saved correctly
+  const savedItems = await storage.getOrderItems(order.id);
+  if (savedItems.length !== items.length) {
+    console.error(`❌ DATA INTEGRITY ALERT: Expected ${items.length} items, but only saved ${savedItems.length} for order ${order.id}`);
+    throw new Error(`Data integrity failure: Expected ${items.length} items, saved ${savedItems.length}`);
+  }
+  
+  console.log(`✅ Order #${order.id} (Order Number: ${order.orderNumber}) created with ${savedItems.length}/${items.length} items verified for wholesaler ${wholesalerId}, customer ${customerName}, total: ${totalAmount}`);
 
   // Send order confirmation email to customer
   try {
