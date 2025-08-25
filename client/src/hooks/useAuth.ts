@@ -81,12 +81,47 @@ export function useAuth() {
     }
   });
 
+  const backToHomeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Clear all authentication data
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+      // Force redirect to landing page instead of login
+      window.location.href = "/landing";
+    },
+    onError: (error) => {
+      console.error("Back to home error:", error);
+      // Force logout even if API fails and go to landing
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/landing";
+    }
+  });
+
   return {
     user,
     loading: isLoading,
     isLoading,
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
+    backToHome: backToHomeMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };
 }
