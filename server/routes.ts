@@ -59,6 +59,30 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 }) : null;
 
 // Helper function to format numbers with commas
+
+// Helper function for generating consistent SF-XXX order numbers
+async function generateOrderNumber(wholesalerId: string, trx?: any) {
+  const wholesaler = await storage.getUser(wholesalerId);
+  const businessPrefix = wholesaler?.businessName 
+    ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
+    : 'WS';
+  
+  const dbConnection = trx || db;
+  const result = await dbConnection.execute(sql`
+    SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
+    FROM orders 
+    WHERE wholesaler_id = ${wholesalerId} 
+    AND order_number LIKE ${businessPrefix + '-%'}
+  `);
+  
+  const maxNumber = result.rows[0]?.max_number || 0;
+  const nextNumber = parseInt(maxNumber.toString()) + 1;
+  const orderNumber = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
+  
+  console.log(`🏢 Generated order number: ${orderNumber} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+  return orderNumber;
+}
+
 // Function to create and send Stripe invoice to customer
 async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: any, customer: any) {
   if (!stripe) {
@@ -3153,7 +3177,7 @@ The Quikpik Team
       const wholesalerId = firstProduct!.wholesalerId;
 
       const orderData = insertOrderSchema.parse({
-        orderNumber: `ORD-${Date.now()}`,
+        orderNumber: await generateOrderNumber(wholesalerId),
         wholesalerId,
         retailerId: userId,
         subtotal: subtotal.toFixed(2),
@@ -3788,14 +3812,6 @@ The Quikpik Team
           servicePrice: shippingInfo.service?.price
         });
 
-        // Get wholesaler info for reference generation
-        const wholesaler = await storage.getUser(wholesalerId);
-        
-        // CRITICAL FIX: Use proper sequential order numbering like order-processor.ts
-        const businessPrefix = wholesaler?.businessName 
-          ? wholesaler.businessName.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase()
-          : 'WS';
-        
         // ATOMIC ORDER NUMBER GENERATION: Use database transaction with proper sequential numbering AND duplicate checking
         let order, wholesaleRef;
         
@@ -3814,19 +3830,8 @@ The Quikpik Team
               throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
             }
 
-            // CRITICAL FIX: Use MAX function to get highest numeric part, not just latest record (FOR UPDATE removed for Neon compatibility)
-            const result = await trx.execute(sql`
-              SELECT COALESCE(MAX(CAST(SPLIT_PART(order_number, '-', 2) AS INTEGER)), 0) as max_number
-              FROM orders 
-              WHERE wholesaler_id = ${wholesalerId} 
-              AND order_number LIKE ${businessPrefix + '-%'}
-            `);
-            
-            const maxNumber = result.rows[0]?.max_number || 0;
-            const nextNumber = parseInt(maxNumber.toString()) + 1;
-            const wholesaleRef = `${businessPrefix}-${nextNumber.toString().padStart(3, '0')}`;
-            
-            console.log(`🏢 ATOMIC: Generated wholesale reference: ${wholesaleRef} (from max: ${maxNumber} -> next: ${nextNumber}) for ${wholesaler?.businessName || 'Unknown Business'}`);
+            // Use consistent order number generation
+            const wholesaleRef = await generateOrderNumber(wholesalerId, trx);
             
             // CRITICAL FIX: Calculate subtotal from items when metadata missing
             const safeSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined'
@@ -9466,7 +9471,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       // Create order with customer details  
       const orderData = {
-        orderNumber: `ORD-${Date.now()}`,
+        orderNumber: await generateOrderNumber(product.wholesalerId),
         wholesalerId: product.wholesalerId,
         retailerId: customer.id,
         customerName, // Store customer name
@@ -9668,7 +9673,7 @@ Please contact the customer to confirm this order.
       // Create the order with customer details
       const order = await storage.createOrder(
         {
-          orderNumber: `ORD-${Date.now()}`,
+          orderNumber: await generateOrderNumber(firstProduct.wholesalerId),
           retailerId: customer.id,
           wholesalerId: firstProduct.wholesalerId,
           customerName, // Store customer name
