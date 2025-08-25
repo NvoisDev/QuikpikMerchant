@@ -25,6 +25,9 @@ export class WhatsAppBusinessService {
   async sendMessage(to: string, message: string, userCredentials: {
     accessToken: string;
     phoneNumberId: string;
+  }, options?: {
+    imageUrl?: string;
+    caption?: string;
   }) {
     if (!userCredentials.accessToken || !userCredentials.phoneNumberId) {
       throw new Error('WhatsApp Business API credentials not configured');
@@ -33,20 +36,33 @@ export class WhatsAppBusinessService {
     try {
       const url = `https://graph.facebook.com/v17.0/${userCredentials.phoneNumberId}/messages`;
       
+      // Prepare message payload
+      let messagePayload: any = {
+        messaging_product: 'whatsapp',
+        to: to.replace('+', ''),
+      };
+
+      // Send image if provided, otherwise send text
+      if (options?.imageUrl) {
+        messagePayload.type = 'image';
+        messagePayload.image = {
+          link: options.imageUrl,
+          caption: options.caption || message
+        };
+      } else {
+        messagePayload.type = 'text';
+        messagePayload.text = {
+          body: message
+        };
+      }
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${userCredentials.accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: to.replace('+', ''),
-          type: 'text',
-          text: {
-            body: message
-          }
-        })
+        body: JSON.stringify(messagePayload)
       });
       
       if (!response.ok) {
@@ -57,6 +73,7 @@ export class WhatsAppBusinessService {
       const result = await response.json();
       console.log(`✅ WhatsApp message sent successfully:`, {
         to,
+        type: messagePayload.type,
         messageId: result.messages[0].id
       });
       
