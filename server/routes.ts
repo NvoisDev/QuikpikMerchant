@@ -712,6 +712,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Temporary reset endpoint for testing
+  app.post('/api/reset-whatsapp-status', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      console.log('🔄 Resetting WhatsApp status for user:', userId);
+
+      await storage.updateUser(userId, {
+        whatsappEnabled: false,
+        whatsappProvider: null,
+        whatsappAccessToken: null,
+        whatsappBusinessPhoneId: null,
+        whatsappAppId: null,
+        whatsappBusinessPhone: null,
+        whatsappBusinessName: null,
+      });
+
+      console.log('✅ WhatsApp status reset for user:', userId);
+      res.json({ success: true, message: 'WhatsApp status reset' });
+    } catch (error) {
+      console.error('❌ Error resetting WhatsApp status:', error);
+      res.status(500).json({ success: false, message: 'Failed to reset WhatsApp status' });
+    }
+  });
+
   // Simple WhatsApp activation endpoint for platform integration
   app.post('/api/whatsapp/activate', requireAuth, async (req: any, res) => {
     try {
@@ -7183,14 +7208,21 @@ Write a professional, sales-focused description that highlights the key benefits
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Check if WhatsApp is configured (either Twilio global credentials or user Direct credentials)
-      const twilioConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+      // Check if platform has WhatsApp capability (global credentials exist)
+      const platformCapable = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+      
+      // Check if user has specifically activated WhatsApp for their account
+      const userActivated = user.whatsappEnabled === true;
+      
+      // Check if user has direct WhatsApp credentials configured
       const directWhatsappConfigured = !!(user.whatsappBusinessPhoneId && user.whatsappAccessToken && user.whatsappAppId);
       
-      const isConfigured = twilioConfigured || directWhatsappConfigured;
+      // User's WhatsApp is only "configured" if they've explicitly activated it
+      const isConfigured = userActivated && (platformCapable || directWhatsappConfigured);
       
-      console.log('📞 WhatsApp Configuration Check:', {
-        twilioConfigured,
+      console.log('📞 WhatsApp Status Check:', {
+        platformCapable,
+        userActivated,
         directWhatsappConfigured,
         isConfigured,
         userId: user.id
@@ -7200,13 +7232,16 @@ Write a professional, sales-focused description that highlights the key benefits
       
       res.json({
         isConfigured,
+        platformCapable, // Platform has WhatsApp capability
+        userActivated,   // User has activated WhatsApp
         provider,
         serviceProvider: provider === 'twilio' ? 'Twilio WhatsApp' : 'WhatsApp Business API',
-        // Global Twilio credentials (environment-based)
+        // Global platform capability
         twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? "configured" : null,
         twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ? "configured" : null, 
         twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
-        // User-specific Direct WhatsApp credentials
+        // User-specific WhatsApp settings
+        whatsappEnabled: user.whatsappEnabled,
         whatsappBusinessPhoneId: user.whatsappBusinessPhoneId,
         whatsappAccessToken: user.whatsappAccessToken ? "configured" : null,
         whatsappAppId: user.whatsappAppId,
@@ -7214,7 +7249,7 @@ Write a professional, sales-focused description that highlights the key benefits
         whatsappBusinessName: user.whatsappBusinessName,
         whatsappProvider: user.whatsappProvider,
         // Debug info
-        configurationSource: twilioConfigured ? 'global_twilio' : (directWhatsappConfigured ? 'user_direct' : 'not_configured')
+        configurationSource: isConfigured ? (user.whatsappProvider === 'direct' ? 'user_direct' : 'user_activated_platform') : (platformCapable ? 'platform_available' : 'not_available')
       });
     } catch (error) {
       console.error("Error fetching WhatsApp status:", error);

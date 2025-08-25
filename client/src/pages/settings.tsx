@@ -287,10 +287,20 @@ export default function Settings() {
       setIsConnectingWhatsApp(true);
       
       // Check if user already has WhatsApp activated
-      if (user?.whatsappEnabled) {
+      if ((whatsappStatus as any)?.userActivated) {
         toast({
           title: "WhatsApp Already Active",
           description: "Your WhatsApp messaging is already active and ready to use for campaigns.",
+        });
+        return;
+      }
+      
+      // Check if platform capability is available
+      if (!(whatsappStatus as any)?.platformCapable) {
+        toast({
+          title: "WhatsApp Not Available",
+          description: "WhatsApp platform capability is not currently available. Please contact support.",
+          variant: "destructive",
         });
         return;
       }
@@ -829,15 +839,20 @@ export default function Settings() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
-                          {user?.whatsappEnabled ? (
+                          {(whatsappStatus as any)?.userActivated ? (
                             <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
                               <CheckCircle className="h-3 w-3" />
                               <span className="text-xs font-medium">Active</span>
                             </div>
-                          ) : (
+                          ) : (whatsappStatus as any)?.platformCapable ? (
                             <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                               <MessageSquare className="h-3 w-3" />
                               <span className="text-xs font-medium">Activate Now</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-gray-50 text-gray-700 px-2 py-1 rounded-full">
+                              <AlertTriangle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Not Available</span>
                             </div>
                           )}
                         </div>
@@ -846,7 +861,7 @@ export default function Settings() {
                           Send product promotions, order confirmations, and customer communications via WhatsApp.
                         </p>
                         
-                        {user?.whatsappEnabled ? (
+                        {(whatsappStatus as any)?.userActivated ? (
                           // User has activated WhatsApp - show success state
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
                             <div className="flex items-start gap-3">
@@ -910,23 +925,27 @@ export default function Settings() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Status:</span>
-                            {user?.whatsappEnabled ? (
+                            {(whatsappStatus as any)?.userActivated ? (
                               <span className="text-green-600 font-medium text-sm">
                                 ✅ Active via {(whatsappStatus as any)?.serviceProvider || 'Platform Integration'}
                               </span>
-                            ) : (
+                            ) : (whatsappStatus as any)?.platformCapable ? (
                               <span className="text-blue-600 font-medium text-sm">
                                 ⚡ Ready to activate - no setup required
+                              </span>
+                            ) : (
+                              <span className="text-gray-600 font-medium text-sm">
+                                ❌ Platform capability not available
                               </span>
                             )}
                           </div>
                           <button 
                             onClick={handleWhatsAppActivation}
-                            disabled={isConnectingWhatsApp}
+                            disabled={isConnectingWhatsApp || !(whatsappStatus as any)?.platformCapable}
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="text-sm sm:text-base">
-                              {isConnectingWhatsApp ? 'Activating...' : (user?.whatsappEnabled ? 'Manage WhatsApp' : 'Activate WhatsApp')}
+                              {isConnectingWhatsApp ? 'Activating...' : ((whatsappStatus as any)?.userActivated ? 'Manage WhatsApp' : 'Activate WhatsApp')}
                             </span>
                             {!isConnectingWhatsApp && <MessageSquare className="h-4 w-4" />}
                             {isConnectingWhatsApp && <Loader2 className="h-4 w-4 animate-spin" />}
