@@ -717,10 +717,10 @@ export default function Campaigns() {
 
         <TabsContent value="campaigns" className="space-y-6">
           {/* WhatsApp Connection Status */}
-          <div className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-green-600" />
-              <h3 className="font-medium text-gray-900">WhatsApp Integration</h3>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border rounded-lg shadow-sm gap-3 sm:gap-0">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <MessageSquare className="h-5 w-5 text-green-600 flex-shrink-0" />
+              <h3 className="font-medium text-gray-900 text-sm sm:text-base">WhatsApp Integration</h3>
               <WhatsAppStatusIndicator />
             </div>
           </div>
@@ -729,19 +729,19 @@ export default function Campaigns() {
           <WhatsAppSetupAlert />
 
           {/* Broadcast Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Campaigns</p>
-                <p className="text-2xl font-bold text-gray-900">{campaigns.length}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Campaigns</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{campaigns.length}</p>
               </div>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
-                      <MessageSquare className="h-4 w-4 text-blue-600" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
+                      <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -754,11 +754,11 @@ export default function Campaigns() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Messages Sent</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Messages Sent</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {campaigns.reduce((total, campaign) => 
                     total + campaign.sentCampaigns.reduce((sum, sent) => sum + sent.recipientCount, 0), 0
                   )}
@@ -767,8 +767,8 @@ export default function Campaigns() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center cursor-help">
-                      <Send className="h-4 w-4 text-green-600" />
+                    <div className="h-6 w-6 sm:h-8 sm:w-8 bg-green-100 rounded-full flex items-center justify-center cursor-help">
+                      <Send className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -781,7 +781,7 @@ export default function Campaigns() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Orders</p>
@@ -808,7 +808,7 @@ export default function Campaigns() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Stock Value</p>
@@ -1278,7 +1278,7 @@ export default function Campaigns() {
                   </div>
                 )}
               </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               {campaign.campaignType === 'single' ? (
                 <div className="space-y-2">
                   <div className="flex items-center text-sm">
@@ -1524,9 +1524,9 @@ export default function Campaigns() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               WhatsApp Message Preview
               <Button
                 variant="outline"
@@ -1545,7 +1545,7 @@ export default function Campaigns() {
           </DialogHeader>
           {selectedCampaign && (
             <div className="space-y-4">
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-center mb-2">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
                     <MessageSquare className="h-4 w-4 text-white" />
@@ -1558,10 +1558,10 @@ export default function Campaigns() {
                       value={editableMessage}
                       onChange={(e) => setEditableMessage(e.target.value)}
                       placeholder="Edit your WhatsApp message..."
-                      className="min-h-[200px] font-mono text-sm resize-none"
+                      className="min-h-[200px] font-mono text-xs sm:text-sm resize-none w-full"
                     />
                   ) : (
-                    <pre className="whitespace-pre-wrap text-sm">{generatePreviewMessage(selectedCampaign)}</pre>
+                    <pre className="whitespace-pre-wrap text-xs sm:text-sm break-words overflow-wrap-anywhere">{generatePreviewMessage(selectedCampaign)}</pre>
                   )}
                 </div>
               </div>
@@ -1575,11 +1575,11 @@ export default function Campaigns() {
                 </div>
               )}
               
-              <div className="flex justify-between">
-                <div className="text-sm text-gray-500">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
+                <div className="text-xs sm:text-sm text-gray-500">
                   Character count: {(isEditingMessage ? editableMessage : generatePreviewMessage(selectedCampaign)).length}
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 w-full sm:w-auto">
                   {isEditingMessage && (
                     <Button 
                       variant="outline" 

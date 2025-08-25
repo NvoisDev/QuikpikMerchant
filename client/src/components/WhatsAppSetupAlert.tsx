@@ -23,8 +23,8 @@ export function WhatsAppSetupAlert() {
 
   return (
     <Alert className="border-orange-200 bg-orange-50 mb-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-3">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-0">
+        <div className="flex items-start space-x-3 w-full sm:w-auto">
           <div className="flex-shrink-0">
             <div className="p-2 bg-orange-100 rounded-full">
               <MessageSquare className="h-5 w-5 text-orange-600" />
@@ -32,21 +32,21 @@ export function WhatsAppSetupAlert() {
           </div>
           
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-semibold text-orange-800">WhatsApp Setup Required</h4>
-              <Badge variant="outline" className="text-orange-700 border-orange-200">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+              <h4 className="font-semibold text-orange-800 text-sm sm:text-base">WhatsApp Setup Required</h4>
+              <Badge variant="outline" className="text-orange-700 border-orange-200 w-fit">
                 Priority
               </Badge>
             </div>
             
-            <AlertDescription className="text-orange-700 mb-3">
+            <AlertDescription className="text-orange-700 mb-3 text-sm">
               Set up WhatsApp messaging to enable customer communications, order notifications, and marketing campaigns. 
               This is essential for your wholesale business operations.
             </AlertDescription>
             
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-3">
               <Link href="/settings?tab=integrations">
-                <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
+                <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white w-full xs:w-auto">
                   <Settings className="h-4 w-4 mr-2" />
                   Set Up WhatsApp
                 </Button>
@@ -56,7 +56,7 @@ export function WhatsAppSetupAlert() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => setDismissed(true)}
-                className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                className="text-orange-600 border-orange-200 hover:bg-orange-50 w-full xs:w-auto"
               >
                 Dismiss
               </Button>
@@ -68,7 +68,7 @@ export function WhatsAppSetupAlert() {
           variant="ghost"
           size="sm"
           onClick={() => setDismissed(true)}
-          className="text-orange-600 hover:bg-orange-100 p-1"
+          className="text-orange-600 hover:bg-orange-100 p-1 self-start sm:self-auto"
         >
           <X className="h-4 w-4" />
         </Button>
