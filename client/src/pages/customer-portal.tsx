@@ -1323,6 +1323,13 @@ export default function CustomerPortal() {
   // Simplified payment intent creation - no shipping metadata needed
   const createPaymentIntentForCheckout = useCallback(async () => {
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
+    console.log('🚚 DEBUG: customerData.shippingOption at payment creation:', customerData.shippingOption);
+    console.log('🚚 DEBUG: Full customerData at payment creation:', JSON.stringify({
+      name: customerData.name,
+      phone: customerData.phone,
+      shippingOption: customerData.shippingOption,
+      selectedDeliveryAddress: customerData.selectedDeliveryAddress
+    }, null, 2));
     
     if (isCreatingIntent || clientSecret || !wholesaler) {
       console.log('🚚 Payment intent already exists or is being created - SKIPPING');
@@ -4041,6 +4048,7 @@ export default function CustomerPortal() {
                         checked={customerData.shippingOption === 'delivery'}
                         onChange={async () => {
                           console.log('🚚 RADIO BUTTON: User clicked delivery option');
+                          console.log('🚚 DEBUG: Current customerData.shippingOption before change:', customerData.shippingOption);
                           
                           // Auto-select default delivery address if none is selected
                           if (!customerData.selectedDeliveryAddress && wholesaler?.id && authenticatedCustomer?.id) {
@@ -4087,6 +4095,8 @@ export default function CustomerPortal() {
                               console.error('🚚 Error saving delivery choice:', error);
                             }
                           }
+                          
+                          console.log('🚚 DEBUG: customerData.shippingOption AFTER setting to delivery:', customerData.shippingOption);
                         }}
                         className="w-4 h-4 text-emerald-600"
                       />
