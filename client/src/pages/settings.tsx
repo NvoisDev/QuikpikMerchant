@@ -9,6 +9,7 @@ import { SiWhatsapp, SiStripe } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { WhatsAppSetupModal } from "@/components/WhatsAppSetupModal";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("account");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isConnectingWhatsApp, setIsConnectingWhatsApp] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   // Get Stripe Connect status
   const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
@@ -212,46 +214,28 @@ export default function Settings() {
   };
 
   // WhatsApp Business API configuration
-  const handleWhatsAppConnect = async () => {
-    // Get WhatsApp Business API credentials from user
-    const accessToken = prompt(
-      "Enter your WhatsApp Business API Access Token\n\n" +
-      "To get your access token:\n" +
-      "1. Go to Meta Business Manager (business.facebook.com)\n" +
-      "2. Select your WhatsApp Business Account\n" +
-      "3. Go to System Users > Generate New Token\n" +
-      "4. Grant 'whatsapp_business_messaging' permissions"
-    );
-    
-    if (!accessToken) return;
-    
-    const businessPhoneId = prompt(
-      "Enter your WhatsApp Business Phone Number ID\n\n" +
-      "To find your Phone Number ID:\n" +
-      "1. Go to Meta Business Manager\n" +
-      "2. WhatsApp Manager > Phone Numbers\n" +
-      "3. Copy the Phone Number ID (not the actual phone number)"
-    );
-    
-    if (!businessPhoneId) return;
-    
-    const businessName = prompt(
-      "Enter your WhatsApp Business Display Name (optional)\n\n" +
-      "This will appear in WhatsApp messages to customers"
-    );
+  const handleWhatsAppConnect = () => {
+    setShowWhatsAppModal(true);
+  };
 
+  const handleWhatsAppSubmit = async (credentials: {
+    accessToken: string;
+    businessPhoneId: string;
+    businessName?: string;
+  }) => {
     setIsConnectingWhatsApp(true);
     try {
       const response = await apiRequest('POST', '/api/whatsapp/configure', {
-        accessToken,
-        businessPhoneId,
-        businessName: businessName || undefined
+        accessToken: credentials.accessToken,
+        businessPhoneId: credentials.businessPhoneId,
+        businessName: credentials.businessName || undefined
       });
       
       const data = await response.json();
       
       if (data.success) {
         await refetchWhatsApp(); // Refresh WhatsApp status
+        setShowWhatsAppModal(false);
         toast({
           title: "WhatsApp Connected!",
           description: "Your WhatsApp Business API is now configured and ready to send messages.",
@@ -818,6 +802,14 @@ export default function Settings() {
 
               {activeTab === "integrations" && (
                 <div className="space-y-6">
+                  {/* WhatsApp Setup Modal */}
+                  <WhatsAppSetupModal 
+                    isOpen={showWhatsAppModal}
+                    onClose={() => setShowWhatsAppModal(false)}
+                    onSubmit={handleWhatsAppSubmit}
+                    isSubmitting={isConnectingWhatsApp}
+                  />
+
                   <div>
                     <h3 className="text-base sm:text-lg font-medium mb-4">Integration Settings</h3>
                     <p className="text-gray-600 text-sm sm:text-base">Connect your business with WhatsApp and Stripe to streamline operations.</p>
@@ -935,10 +927,9 @@ export default function Settings() {
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="text-sm sm:text-base">
-                              {isConnectingWhatsApp ? 'Connecting...' : ((whatsappStatus as any)?.isConfigured ? 'Manage WhatsApp' : 'Connect WhatsApp Business API')}
+                              {(whatsappStatus as any)?.isConfigured ? 'Reconfigure WhatsApp' : 'Connect WhatsApp Business API'}
                             </span>
-                            {!isConnectingWhatsApp && <MessageSquare className="h-4 w-4" />}
-                            {isConnectingWhatsApp && <Loader2 className="h-4 w-4 animate-spin" />}
+                            <MessageSquare className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
