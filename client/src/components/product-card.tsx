@@ -159,11 +159,11 @@ export default function ProductCard({
         };
       case "standard":
         return {
-          limit: 10,
+          limit: -1, // unlimited
           current: currentEdits,
-          showCounter: true,
-          disabled: currentEdits >= 10,
-          label: `${currentEdits}/10 edits`
+          showCounter: false, // Hide counter for standard (unlimited edits)
+          disabled: false,
+          label: "Unlimited edits"
         };
       case "premium":
         return {
