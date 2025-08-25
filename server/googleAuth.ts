@@ -142,9 +142,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     });
 
     // Wait a brief moment for session to populate (fixes racing condition)
-    if (!req.session && req.headers.cookie) {
+    if ((!req.session || (!(req.session as any)?.user && !(req.session as any)?.userId)) && req.headers.cookie) {
       console.log('⏳ Session not ready, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     // Check for session user object (primary method for email/password auth)
