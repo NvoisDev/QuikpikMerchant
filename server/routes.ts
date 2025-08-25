@@ -3200,7 +3200,8 @@ The Quikpik Team
     // Global payment processing lock to prevent ANY payment requests from overlapping
     const globalPaymentLock = 'global_payment_processing';
     try {
-      const { customerName, customerEmail, customerPhone, customerAddress, selectedDeliveryAddress, items, shippingInfo } = req.body;
+      const { customerData, items, shippingInfo } = req.body;
+      const { name: customerName, email: customerEmail, phone: customerPhone, address: customerAddress, selectedDeliveryAddress } = customerData || {};
       
       // Global payment lock disabled - allow payment processing
       console.log('💳 PAYMENT PROCESSING: Global lock disabled, allowing payment');
@@ -3473,7 +3474,7 @@ The Quikpik Team
       // Create stable idempotency key including Connect configuration to prevent conflicts
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
-      const phoneKey = customerPhone.replace(/[^0-9]/g, '').slice(-4); // Clean phone number
+      const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
       const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
       const timestamp = Date.now().toString().slice(-6); // Add timestamp to force new keys during Connect testing
       const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${timestamp}`.replace(/[^a-zA-Z0-9_-]/g, '');
