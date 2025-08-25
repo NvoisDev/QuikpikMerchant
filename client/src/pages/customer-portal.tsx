@@ -117,14 +117,24 @@ const PriceDisplay = ({
           <div className="text-center">
             <div className="text-xs text-gray-600 mb-1">Contact wholesaler</div>
             <Button 
-              onClick={() => {
-                // Clear all cookies and authentication session
-                document.cookie.split(";").forEach(cookie => {
-                  const eqPos = cookie.indexOf("=");
-                  const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                  document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-                });
-                window.location.href = '/landing';
+              onClick={async () => {
+                // Properly destroy session using POST logout
+                try {
+                  await fetch('/api/auth/logout', { 
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  // Small delay to ensure session is destroyed
+                  setTimeout(() => {
+                    window.location.href = '/landing';
+                  }, 100);
+                } catch (error) {
+                  // Fallback - just redirect
+                  window.location.href = '/landing';
+                }
               }}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
@@ -1863,14 +1873,24 @@ export default function CustomerPortal() {
               {/* Contact Wholesaler button for guests */}
               {isGuestMode && (
                 <Button
-                  onClick={() => {
-                    // Clear all cookies and authentication session
-                    document.cookie.split(";").forEach(cookie => {
-                      const eqPos = cookie.indexOf("=");
-                      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-                    });
-                    window.location.href = '/landing';
+                  onClick={async () => {
+                    // Properly destroy session using POST logout
+                    try {
+                      await fetch('/api/auth/logout', { 
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        }
+                      });
+                      // Small delay to ensure session is destroyed
+                      setTimeout(() => {
+                        window.location.href = '/landing';
+                      }, 100);
+                    } catch (error) {
+                      // Fallback - just redirect
+                      window.location.href = '/landing';
+                    }
                   }}
                   variant="outline"
                   size="sm"
@@ -2115,14 +2135,24 @@ export default function CustomerPortal() {
                 </p>
                 <div className="flex items-center space-x-4">
                   <Button
-                    onClick={() => {
-                      // Clear all cookies and authentication session
-                      document.cookie.split(";").forEach(cookie => {
-                        const eqPos = cookie.indexOf("=");
-                        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-                      });
-                      window.location.href = '/landing';
+                    onClick={async () => {
+                      // Properly destroy session using POST logout
+                      try {
+                        await fetch('/api/auth/logout', { 
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: {
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        // Small delay to ensure session is destroyed
+                        setTimeout(() => {
+                          window.location.href = '/landing';
+                        }, 100);
+                      } catch (error) {
+                        // Fallback - just redirect
+                        window.location.href = '/landing';
+                      }
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
