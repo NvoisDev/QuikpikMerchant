@@ -8,6 +8,7 @@ import compression from "compression";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getGoogleAuthUrl, verifyGoogleToken, createOrUpdateUser, requireAuth } from "./googleAuth";
 import { insertProductSchema, insertOrderSchema, insertCustomerGroupSchema, insertBroadcastSchema, insertMessageTemplateSchema, insertTemplateProductSchema, insertTemplateCampaignSchema, users, orders, orderItems, products, customerGroups, customerGroupMembers, smsVerificationCodes, insertSMSVerificationCodeSchema, customerRegistrationRequests, insertCustomerRegistrationRequestSchema, campaignOrders } from "@shared/schema";
+import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
@@ -3265,11 +3266,20 @@ The Quikpik Team
           return res.status(400).json({ message: `Product ${item.productId} not found` });
         }
 
-        // Determine if this is a pallet or unit order based on unit price
-        const isUnitOrder = parseFloat(item.unitPrice) === parseFloat(product.price);
+        // CRITICAL FIX: Use promotional pricing calculator to determine correct expected price
+        const basePrice = parseFloat(product.price);
+        const promotionalPricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+          basePrice,
+          item.quantity,
+          product.promotionalOffers || [],
+          product.promoPrice ? parseFloat(product.promoPrice) : undefined,
+          product.promoActive
+        );
+        
+        // Determine if this is a pallet, unit, or promotional order based on calculated promotional price
+        const isUnitOrder = parseFloat(item.unitPrice) === promotionalPricing.effectivePrice;
         const isPalletOrder = product.palletPrice && parseFloat(item.unitPrice) === parseFloat(product.palletPrice);
-        // CRITICAL: Also check for promotional pricing
-        const isPromotionalOrder = product.promoActive && product.promoPrice && parseFloat(item.unitPrice) === parseFloat(product.promoPrice);
+        const isPromotionalOrder = isUnitOrder && promotionalPricing.effectivePrice !== basePrice;
         
         console.log(`🔍 MOQ VALIDATION for ${product.name}:`, {
           itemQuantity: item.quantity,
