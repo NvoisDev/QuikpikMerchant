@@ -208,14 +208,8 @@ export default function Settings() {
 
   const handleSaveBusiness = async () => {
     try {
-      console.log('🚀 Saving business form:', businessForm);
-      console.log('📍 Business address in form:', businessForm.businessAddress);
-      
       const response = await apiRequest('PUT', '/api/user/profile', businessForm);
-      console.log('📡 API Response status:', response.status);
-      
       const data = await response.json();
-      console.log('📄 API Response data:', data);
       
       if (data.success) {
         toast({
@@ -224,12 +218,9 @@ export default function Settings() {
         });
         setIsEditingBusiness(false);
         window.location.reload(); // Refresh to show updated data
-      } else {
-        console.log('❌ API returned success: false');
-        throw new Error(data.message || 'Save failed');
       }
     } catch (error) {
-      console.error('❌ Error updating business:', error);
+      console.error('Error updating business:', error);
       toast({
         title: "Update Failed",
         description: "Unable to update business information. Please try again.",

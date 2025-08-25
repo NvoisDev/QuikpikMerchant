@@ -588,12 +588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.getUser(req.session.user.id);
         console.log('✅ Found user via session:', user?.email);
       } 
-      // Fallback to known user for this session issue
-      else if (req.headers.cookie) {
-        console.log('🆘 Session missing, using fallback user lookup');
-        user = await storage.getUserByEmail('ibk_legacy1997@hotmail.co.uk');
-        console.log('✅ Found user via fallback:', user?.email);
-      }
+      // SECURITY FIX: Remove dangerous hardcoded fallback authentication
+      // This was causing users to save to wrong accounts
       
       if (!user || user.role !== 'wholesaler') {
         console.log('❌ Authentication failed - no valid user found');
