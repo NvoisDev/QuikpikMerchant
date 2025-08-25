@@ -51,6 +51,7 @@ import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { debounce } from "@/utils/performance";
 import { StockIndicator } from "@/components/ui/stock-indicator";
+import { Package2 } from "lucide-react";
 
 // Extended Product type that includes all schema fields for customer portal
 type ExtendedProduct = ProductType;
@@ -2402,7 +2403,8 @@ export default function CustomerPortal() {
                                   {/* Pallet Count Indicator */}
                                   {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
-                                      📦 {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
+                                      <Package2 className="w-3 h-3" />
+                                      {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
                                     </span>
                                   )}
                                 </div>
@@ -2947,8 +2949,9 @@ export default function CustomerPortal() {
                                   {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
                                     <div className="flex items-center gap-1.5">
                                       <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                      <span className="font-medium text-blue-700 text-sm">
-                                        📦 {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets available
+                                      <span className="font-medium text-blue-700 text-xs">
+                                        <Package2 className="w-3 h-3 inline mr-1" />
+                                        {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
                                       </span>
                                     </div>
                                   )}
