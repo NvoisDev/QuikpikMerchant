@@ -136,7 +136,10 @@ export const users = pgTable("users", {
   productLimit: integer("product_limit").default(3), // 3 for free, 10 for standard, unlimited (-1) for premium
   
   // WhatsApp Integration - Simple Setup
-  whatsappEnabled: boolean("whatsapp_enabled").default(false),
+  // WhatsApp Business API credentials (user's own)
+  whatsappAccessToken: varchar("whatsapp_access_token"),
+  whatsappBusinessPhoneId: varchar("whatsapp_business_phone_id"),
+  whatsappBusinessName: varchar("whatsapp_business_name"),
   
   // Settings
   preferredCurrency: varchar("preferred_currency").default("GBP"), // ISO currency code

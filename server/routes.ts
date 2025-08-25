@@ -12,7 +12,7 @@ import { generateProductDescription, generateProductImage } from "./ai";
 import { generatePersonalizedTagline, generateCampaignSuggestions, optimizeMessageTiming } from "./ai-taglines";
 import { parcel2goService, createTestCredentials } from "./parcel2go";
 import { formatPhoneToInternational, validatePhoneNumber } from "../shared/phone-utils";
-import { simpleWhatsAppService } from "./whatsapp-simple";
+import { whatsAppBusinessService } from "./whatsapp-simple";
 import { PreciseShippingCalculator } from "./utils/preciseShippingCalculator";
 import { healthCheck } from "./health";
 import { z } from "zod";
@@ -3919,7 +3919,12 @@ The Quikpik Team
           try {
             // WhatsApp notification (simplified)
             if (wholesaler.whatsappEnabled) {
-              await simpleWhatsAppService.sendMessage(wholesaler.businessPhone, message);
+              if (wholesaler.whatsappAccessToken && wholesaler.whatsappBusinessPhoneId) {
+                await whatsAppBusinessService.sendMessage(wholesaler.businessPhone, message, {
+                  accessToken: wholesaler.whatsappAccessToken,
+                  phoneNumberId: wholesaler.whatsappBusinessPhoneId
+                });
+              }
             }
           } catch (error) {
             console.error('Failed to send WhatsApp notification:', error);
@@ -4979,7 +4984,7 @@ The Quikpik Team
         return res.status(404).json({ error: "User not found" });
       }
 
-      const status = simpleWhatsAppService.getStatus(user);
+      const status = whatsAppBusinessService.getStatus(user);
       res.json(status);
     } catch (error) {
       console.error("Error fetching WhatsApp status:", error);
@@ -4987,31 +4992,58 @@ The Quikpik Team
     }
   });
 
-  app.post('/api/whatsapp/activate', requireAuth, async (req: any, res) => {
+  // WhatsApp Business API configuration endpoint
+  app.post('/api/whatsapp/configure', requireAuth, async (req: any, res) => {
     try {
-      const user = req.user;
+      const userId = req.user.id;
+      const { 
+        accessToken, 
+        businessPhoneId, 
+        businessName 
+      } = req.body;
       
-      // Check if platform is capable
-      if (!simpleWhatsAppService.isCapable()) {
+      if (!accessToken || !businessPhoneId) {
         return res.status(400).json({ 
           success: false,
-          message: "WhatsApp platform is not configured. Please contact support." 
+          message: 'WhatsApp Business API access token and phone number ID are required' 
         });
       }
-
-      // Activate WhatsApp for user
-      await storage.updateUser(user.id, { whatsappEnabled: true });
       
-      console.log('✅ WhatsApp activated for user:', user.id);
+      // Test the credentials by making a simple API call
+      try {
+        const testResponse = await fetch(`https://graph.facebook.com/v17.0/${businessPhoneId}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        });
+        
+        if (!testResponse.ok) {
+          throw new Error('Invalid WhatsApp Business API credentials');
+        }
+      } catch (error) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid WhatsApp Business API credentials. Please verify your access token and phone number ID.' 
+        });
+      }
+      
+      // Update user with WhatsApp Business API credentials
+      await storage.updateUser(userId, { 
+        whatsappAccessToken: accessToken,
+        whatsappBusinessPhoneId: businessPhoneId,
+        whatsappBusinessName: businessName || null
+      });
+      
+      console.log(`✅ WhatsApp Business API configured for user: ${userId}`);
       res.json({ 
-        success: true,
-        message: "WhatsApp messaging activated successfully!" 
+        success: true, 
+        message: 'WhatsApp Business API configured successfully!' 
       });
     } catch (error) {
-      console.error('❌ Error activating WhatsApp:', error);
+      console.error('Error configuring WhatsApp Business API:', error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to activate WhatsApp" 
+        message: 'Failed to configure WhatsApp Business API' 
       });
     }
   });
@@ -5102,7 +5134,12 @@ The Quikpik Team
           // Send welcome message via WhatsApp if enabled
           const user = await storage.getUserById(targetUserId);
           if (user?.whatsappEnabled) {
-            await simpleWhatsAppService.sendMessage(formattedPhoneNumber, welcomeMessage);
+            if (wholesaler.whatsappAccessToken && wholesaler.whatsappBusinessPhoneId) {
+              await whatsAppBusinessService.sendMessage(formattedPhoneNumber, welcomeMessage, {
+                accessToken: wholesaler.whatsappAccessToken,
+                phoneNumberId: wholesaler.whatsappBusinessPhoneId
+              });
+            }
             console.log(`Welcome message sent to new customer: ${formattedPhoneNumber}`);
           }
         } catch (welcomeError) {

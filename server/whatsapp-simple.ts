@@ -1,59 +1,71 @@
-// Simple WhatsApp Integration - Clean Implementation
-export class SimpleWhatsAppService {
+// WhatsApp Business API Integration
+export class WhatsAppBusinessService {
   
   /**
-   * Check if platform has WhatsApp capability
-   */
-  isCapable(): boolean {
-    return !!(
-      process.env.TWILIO_ACCOUNT_SID && 
-      process.env.TWILIO_AUTH_TOKEN && 
-      process.env.TWILIO_PHONE_NUMBER
-    );
-  }
-  
-  /**
-   * Get platform status and user activation state
+   * Get WhatsApp Business API status for a user
    */
   getStatus(user: any) {
-    const platformCapable = this.isCapable();
-    const userActivated = user.whatsappEnabled === true;
+    const hasCredentials = !!(
+      user.whatsappAccessToken && 
+      user.whatsappBusinessPhoneId
+    );
     
     return {
-      platformCapable,
-      userActivated,
-      isConfigured: platformCapable && userActivated,
-      serviceProvider: 'Twilio WhatsApp Platform',
-      isDemoMode: true // Indicates messages are logged, not sent
+      isConfigured: hasCredentials,
+      userActivated: hasCredentials,
+      accessToken: user.whatsappAccessToken ? '***' : null,
+      phoneNumberId: user.whatsappBusinessPhoneId || null,
+      businessName: user.whatsappBusinessName || null
     };
   }
   
   /**
-   * Send a simple WhatsApp message via Twilio
+   * Send WhatsApp message using user's WhatsApp Business API credentials
    */
-  async sendMessage(to: string, message: string, from?: string) {
-    if (!this.isCapable()) {
-      throw new Error('WhatsApp platform not configured');
+  async sendMessage(to: string, message: string, userCredentials: {
+    accessToken: string;
+    phoneNumberId: string;
+  }) {
+    if (!userCredentials.accessToken || !userCredentials.phoneNumberId) {
+      throw new Error('WhatsApp Business API credentials not configured');
     }
     
-    // For now, just log the message since we don't want to send real messages in demo
-    console.log(`📱 WhatsApp Message (Demo Mode):`, {
-      to,
-      from: from || process.env.TWILIO_PHONE_NUMBER,
-      message: message.substring(0, 100) + '...'
-    });
-    
-    // Real Twilio integration would be:
-    // const twilio = require('twilio');
-    // const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    // return await client.messages.create({
-    //   from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
-    //   to: `whatsapp:${to}`,
-    //   body: message
-    // });
-    
-    return { success: true, messageId: `demo_${Date.now()}` };
+    try {
+      const url = `https://graph.facebook.com/v17.0/${userCredentials.phoneNumberId}/messages`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userCredentials.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: to.replace('+', ''),
+          type: 'text',
+          text: {
+            body: message
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`WhatsApp API Error: ${error.error?.message || response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log(`✅ WhatsApp message sent successfully:`, {
+        to,
+        messageId: result.messages[0].id
+      });
+      
+      return { success: true, messageId: result.messages[0].id };
+    } catch (error) {
+      console.error(`❌ Failed to send WhatsApp message:`, error);
+      throw error;
+    }
   }
 }
 
-export const simpleWhatsAppService = new SimpleWhatsAppService();
+export const whatsAppBusinessService = new WhatsAppBusinessService();

@@ -211,27 +211,59 @@ export default function Settings() {
     }
   };
 
-  // Simplified WhatsApp setup - just activate the platform integration
+  // WhatsApp Business API configuration
   const handleWhatsAppConnect = async () => {
+    // Get WhatsApp Business API credentials from user
+    const accessToken = prompt(
+      "Enter your WhatsApp Business API Access Token\n\n" +
+      "To get your access token:\n" +
+      "1. Go to Meta Business Manager (business.facebook.com)\n" +
+      "2. Select your WhatsApp Business Account\n" +
+      "3. Go to System Users > Generate New Token\n" +
+      "4. Grant 'whatsapp_business_messaging' permissions"
+    );
+    
+    if (!accessToken) return;
+    
+    const businessPhoneId = prompt(
+      "Enter your WhatsApp Business Phone Number ID\n\n" +
+      "To find your Phone Number ID:\n" +
+      "1. Go to Meta Business Manager\n" +
+      "2. WhatsApp Manager > Phone Numbers\n" +
+      "3. Copy the Phone Number ID (not the actual phone number)"
+    );
+    
+    if (!businessPhoneId) return;
+    
+    const businessName = prompt(
+      "Enter your WhatsApp Business Display Name (optional)\n\n" +
+      "This will appear in WhatsApp messages to customers"
+    );
+
     setIsConnectingWhatsApp(true);
     try {
-      const response = await apiRequest('POST', '/api/whatsapp/activate');
+      const response = await apiRequest('POST', '/api/whatsapp/configure', {
+        accessToken,
+        businessPhoneId,
+        businessName: businessName || undefined
+      });
+      
       const data = await response.json();
       
       if (data.success) {
         await refetchWhatsApp(); // Refresh WhatsApp status
         toast({
-          title: "WhatsApp Activated!",
-          description: "Your WhatsApp messaging is now active. You can start sending campaigns to customers.",
+          title: "WhatsApp Connected!",
+          description: "Your WhatsApp Business API is now configured and ready to send messages.",
         });
       } else {
-        throw new Error(data.message || "Activation failed");
+        throw new Error(data.message || "Configuration failed");
       }
     } catch (error) {
-      console.error('Error activating WhatsApp:', error);
+      console.error('Error configuring WhatsApp:', error);
       toast({
-        title: "Activation Failed",
-        description: "Unable to activate WhatsApp messaging. Please try again or contact support.",
+        title: "Configuration Failed",
+        description: "Unable to configure WhatsApp Business API. Please verify your credentials and try again.",
         variant: "destructive",
       });
     } finally {
@@ -802,20 +834,15 @@ export default function Settings() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-base sm:text-lg font-medium text-gray-900">WhatsApp Messaging</h4>
-                          {(whatsappStatus as any)?.userActivated ? (
-                            <div className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-1 rounded-full">
-                              <AlertCircle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Demo Mode</span>
-                            </div>
-                          ) : (whatsappStatus as any)?.platformCapable ? (
-                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                              <MessageSquare className="h-3 w-3" />
-                              <span className="text-xs font-medium">Activate Now</span>
+                          {(whatsappStatus as any)?.isConfigured ? (
+                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                              <CheckCircle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Connected</span>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 bg-gray-50 text-gray-700 px-2 py-1 rounded-full">
-                              <AlertTriangle className="h-3 w-3" />
-                              <span className="text-xs font-medium">Not Available</span>
+                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                              <MessageSquare className="h-3 w-3" />
+                              <span className="text-xs font-medium">Setup Required</span>
                             </div>
                           )}
                         </div>
@@ -824,28 +851,29 @@ export default function Settings() {
                           Send product promotions, order confirmations, and customer communications via WhatsApp.
                         </p>
                         
-                        {(whatsappStatus as any)?.userActivated ? (
-                          // User has activated WhatsApp - show success state
+                        {(whatsappStatus as any)?.isConfigured ? (
+                          // User has configured WhatsApp Business API - show success state
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
                             <div className="flex items-start gap-3">
                               <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                               <div className="flex-1">
-                                <h5 className="font-medium text-green-900 mb-1">WhatsApp is Ready (Demo Mode)</h5>
+                                <h5 className="font-medium text-green-900 mb-1">WhatsApp Business API Connected!</h5>
                                 <p className="text-green-800 text-sm mb-2">
-                                  Your WhatsApp integration is configured via {(whatsappStatus as any)?.serviceProvider}, but currently in demonstration mode. 
-                                  Features available:
+                                  Your WhatsApp Business API is configured and ready to send messages. 
+                                  You can now:
                                 </p>
                                 <ul className="text-green-800 text-sm space-y-1">
-                                  <li>• Send product campaigns to customer groups (demo mode)</li>
-                                  <li>• Notify customers about order updates (demo mode)</li>
-                                  <li>• Share promotional offers directly (demo mode)</li>
+                                  <li>• Send product campaigns to customer groups</li>
+                                  <li>• Notify customers about order updates</li>
+                                  <li>• Share promotional offers directly</li>
                                 </ul>
-                                <p className="text-orange-700 text-xs mt-2 font-medium">
-                                  📋 Note: Messages are currently logged for demonstration - no actual WhatsApp messages are sent.
-                                </p>
-                                <p className="text-green-700 text-xs mt-2">
-                                  Using phone: {(whatsappStatus as any)?.twilioPhoneNumber || 'Platform Number'}
-                                </p>
+                                <div className="mt-3 text-xs text-green-700 bg-green-100 p-2 rounded">
+                                  <p><strong>Phone Number ID:</strong> {(whatsappStatus as any)?.phoneNumberId}</p>
+                                  {(whatsappStatus as any)?.businessName && (
+                                    <p><strong>Business Name:</strong> {(whatsappStatus as any)?.businessName}</p>
+                                  )}
+                                  <p><strong>Access Token:</strong> {(whatsappStatus as any)?.accessToken}</p>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -891,27 +919,23 @@ export default function Settings() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Status:</span>
-                            {(whatsappStatus as any)?.userActivated ? (
-                              <span className="text-orange-600 font-medium text-sm">
-                                🧪 Demo Mode via {(whatsappStatus as any)?.serviceProvider || 'Platform Integration'}
-                              </span>
-                            ) : (whatsappStatus as any)?.platformCapable ? (
-                              <span className="text-blue-600 font-medium text-sm">
-                                ⚡ Ready to activate - no setup required
+                            {(whatsappStatus as any)?.isConfigured ? (
+                              <span className="text-green-600 font-medium text-sm">
+                                ✅ Connected via WhatsApp Business API
                               </span>
                             ) : (
-                              <span className="text-gray-600 font-medium text-sm">
-                                ❌ Platform capability not available
+                              <span className="text-blue-600 font-medium text-sm">
+                                ⚡ Ready to configure your WhatsApp Business API
                               </span>
                             )}
                           </div>
                           <button 
                             onClick={handleWhatsAppConnect}
-                            disabled={isConnectingWhatsApp || !(whatsappStatus as any)?.platformCapable}
+                            disabled={isConnectingWhatsApp}
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="text-sm sm:text-base">
-                              {isConnectingWhatsApp ? 'Activating...' : ((whatsappStatus as any)?.userActivated ? 'WhatsApp Demo Mode' : 'Activate WhatsApp')}
+                              {isConnectingWhatsApp ? 'Connecting...' : ((whatsappStatus as any)?.isConfigured ? 'Manage WhatsApp' : 'Connect WhatsApp Business API')}
                             </span>
                             {!isConnectingWhatsApp && <MessageSquare className="h-4 w-4" />}
                             {isConnectingWhatsApp && <Loader2 className="h-4 w-4 animate-spin" />}
