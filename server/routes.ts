@@ -1699,7 +1699,7 @@ Best regards,
 The Quikpik Team
           `;
           
-          await sendEmail(process.env.SENDGRID_API_KEY!, {
+          await sendEmail({
             to: wholesaler.email,
             from: 'notifications@quikpik.app',
             subject: emailSubject,
@@ -5330,7 +5330,7 @@ The Quikpik Team
       // Add customer to the group
       await storage.addCustomerToGroup(groupId, customer.id);
 
-      // Send welcome message to new customers
+      // Send multi-channel welcome notifications to new customers
       if (isNewCustomer) {
         try {
           const wholesaler = await storage.getUser(targetUserId);
@@ -5338,43 +5338,131 @@ The Quikpik Team
           
           // Get the application domain for customer portal link
           const portalUrl = `https://quikpik.app/customer/${targetUserId}`;
+          const lastFourDigits = formattedPhoneNumber.slice(-4);
           
-          const welcomeMessage = `🎉 Welcome to ${businessName}!\n\n` +
-            `Hi ${name}! 👋\n\n` +
-            `You've been added to our customer network and can now:\n\n` +
-            `🛒 Browse our latest products\n` +
-            `📱 Receive instant stock updates\n` +
-            `💬 Place orders directly via WhatsApp\n` +
-            `🚚 Track your deliveries\n` +
-            `💰 Access special wholesale pricing\n\n` +
-            `🌐 **Shop Online**: ${portalUrl}\n` +
-            `Visit our customer portal to browse products, place orders, and track deliveries!\n\n` +
-            `We'll keep you updated with:\n` +
-            `• New product arrivals\n` +
-            `• Special promotions\n` +
-            `• Stock availability alerts\n\n` +
-            `Questions? Just reply to this message!\n\n` +
-            `✨ This message was powered by Quikpik Merchant`;
-
-          console.log(`Sending welcome message to ${formattedPhoneNumber}:`);
+          // Portal access instructions
+          const accessInstructions = `To access your customer portal:\n1. Visit: ${portalUrl}\n2. Enter last 4 digits of your phone: ${lastFourDigits}\n3. Enter the SMS code sent to your phone`;
+          
+          console.log(`📱 Sending welcome notifications to ${formattedPhoneNumber} for ${businessName}`);
           console.log(`Portal URL: ${portalUrl}`);
-          console.log(`Welcome message length: ${welcomeMessage.length}`);
-          console.log(`Welcome message preview: ${welcomeMessage.substring(0, 200)}...`);
+          console.log(`Last 4 digits for login: ${lastFourDigits}`);
           
-          // Send welcome message via WhatsApp if enabled
-          const user = await storage.getUserById(targetUserId);
-          if (user?.whatsappEnabled) {
-            if (wholesaler.whatsappAccessToken && wholesaler.whatsappBusinessPhoneId) {
-              await whatsAppBusinessService.sendMessage(formattedPhoneNumber, welcomeMessage, {
+          let notificationResults = {
+            sms: false,
+            email: false,
+            whatsapp: false
+          };
+
+          // 1. Send SMS notification with portal access instructions
+          try {
+            const smsMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! You've been added to our wholesale customer network.\n\n${accessInstructions}\n\nYou can browse products, place orders, and track deliveries through our customer portal.\n\nQuestions? Contact us anytime!`;
+            
+            // Use Twilio directly for welcome message since it's not a verification code
+            if (ReliableSMSService.isConfigured()) {
+              const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+              
+              const message = await twilio.messages.create({
+                body: smsMessage,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: formattedPhoneNumber,
+                riskCheck: 'disable'
+              });
+              
+              notificationResults.sms = true;
+              console.log(`✅ Welcome SMS sent to ${formattedPhoneNumber}: ${message.sid}`);
+            } else {
+              console.log(`⚠️ SMS service not configured, skipping SMS notification`);
+            }
+          } catch (smsError) {
+            console.error(`SMS notification error for ${formattedPhoneNumber}:`, smsError);
+          }
+
+          // 2. Send email notification if customer has email
+          if (customer.email) {
+            try {
+              const emailSubject = `Welcome to ${businessName} - Your Wholesale Portal Access`;
+              const emailContent = `
+Dear ${name},
+
+Welcome to ${businessName}! 🎉
+
+You've been successfully added to our wholesale customer network and now have access to exclusive benefits:
+
+• Browse our complete product catalog
+• Access special wholesale pricing
+• Place orders 24/7 through our customer portal
+• Track your order status and delivery
+• Receive instant stock updates and promotions
+
+${accessInstructions}
+
+Our customer portal provides a seamless shopping experience where you can:
+- View real-time product availability
+- Compare prices and specifications
+- Manage your order history
+- Update your delivery preferences
+- Access your account information
+
+If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!
+
+Best regards,
+The ${businessName} Team
+
+---
+This message was sent by Quikpik Merchant Platform
+              `;
+
+              const emailSuccess = await sendEmail({
+                to: customer.email,
+                from: wholesaler?.email || 'notifications@quikpik.app',
+                subject: emailSubject,
+                text: emailContent
+              });
+
+              notificationResults.email = emailSuccess;
+              
+              if (emailSuccess) {
+                console.log(`✅ Welcome email sent to ${customer.email}`);
+              } else {
+                console.log(`❌ Failed to send welcome email to ${customer.email}`);
+              }
+            } catch (emailError) {
+              console.error(`Email notification error for ${customer.email}:`, emailError);
+            }
+          }
+
+          // 3. Send WhatsApp message if enabled (existing functionality)
+          try {
+            const whatsappMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! 👋\n\nYou've been added to our customer network and can now:\n\n🛒 Browse our latest products\n📱 Receive instant stock updates\n💬 Place orders directly via WhatsApp\n🚚 Track your deliveries\n💰 Access special wholesale pricing\n\n🌐 **Shop Online**: ${portalUrl}\nVisit our customer portal to browse products, place orders, and track deliveries!\n\n${accessInstructions}\n\nWe'll keep you updated with:\n• New product arrivals\n• Special promotions\n• Stock availability alerts\n\nQuestions? Just reply to this message!\n\n✨ This message was powered by Quikpik Merchant`;
+
+            const user = await storage.getUserById(targetUserId);
+            if (user?.whatsappEnabled && wholesaler?.whatsappAccessToken && wholesaler?.whatsappBusinessPhoneId) {
+              await whatsAppBusinessService.sendMessage(formattedPhoneNumber, whatsappMessage, {
                 accessToken: wholesaler.whatsappAccessToken,
                 phoneNumberId: wholesaler.whatsappBusinessPhoneId
               });
+              notificationResults.whatsapp = true;
+              console.log(`✅ Welcome WhatsApp message sent to ${formattedPhoneNumber}`);
             }
-            console.log(`Welcome message sent to new customer: ${formattedPhoneNumber}`);
+          } catch (whatsappError) {
+            console.error(`WhatsApp notification error for ${formattedPhoneNumber}:`, whatsappError);
           }
+
+          // Log notification summary
+          const sentChannels = Object.entries(notificationResults)
+            .filter(([_, sent]) => sent)
+            .map(([channel, _]) => channel)
+            .join(', ');
+          
+          if (sentChannels) {
+            console.log(`📊 Welcome notifications sent via: ${sentChannels}`);
+          } else {
+            console.log(`⚠️ No welcome notifications were sent successfully`);
+          }
+          
         } catch (welcomeError) {
-          console.error(`Failed to send welcome message to ${formattedPhoneNumber}:`, welcomeError);
-          // Don't fail the whole operation if welcome message fails
+          console.error(`Failed to send welcome notifications to ${formattedPhoneNumber}:`, welcomeError);
+          // Don't fail the whole operation if welcome notifications fail
         }
       }
       
