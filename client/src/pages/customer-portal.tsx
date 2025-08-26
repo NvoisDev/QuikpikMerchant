@@ -738,6 +738,7 @@ export default function CustomerPortal() {
   // Payment intent creation state
   const [clientSecret, setClientSecret] = useState("");
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+  const [lastUsedShippingOption, setLastUsedShippingOption] = useState<'pickup' | 'delivery' | null>(null);
   const [showMOQWarnings, setShowMOQWarnings] = useState<Record<number, boolean>>({});
   const [showQuantityHints, setShowQuantityHints] = useState<Record<number, boolean>>({});
   const [activeQuantityInput, setActiveQuantityInput] = useState<number | null>(null);
@@ -1343,8 +1344,22 @@ export default function CustomerPortal() {
       selectedDeliveryAddress: customerData.selectedDeliveryAddress
     }, null, 2));
     
-    if (isCreatingIntent || clientSecret || !wholesaler) {
-      console.log('🚚 Payment intent already exists or is being created - SKIPPING');
+    // CRITICAL FIX: Check if shipping option changed - if so, create new payment intent
+    const shippingOptionChanged = clientSecret && lastUsedShippingOption && lastUsedShippingOption !== shippingOption;
+    
+    if (shippingOptionChanged) {
+      console.log('🚚 SHIPPING CHANGED: Creating new payment intent because shipping option changed from', lastUsedShippingOption, 'to', shippingOption);
+      setClientSecret(''); // Clear existing payment intent
+      setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Update tracking
+    }
+    
+    if ((isCreatingIntent || clientSecret) && !shippingOptionChanged) {
+      console.log('🚚 Payment intent already exists or is being created - SKIPPING (no shipping change)');
+      return;
+    }
+    
+    if (!wholesaler) {
+      console.log('🚚 No wholesaler data - SKIPPING');
       return;
     }
 
@@ -1418,7 +1433,8 @@ export default function CustomerPortal() {
       if (response.ok) {
         const data = await response.json();
         setClientSecret(data.clientSecret);
-        console.log('🚚 SIMPLIFIED: Payment intent created successfully');
+        setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Track the shipping option for this payment intent
+        console.log('🚚 SIMPLIFIED: Payment intent created successfully with shipping option:', shippingOption);
         toast({
           title: "Payment Ready",
           description: "You can now complete your payment",
