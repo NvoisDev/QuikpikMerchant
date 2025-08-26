@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { log } from "./vite";
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
+import cron from 'node-cron';
 
 // Set OAuth redirect URI for production deployment
 if (process.env.CUSTOM_DOMAIN === 'quikpik.app') {
@@ -97,13 +98,25 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     console.log(`✅ Server successfully started on port ${port}`);
     console.log(`🌐 Health check available at: http://localhost:${port}/api/health`);
     
     // Start automatic database maintenance
     startDatabaseMaintenance();
     console.log(`🧹 Database maintenance scheduler enabled`);
+    
+    // Start stock alert monitoring (runs every 2 hours)
+    const { stockAlertService } = await import("./services/stockAlertService");
+    cron.schedule('0 */2 * * *', async () => {
+      console.log('📦 Running automated stock level check...');
+      try {
+        await stockAlertService.checkAndSendLowStockAlerts();
+      } catch (error) {
+        console.error('❌ Stock alert check failed:', error);
+      }
+    });
+    console.log(`🔔 Stock alert system enabled (every 2 hours)`);
     
     log(`serving on port ${port}`);
   });

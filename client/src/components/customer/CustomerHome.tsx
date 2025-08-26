@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CustomerOrderHistory } from "./CustomerOrderHistory";
 import { Separator } from "@/components/ui/separator";
+import { QuickOrderPanel } from '@/components/QuickOrderPanel';
 
 // Quick Order Component
 function QuickOrder({ wholesalerId, onOrderComplete }: { wholesalerId: string; onOrderComplete?: () => void }) {
@@ -516,6 +517,33 @@ export function CustomerHome({
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Quick Order Panel - New Short-term Feature */}
+        {customerData && wholesaler && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Quick Reorder</h2>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                ⚡ NEW
+              </Badge>
+            </div>
+            
+            <QuickOrderPanel
+              wholesalerId={wholesaler.id}
+              customerPhone={customerData.phone || customerData.phoneNumber}
+              onAddToCart={(productId: number, quantity: number, sellingType: 'units' | 'pallets') => {
+                // Add to existing cart functionality or redirect to product page
+                console.log('Quick add to cart:', { productId, quantity, sellingType });
+                // You can integrate this with your existing cart system
+              }}
+              onQuickReorder={(items: any[]) => {
+                // Handle quick reorder functionality
+                console.log('Quick reorder:', items);
+                // You can integrate this with your existing order system
+              }}
+            />
           </div>
         )}
 

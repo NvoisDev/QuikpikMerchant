@@ -27,6 +27,8 @@ import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
+import { orderNotificationService } from "./services/orderNotificationService";
+import { quickOrderService } from "./services/quickOrderService";
 import { db } from "./db";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
 import { 
@@ -2207,6 +2209,91 @@ The Quikpik Team
     }
   });
 
+  // Get quick order templates for efficient reordering
+  app.get('/api/quick-order-templates/:wholesalerId/:phoneNumber', async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber } = req.params;
+      
+      if (!wholesalerId || !phoneNumber) {
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      }
+
+      // Find customer using the same logic as authentication
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+
+      if (!customer) {
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler" 
+        });
+      }
+
+      const templates = await quickOrderService.getQuickOrderTemplates(customer.id, wholesalerId);
+      res.json({ success: true, templates });
+
+    } catch (error) {
+      console.error("❌ Error fetching quick order templates:", error);
+      res.status(500).json({ error: "Failed to fetch quick order templates" });
+    }
+  });
+
+  // Get frequently ordered products for a customer
+  app.get('/api/frequently-ordered/:wholesalerId/:phoneNumber', async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber } = req.params;
+      
+      if (!wholesalerId || !phoneNumber) {
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      }
+
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+
+      if (!customer) {
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler" 
+        });
+      }
+
+      const patterns = await quickOrderService.getFrequentlyOrderedProducts(customer.id, wholesalerId);
+      res.json({ success: true, products: patterns });
+
+    } catch (error) {
+      console.error("❌ Error fetching frequently ordered products:", error);
+      res.status(500).json({ error: "Failed to fetch frequently ordered products" });
+    }
+  });
+
+  // Get last order for quick reordering
+  app.get('/api/last-order-reorder/:wholesalerId/:phoneNumber', async (req, res) => {
+    try {
+      const { wholesalerId, phoneNumber } = req.params;
+      
+      if (!wholesalerId || !phoneNumber) {
+        return res.status(400).json({ error: "Wholesaler ID and phone number are required" });
+      }
+
+      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
+      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+
+      if (!customer) {
+        return res.status(403).json({ 
+          error: "Customer not registered with this wholesaler" 
+        });
+      }
+
+      const lastOrder = await quickOrderService.getLastOrderForReorder(customer.id, wholesalerId);
+      res.json({ success: true, lastOrder });
+
+    } catch (error) {
+      console.error("❌ Error fetching last order for reorder:", error);
+      res.status(500).json({ error: "Failed to fetch last order for reorder" });
+    }
+  });
+
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId, phoneNumber } = req.params;
@@ -3019,6 +3106,30 @@ The Quikpik Team
       const updated = await storage.updateOrderStatus(orderId, status);
       if (!updated) {
         return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Send real-time notifications to customer
+      try {
+        const customer = await storage.getUser(updated.retailerId);
+        const wholesaler = await storage.getUser(updated.wholesalerId);
+        
+        if (customer && wholesaler) {
+          await orderNotificationService.sendOrderStatusUpdate({
+            orderId: updated.id,
+            orderNumber: updated.orderNumber,
+            status: updated.status,
+            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            customerPhone: customer.phoneNumber || '',
+            customerEmail: customer.email || undefined,
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            trackingNumber: updated.deliveryTrackingNumber || undefined,
+            estimatedDelivery: undefined // TODO: Add estimated delivery calculation
+          });
+          console.log(`📱 Real-time notifications sent for order ${orderId}`);
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to send order notifications:', notificationError);
+        // Don't fail the status update if notifications fail
       }
 
       console.log(`✅ Order ${orderId} status updated to ${status}`);
