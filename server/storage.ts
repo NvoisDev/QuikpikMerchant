@@ -583,34 +583,53 @@ export class DatabaseStorage implements IStorage {
       console.log(`⚡ PERFORMANCE: Wholesaler products query: ${result.rows.length} rows in ${queryTime}ms`);
       
       return result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        description: row.description || '',
-        price: row.price,
-        currency: row.currency || 'GBP',
-        stock: row.stock || 0,
-        moq: row.moq || 1,
-        wholesalerId: row.wholesaler_id,
-        imageUrl: row.image_url,
-        images: row.images || [],
-        status: row.status,
-        category: row.category,
-        priceVisible: row.price_visible !== false,
-        negotiationEnabled: Boolean(row.negotiation_enabled),
-        minimumBidPrice: row.minimum_bid_price,
-        packQuantity: row.pack_quantity,
-        unitOfMeasure: row.unit_of_measure,
-        unitSize: row.size_per_unit,
-        sellingFormat: row.selling_format || 'units',
-        unitsPerPallet: row.units_per_pallet,
-        palletPrice: row.pallet_price,
-        palletMoq: row.pallet_moq,
-        palletStock: row.pallet_stock,
+        id: Number(row.id),
+        name: String(row.name),
+        wholesalerId: String(row.wholesaler_id),
+        description: row.description ? String(row.description) : null,
+        price: String(row.price),
+        promoPrice: row.promo_price ? String(row.promo_price) : null,
         promoActive: Boolean(row.promo_active),
-        promoPrice: row.promo_price,
-        lowStockThreshold: row.low_stock_threshold || 50,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at)
+        promotionalOffers: [],
+        currency: String(row.currency || 'GBP'),
+        moq: Number(row.moq || 1),
+        stock: Number(row.stock || 0),
+        imageUrl: row.image_url ? String(row.image_url) : null,
+        images: Array.isArray(row.images) ? row.images : [],
+        category: row.category ? String(row.category) : null,
+        status: String(row.status),
+        priceVisible: Boolean(row.price_visible !== false),
+        negotiationEnabled: Boolean(row.negotiation_enabled),
+        minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
+        editCount: 0,
+        sellingFormat: String(row.selling_format || 'units'),
+        palletPrice: row.pallet_price ? String(row.pallet_price) : null,
+        palletMoq: row.pallet_moq ? Number(row.pallet_moq) : null,
+        palletStock: row.pallet_stock ? Number(row.pallet_stock) : null,
+        unitsPerPallet: row.units_per_pallet ? Number(row.units_per_pallet) : null,
+        palletWeight: null,
+        unitWeight: null,
+        unit_weight: null,
+        pallet_weight: null,
+        deliveryExcluded: false,
+        lowStockThreshold: Number(row.low_stock_threshold || 50),
+        unit: 'units',
+        unitFormat: null,
+        packQuantity: row.pack_quantity ? Number(row.pack_quantity) : null,
+        unitOfMeasure: row.unit_of_measure ? String(row.unit_of_measure) : null,
+        sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
+        totalPackageWeight: null,
+        individualUnitWeight: null,
+        packageDimensions: {},
+        unitConfiguration: {},
+        unitSize: row.size_per_unit ? String(row.size_per_unit) : null,
+        unitWeightKg: null,
+        temperatureRequirement: 'ambient',
+        specialHandling: {},
+        shelfLife: null,
+        contentCategory: null,
+        createdAt: row.created_at ? new Date(String(row.created_at)) : null,
+        updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
       }));
     }
     
@@ -637,34 +656,53 @@ export class DatabaseStorage implements IStorage {
     console.log(`⚡ PERFORMANCE: All products query: ${result.rows.length} rows in ${queryTime}ms`);
     
     return result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description || '',
-      price: row.price,
-      currency: row.currency || 'GBP',
-      stock: row.stock || 0,
-      moq: row.moq || 1,
-      wholesalerId: row.wholesaler_id,
-      imageUrl: row.image_url,
-      images: row.images || [],
-      status: row.status,
-      category: row.category,
-      priceVisible: row.price_visible !== false,
-      negotiationEnabled: Boolean(row.negotiation_enabled),
-      minimumBidPrice: row.minimum_bid_price,
-      packQuantity: row.pack_quantity,
-      unitOfMeasure: row.unit_of_measure,
-      unitSize: row.size_per_unit,
-      sellingFormat: row.selling_format || 'units',
-      unitsPerPallet: row.units_per_pallet,
-      palletPrice: row.pallet_price,
-      palletMoq: row.pallet_moq,
-      palletStock: row.pallet_stock,
+      id: Number(row.id),
+      name: String(row.name),
+      wholesalerId: String(row.wholesaler_id),
+      description: row.description ? String(row.description) : null,
+      price: String(row.price),
+      promoPrice: row.promo_price ? String(row.promo_price) : null,
       promoActive: Boolean(row.promo_active),
-      promoPrice: row.promo_price,
-      lowStockThreshold: row.low_stock_threshold || 50,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      promotionalOffers: [],
+      currency: String(row.currency || 'GBP'),
+      moq: Number(row.moq || 1),
+      stock: Number(row.stock || 0),
+      imageUrl: row.image_url ? String(row.image_url) : null,
+      images: Array.isArray(row.images) ? row.images : [],
+      category: row.category ? String(row.category) : null,
+      status: String(row.status),
+      priceVisible: Boolean(row.price_visible !== false),
+      negotiationEnabled: Boolean(row.negotiation_enabled),
+      minimumBidPrice: row.minimum_bid_price ? String(row.minimum_bid_price) : null,
+      editCount: 0,
+      sellingFormat: String(row.selling_format || 'units'),
+      palletPrice: row.pallet_price ? String(row.pallet_price) : null,
+      palletMoq: row.pallet_moq ? Number(row.pallet_moq) : null,
+      palletStock: row.pallet_stock ? Number(row.pallet_stock) : null,
+      unitsPerPallet: row.units_per_pallet ? Number(row.units_per_pallet) : null,
+      palletWeight: null,
+      unitWeight: null,
+      unit_weight: null,
+      pallet_weight: null,
+      deliveryExcluded: false,
+      lowStockThreshold: Number(row.low_stock_threshold || 50),
+      unit: 'units',
+      unitFormat: null,
+      packQuantity: row.pack_quantity ? Number(row.pack_quantity) : null,
+      unitOfMeasure: row.unit_of_measure ? String(row.unit_of_measure) : null,
+      sizePerUnit: row.size_per_unit ? String(row.size_per_unit) : null,
+      totalPackageWeight: null,
+      individualUnitWeight: null,
+      packageDimensions: {},
+      unitConfiguration: {},
+      unitSize: row.size_per_unit ? String(row.size_per_unit) : null,
+      unitWeightKg: null,
+      temperatureRequirement: 'ambient',
+      specialHandling: {},
+      shelfLife: null,
+      contentCategory: null,
+      createdAt: row.created_at ? new Date(String(row.created_at)) : null,
+      updatedAt: row.updated_at ? new Date(String(row.updated_at)) : null
     }));
   }
 
@@ -1078,11 +1116,11 @@ export class DatabaseStorage implements IStorage {
         console.error(`❌ CRITICAL: Order insertion failed:`, error);
         console.error(`❌ Clean order data that failed:`, cleanOrderData);
         console.error(`❌ Full error details:`, {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          position: error.position,
-          code: error.code
+          name: (error as any).name,
+          message: (error as any).message,
+          stack: (error as any).stack,
+          position: (error as any).position,
+          code: (error as any).code
         });
         throw error;
       }
@@ -1226,7 +1264,7 @@ export class DatabaseStorage implements IStorage {
     shippingStatus?: string;
     deliveryCarrier?: string;
     deliveryServiceId?: string;
-    shippingTotal?: number;
+    shippingTotal?: string;
     deliveryTrackingNumber?: string;
   }): Promise<Order> {
     const [updatedOrder] = await db
@@ -1486,7 +1524,7 @@ export class DatabaseStorage implements IStorage {
               FROM orders
               WHERE retailer_id = ${customer.customer_id}
             `);
-            const count = parseInt(orderCount.rows[0]?.count || '0');
+            const count = parseInt(String(orderCount.rows[0]?.count || '0'));
             console.log(`Customer ${customer.name} (${customer.customer_id}): ${count} orders`);
             return {
               customer,
