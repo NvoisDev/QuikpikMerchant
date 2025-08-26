@@ -132,7 +132,16 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
           
           <div class="footer">
             <p>This email was sent because you were added as a customer to ${wholesalerName}'s wholesale platform.</p>
-            <p>Powered by <strong>Quikpik</strong> - Modern B2B Commerce Platform</p>
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" fill="#10b981" stroke="#065f46" stroke-width="1"/>
+                  <path d="M8 12 L11 15 L16 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span style="color: #666; font-size: 14px;">Powered by <strong style="color: #10b981;">Quikpik</strong></span>
+              </div>
+              <p style="margin: 5px 0 0 0; font-size: 12px; color: #999;">Modern B2B Commerce Platform</p>
+            </div>
           </div>
         </div>
       </body>
