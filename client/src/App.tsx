@@ -45,6 +45,7 @@ import SignupComplete from "@/pages/signup-complete";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
+import CustomerRegistrationRequests from "@/pages/customer-registration-requests";
 import UpgradeSuccess from "@/pages/upgrade-success";
 import AuthSuccess from "@/pages/auth-success";
 import SuperAdmin from "@/pages/super-admin";
@@ -119,6 +120,7 @@ function AuthenticatedRoutes() {
             <Route path="/dashboard" component={WholesalerDashboard} />
             <Route path="/products" component={ProductManagement} />
             <Route path="/customers" component={Customers} />
+            <Route path="/customer-registration-requests" component={CustomerRegistrationRequests} />
             <Route path="/orders" component={OrdersFresh} />
             <Route path="/subscription" component={SubscriptionSettingsSimple} />
             <Route path="/subscription-settings" component={SubscriptionSettingsSimple} />

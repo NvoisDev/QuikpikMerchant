@@ -837,6 +837,12 @@ export default function Customers() {
           <h1 className="text-2xl font-bold">Customer Management</h1>
           <p className="text-muted-foreground">Manage your customer groups and address book</p>
         </div>
+        <Link href="/customer-registration-requests">
+          <Button variant="outline" className="flex items-center space-x-2">
+            <UserPlus className="h-4 w-4" />
+            <span>Registration Requests</span>
+          </Button>
+        </Link>
       </div>
 
       <Tabs defaultValue={defaultTab} className="space-y-6">

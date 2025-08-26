@@ -28,6 +28,7 @@ import { createEmailVerification, verifyEmailCode } from "./email-verification";
 import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
+import { parseCustomerName } from "./order-processor";
 import { quickOrderService } from "./services/quickOrderService";
 import { db } from "./db";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
@@ -1722,6 +1723,184 @@ The Quikpik Team
     } catch (error) {
       console.error("❌ Error creating registration request:", error);
       res.status(500).json({ error: "Failed to submit registration request" });
+    }
+  });
+
+  // Get pending registration requests for wholesaler  
+  app.get('/api/registration-requests', requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      console.log(`🔍 Fetching pending registration requests for wholesaler: ${userId}`);
+      
+      const requests = await storage.getPendingRegistrationRequests(userId);
+      
+      console.log(`✅ Found ${requests.length} pending registration requests`);
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching registration requests:', error);
+      res.status(500).json({ error: 'Failed to fetch registration requests' });
+    }
+  });
+
+  // Approve or reject registration request
+  app.post('/api/registration-requests/:requestId/respond', requireAuth, async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const { action, responseMessage, customerGroupId } = req.body;
+      const userId = (req as any).user.id;
+      
+      console.log(`📝 Processing registration request ${requestId}: ${action} by user ${userId}`);
+      
+      if (!['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: 'Invalid action. Must be approve or reject' });
+      }
+      
+      // Get the request details first
+      const request = await db
+        .select()
+        .from(customerRegistrationRequests)
+        .where(eq(customerRegistrationRequests.id, parseInt(requestId)))
+        .limit(1);
+        
+      if (!request[0] || request[0].wholesalerId !== userId) {
+        return res.status(404).json({ error: 'Registration request not found or unauthorized' });
+      }
+      
+      const requestData = request[0];
+      
+      if (requestData.status !== 'pending') {
+        return res.status(400).json({ error: 'This request has already been processed' });
+      }
+      
+      // Update request status
+      await storage.updateRegistrationRequestStatus(
+        parseInt(requestId), 
+        action === 'approve' ? 'approved' : 'rejected',
+        userId,
+        responseMessage
+      );
+      
+      if (action === 'approve') {
+        // Parse customer name
+        const { firstName, lastName } = parseCustomerName(requestData.customerName);
+        
+        // Create customer account
+        const newCustomer = await storage.createCustomer({
+          phoneNumber: requestData.customerPhone,
+          firstName,
+          lastName,
+          email: requestData.customerEmail || undefined,
+          businessName: requestData.businessName || undefined,
+          role: 'retailer',
+          wholesalerId: userId
+        });
+        
+        console.log(`✅ Created customer account: ${newCustomer.id} (${newCustomer.firstName} ${newCustomer.lastName})`);
+        
+        // Add to customer group if specified
+        if (customerGroupId && customerGroupId > 0) {
+          try {
+            await storage.addMemberToGroup(customerGroupId, newCustomer.id);
+            console.log(`✅ Added customer ${newCustomer.id} to group ${customerGroupId}`);
+          } catch (groupError) {
+            console.warn(`⚠️ Failed to add customer to group ${customerGroupId}:`, groupError);
+          }
+        }
+        
+        // Send welcome messages to new customer
+        try {
+          const wholesaler = await storage.getUser(userId);
+          if (wholesaler) {
+            const customerName = `${firstName} ${lastName}`.trim();
+            const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+            const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+            
+            console.log(`📧 Sending welcome messages for approved customer ${customerName}`);
+            
+            const welcomeResult = await sendWelcomeMessages({
+              customerName,
+              customerEmail: requestData.customerEmail || undefined,
+              customerPhone: requestData.customerPhone,
+              wholesalerName,
+              wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+              wholesalerPhone: wholesaler.phoneNumber,
+              portalUrl
+            });
+            
+            console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
+          }
+        } catch (welcomeError) {
+          console.error('❌ Error sending welcome messages (Registration Approval):', welcomeError);
+        }
+        
+        // Send approval notification to customer
+        if (requestData.customerEmail) {
+          try {
+            const wholesaler = await storage.getUser(userId);
+            const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
+            
+            await sendEmail({
+              to: requestData.customerEmail,
+              from: 'notifications@quikpik.app',
+              subject: `Registration Approved - Welcome to ${businessName}`,
+              text: `Hello ${requestData.customerName},
+
+Great news! Your registration request has been approved by ${businessName}.
+
+You can now access their wholesale platform using your phone number: ${requestData.customerPhone}
+
+Portal: ${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal
+
+${responseMessage ? `Message from ${businessName}: ${responseMessage}` : ''}
+
+Welcome to our wholesale platform!
+
+Best regards,
+The Quikpik Team`
+            });
+            console.log(`📧 Approval notification sent to ${requestData.customerEmail}`);
+          } catch (emailError) {
+            console.error('Failed to send approval notification:', emailError);
+          }
+        }
+      } else {
+        // Send rejection notification to customer
+        if (requestData.customerEmail) {
+          try {
+            const wholesaler = await storage.getUser(userId);
+            const businessName = wholesaler?.businessName || `${wholesaler?.firstName} ${wholesaler?.lastName}`.trim() || 'Wholesaler';
+            
+            await sendEmail({
+              to: requestData.customerEmail,
+              from: 'notifications@quikpik.app',
+              subject: `Registration Request Update - ${businessName}`,
+              text: `Hello ${requestData.customerName},
+
+Thank you for your interest in ${businessName}'s wholesale platform.
+
+Unfortunately, your registration request could not be approved at this time.
+
+${responseMessage ? `Reason: ${responseMessage}` : ''}
+
+If you have any questions, please feel free to contact ${businessName} directly.
+
+Best regards,
+The Quikpik Team`
+            });
+            console.log(`📧 Rejection notification sent to ${requestData.customerEmail}`);
+          } catch (emailError) {
+            console.error('Failed to send rejection notification:', emailError);
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Registration request ${action}d successfully${action === 'approve' ? ' and customer account created' : ''}` 
+      });
+    } catch (error) {
+      console.error(`❌ Error ${req.body.action}ing registration request:`, error);
+      res.status(500).json({ error: `Failed to ${req.body.action} registration request` });
     }
   });
 
