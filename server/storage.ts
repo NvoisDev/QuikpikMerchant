@@ -4322,6 +4322,22 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
+  // Allow customers to request access again after rejection
+  async getLatestRegistrationRequest(wholesalerId: string, customerPhone: string) {
+    const [request] = await db
+      .select()
+      .from(customerRegistrationRequests)
+      .where(
+        and(
+          eq(customerRegistrationRequests.wholesalerId, wholesalerId),
+          eq(customerRegistrationRequests.customerPhone, customerPhone)
+        )
+      )
+      .orderBy(desc(customerRegistrationRequests.requestedAt))
+      .limit(1);
+    return request;
+  }
+
   async getPendingRegistrationRequests(wholesalerId: string) {
     return await db
       .select()

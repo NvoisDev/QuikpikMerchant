@@ -72,6 +72,7 @@ export default function CustomerRegistrationRequests() {
   const [responseMessage, setResponseMessage] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch registration requests
   const { data: requests = [], isLoading, refetch } = useQuery<RegistrationRequest[]>({
@@ -151,8 +152,20 @@ export default function CustomerRegistrationRequests() {
     });
   };
 
-  const pendingRequests = requests.filter(req => req.status === 'pending');
-  const processedRequests = requests.filter(req => req.status !== 'pending');
+  // Filter requests based on search query
+  const filteredRequests = requests.filter(req => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      req.customerName?.toLowerCase().includes(query) ||
+      req.businessName?.toLowerCase().includes(query) ||
+      req.customerPhone?.includes(query) ||
+      req.customerEmail?.toLowerCase().includes(query)
+    );
+  });
+
+  const pendingRequests = filteredRequests.filter(req => req.status === 'pending');
+  const processedRequests = filteredRequests.filter(req => req.status !== 'pending');
 
   if (isLoading) {
     return (
@@ -182,9 +195,21 @@ export default function CustomerRegistrationRequests() {
             </p>
           </div>
         </div>
-        <Badge variant="secondary" className="px-3 py-1">
-          {pendingRequests.length} Pending
-        </Badge>
+        <div className="flex items-center space-x-4">
+          {/* Search functionality */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, business, phone, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-80"
+            />
+          </div>
+          <Badge variant="secondary" className="px-3 py-1">
+            {pendingRequests.length} Pending
+          </Badge>
+        </div>
       </div>
 
       {/* Stats Cards */}

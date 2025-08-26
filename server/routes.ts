@@ -1666,6 +1666,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "You already have a pending request with this wholesaler" });
       }
       
+      // Allow customers to request again after rejection (re-request capability)
+      const latestRequest = await storage.getLatestRegistrationRequest(wholesalerId, customerPhone);
+      if (latestRequest && latestRequest.status === 'rejected') {
+        console.log("Customer re-requesting access after previous rejection");
+      }
+      
       // Create the registration request
       const request = await storage.createCustomerRegistrationRequest({
         wholesalerId,
