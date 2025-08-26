@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { 
@@ -41,7 +42,8 @@ import {
   Mail,
   MessageSquare,
   Users,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -152,8 +154,8 @@ export default function CustomerRegistrationRequests() {
     });
   };
 
-  // Filter requests based on search query
-  const filteredRequests = requests.filter(req => {
+  // Filter requests based on search query - ensure requests is an array
+  const filteredRequests = (requests || []).filter(req => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -164,8 +166,8 @@ export default function CustomerRegistrationRequests() {
     );
   });
 
-  const pendingRequests = filteredRequests.filter(req => req.status === 'pending');
-  const processedRequests = filteredRequests.filter(req => req.status !== 'pending');
+  const pendingRequests = (filteredRequests || []).filter(req => req.status === 'pending');
+  const processedRequests = (filteredRequests || []).filter(req => req.status !== 'pending');
 
   if (isLoading) {
     return (
@@ -202,7 +204,7 @@ export default function CustomerRegistrationRequests() {
             <Input
               placeholder="Search by name, business, phone, or email..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="pl-10 w-80"
             />
           </div>
@@ -406,11 +408,23 @@ export default function CustomerRegistrationRequests() {
       ) : (
         <Card>
           <CardContent className="text-center py-12">
-            <UserPlus className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
-            <p className="text-gray-500">
-              All customer registration requests have been processed.
-            </p>
+            {searchQuery && (requests || []).length > 0 ? (
+              <>
+                <Search className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No matching requests</h3>
+                <p className="text-gray-500">
+                  No pending requests match your search: "{searchQuery}"
+                </p>
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
+                <p className="text-gray-500">
+                  All customer registration requests have been processed.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
