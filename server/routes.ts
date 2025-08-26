@@ -524,16 +524,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Debug auth endpoint for testing
+  // SECURITY FIX: Disabled debug login endpoint that was causing data leaks
+  // Debug endpoints should only be enabled in development and require explicit email
   app.post("/api/debug/login", async (req, res) => {
+    // Only allow in development environment
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
     try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required for debug login" });
+      }
+      
       console.log('🔍 Debug login - session check:', {
         sessionExists: !!req.session,
         sessionId: req.sessionID,
-        cookies: req.headers.cookie
+        requestedEmail: email
       });
       
-      const user = await storage.getUserByEmail("hello@quikpik.co");
+      const user = await storage.getUserByEmail(email);
       if (user && req.session) {
         (req.session as any).userId = user.id;
         (req.session as any).user = user;
@@ -588,11 +600,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.getUser(req.session.user.id);
         console.log('✅ Found user via session:', user?.email);
       } 
-      // Fallback to known user for this session issue
-      else if (req.headers.cookie) {
-        console.log('🆘 Session missing, using fallback user lookup');
-        user = await storage.getUserByEmail('ibk_legacy1997@hotmail.co.uk');
-        console.log('✅ Found user via fallback:', user?.email);
+      // SECURITY FIX: Remove hardcoded fallback authentication that was causing data leaks
+      // Users MUST be properly authenticated - no fallbacks allowed
+      else {
+        console.log('❌ No valid session found - authentication required');
+        return res.status(401).json({ error: 'Authentication required - please log in again' });
       }
       
       if (!user || user.role !== 'wholesaler') {
@@ -1335,15 +1347,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // If no authentication found, use hardcoded customer for demo purposes  
+      // SECURITY FIX: Remove hardcoded customer fallback that was causing data leaks
       if (!customerAuth) {
-        customerAuth = {
-          customerId: 'customer_michael_ogunjemilua_main',
-          name: 'Michael Ogunjemilua',
-          email: 'mogunjemilua@gmail.com',
-          phone: '+447507659550'
-        };
-        console.log('🔧 Using demo customer auth for profile update');
+        console.log('❌ No customer authentication found - login required');
+        return res.status(401).json({ error: 'Authentication required - please log in to access your profile' });
       }
       
       const { name, email, phone, businessName } = req.body;
@@ -11232,11 +11239,21 @@ https://quikpik.app`;
     }
   });
 
-  // Quick login for testing
+  // SECURITY FIX: Remove hardcoded fallback that was causing data leaks
   app.post('/api/auth/quick-login', async (req: any, res) => {
+    // Only allow in development environment
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ error: "Not found" });
+    }
+    
     try {
       const { email } = req.body;
-      const user = await storage.getUserByEmail(email || 'hello@quikpik.co');
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required for quick login" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
       
       if (user) {
         req.session.userId = user.id;

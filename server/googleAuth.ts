@@ -190,53 +190,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // ENHANCED: Try to recover session for known user (temporary fix for session issues)
-    if (req.headers.cookie && (!req.session || (!(req.session as any).user && !(req.session as any).userId))) {
-      console.log('🔄 Attempting session recovery...');
-      try {
-        // Look for a known active user (this is a temporary workaround)
-        const knownUser = await storage.getUserByEmail('ibk_legacy1997@hotmail.co.uk');
-        if (knownUser && knownUser.role === 'wholesaler') {
-          console.log(`🆘 Emergency session recovery for user ${knownUser.email}`);
-          
-          // Recreate session data
-          const sessionUser = {
-            id: knownUser.id,
-            email: knownUser.email,
-            firstName: knownUser.firstName,
-            lastName: knownUser.lastName,
-            role: knownUser.role,
-            subscriptionTier: knownUser.subscriptionTier,
-            businessName: knownUser.businessName,
-            isTeamMember: false
-          };
-          
-          // Set session data safely - check if session exists first
-          if (req.session) {
-            (req.session as any).userId = knownUser.id;
-            (req.session as any).user = sessionUser;
-          } else {
-            console.log('⚠️ Session object is undefined, creating mock session for recovery');
-            // Create a mock session object for this request
-            (req as any).session = {
-              userId: knownUser.id,
-              user: sessionUser,
-              save: (callback: any) => callback && callback(),
-              destroy: (callback: any) => callback && callback(),
-              regenerate: (callback: any) => callback && callback(),
-              reload: (callback: any) => callback && callback()
-            };
-          }
-          
-          req.user = sessionUser;
-          
-          console.log(`✅ Emergency session recovery successful for ${knownUser.email}`);
-          return next();
-        }
-      } catch (recoveryError) {
-        console.error('❌ Session recovery failed:', recoveryError);
-      }
-    }
+    // SECURITY FIX: Removed hardcoded emergency session recovery that was causing data leaks
+    // Users with missing sessions MUST log in properly - no automatic fallbacks allowed
+    console.log('❌ No valid authentication found - proper login required');
 
     // Check for Replit OAuth session
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
