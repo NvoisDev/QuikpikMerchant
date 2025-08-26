@@ -4114,6 +4114,32 @@ The Quikpik Team
             wholesalerId: wholesalerId
           });
           console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName}) linked to wholesaler: ${wholesalerId}`);
+          
+          // Send welcome messages to new customer (Payment Processing)
+          try {
+            const wholesaler = await storage.getUser(wholesalerId);
+            if (wholesaler) {
+              const customerName = `${firstName} ${lastName}`.trim();
+              const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+              const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+              
+              console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
+              
+              const welcomeResult = await sendWelcomeMessages({
+                customerName,
+                customerEmail: customerEmail,
+                customerPhone: customerPhone,
+                wholesalerName,
+                wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+                wholesalerPhone: wholesaler.phoneNumber,
+                portalUrl
+              });
+              
+              console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
+            }
+          } catch (welcomeError) {
+            console.error('❌ Error sending welcome messages (Payment Processing):', welcomeError);
+          }
         } else {
           // Check if email belongs to different customer before updating
           let emailConflict = false;
@@ -9959,6 +9985,32 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           role: 'retailer',
           wholesalerId: product.wholesalerId
         });
+        
+        // Send welcome messages to new customer (Marketplace Order)
+        try {
+          const wholesaler = await storage.getUser(product.wholesalerId);
+          if (wholesaler) {
+            const customerName = `${firstName} ${lastName}`.trim();
+            const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+            const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+            
+            console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
+            
+            const welcomeResult = await sendWelcomeMessages({
+              customerName,
+              customerEmail: customerEmail,
+              customerPhone: formattedPhoneNumber,
+              wholesalerName,
+              wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+              wholesalerPhone: wholesaler.phoneNumber,
+              portalUrl
+            });
+            
+            console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
+          }
+        } catch (welcomeError) {
+          console.error('❌ Error sending welcome messages (Marketplace Order):', welcomeError);
+        }
       }
       
       // Calculate platform fee (5% of total)
@@ -10157,6 +10209,32 @@ Please contact the customer to confirm this order.
             streetAddress: customerAddress,
             wholesalerId: firstProduct.wholesalerId
           });
+          
+          // Send welcome messages to new customer (Customer Portal Orders)
+          try {
+            const wholesaler = await storage.getUser(firstProduct.wholesalerId);
+            if (wholesaler) {
+              const customerName = `${firstName} ${lastName}`.trim();
+              const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+              const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+              
+              console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
+              
+              const welcomeResult = await sendWelcomeMessages({
+                customerName,
+                customerEmail: customerEmail,
+                customerPhone: customerPhone,
+                wholesalerName,
+                wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+                wholesalerPhone: wholesaler.phoneNumber,
+                portalUrl
+              });
+              
+              console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
+            }
+          } catch (welcomeError) {
+            console.error('❌ Error sending welcome messages (Customer Portal Orders):', welcomeError);
+          }
         }
       } catch (error) {
         console.error("Error creating customer:", error);
@@ -10795,6 +10873,34 @@ Please contact the customer to confirm this order.
             wholesalerId: product.wholesalerId
           });
           customerId = tempCustomer.id;
+          
+          // Send welcome messages to new customer (Marketplace Negotiations)
+          if (customerEmail && customerPhone && customerPhone !== `+44${Date.now()}`) {
+            try {
+              const wholesaler = await storage.getUser(product.wholesalerId);
+              if (wholesaler) {
+                const customerName = `${firstName} ${lastName}`.trim();
+                const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+                const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+                
+                console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
+                
+                const welcomeResult = await sendWelcomeMessages({
+                  customerName,
+                  customerEmail: customerEmail,
+                  customerPhone: customerPhone,
+                  wholesalerName,
+                  wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+                  wholesalerPhone: wholesaler.phoneNumber,
+                  portalUrl
+                });
+                
+                console.log(`📨 Welcome messages sent to ${customerName}:`, welcomeResult);
+              }
+            } catch (welcomeError) {
+              console.error('❌ Error sending welcome messages (Marketplace Negotiations):', welcomeError);
+            }
+          }
         } catch (error) {
           // If customer creation fails, use a fallback approach
           return res.status(400).json({ 
