@@ -1439,7 +1439,7 @@ export class DatabaseStorage implements IStorage {
       
       // CRITICAL FIX: Only search customers belonging to the specific wholesaler
       const wholesalerCustomers = await db.execute(sql`
-        SELECT 
+        SELECT DISTINCT
           u.id as customer_id,
           u.first_name,
           u.last_name,
@@ -1450,11 +1450,14 @@ export class DatabaseStorage implements IStorage {
           cg.id as group_id,
           cg.name as group_name
         FROM users u
-        JOIN customer_group_members cgm ON u.id = cgm.customer_id
-        JOIN customer_groups cg ON cgm.group_id = cg.id
+        LEFT JOIN customer_group_members cgm ON u.id = cgm.customer_id
+        LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
         WHERE ((u.phone_number IS NOT NULL AND u.phone_number != '')
           OR (u.business_phone IS NOT NULL AND u.business_phone != ''))
-          AND cg.wholesaler_id = ${wholesalerId}
+          AND (
+            u.wholesaler_id = ${wholesalerId}
+            OR cg.wholesaler_id = ${wholesalerId}
+          )
       `);
       
       // Find customers of this wholesaler whose phone number ends with the provided last 4 digits
@@ -1573,16 +1576,33 @@ export class DatabaseStorage implements IStorage {
           u.business_address as location,
           5.0 as rating
         FROM users u
-        JOIN customer_groups cg ON u.id = cg.wholesaler_id
-        JOIN customer_group_members cgm ON cg.id = cgm.group_id
-        JOIN users customer ON cgm.customer_id = customer.id
         WHERE u.role = 'wholesaler'
           AND u.business_name IS NOT NULL
           AND u.business_name != ''
           AND (
-            (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
-            OR 
-            (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
+            -- Customer directly belongs to this wholesaler
+            EXISTS (
+              SELECT 1 FROM users customer 
+              WHERE customer.wholesaler_id = u.id
+                AND (
+                  (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
+                  OR 
+                  (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
+                )
+            )
+            OR
+            -- Customer is in a group owned by this wholesaler
+            EXISTS (
+              SELECT 1 FROM customer_groups cg 
+              JOIN customer_group_members cgm ON cg.id = cgm.group_id
+              JOIN users customer ON cgm.customer_id = customer.id
+              WHERE cg.wholesaler_id = u.id
+                AND (
+                  (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
+                  OR 
+                  (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
+                )
+            )
           )
         ORDER BY u.business_name
       `);
@@ -1759,6 +1779,7 @@ export class DatabaseStorage implements IStorage {
     state?: string; 
     postalCode?: string; 
     country?: string;
+    wholesalerId?: string;
   }): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -1774,6 +1795,7 @@ export class DatabaseStorage implements IStorage {
         state: customer.state,
         postalCode: customer.postalCode,
         country: customer.country || "United Kingdom",
+        wholesalerId: customer.wholesalerId,
       })
       .returning();
     return user;
@@ -4017,6 +4039,9 @@ export class DatabaseStorage implements IStorage {
         AND u.id != ${wholesalerId} 
         AND u.archived = false
         AND (
+          -- Customer directly belongs to this wholesaler
+          u.wholesaler_id = ${wholesalerId}
+          OR
           -- Customer is in a group owned by this wholesaler
           EXISTS (
             SELECT 1 FROM customer_group_members cgm2 

@@ -118,6 +118,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   googleId: varchar("google_id").unique(),
   role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'retailer' | 'team_member'
+  wholesalerId: varchar("wholesaler_id"), // For customers/retailers: which wholesaler they belong to
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),
   businessPhone: varchar("business_phone"),

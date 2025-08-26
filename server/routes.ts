@@ -3909,9 +3909,10 @@ The Quikpik Team
             firstName,
             lastName,
             role: 'retailer',
-            email: customerEmail
+            email: customerEmail,
+            wholesalerId: wholesalerId
           });
-          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName})`);
+          console.log(`✅ New customer created: ${customer.id} (${customer.firstName} ${customer.lastName}) linked to wholesaler: ${wholesalerId}`);
         } else {
           // Check if email belongs to different customer before updating
           let emailConflict = false;
@@ -5323,6 +5324,7 @@ The Quikpik Team
           firstName,
           lastName,
           role: "retailer",
+          wholesalerId: targetUserId, // Link customer to their wholesaler
         });
         isNewCustomer = true;
       }
@@ -9753,7 +9755,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           firstName,
           lastName,
           email: customerEmail,
-          role: 'retailer'
+          role: 'retailer',
+          wholesalerId: product.wholesalerId
         });
       }
       
@@ -9951,6 +9954,7 @@ Please contact the customer to confirm this order.
             role: 'retailer',
             email: customerEmail,
             streetAddress: customerAddress,
+            wholesalerId: firstProduct.wholesalerId
           });
         }
       } catch (error) {
@@ -10587,6 +10591,7 @@ Please contact the customer to confirm this order.
             lastName,
             role: 'retailer',
             email: customerEmail,
+            wholesalerId: product.wholesalerId
           });
           customerId = tempCustomer.id;
         } catch (error) {
@@ -13962,7 +13967,8 @@ The Quikpik Team
           lastName: lastName || '',
           email: email || '',
           phoneNumber: formattedPhone,
-          role: 'customer'
+          role: 'customer',
+          wholesalerId: targetUserId
         });
       }
       
