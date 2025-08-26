@@ -175,6 +175,51 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
 webhookApp.post('/api/webhook-test', async (req, res) => {
   console.log(`🧪 STANDALONE TEST EXECUTING at ${new Date().toISOString()}`);
   console.log(`🧪 Body received:`, JSON.stringify(req.body, null, 2));
+  
+  // If this is a test order, process it like a real webhook
+  if (req.body.payment_intent && req.body.payment_intent.metadata) {
+    try {
+      console.log(`🧪 Processing test order for fulfillment type verification`);
+      
+      // Import order processing logic directly
+      const { processCustomerPortalOrder } = await import('./order-processor');
+      
+      // Create a fake payment_intent object with customer_portal order type
+      const testPaymentIntent = {
+        ...req.body.payment_intent,
+        metadata: {
+          ...req.body.payment_intent.metadata,
+          orderType: 'customer_portal'
+        }
+      };
+      
+      console.log(`🧪 Test shipping info: ${testPaymentIntent.metadata.shippingInfo}`);
+      
+      // Process order directly  
+      const orderResult = await processCustomerPortalOrder(testPaymentIntent);
+      
+      console.log(`✅ Test order created: ${orderResult.orderNumber} with fulfillment type: ${orderResult.fulfillmentType}`);
+      
+      return res.json({
+        standaloneTesting: 'success',
+        timestamp: new Date().toISOString(),
+        orderCreated: {
+          orderNumber: orderResult.orderNumber,
+          fulfillmentType: orderResult.fulfillmentType,
+          customerName: orderResult.customerName
+        }
+      });
+      
+    } catch (error: any) {
+      console.error(`❌ Test order processing error:`, error);
+      return res.json({
+        standaloneTesting: 'error',
+        timestamp: new Date().toISOString(),
+        error: error.message
+      });
+    }
+  }
+  
   res.json({ standaloneTesting: 'success', timestamp: new Date().toISOString() });
 });
 
