@@ -143,6 +143,16 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
   const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
   
+  // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
+  if (!shippingInfoJson) {
+    console.error(`🚨 ORDER-PROCESSOR CRITICAL: No shippingInfo in payment metadata for ${paymentIntent.id}! This will default to pickup.`);
+    console.error(`🚨 Payment metadata keys:`, Object.keys(paymentIntent.metadata || {}));
+  } else if (shippingInfo.option === 'pickup') {
+    console.log(`📦 ORDER-PROCESSOR: Customer explicitly chose pickup for payment ${paymentIntent.id}`);
+  } else if (shippingInfo.option === 'delivery') {
+    console.log(`🚚 ORDER-PROCESSOR: Customer chose delivery for payment ${paymentIntent.id} - will create DELIVERY order`);
+  }
+  
   // Use actual order shipping choice, not saved customer preference
   const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
   

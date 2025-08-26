@@ -3956,6 +3956,16 @@ The Quikpik Team
         const shippingInfoJson = paymentIntent.metadata.shippingInfo;
         const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
+        // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
+        if (!shippingInfoJson) {
+          console.error(`🚨 CRITICAL: No shippingInfo in payment metadata for ${paymentIntentId}! This will default to pickup.`);
+          console.error(`🚨 Payment metadata keys:`, Object.keys(paymentIntent.metadata || {}));
+        } else if (shippingInfo.option === 'pickup') {
+          console.log(`📦 Customer explicitly chose pickup for payment ${paymentIntentId}`);
+        } else if (shippingInfo.option === 'delivery') {
+          console.log(`🚚 Customer chose delivery for payment ${paymentIntentId} - will create DELIVERY order`);
+        }
+        
         // Use actual order shipping choice, not saved customer preference
         const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
         
