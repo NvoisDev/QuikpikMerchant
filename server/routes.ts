@@ -2294,6 +2294,96 @@ The Quikpik Team
     }
   });
 
+  // MEDIUM-TERM BUSINESS GROWTH ENDPOINTS
+
+  // Comprehensive business intelligence dashboard
+  app.get('/api/analytics/business-intelligence/:wholesalerId', isAuthenticated, async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      const { businessIntelligenceService } = await import('./services/businessIntelligenceService');
+      
+      const insights = await businessIntelligenceService.generateBusinessInsights(wholesalerId);
+      
+      res.json({ success: true, insights });
+    } catch (error) {
+      console.error("❌ Error generating business intelligence:", error);
+      res.status(500).json({ error: "Failed to generate business intelligence" });
+    }
+  });
+
+  // Automated demand-based pricing optimizer
+  app.post('/api/analytics/optimize-pricing/:wholesalerId', isAuthenticated, async (req, res) => {
+    try {
+      const { wholesalerId } = req.params;
+      
+      // Simple demand-based pricing logic using existing data
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Get products with recent sales data
+      const productsToOptimize = await db
+        .select({
+          productId: products.id,
+          productName: products.name,
+          currentPrice: products.price,
+          stock: products.stock,
+          recentSales: count(orderItems.id)
+        })
+        .from(products)
+        .leftJoin(orderItems, eq(orderItems.productId, products.id))
+        .leftJoin(orders, and(
+          eq(orderItems.orderId, orders.id),
+          gte(orders.createdAt, thirtyDaysAgo)
+        ))
+        .where(eq(products.wholesalerId, wholesalerId))
+        .groupBy(products.id, products.name, products.price, products.stock)
+        .having(sql`COUNT(${orderItems.id}) > 0`);
+
+      let optimizedCount = 0;
+      let totalRevenueImpact = 0;
+
+      // Apply simple pricing rules
+      for (const product of productsToOptimize) {
+        let newPrice = Number(product.currentPrice);
+        let priceAdjustment = 0;
+        const salesVolume = Number(product.recentSales);
+        const stock = product.stock || 0;
+
+        // High sales + low stock = increase price
+        if (salesVolume > 10 && stock < 50) {
+          priceAdjustment = 0.05; // 5% increase
+        }
+        // Low sales + high stock = decrease price  
+        else if (salesVolume < 3 && stock > 100) {
+          priceAdjustment = -0.10; // 10% decrease
+        }
+
+        if (priceAdjustment !== 0) {
+          newPrice = Number(product.currentPrice) * (1 + priceAdjustment);
+          
+          await db
+            .update(products)
+            .set({ price: newPrice.toFixed(2) })
+            .where(eq(products.id, product.productId));
+
+          optimizedCount++;
+          totalRevenueImpact += salesVolume * (newPrice - Number(product.currentPrice));
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        result: {
+          optimizedProducts: optimizedCount,
+          estimatedRevenueImpact: Math.round(totalRevenueImpact * 100) / 100
+        }
+      });
+    } catch (error) {
+      console.error("❌ Error optimizing pricing:", error);
+      res.status(500).json({ error: "Failed to optimize pricing" });
+    }
+  });
+
   app.get('/api/customer-orders/stats/:wholesalerId/:phoneNumber', async (req, res) => {
     try {
       const { wholesalerId, phoneNumber } = req.params;
