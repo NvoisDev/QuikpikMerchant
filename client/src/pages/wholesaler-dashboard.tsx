@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader, AnimatedCardTitle } from "@/components/ui/animated-card";
 import { Button } from "@/components/ui/button";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -321,11 +323,16 @@ export default function WholesalerDashboard() {
               placement="bottom"
             >
               <Link href="/products">
-                <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25 flex-1 sm:flex-none" data-onboarding="add-product-button">
+                <AnimatedButton 
+                  size="sm" 
+                  animation="glow" 
+                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/25 flex-1 sm:flex-none" 
+                  data-onboarding="add-product-button"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   <span className="hidden xs:inline">Add Product</span>
                   <span className="xs:hidden">Product</span>
-                </Button>
+                </AnimatedButton>
               </Link>
             </DynamicTooltip>
             <DynamicTooltip 
@@ -334,11 +341,16 @@ export default function WholesalerDashboard() {
               placement="bottom"
             >
               <Link href="/campaigns">
-                <Button size="sm" variant="outline" className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700 flex-1 sm:flex-none">
+                <AnimatedButton 
+                  size="sm" 
+                  variant="outline" 
+                  animation="bounce" 
+                  className="border-2 border-blue-200 hover:bg-blue-50 hover:text-blue-800 text-blue-700 flex-1 sm:flex-none"
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   <span className="hidden xs:inline">Create Campaign</span>
                   <span className="xs:hidden">Campaign</span>
-                </Button>
+                </AnimatedButton>
               </Link>
             </DynamicTooltip>
             <DynamicTooltip 
@@ -354,9 +366,10 @@ export default function WholesalerDashboard() {
                 </Button>
               </Link>
             </DynamicTooltip>
-            <Button 
+            <AnimatedButton 
               size="sm"
               variant="outline" 
+              animation="scale"
               className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
               data-onboarding="preview-store"
               onClick={() => {
@@ -367,7 +380,7 @@ export default function WholesalerDashboard() {
               <Package className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Preview Store</span>
               <span className="xs:hidden">Preview</span>
-            </Button>
+            </AnimatedButton>
             <DynamicTooltip 
               content="Copy your customer portal link to share with customers. They can browse and order your products through this link."
               type="success"
@@ -438,8 +451,13 @@ export default function WholesalerDashboard() {
               type="info"
               placement="top"
             >
-              <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
-                <CardContent className="p-6">
+              <AnimatedCard 
+                className="text-white border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600" 
+                hoverScale={true} 
+                fadeIn={true} 
+                delay={0}
+              >
+                <AnimatedCardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-sm font-medium">Total Revenue</p>
@@ -454,8 +472,8 @@ export default function WholesalerDashboard() {
                       <DollarSign className="h-6 w-6" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </AnimatedCardContent>
+              </AnimatedCard>
             </DynamicTooltip>
 
             <DynamicTooltip 
@@ -463,8 +481,13 @@ export default function WholesalerDashboard() {
               type="info"
               placement="top"
             >
-              <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
-                <CardContent className="p-6">
+              <AnimatedCard 
+                className="text-white border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600" 
+                hoverScale={true} 
+                fadeIn={true} 
+                delay={100}
+              >
+                <AnimatedCardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-sm font-medium">Total Orders</p>
@@ -479,8 +502,8 @@ export default function WholesalerDashboard() {
                       <ShoppingCart className="h-6 w-6" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </AnimatedCardContent>
+              </AnimatedCard>
             </DynamicTooltip>
 
             <DynamicTooltip 

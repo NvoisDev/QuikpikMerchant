@@ -2,6 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Gentle Micro-animations for Interactive Elements */
+@layer base {
+  /* Smooth transitions for all interactive elements */
+  * {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Enhanced button animations */
+  button, [role="button"], input[type="button"], input[type="submit"] {
+    transition-property: all;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button:hover, [role="button"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  button:active, [role="button"]:active {
+    transform: translateY(0px);
+    transition-duration: 75ms;
+  }
+
+  /* Card hover animations */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Input field focus animations */
+  input, textarea, select {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  input:focus, textarea:focus, select:focus {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Link hover animations */
+  a {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  a:hover {
+    transform: translateX(2px);
+  }
+
+  /* Icon spin animation */
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+
+  /* Fade in animation */
+  .animate-fade-in {
+    animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scale animation */
+  .animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Bounce animation for notifications */
+  .animate-bounce-gentle {
+    animation: bounceGentle 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes bounceGentle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* Pulse animation for loading states */
+  .animate-pulse-gentle {
+    animation: pulseGentle 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes pulseGentle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+}
+
 /* Onboarding highlight styles */
 .onboarding-highlight {
   position: relative !important;
