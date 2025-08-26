@@ -3976,9 +3976,12 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // CRITICAL FIX: Get all customers with accurate order counts
-    // For Michael's case: he's the wholesaler (104871691614680693123) so we count orders where:
-    // 1. He's the wholesaler (most orders) OR 2. He's the customer (self-orders)
+    // CRITICAL SECURITY FIX: Only return customers that actually belong to this wholesaler
+    // Customers belong to a wholesaler if they are:
+    // 1. Members of customer groups owned by this wholesaler, OR
+    // 2. Have order history with this wholesaler
+    console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
+    
     const allCustomers = await db.execute(sql`
       SELECT DISTINCT
         u.id,
@@ -4008,10 +4011,26 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
       LEFT JOIN orders o ON (
         (u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}) OR
-        (u.id = o.wholesaler_id AND o.retailer_id = ${wholesalerId}) OR
-        (u.id = ${wholesalerId} AND (o.wholesaler_id = ${wholesalerId} OR o.retailer_id = ${wholesalerId}))
+        (u.id = o.wholesaler_id AND o.retailer_id = ${wholesalerId})
       )
-      WHERE u.role IN ('retailer', 'customer') AND u.id != ${wholesalerId} AND u.archived = false
+      WHERE u.role IN ('retailer', 'customer') 
+        AND u.id != ${wholesalerId} 
+        AND u.archived = false
+        AND (
+          -- Customer is in a group owned by this wholesaler
+          EXISTS (
+            SELECT 1 FROM customer_group_members cgm2 
+            INNER JOIN customer_groups cg2 ON cgm2.group_id = cg2.id 
+            WHERE cgm2.customer_id = u.id AND cg2.wholesaler_id = ${wholesalerId}
+          )
+          OR
+          -- Customer has order history with this wholesaler
+          EXISTS (
+            SELECT 1 FROM orders o2 
+            WHERE (o2.retailer_id = u.id AND o2.wholesaler_id = ${wholesalerId})
+              OR (o2.wholesaler_id = u.id AND o2.retailer_id = ${wholesalerId})
+          )
+        )
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, u.business_name,
                u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
       ORDER BY total_spent DESC, u.first_name ASC
