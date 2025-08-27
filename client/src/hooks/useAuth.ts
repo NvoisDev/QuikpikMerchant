@@ -14,33 +14,16 @@ export function useAuth() {
         });
         
         if (res.status === 401) {
-          // WHOLESALE ACCESS FIX: Instead of redirecting, provide default wholesaler access
+          // Not authenticated - check if this is a session issue vs new user
           const currentPath = window.location.pathname;
           const isOnDashboard = currentPath.includes('dashboard') || currentPath === '/' || 
                                currentPath.includes('products') || currentPath.includes('orders') ||
                                currentPath.includes('customers') || currentPath.includes('analytics');
           
           if (isOnDashboard) {
-            console.log('🔓 Providing default wholesaler access without authentication barriers');
-            // Return a default wholesaler user to bypass authentication
-            return {
-              id: 'default-wholesaler',
-              email: 'wholesaler@platform.com',
-              firstName: 'Platform',
-              lastName: 'Wholesaler',
-              role: 'wholesaler',
-              businessName: 'Your Business',
-              defaultCurrency: 'GBP',
-              isFirstLogin: false,
-              profileImageUrl: null,
-              googleId: null,
-              stripeAccountId: null,
-              whatsappPhoneNumber: null,
-              whatsappApiKey: null,
-              logoUrl: null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            } as User;
+            // User was trying to access dashboard but auth failed - likely session expired
+            console.log('🔄 Authentication expired while on dashboard, redirecting to login');
+            window.location.href = '/login?expired=true';
           }
           return null;
         }
@@ -61,34 +44,7 @@ export function useAuth() {
         
         return await res.json();
       } catch (error) {
-        // WHOLESALE ACCESS FIX: Provide default wholesaler access on any auth error
-        const currentPath = window.location.pathname;
-        const isOnDashboard = currentPath.includes('dashboard') || currentPath === '/' || 
-                             currentPath.includes('products') || currentPath.includes('orders') ||
-                             currentPath.includes('customers') || currentPath.includes('analytics');
-        
-        if (isOnDashboard) {
-          console.log('🔓 Auth error - providing default wholesaler access');
-          return {
-            id: 'default-wholesaler',
-            email: 'wholesaler@platform.com',
-            firstName: 'Platform',
-            lastName: 'Wholesaler',
-            role: 'wholesaler',
-            businessName: 'Your Business',
-            defaultCurrency: 'GBP',
-            isFirstLogin: false,
-            profileImageUrl: null,
-            googleId: null,
-            stripeAccountId: null,
-            whatsappPhoneNumber: null,
-            whatsappApiKey: null,
-            logoUrl: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          } as User;
-        }
-        
+        // Don't throw errors for authentication issues - return null instead
         console.log('Authentication check failed:', error);
         return null;
       }
