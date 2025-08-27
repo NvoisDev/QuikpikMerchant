@@ -196,7 +196,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
     // Check for Replit OAuth session
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      const user = req.user;
+      const user = req.user as any;
       
       // SECURITY: Block customer/retailer access to wholesaler dashboard
       if (user.role === 'retailer' || user.role === 'customer') {

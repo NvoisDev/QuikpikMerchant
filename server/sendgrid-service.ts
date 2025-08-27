@@ -21,10 +21,10 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send({
       to: params.to,
-      from: params.from || 'noreply@quikpik.co',
+      from: params.from || 'noreply@quikpik.app',
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+      text: params.text || '',
+      html: params.html || '',
     });
     
     console.log('✅ Email sent successfully via SendGrid');
