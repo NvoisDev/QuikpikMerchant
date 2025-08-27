@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,22 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { backToHome } = useAuth();
+
+  // Check for session expiry and show helpful message
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const expired = urlParams.get('expired');
+    
+    if (expired === 'true') {
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please sign in again to continue.",
+        variant: "default",
+      });
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [toast]);
 
   const handleBackToHome = () => {
     // Clear any existing session and go to landing page

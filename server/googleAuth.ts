@@ -163,9 +163,19 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         }
         
         console.log(`✅ Session auth successful for user ${user.email} (${req.url})`);
-        // Use session data which includes team member context
-        req.user = sessionUser;
+        // Ensure session user has the latest data from database
+        const enrichedSessionUser = {
+          ...sessionUser,
+          ...user,
+          role: user.role // Ensure role is from fresh database data
+        };
+        req.user = enrichedSessionUser;
         return next();
+      } else {
+        // User not found in database but session exists - clear session
+        console.log('🔄 User not found in database but session exists, clearing session');
+        delete (req.session as any)?.user;
+        delete (req.session as any)?.userId;
       }
     }
 
@@ -186,7 +196,14 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         
         console.log(`✅ Legacy session auth successful for user ${user.email} (${req.url})`);
         req.user = user;
+        
+        // Update session with full user object for consistency
+        (req.session as any).user = user;
         return next();
+      } else {
+        // UserId exists but user not found - clear session
+        console.log('🔄 Legacy userId exists but user not found, clearing session');
+        delete (req.session as any)?.userId;
       }
     }
 

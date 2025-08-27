@@ -14,7 +14,17 @@ export function useAuth() {
         });
         
         if (res.status === 401) {
-          // Not authenticated - this is expected, return null
+          // Not authenticated - check if this is a session issue vs new user
+          const currentPath = window.location.pathname;
+          const isOnDashboard = currentPath.includes('dashboard') || currentPath === '/' || 
+                               currentPath.includes('products') || currentPath.includes('orders') ||
+                               currentPath.includes('customers') || currentPath.includes('analytics');
+          
+          if (isOnDashboard) {
+            // User was trying to access dashboard but auth failed - likely session expired
+            console.log('🔄 Authentication expired while on dashboard, redirecting to login');
+            window.location.href = '/login?expired=true';
+          }
           return null;
         }
         
