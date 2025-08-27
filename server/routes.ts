@@ -458,6 +458,11 @@ The Quikpik Team`,
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // CRITICAL FIX: Setup session middleware FIRST before any routes
+  console.log('🔧 Setting up session middleware at start of registerRoutes...');
+  await setupAuth(app);
+  console.log('✅ Session middleware configured successfully');
+
   // Apply lightweight performance middleware
   app.use(compression());
   app.use(performanceMiddleware.securityHeadersMiddleware());
@@ -2719,12 +2724,7 @@ The Quikpik Team`
     }
   });
 
-  // Auth middleware - setup session handling after customer routes
-  // Set up unified session middleware 
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  
-  // Use simple session configuration that works for both auth methods
-  await setupAuth(app);
+  // Session middleware setup moved to beginning of registerRoutes
 
   // STRIPE WEBHOOKS MOVED TO TOP OF FILE TO AVOID VITE INTERFERENCE
 
