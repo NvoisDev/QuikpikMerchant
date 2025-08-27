@@ -190,11 +190,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // SECURITY FIX: Removed hardcoded emergency session recovery that was causing data leaks
-    // Users with missing sessions MUST log in properly - no automatic fallbacks allowed
-    console.log('❌ No valid authentication found - proper login required');
-
-    // Check for Replit OAuth session
+    // Check for Replit OAuth session (Passport.js integration)
     if (req.isAuthenticated && req.isAuthenticated() && req.user) {
       const user = req.user as any;
       
@@ -208,10 +204,27 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         });
       }
       
+      console.log(`✅ Replit OAuth auth successful for user ${user.email || user.claims?.email} (${req.url})`);
       return next();
     }
 
-    return res.status(401).json({ error: 'Authentication required' });
+    // Session Recovery: If session exists but user data is missing, provide clear guidance
+    if (req.session && req.sessionID && !sessionUser && !sessionUserId) {
+      console.log(`🔄 Session exists but user data missing - session may have expired`);
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        sessionExpired: true,
+        message: 'Your session has expired. Please log in again.',
+        redirectUrl: '/login'
+      });
+    }
+
+    console.log('❌ No valid authentication found - proper login required');
+    return res.status(401).json({ 
+      error: 'Authentication required',
+      message: 'Please log in to access this resource.',
+      redirectUrl: '/login'
+    });
   } catch (error) {
     console.error('Authentication error:', error);
     res.status(500).json({ error: 'Authentication failed' });

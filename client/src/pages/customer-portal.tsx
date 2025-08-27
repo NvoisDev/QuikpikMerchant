@@ -54,7 +54,26 @@ import { StockIndicator } from "@/components/ui/stock-indicator";
 import { Package2, Hash } from "lucide-react";
 
 // Extended Product type that includes all schema fields for customer portal
-type ExtendedProduct = ProductType;
+type ExtendedProduct = ProductType & {
+  wholesaler?: {
+    id: string;
+    businessName?: string | null;
+    logoUrl?: string | null;
+  };
+  palletMoq?: number | null;
+  palletStock?: number | null;
+  palletPrice?: string | null;
+  unitsPerPallet?: number | null;
+  palletWeight?: string | null;
+};
+
+// Cart item type
+// Unified CartItem type
+type CartItem = {
+  product: ExtendedProduct;
+  quantity: number;
+  sellingType: "units" | "pallets";
+};
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -255,11 +274,7 @@ interface Product {
   };
 }
 
-interface CartItem {
-  product: Product;
-  quantity: number;
-  sellingType: "units" | "pallets"; // What type of quantity this item represents
-}
+
 
 interface CustomerData {
   name: string;
@@ -1195,7 +1210,7 @@ export default function CustomerPortal() {
           itemQuantity,
           item.product.promotionalOffers || [],
           item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
-          item.product.promoActive
+          Boolean(item.product.promoActive)
         );
         
         // Use effective price and total quantity (includes free items from BOGOFF)
