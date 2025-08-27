@@ -367,21 +367,27 @@ export default function WholesalerDashboard() {
                 </Button>
               </Link>
             </DynamicTooltip>
-            <AnimatedButton 
-              size="sm"
-              variant="outline" 
-              animation="scale"
-              className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
-              data-onboarding="preview-store"
-              onClick={() => {
-                const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
-                window.open(`/customer/${effectiveUserId}`, '_blank');
-              }}
+            <DynamicTooltip 
+              content="Preview your customer store exactly as customers will see it. Test the shopping experience without needing customer authentication."
+              type="feature"
+              placement="bottom"
             >
-              <Package className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Preview Store</span>
-              <span className="xs:hidden">Preview</span>
-            </AnimatedButton>
+              <AnimatedButton 
+                size="sm"
+                variant="outline" 
+                animation="scale"
+                className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
+                data-onboarding="preview-store"
+                onClick={() => {
+                  const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+                  window.open(`/customer/${effectiveUserId}`, '_blank');
+                }}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                <span className="hidden xs:inline">Preview Store</span>
+                <span className="xs:hidden">Preview</span>
+              </AnimatedButton>
+            </DynamicTooltip>
             <DynamicTooltip 
               content="Copy your customer portal link to share with customers. They can browse and order your products through this link."
               type="success"

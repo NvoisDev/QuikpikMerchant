@@ -640,19 +640,21 @@ export default function CustomerPortal() {
   // Theme system
   const { theme, changeTheme } = useCustomerTheme();
 
-  // Detect if this is preview mode (accessed via /preview-store)
+  // Detect if this is preview mode (accessed via /preview-store or wholesaler viewing own store)
   const isPreviewMode = location === '/preview-store';
   
-  // Get authenticated user only for preview mode - TEMPORARILY DISABLED
+  // Get authenticated user to check if wholesaler is viewing their own store
   const { data: user } = useQuery<{
     id?: string;
     role?: string;
     wholesalerId?: string;
+    firstName?: string;
+    lastName?: string;
   }>({
     queryKey: ["/api/auth/user"],
-    enabled: false, // DISABLED to prevent infinite loops
+    enabled: isPreviewMode || !!wholesalerIdParam, // Enable for preview mode or when viewing store with ID
     retry: false,
-    staleTime: Infinity,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchInterval: false,
@@ -675,6 +677,18 @@ export default function CustomerPortal() {
     const cleanId = decodedId ? decodedId.split('?')[0] : undefined;
     return cleanId;
   }, [wholesalerIdParam, location]);
+  
+  // Check if current user is a wholesaler viewing their own store
+  const isWholesalerOwnStore = useMemo(() => {
+    if (!user || user.role !== 'wholesaler') return false;
+    if (!wholesalerId) return false;
+    
+    // Check if the wholesaler ID matches the current user's ID
+    return user.id === wholesalerId || user.wholesalerId === wholesalerId;
+  }, [user, wholesalerId]);
+  
+  // Enhanced preview mode that includes wholesaler own store access
+  const isEnhancedPreviewMode = isPreviewMode || isWholesalerOwnStore;
 
 
 
@@ -720,7 +734,7 @@ export default function CustomerPortal() {
       
       return response.json();
     },
-    enabled: !!wholesalerId && !isPreviewMode,
+    enabled: !!wholesalerId && !isEnhancedPreviewMode,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
@@ -732,7 +746,10 @@ export default function CustomerPortal() {
   const hasAuthParam = urlParams.has('auth');
   const forceLoginParam = urlParams.has('login');
   
-  const [showAuth, setShowAuth] = useState(() => !isPreviewMode && (!hasAuthParam || forceLoginParam));
+  const [showAuth, setShowAuth] = useState(() => {
+    const isPreviewModeCheck = location === '/preview-store';
+    return !isPreviewModeCheck && (!hasAuthParam || forceLoginParam);
+  });
   const [isGuestMode, setIsGuestMode] = useState(true);
 
   // State management
@@ -1258,7 +1275,7 @@ export default function CustomerPortal() {
 
   // Event handlers
   const openQuantityEditor = useCallback((product: Product) => {
-    if (isPreviewMode) {
+    if (isEnhancedPreviewMode) {
       toast({
         title: "Preview Mode",
         description: "Cart functionality is disabled in preview mode.",
@@ -1279,10 +1296,10 @@ export default function CustomerPortal() {
     }
     
     setShowQuantityEditor(true);
-  }, [isPreviewMode, toast]);
+  }, [isEnhancedPreviewMode, toast]);
 
   const openNegotiation = useCallback((product: Product) => {
-    if (isPreviewMode) {
+    if (isEnhancedPreviewMode) {
       toast({
         title: "Preview Mode",
         description: "Negotiation functionality is disabled in preview mode.",
@@ -1297,10 +1314,10 @@ export default function CustomerPortal() {
       message: ''
     });
     setShowNegotiation(true);
-  }, [isPreviewMode, toast]);
+  }, [isEnhancedPreviewMode, toast]);
 
   const addToCart = useCallback((product: ExtendedProduct, quantity: number, sellingType: "units" | "pallets" = "units") => {
-    if (isPreviewMode) {
+    if (isEnhancedPreviewMode) {
       toast({
         title: "Preview Mode",
         description: "Cart functionality is disabled in preview mode.",
@@ -1707,10 +1724,21 @@ export default function CustomerPortal() {
 
   // Authentication state management using server sessions
   useEffect(() => {
-    if (isPreviewMode) {
-      // In preview mode, skip authentication
+    if (isEnhancedPreviewMode) {
+      // In preview mode (including wholesaler own store), skip customer authentication
       setShowAuth(false);
       setIsGuestMode(false);
+      setIsAuthenticated(true); // Set as authenticated for preview mode
+      if (isWholesalerOwnStore && user) {
+        // If wholesaler is viewing their own store, set them as a mock customer for display purposes
+        setAuthenticatedCustomer({
+          id: 'preview-customer',
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Store Preview',
+          email: 'preview@store.com',
+          phone: '+1234567890',
+          businessName: 'Store Preview Mode'
+        });
+      }
       return;
     }
 
@@ -1744,7 +1772,7 @@ export default function CustomerPortal() {
     setAuthenticatedCustomer(null);
     setShowAuth(true);
     setIsGuestMode(true);
-  }, [isPreviewMode, wholesalerId, sessionLoading, sessionData, forceLoginParam]);
+  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam]);
 
 
 
@@ -1762,7 +1790,7 @@ export default function CustomerPortal() {
   // });
 
   // Show loading screen if wholesalerId is not available yet
-  if (!wholesalerId && !isPreviewMode) {
+  if (!wholesalerId && !isEnhancedPreviewMode) {
     console.log('⏳ Waiting for wholesalerId...');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1787,7 +1815,7 @@ export default function CustomerPortal() {
   }
 
   // Show authentication screen (3-step process)
-  if (showAuth && !isPreviewMode && wholesalerId) {
+  if (showAuth && !isEnhancedPreviewMode && wholesalerId) {
     console.log('🔐 Showing 3-step authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
@@ -1854,9 +1882,9 @@ export default function CustomerPortal() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Preview Mode Banner */}
-      {isPreviewMode && (
+      {isEnhancedPreviewMode && (
         <div className="bg-orange-500 text-white px-4 py-2 text-center text-sm font-medium">
-          🔍 Store Preview Mode - Cart and checkout features are disabled for testing
+          🔍 Store Preview Mode{isWholesalerOwnStore ? ' (Viewing Your Store)' : ''} - Cart and checkout features are disabled for testing
         </div>
       )}
 
