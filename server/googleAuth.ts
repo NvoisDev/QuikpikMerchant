@@ -128,45 +128,9 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Enhanced debug session information
-    console.log('🔍 Auth Debug:', {
-      sessionExists: !!req.session,
-      sessionUser: (req.session as any)?.user ? 'exists' : 'missing',
-      sessionUserId: (req.session as any)?.userId || 'missing',
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : 'no_method',
-      headers: req.headers.cookie ? 'has_cookies' : 'no_cookies',
-      sessionId: req.sessionID || 'no_session_id',
-      url: req.url,
-      method: req.method,
-      userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-
-    // For POST requests, give session more time to initialize  
-    if (req.method === 'POST' && (!req.session || !(req.session as any)?.user)) {
-      console.log('⏳ POST request - waiting for session to initialize...');
-      console.log('🔍 POST Debug - Headers:', {
-        cookie: req.headers.cookie ? 'present' : 'missing',
-        sessionId: req.sessionID || 'none',
-        userAgent: req.headers['user-agent']?.substring(0, 50)
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Force session reload for POST requests if still missing
-      if (!req.session && req.headers.cookie) {
-        console.log('🔄 Forcing session reload for POST request');
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-
-    // Standard session check after potential wait
-    if (!req.session && req.headers.cookie) {
-      console.log('⏳ Session not ready, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 150));
-    }
-
-    // Check for session user object (primary method for email/password auth)
+    // Simple session check - same logic that works for GET requests
     const sessionUser = (req.session as any)?.user;
+    
     if (sessionUser && sessionUser.id) {
       const user = await storage.getUser(sessionUser.id);
       if (user) {
@@ -180,20 +144,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           });
         }
         
-        console.log(`✅ Session auth successful for user ${user.email} (${req.url})`);
-        // Ensure session user has the latest data from database
-        const enrichedSessionUser = {
-          ...sessionUser,
-          ...user,
-          role: user.role // Ensure role is from fresh database data
-        };
-        req.user = enrichedSessionUser;
+        console.log(`✅ Auth successful for ${user.email} (${req.method} ${req.url})`);
+        req.user = user;
         return next();
-      } else {
-        // User not found in database but session exists - clear session
-        console.log('🔄 User not found in database but session exists, clearing session');
-        delete (req.session as any)?.user;
-        delete (req.session as any)?.userId;
       }
     }
 
@@ -204,19 +157,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       if (user) {
         // SECURITY: Block customer/retailer access to wholesaler dashboard
         if (user.role === 'retailer' || user.role === 'customer') {
-          console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard via legacy session`);
-          return res.status(403).json({ 
-            error: 'Access denied. Customers cannot access the wholesaler dashboard.',
-            userType: user.role,
-            redirectUrl: '/customer-login'
-          });
-        }
-        
-        console.log(`✅ Legacy session auth successful for user ${user.email} (${req.url})`);
-        req.user = user;
-        return next();
-        // SECURITY: Block customer/retailer access to wholesaler dashboard
-        if (user.role === 'retailer' || user.role === 'customer') {
           console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard`);
           return res.status(403).json({ 
             error: 'Access denied. Customers cannot access the wholesaler dashboard.',
@@ -225,16 +165,12 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           });
         }
         
-        console.log(`✅ Legacy session auth successful for user ${user.email} (${req.url})`);
+        console.log(`✅ Legacy auth successful for ${user.email} (${req.method} ${req.url})`);
         req.user = user;
         
-        // Update session with full user object for consistency
+        // Update session for consistency
         (req.session as any).user = user;
         return next();
-      } else {
-        // UserId exists but user not found - clear session
-        console.log('🔄 Legacy userId exists but user not found, clearing session');
-        delete (req.session as any)?.userId;
       }
     }
 
