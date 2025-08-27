@@ -182,33 +182,40 @@ export default function CustomerRegistrationRequests() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/customers">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Customer Registration Requests</h1>
-            <p className="text-muted-foreground">
-              Review and approve customer access requests
-            </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link href="/customers">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Back to Customers</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Customer Registration Requests</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Review and approve customer access requests
+              </p>
+            </div>
           </div>
+          <Badge variant="secondary" className="px-3 py-1 hidden sm:flex">
+            {pendingRequests.length} Pending
+          </Badge>
         </div>
-        <div className="flex items-center space-x-4">
-          {/* Search functionality */}
-          <div className="relative">
+        
+        {/* Mobile-friendly search bar */}
+        <div className="flex items-center justify-between space-x-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, business, phone, or email..."
+              placeholder="Search requests..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="pl-10 w-80"
+              className="pl-10 w-full"
             />
           </div>
-          <Badge variant="secondary" className="px-3 py-1">
+          <Badge variant="secondary" className="px-3 py-1 sm:hidden flex-shrink-0">
             {pendingRequests.length} Pending
           </Badge>
         </div>
@@ -265,20 +272,22 @@ export default function CustomerRegistrationRequests() {
             <div className="space-y-4">
               {pendingRequests.map((request) => (
                 <div key={request.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <UserPlus className="h-4 w-4 text-blue-500" />
-                        <h3 className="font-semibold">{request.customerName}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                        <div className="flex items-center space-x-2">
+                          <UserPlus className="h-4 w-4 text-blue-500" />
+                          <h3 className="font-semibold">{request.customerName}</h3>
+                        </div>
                         {request.businessName && (
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="w-fit">
                             <Building2 className="h-3 w-3 mr-1" />
                             {request.businessName}
                           </Badge>
                         )}
                       </div>
                       
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Phone className="h-3 w-3 mr-1" />
                           {request.customerPhone}
@@ -291,7 +300,8 @@ export default function CustomerRegistrationRequests() {
                         )}
                         <div className="flex items-center">
                           <Clock className="h-3 w-3 mr-1" />
-                          {format(new Date(request.requestedAt), 'MMM d, yyyy h:mm a')}
+                          <span className="hidden sm:inline">{format(new Date(request.requestedAt), 'MMM d, yyyy h:mm a')}</span>
+                          <span className="sm:hidden">{format(new Date(request.requestedAt), 'MMM d')}</span>
                         </div>
                       </div>
                       
@@ -310,11 +320,14 @@ export default function CustomerRegistrationRequests() {
                         <Button 
                           size="sm"
                           onClick={() => setSelectedRequest(request)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
                         >
-                          Review
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">Review Request</span>
+                          <span className="sm:hidden">Review</span>
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
+                      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>Review Registration Request</DialogTitle>
                           <DialogDescription>
@@ -379,11 +392,12 @@ export default function CustomerRegistrationRequests() {
                           </div>
                         </div>
                         
-                        <DialogFooter className="space-x-2">
+                        <DialogFooter className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                           <Button
                             variant="destructive"
                             onClick={handleReject}
                             disabled={isProcessing}
+                            className="w-full sm:w-auto"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
                             Reject
@@ -391,10 +405,11 @@ export default function CustomerRegistrationRequests() {
                           <Button
                             onClick={handleApprove}
                             disabled={isProcessing}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
-                            Approve & Create Account
+                            <span className="hidden sm:inline">Approve & Create Account</span>
+                            <span className="sm:hidden">Approve</span>
                           </Button>
                         </DialogFooter>
                       </DialogContent>
