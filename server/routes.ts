@@ -590,6 +590,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
+  // Test endpoint to simulate Stripe Connect authentication
+  app.post('/api/stripe/connect-test', async (req: any, res) => {
+    console.log('🧪 Testing Stripe Connect authentication flow...');
+    
+    // Check if we have the basic session requirements
+    const hasSessionCookie = req.headers.cookie?.includes('connect.sid');
+    const hasSession = !!req.session;
+    const sessionData = req.session;
+    
+    console.log('🔍 Stripe Connect Test Debug:', {
+      hasSessionCookie,
+      hasSession,
+      sessionExists: !!sessionData,
+      sessionUser: sessionData && (sessionData as any).user ? 'exists' : 'missing',
+      sessionUserId: sessionData && (sessionData as any).userId ? 'exists' : 'missing',
+      headers: req.headers.cookie ? 'has_cookies' : 'no_cookies'
+    });
+    
+    // If we have session data, try to get the user
+    if (hasSession && sessionData && (sessionData as any).user) {
+      try {
+        const user = await storage.getUser((sessionData as any).user.id);
+        if (user && user.role === 'wholesaler') {
+          console.log('✅ Test: Authentication successful for:', user.email);
+          res.json({ 
+            success: true, 
+            message: 'Authentication test passed',
+            user: { id: user.id, email: user.email }
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Test: Error getting user:', error);
+      }
+    }
+    
+    console.log('❌ Test: Authentication failed');
+    res.status(401).json({ 
+      success: false, 
+      message: 'Authentication test failed',
+      debug: {
+        hasSessionCookie,
+        hasSession,
+        sessionExists: !!sessionData
+      }
+    });
+  });
+
   // Stripe Connect endpoint - Use standard auth middleware
   app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
     try {
