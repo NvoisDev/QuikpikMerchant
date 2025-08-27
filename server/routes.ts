@@ -2989,8 +2989,8 @@ The Quikpik Team`
         unitOfMeasure: row.unit_of_measure,
         unitSize: row.size_per_unit,
         wholesalerId: defaultUserId,
-        createdAt: row.created_at ? new Date(row.created_at) : new Date(),
-        updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+        createdAt: row.created_at ? new Date(String(row.created_at)) : new Date(),
+        updatedAt: row.updated_at ? new Date(String(row.updated_at)) : new Date(),
         promoActive: Boolean(row.promo_active),
         promoPrice: row.promo_price,
         unit: row.unit || 'units',
@@ -3834,7 +3834,7 @@ The Quikpik Team`
           item.quantity,
           product.promotionalOffers || [],
           product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-          product.promoActive
+          Boolean(product.promoActive)
         );
         
         // CRITICAL FIX: Use the sellingType field sent from frontend instead of guessing from price
@@ -3871,7 +3871,7 @@ The Quikpik Team`
           }
         } else if (isPalletOrder && product.palletMoq && item.quantity < product.palletMoq) {
           // Smart MOQ for pallets: If pallet stock is below pallet MOQ, allow customer to buy remaining pallets
-          const palletStock = Math.floor(product.stock / (product.palletSize || 48)); // Default pallet size 48
+          const palletStock = Math.floor(product.stock / (product.unitsPerPallet || 48)); // Default pallet size 48
           if (palletStock >= product.palletMoq) {
             return res.status(400).json({ 
               message: `Minimum order quantity for ${product.name} is ${product.palletMoq} pallets` 
@@ -3918,7 +3918,7 @@ The Quikpik Team`
             item.quantity,
             product.promotionalOffers || [],
             product.promoPrice ? parseFloat(product.promoPrice) : undefined,
-            product.promoActive
+            Boolean(product.promoActive)
           );
         }
         
@@ -4310,11 +4310,11 @@ The Quikpik Team`
               
               const welcomeResult = await sendWelcomeMessages({
                 customerName,
-                customerEmail: customerEmail,
+                customerEmail: customerEmail || '',
                 customerPhone: customerPhone,
                 wholesalerName,
                 wholesalerEmail: wholesaler.email || 'support@quikpik.co',
-                wholesalerPhone: wholesaler.phoneNumber,
+                wholesalerPhone: wholesaler.phoneNumber || '',
                 portalUrl
               });
               
@@ -5249,7 +5249,7 @@ The Quikpik Team`
       
       if (includeAlerts === 'true') {
         const stockAlerts = await storage.getStockAlerts(targetUserId);
-        inventoryStatus.alerts = stockAlerts;
+        (inventoryStatus as any).alerts = stockAlerts;
       }
       
       res.json(inventoryStatus);
@@ -5848,10 +5848,10 @@ This message was sent by Quikpik Merchant Platform
             const whatsappMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! 👋\n\nYou've been added to our customer network and can now:\n\n🛒 Browse our latest products\n📱 Receive instant stock updates\n💬 Place orders directly via WhatsApp\n🚚 Track your deliveries\n💰 Access special wholesale pricing\n\n🌐 **Shop Online**: ${portalUrl}\nVisit our customer portal to browse products, place orders, and track deliveries!\n\n${accessInstructions}\n\nWe'll keep you updated with:\n• New product arrivals\n• Special promotions\n• Stock availability alerts\n\nQuestions? Just reply to this message!\n\n✨ This message was powered by Quikpik Merchant`;
 
             const user = await storage.getUserById(targetUserId);
-            if ((user as any)?.whatsappEnabled && (wholesaler as any)?.whatsappAccessToken && wholesaler?.whatsappBusinessPhoneId) {
+            if ((user as any)?.whatsappEnabled && (wholesaler as any)?.whatsappAccessToken && (wholesaler as any)?.whatsappBusinessPhoneId) {
               await whatsAppBusinessService.sendMessage(formattedPhoneNumber, whatsappMessage, {
-                accessToken: wholesaler.whatsappAccessToken,
-                phoneNumberId: wholesaler.whatsappBusinessPhoneId
+                accessToken: (wholesaler as any).whatsappAccessToken,
+                phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
               });
               notificationResults.whatsapp = true;
               console.log(`✅ Welcome WhatsApp message sent to ${formattedPhoneNumber}`);
@@ -6661,12 +6661,12 @@ This message was sent by Quikpik Merchant Platform
           undefined,
           undefined,
           undefined,
-          result.error
+          (result as any).error
         );
         
         res.status(400).json({
           success: false,
-          error: result.error,
+          error: (result as any).error,
           broadcastId: broadcast.id
         });
       }
@@ -7348,7 +7348,7 @@ Write a professional, sales-focused description that highlights the key benefits
       res.json(wholesaler);
     } catch (error) {
       console.error("=== Error in wholesaler profile route ===");
-      console.error("Error type:", error.constructor.name);
+      console.error("Error type:", (error as any).constructor?.name);
       console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
       console.error("Full error:", error);
       console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
@@ -8462,8 +8462,8 @@ Return only the taglines, one per line, without numbers or formatting.`;
           // Count orders for this specific product after broadcast was sent
           // Include all completed order statuses, not just 'paid'
           const ordersForProduct = allOrders.filter(order => {
-            const orderDate = new Date(order.createdAt || Date.now());
-            const broadcastDate = new Date(broadcast.sentAt);
+            const orderDate = new Date(String(order.createdAt || Date.now()));
+            const broadcastDate = new Date(String(broadcast.sentAt));
             const validStatuses = ['paid', 'processing', 'shipped', 'delivered', 'fulfilled'];
             return orderDate >= broadcastDate && validStatuses.includes(order.status);
           });
