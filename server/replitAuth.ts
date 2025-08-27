@@ -34,11 +34,12 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: false, // Don't save unchanged sessions
-    saveUninitialized: false, // Don't save empty sessions
+    resave: true, // Save sessions on every request for POST consistency
+    saveUninitialized: true, // Initialize empty sessions for proper sharing
+    rolling: true, // Reset expiry on each request
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only secure in production (HTTPS)
+      secure: false, // Allow insecure cookies for development/testing
       maxAge: sessionTtl,
       sameSite: 'lax', // Allow same-site cookie transmission
     },

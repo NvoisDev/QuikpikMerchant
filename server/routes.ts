@@ -621,6 +621,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
+  // Debug session endpoint to understand the issue
+  app.get('/api/debug/session', (req: any, res) => {
+    console.log('🔍 Session Debug:', {
+      sessionExists: !!req.session,
+      sessionId: req.sessionID,
+      sessionUser: (req.session as any)?.user,
+      sessionUserId: (req.session as any)?.userId,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      cookies: req.headers.cookie
+    });
+    
+    res.json({
+      sessionExists: !!req.session,
+      sessionId: req.sessionID,
+      hasUser: !!(req.session as any)?.user,
+      hasUserId: !!(req.session as any)?.userId,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
+    });
+  });
+
   // Stripe Connect endpoint - Use the proven authentication middleware
   app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
     console.log('🔗 Stripe Connect request received from authenticated user:', req.user?.email);
