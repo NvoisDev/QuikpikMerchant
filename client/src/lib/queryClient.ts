@@ -12,11 +12,26 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Cache-Control': 'no-cache',
+  };
+  
+  if (data) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  // For POST requests, add additional headers to ensure session persistence
+  if (method.toUpperCase() === 'POST') {
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    cache: "no-cache",
   });
 
   await throwIfResNotOk(res);

@@ -144,12 +144,18 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     // For POST requests, give session more time to initialize  
     if (req.method === 'POST' && (!req.session || !(req.session as any)?.user)) {
       console.log('⏳ POST request - waiting for session to initialize...');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔍 POST Debug - Headers:', {
+        cookie: req.headers.cookie ? 'present' : 'missing',
+        sessionId: req.sessionID || 'none',
+        userAgent: req.headers['user-agent']?.substring(0, 50)
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Force session reload for POST requests if still missing
       if (!req.session && req.headers.cookie) {
         console.log('🔄 Forcing session reload for POST request');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
 
