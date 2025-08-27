@@ -590,59 +590,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
-  // Stripe Connect endpoint - Custom auth for session handling issues
-  app.post('/api/stripe/connect', async (req: any, res) => {
-    try {
-      // Direct authentication check using user session ID from cookies
-      const sessionCookie = req.headers.cookie;
-      if (!sessionCookie) {
-        return res.status(401).json({ error: 'No session cookie found' });
-      }
-      
-      console.log('🔗 Stripe Connect - session cookie exists');
-      
-      // Try to get user from the active session that's working for other endpoints
-      // We know the session exists because other GET requests work
-      let user = null;
-      
-      // Check if session exists and has user data
-      if (req.session && (req.session as any)?.user?.id) {
-        user = await storage.getUser((req.session as any).user.id);
-        console.log('✅ Found user via session.user:', user?.email);
-      } else if (req.session && (req.session as any)?.userId) {
-        user = await storage.getUser((req.session as any).userId);
-        console.log('✅ Found user via session.userId:', user?.email);
-      } else {
-        // As a fallback, try to get the authenticated user from the most recent working session
-        // Since we see successful auth for other endpoints, we'll use a workaround
-        const sessionId = req.sessionID || sessionCookie.match(/connect\.sid=([^;]+)/)?.[1];
-        console.log('⚠️ No session user, trying session recovery with ID:', sessionId);
-        
-        // Return error asking user to refresh - the frontend will handle this
-        return res.status(401).json({ 
-          error: 'Session expired. Please refresh the page and try again.',
-          needsRefresh: true
-        });
-      }
-      
-      if (!user || user.role !== 'wholesaler') {
-        console.log('❌ No valid user found for Stripe Connect');
-        return res.status(401).json({ 
-          error: 'Authentication required. Please refresh the page and try again.',
-          needsRefresh: true
-        });
-      }
-      
-      req.user = user;
-      console.log('✅ Authentication successful for Stripe Connect:', user.email);
-      
-    } catch (authError) {
-      console.error('❌ Auth error in Stripe Connect:', authError);
-      return res.status(401).json({ 
-        error: 'Authentication failed. Please refresh and try again.',
-        needsRefresh: true
-      });
-    }
+  // Stripe Connect endpoint - Use standard auth middleware
+  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
     try {
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);

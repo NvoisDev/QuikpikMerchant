@@ -144,13 +144,19 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     // For POST requests, give session more time to initialize  
     if (req.method === 'POST' && (!req.session || !(req.session as any)?.user)) {
       console.log('⏳ POST request - waiting for session to initialize...');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Force session reload for POST requests if still missing
+      if (!req.session && req.headers.cookie) {
+        console.log('🔄 Forcing session reload for POST request');
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
 
     // Standard session check after potential wait
     if (!req.session && req.headers.cookie) {
       console.log('⏳ Session not ready, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     // Check for session user object (primary method for email/password auth)
