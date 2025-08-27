@@ -1312,7 +1312,7 @@ export default function CustomerPortal() {
     // Validate quantity meets MOQ requirements (unless stock is less than MOQ)
     const minQuantity = sellingType === "pallets" ? ((product as any).palletMoq || 1) : (product.moq || 1);
     const availableStock = sellingType === "pallets" 
-      ? Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))
+      ? ((product as any).palletStock || 0)
       : (product.stock || 0);
     
     // Allow purchasing remaining stock if it's less than MOQ
@@ -1548,7 +1548,7 @@ export default function CustomerPortal() {
     if (!selectedProduct) return;
     
     const minQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletMoq || 1) : selectedProduct.moq;
-    const maxQuantity = selectedSellingType === "pallets" ? (selectedProduct.palletStock || 0) : selectedProduct.stock;
+    const maxQuantity = selectedSellingType === "pallets" ? ((selectedProduct as any).palletStock || 0) : selectedProduct.stock;
     
     if (editQuantity >= minQuantity && editQuantity <= maxQuantity) {
       addToCart(selectedProduct, editQuantity, selectedSellingType);
@@ -2453,7 +2453,7 @@ export default function CustomerPortal() {
                                   {product.palletPrice && parseFloat(product.palletPrice.toString()) > 0 && (product as any).unitsPerPallet && (
                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium bg-blue-50 border-blue-200 text-blue-700">
                                       <Package2 className="w-3 h-3" />
-                                      {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
+                                      {(product as any).palletStock || 0} pallets
                                     </span>
                                   )}
                                 </div>
@@ -3002,7 +3002,7 @@ export default function CustomerPortal() {
                                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                                       <span className="font-medium text-blue-700 text-xs">
                                         <Package2 className="w-3 h-3 inline mr-1" />
-                                        {Math.floor((product.stock || 0) / ((product as any).unitsPerPallet || 1))} pallets
+                                        {(product as any).palletStock || 0} pallets
                                       </span>
                                     </div>
                                   )}
@@ -4471,7 +4471,7 @@ export default function CustomerPortal() {
                       onClick={() => {
                         setSelectedModalType('pallets');
                         // Set quantity to available stock if it's less than MOQ, otherwise use MOQ
-                        const availableStock = Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                        const availableStock = (selectedProductForModal as any).palletStock || 0;
                         const minQuantity = (selectedProductForModal as any).palletMoq || 1;
                         setModalQuantity(availableStock < minQuantity ? availableStock : minQuantity);
                         setModalStep('quantity');
@@ -4602,7 +4602,7 @@ export default function CustomerPortal() {
                           onClick={() => {
                             const availableStock = selectedModalType === 'units' 
                               ? selectedProductForModal.stock 
-                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                              : ((selectedProductForModal as any).palletStock || 0);
                             if (modalQuantity < availableStock) {
                               setModalQuantity(modalQuantity + 1);
                             }
@@ -4610,7 +4610,7 @@ export default function CustomerPortal() {
                           disabled={(() => {
                             const availableStock = selectedModalType === 'units' 
                               ? selectedProductForModal.stock 
-                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                              : ((selectedProductForModal as any).palletStock || 0);
                             return modalQuantity >= availableStock;
                           })()}
                           className="h-10 w-10 p-0"
@@ -4633,7 +4633,7 @@ export default function CustomerPortal() {
                             const value = parseFloat(e.target.value) || 0;
                             const availableStock = selectedModalType === 'units' 
                               ? selectedProductForModal.stock 
-                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                              : ((selectedProductForModal as any).palletStock || 0);
                             
                             // Cap quantity at available stock
                             if (value >= 0 || e.target.value === '') {
@@ -4656,7 +4656,7 @@ export default function CustomerPortal() {
                               Available: {(() => {
                                 const availableStock = selectedModalType === 'units' 
                                   ? selectedProductForModal.stock 
-                                  : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                                  : ((selectedProductForModal as any).palletStock || 0);
                                 return `${availableStock} ${selectedModalType === 'units' ? 'units' : 'pallets'}`;
                               })()}
                             </span>
@@ -4668,7 +4668,7 @@ export default function CustomerPortal() {
                               : ((selectedProductForModal as any).palletMoq || 1);
                             const availableStock = selectedModalType === 'units' 
                               ? selectedProductForModal.stock 
-                              : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                              : ((selectedProductForModal as any).palletStock || 0);
                             
                             // Case 1: Stock is less than MOQ - allow purchasing remaining stock
                             if (availableStock < minQuantity) {
@@ -4734,7 +4734,7 @@ export default function CustomerPortal() {
                         // Reset quantity to available stock if less than MOQ, otherwise MOQ
                         const availableStock = selectedModalType === 'units' 
                           ? selectedProductForModal.stock 
-                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                          : ((selectedProductForModal as any).palletStock || 0);
                         const minQuantity = selectedModalType === 'units' 
                           ? (selectedProductForModal.moq || 1)
                           : ((selectedProductForModal as any).palletMoq || 1);
@@ -4751,7 +4751,7 @@ export default function CustomerPortal() {
                           : ((selectedProductForModal as any).palletMoq || 1);
                         const availableStock = selectedModalType === 'units' 
                           ? selectedProductForModal.stock 
-                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                          : ((selectedProductForModal as any).palletStock || 0);
                         
                         // Check if we're editing an existing cart item
                         const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
@@ -4800,7 +4800,7 @@ export default function CustomerPortal() {
                       disabled={(() => {
                         const availableStock = selectedModalType === 'units' 
                           ? selectedProductForModal.stock 
-                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                          : ((selectedProductForModal as any).palletStock || 0);
                         return availableStock <= 0;
                       })()}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400"
@@ -4811,7 +4811,7 @@ export default function CustomerPortal() {
                           : ((selectedProductForModal as any).palletMoq || 1);
                         const availableStock = selectedModalType === 'units' 
                           ? selectedProductForModal.stock 
-                          : Math.floor((selectedProductForModal.stock || 0) / ((selectedProductForModal as any).unitsPerPallet || 1));
+                          : ((selectedProductForModal as any).palletStock || 0);
                         
                         const existingCartItem = cart.find(item => item.product.id === selectedProductForModal.id);
                         
