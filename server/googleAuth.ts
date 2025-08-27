@@ -278,3 +278,89 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     res.status(500).json({ error: 'Authentication failed' });
   }
 };
+
+// New session authentication function that works for both GET and POST
+export async function authenticateSession(req: any): Promise<{
+  success: boolean;
+  user?: any;
+  message?: string;
+  debug?: any;
+}> {
+  try {
+    // Extract session ID from cookies
+    const sessionId = extractSessionIdFromCookies(req.headers.cookie);
+    if (!sessionId) {
+      return {
+        success: false,
+        message: 'No session cookie found',
+        debug: { hasCookies: !!req.headers.cookie }
+      };
+    }
+
+    // Get session data directly from the database
+    const sessionResult = await db.execute(
+      sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
+    );
+
+    if (sessionResult.length === 0) {
+      return {
+        success: false,
+        message: 'Session not found or expired',
+        debug: { sessionId: sessionId.substring(0, 10) + '...' }
+      };
+    }
+
+    const sessionData = JSON.parse(sessionResult[0].sess as string);
+    
+    // Check if we have passport user data
+    if (!sessionData.passport?.user) {
+      return {
+        success: false,
+        message: 'No user in session',
+        debug: { hasPassport: !!sessionData.passport }
+      };
+    }
+
+    // Get user from database using the session data
+    const userClaims = sessionData.passport.user;
+    if (!userClaims.sub) {
+      return {
+        success: false,
+        message: 'Invalid user claims in session'
+      };
+    }
+
+    const user = await storage.getUser(userClaims.sub);
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found in database'
+      };
+    }
+
+    return {
+      success: true,
+      user: user
+    };
+
+  } catch (error) {
+    console.error('Session authentication error:', error);
+    return {
+      success: false,
+      message: 'Authentication error: ' + String(error)
+    };
+  }
+}
+
+// Helper function to extract session ID from cookie string
+function extractSessionIdFromCookies(cookieString?: string): string | null {
+  if (!cookieString) return null;
+  
+  const sessionMatch = cookieString.match(/connect\.sid=s%3A([^;]+)/);
+  if (sessionMatch && sessionMatch[1]) {
+    // Decode the session ID (it's URL encoded)
+    return decodeURIComponent(sessionMatch[1]).split('.')[0];
+  }
+  
+  return null;
+}

@@ -590,56 +590,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
-  // Test endpoint to simulate Stripe Connect authentication
+  // Test endpoint to simulate Stripe Connect authentication - handles POST properly
   app.post('/api/stripe/connect-test', async (req: any, res) => {
     console.log('🧪 Testing Stripe Connect authentication flow...');
     
-    // Check if we have the basic session requirements
-    const hasSessionCookie = req.headers.cookie?.includes('connect.sid');
-    const hasSession = !!req.session;
-    const sessionData = req.session;
-    
-    console.log('🔍 Stripe Connect Test Debug:', {
-      hasSessionCookie,
-      hasSession,
-      sessionExists: !!sessionData,
-      sessionUser: sessionData && (sessionData as any).user ? 'exists' : 'missing',
-      sessionUserId: sessionData && (sessionData as any).userId ? 'exists' : 'missing',
-      headers: req.headers.cookie ? 'has_cookies' : 'no_cookies'
-    });
-    
-    // If we have session data, try to get the user
-    if (hasSession && sessionData && (sessionData as any).user) {
-      try {
-        const user = await storage.getUser((sessionData as any).user.id);
-        if (user && user.role === 'wholesaler') {
-          console.log('✅ Test: Authentication successful for:', user.email);
-          res.json({ 
-            success: true, 
-            message: 'Authentication test passed',
-            user: { id: user.id, email: user.email }
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('❌ Test: Error getting user:', error);
+    try {
+      // Use the same authentication logic as working GET endpoints
+      const authResult = await googleAuth.authenticateSession(req);
+      
+      if (authResult.success && authResult.user) {
+        console.log('✅ Test: POST authentication successful for:', authResult.user.email);
+        res.json({ 
+          success: true, 
+          message: 'POST authentication test passed',
+          user: { id: authResult.user.id, email: authResult.user.email }
+        });
+        return;
       }
+      
+      console.log('❌ Test: POST authentication failed:', authResult.message);
+      res.status(401).json({ 
+        success: false, 
+        message: 'POST authentication test failed',
+        debug: authResult.debug
+      });
+    } catch (error) {
+      console.error('❌ Test: Error during POST authentication:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'POST authentication error',
+        error: String(error)
+      });
     }
-    
-    console.log('❌ Test: Authentication failed');
-    res.status(401).json({ 
-      success: false, 
-      message: 'Authentication test failed',
-      debug: {
-        hasSessionCookie,
-        hasSession,
-        sessionExists: !!sessionData
-      }
-    });
   });
 
-  // Stripe Connect endpoint - Use standard auth middleware
-  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
+  // Stripe Connect endpoint - Use session authentication for POST requests
+  app.post('/api/stripe/connect', async (req: any, res) => {
+    console.log('🔗 Stripe Connect request received');
+    
+    // Authenticate using our session-based method
+    const authResult = await googleAuth.authenticateSession(req);
+    if (!authResult.success || !authResult.user) {
+      console.log('❌ Stripe Connect authentication failed:', authResult.message);
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: authResult.message,
+        redirectUrl: '/login'
+      });
+    }
+    
+    const user = authResult.user;
+    console.log('✅ Stripe Connect authenticated for user:', user.email);
+    req.user = user; // Set for compatibility with existing code
     try {
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);
