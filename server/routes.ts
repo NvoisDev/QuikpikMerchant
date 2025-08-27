@@ -641,9 +641,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Stripe Connect endpoint - Use the proven authentication middleware
-  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
-    console.log('🔗 Stripe Connect request received from authenticated user:', req.user?.email);
+  // Stripe Connect endpoint - Use simple Passport authentication like GET requests
+  app.post('/api/stripe/connect', async (req: any, res) => {
+    // Use the same authentication pattern that works for GET /api/auth/user
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+      console.log('❌ No valid authentication found - proper login required');
+      return res.status(401).json({
+        error: "Authentication required",
+        message: "Please log in to access this resource.",
+        redirectUrl: "/login"
+      });
+    }
+
+    const user = req.user as any;
+    const userId = user.claims?.sub;
+    
+    if (!userId) {
+      console.log('❌ No user ID found in session');
+      return res.status(401).json({
+        error: "Authentication required",
+        message: "Please log in to access this resource.",
+        redirectUrl: "/login"
+      });
+    }
+
+    console.log('🔗 Stripe Connect request received from authenticated user:', userId);
     try {
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);
