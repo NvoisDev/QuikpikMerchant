@@ -223,10 +223,10 @@ export function AnimatedOnboardingTooltip({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay - increased opacity for better text visibility */}
       <motion.div
         ref={overlayRef}
-        className="onboarding-overlay fixed inset-0 bg-black/60 backdrop-blur-sm"
+        className="onboarding-overlay fixed inset-0 bg-black/85 backdrop-blur-sm"
         style={{ zIndex: 99998 }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -248,7 +248,7 @@ export function AnimatedOnboardingTooltip({
           animate={{ 
             scale: 1, 
             opacity: 1,
-            boxShadow: "0 0 0 4px rgba(34, 197, 94, 0.3), 0 0 0 9999px rgba(0, 0, 0, 0.5)"
+            boxShadow: "0 0 0 4px rgba(34, 197, 94, 0.3), 0 0 0 9999px rgba(0, 0, 0, 0.85)"
           }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         />

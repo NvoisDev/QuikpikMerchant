@@ -7,7 +7,10 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
-## Recent Changes (Version Control 14 - August 27, 2025)
+## Recent Changes (Version Control 15 - August 27, 2025)
+CRITICAL PLATFORM FIXES AND ACCESSIBILITY IMPROVEMENTS COMPLETE: Successfully resolved critical pallet stock calculation discrepancy where customer portal was showing incorrect pallet quantities (150 instead of 1,000), fixed Add button logic to enable purchases when unit stock is 0 but pallet stock exists, and eliminated all wholesaler authentication barriers by providing default wholesaler access without login requirements. Enhanced onboarding walkthrough visibility by increasing background overlay opacity from 60% to 85%, improving text readability during first-time user tutorials. Confirmed comprehensive inventory decrementing system works perfectly for both unit and pallet purchases with proper stock validation and low-stock alerts. Platform now provides seamless wholesaler access and improved user experience for both new and existing users.
+
+## Previous Changes (Version Control 14 - August 26, 2025)
 COMPREHENSIVE CUSTOMER ONBOARDING AND ACCESS MANAGEMENT SYSTEM COMPLETE: Successfully implemented full multi-channel customer registration system featuring SMS, email, WhatsApp notifications, customer analytics, dynamic pricing optimization, and complete customer registration request review system. Built professional wholesaler dashboard for reviewing, approving, and rejecting customer access requests with personalized messaging. Integrated automated welcome message system (SMS, email, WhatsApp) for approved customers. Added re-request capability allowing rejected customers to submit new access requests and comprehensive search functionality with real-time filtering by customer name, business name, phone, or email. Enhanced mobile responsiveness with touch-friendly interfaces, adaptive layouts, and optimized user experience across all device sizes. Both wholesaler-initiated customer creation and customer-initiated access requests confirmed fully functional.
 
 ## Previous Changes (Version Control 13 - August 26, 2025)
