@@ -380,7 +380,7 @@ export default function WholesalerDashboard() {
                 data-onboarding="preview-store"
                 onClick={() => {
                   const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
-                  window.open(`/customer/${effectiveUserId}`, '_blank');
+                  window.open(`/preview-store/${effectiveUserId}`, '_blank');
                 }}
               >
                 <Package className="h-4 w-4 mr-2" />

@@ -641,7 +641,7 @@ export default function CustomerPortal() {
   const { theme, changeTheme } = useCustomerTheme();
 
   // Detect if this is preview mode (accessed via /preview-store or wholesaler viewing own store)
-  const isPreviewMode = location === '/preview-store';
+  const isPreviewMode = location === '/preview-store' || location.startsWith('/preview-store/');
   
   // Get authenticated user to check if wholesaler is viewing their own store
   const { data: user } = useQuery<{
@@ -671,7 +671,10 @@ export default function CustomerPortal() {
     }
     
     // Always prioritize URL parameter extraction for customer portal
-    const rawId = wholesalerIdParam || (location.includes('/store/') ? location.split('/store/')[1] : location.split('/customer/')[1]);
+    const rawId = wholesalerIdParam || 
+                  (location.includes('/store/') ? location.split('/store/')[1] : 
+                   location.includes('/preview-store/') ? location.split('/preview-store/')[1] :
+                   location.split('/customer/')[1]);
     // Decode URL encoding and remove query parameters
     const decodedId = rawId ? decodeURIComponent(rawId) : undefined;
     const cleanId = decodedId ? decodedId.split('?')[0] : undefined;

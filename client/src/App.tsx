@@ -139,6 +139,7 @@ function AuthenticatedRoutes() {
             <Route path="/team-management" component={TeamManagement} />
             <Route path="/help" component={Help} />
             <Route path="/preview-store" component={CustomerPortal} />
+            <Route path="/preview-store/:id" component={CustomerPortal} />
             <Route path="/store/:id" component={CustomerPortal} />
             <Route path="/super-admin" component={SuperAdmin} />
           </>
