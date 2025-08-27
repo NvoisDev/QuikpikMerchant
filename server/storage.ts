@@ -528,15 +528,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        ...settings,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
-      .returning();
-    return user;
+    try {
+      const [user] = await db
+        .update(users)
+        .set({
+          ...settings,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, id))
+        .returning();
+      return user;
+    } catch (error: any) {
+      console.error('Error in updateUserSettings:', error);
+      throw error;
+    }
   }
 
   async updateUserOnboarding(id: string, onboardingData: { onboardingStep?: number; onboardingCompleted?: boolean; onboardingSkipped?: boolean }): Promise<User> {

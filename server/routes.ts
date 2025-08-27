@@ -2929,7 +2929,7 @@ The Quikpik Team`
       console.log("- Updated logo type:", updatedUser.logoType);
       console.log("- Updated logo URL length:", updatedUser.logoUrl?.length || 0);
       res.json(updatedUser);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error updating settings:", error);
       res.status(500).json({ message: "Failed to update settings" });
     }
