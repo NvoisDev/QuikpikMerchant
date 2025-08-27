@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { productivityMetrics, orders, customers, products, users } from "../../shared/schema";
+import { productivityMetrics, orders, products, users } from "../../shared/schema";
 import { eq, and, gte, lte, desc, sql, count, sum } from "drizzle-orm";
 import { subDays, format, startOfDay, endOfDay } from "date-fns";
 

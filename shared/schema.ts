@@ -10,6 +10,7 @@ import {
   decimal,
   boolean,
   uuid,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -874,8 +875,8 @@ export const productivityMetrics = pgTable("productivity_metrics", {
   pagesViewed: integer("pages_viewed").default(0),
   
   // Revenue metrics
-  dailyRevenue: decimal("daily_revenue", { precision: 10, scale: 2 }).default("0"),
-  newCustomerRevenue: decimal("new_customer_revenue", { precision: 10, scale: 2 }).default("0"),
+  dailyRevenue: decimal("daily_revenue", { precision: 10, scale: 2 }).default("0.00"),
+  newCustomerRevenue: decimal("new_customer_revenue", { precision: 10, scale: 2 }).default("0.00"),
   
   // Productivity score (0-100)
   productivityScore: integer("productivity_score").default(0),
