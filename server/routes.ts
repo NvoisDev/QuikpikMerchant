@@ -44,6 +44,19 @@ import {
 } from "./subscriptionLogger";
 import { registerWebhookRoutes } from "./webhook-handler";
 
+// Helper function to extract session ID from cookie string
+function extractSessionId(cookieString?: string): string | null {
+  if (!cookieString) return null;
+  
+  const sessionMatch = cookieString.match(/connect\.sid=s%3A([^;]+)/);
+  if (sessionMatch && sessionMatch[1]) {
+    // Decode the session ID (it's URL encoded)
+    return decodeURIComponent(sessionMatch[1]).split('.')[0];
+  }
+  
+  return null;
+}
+
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY not found. Stripe functionality will not work.');
 }
@@ -595,24 +608,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('🧪 Testing Stripe Connect authentication flow...');
     
     try {
-      // Use the same authentication logic as working GET endpoints
-      const authResult = await googleAuth.authenticateSession(req);
-      
-      if (authResult.success && authResult.user) {
-        console.log('✅ Test: POST authentication successful for:', authResult.user.email);
-        res.json({ 
-          success: true, 
-          message: 'POST authentication test passed',
-          user: { id: authResult.user.id, email: authResult.user.email }
+      // Use direct session database authentication for POST
+      const sessionId = extractSessionId(req.headers.cookie);
+      if (!sessionId) {
+        console.log('❌ Test: No session cookie found');
+        res.status(401).json({ 
+          success: false, 
+          message: 'No session cookie found'
+        });
+        return;
+      }
+
+      // Get session from database directly
+      const sessionResult = await db.execute(
+        sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
+      );
+
+      if (sessionResult.length === 0) {
+        console.log('❌ Test: Session not found or expired');
+        res.status(401).json({ 
+          success: false, 
+          message: 'Session not found or expired'
+        });
+        return;
+      }
+
+      const sessionData = JSON.parse(sessionResult[0].sess as string);
+      if (!sessionData.passport?.user?.sub) {
+        console.log('❌ Test: No user in session data');
+        res.status(401).json({ 
+          success: false, 
+          message: 'No user in session'
+        });
+        return;
+      }
+
+      const user = await storage.getUser(sessionData.passport.user.sub);
+      if (!user) {
+        console.log('❌ Test: User not found in database');
+        res.status(401).json({ 
+          success: false, 
+          message: 'User not found'
         });
         return;
       }
       
-      console.log('❌ Test: POST authentication failed:', authResult.message);
-      res.status(401).json({ 
-        success: false, 
-        message: 'POST authentication test failed',
-        debug: authResult.debug
+      console.log('✅ Test: POST authentication successful for:', user.email);
+      res.json({ 
+        success: true, 
+        message: 'POST authentication test passed',
+        user: { id: user.id, email: user.email }
       });
     } catch (error) {
       console.error('❌ Test: Error during POST authentication:', error);
@@ -628,18 +673,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/stripe/connect', async (req: any, res) => {
     console.log('🔗 Stripe Connect request received');
     
-    // Authenticate using our session-based method
-    const authResult = await googleAuth.authenticateSession(req);
-    if (!authResult.success || !authResult.user) {
-      console.log('❌ Stripe Connect authentication failed:', authResult.message);
+    // Authenticate using direct session database method
+    const sessionId = extractSessionId(req.headers.cookie);
+    if (!sessionId) {
+      console.log('❌ Stripe Connect: No session cookie found');
       return res.status(401).json({ 
         error: 'Authentication required',
-        message: authResult.message,
+        message: 'No session cookie found',
+        redirectUrl: '/login'
+      });
+    }
+
+    // Get session from database directly
+    const sessionResult = await db.execute(
+      sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
+    );
+
+    if (sessionResult.length === 0) {
+      console.log('❌ Stripe Connect: Session not found or expired');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Session expired',
+        redirectUrl: '/login'
+      });
+    }
+
+    const sessionData = JSON.parse(sessionResult[0].sess as string);
+    if (!sessionData.passport?.user?.sub) {
+      console.log('❌ Stripe Connect: No user in session data');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'Invalid session',
+        redirectUrl: '/login'
+      });
+    }
+
+    const user = await storage.getUser(sessionData.passport.user.sub);
+    if (!user) {
+      console.log('❌ Stripe Connect: User not found in database');
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'User not found',
         redirectUrl: '/login'
       });
     }
     
-    const user = authResult.user;
     console.log('✅ Stripe Connect authenticated for user:', user.email);
     req.user = user; // Set for compatibility with existing code
     try {

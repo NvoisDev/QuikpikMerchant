@@ -106,31 +106,9 @@ export default function Settings() {
   const handleStripeConnect = async () => {
     setIsConnectingStripe(true);
     try {
-      console.log('🔗 Attempting Stripe Connect...');
+      console.log('🔗 Starting Stripe Connect process...');
       
-      // Test authentication first
-      try {
-        const testResponse = await apiRequest('POST', '/api/stripe/connect-test');
-        const testData = await testResponse.json();
-        console.log('🧪 Authentication test result:', testData);
-        
-        if (!testData.success) {
-          console.log('❌ Authentication test failed:', testData);
-          toast({
-            title: "Authentication Issue",
-            description: "Please refresh the page and try again.",
-            variant: "destructive",
-          });
-          
-          setTimeout(() => window.location.reload(), 1500);
-          return;
-        }
-        console.log('✅ Authentication test passed, proceeding with Stripe Connect');
-      } catch (testError) {
-        console.error('🧪 Authentication test error:', testError);
-      }
-      
-      // Proceed with Stripe Connect
+      // Directly attempt Stripe Connect without pre-test
       let response = await apiRequest('POST', '/api/stripe/connect');
       let data = await response.json();
       
