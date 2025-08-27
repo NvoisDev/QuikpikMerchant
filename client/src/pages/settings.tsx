@@ -111,7 +111,7 @@ export default function Settings() {
       let data = await response.json();
       
       // If authentication failed, try refreshing and retry once
-      if (response.status === 401 && data.retry) {
+      if (response.status === 401 && (data.retry || data.needsRefresh)) {
         console.log('Authentication failed, refreshing page...');
         toast({
           title: "Session Refresh",

@@ -141,7 +141,13 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
     });
 
-    // Wait a brief moment for session to populate (fixes racing condition)
+    // For POST requests, give session more time to initialize  
+    if (req.method === 'POST' && (!req.session || !(req.session as any)?.user)) {
+      console.log('⏳ POST request - waiting for session to initialize...');
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Standard session check after potential wait
     if (!req.session && req.headers.cookie) {
       console.log('⏳ Session not ready, waiting...');
       await new Promise(resolve => setTimeout(resolve, 100));
