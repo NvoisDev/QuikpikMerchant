@@ -641,10 +641,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Stripe Connect endpoint - Use simple Passport authentication like GET requests
+  // Stripe Connect endpoint - Handle Google OAuth sessions properly
   app.post('/api/stripe/connect', async (req: any, res) => {
-    // Use the same authentication pattern that works for GET /api/auth/user
-    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+    console.log('🔗 Checking authentication for Stripe Connect...');
+    
+    // Try Google OAuth authentication first (for IBK's login method)
+    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+      const passportUser = req.user as any;
+      const userId = passportUser.claims?.sub;
+      
+      if (userId) {
+        console.log('✅ Google OAuth authentication successful for user:', userId);
+        
+        // Get full user data from database
+        const user = await storage.getUser(userId);
+        if (user) {
+          console.log('🔗 Stripe Connect request from Google OAuth user:', user.email);
+          req.user = user; // Set user data for the rest of the endpoint
+        }
+      }
+    } 
+    // Fallback: Check for email-based authentication
+    else {
+      const sessionUser = (req.session as any)?.user;
+      const sessionUserId = (req.session as any)?.userId;
+      
+      if (sessionUser?.id) {
+        const user = await storage.getUser(sessionUser.id);
+        if (user) {
+          console.log('✅ Email-based authentication successful for user:', user.email);
+          req.user = user;
+        }
+      } else if (sessionUserId) {
+        const user = await storage.getUser(sessionUserId);
+        if (user) {
+          console.log('✅ Legacy session authentication successful for user:', user.email);
+          req.user = user;
+        }
+      }
+    }
+
+    // Final authentication check
+    if (!req.user) {
       console.log('❌ No valid authentication found - proper login required');
       return res.status(401).json({
         error: "Authentication required",
@@ -653,19 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    const user = req.user as any;
-    const userId = user.claims?.sub;
-    
-    if (!userId) {
-      console.log('❌ No user ID found in session');
-      return res.status(401).json({
-        error: "Authentication required",
-        message: "Please log in to access this resource.",
-        redirectUrl: "/login"
-      });
-    }
-
-    console.log('🔗 Stripe Connect request received from authenticated user:', userId);
+    console.log('🔗 Stripe Connect request received from authenticated user:', req.user.email);
     try {
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);
