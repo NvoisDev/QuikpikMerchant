@@ -4552,17 +4552,17 @@ The Quikpik Team`
         }
 
         // Send WhatsApp notification to wholesaler with wholesale reference
-        if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+        if (wholesaler && (wholesaler as any).twilioAuthToken && (wholesaler as any).twilioPhoneNumber) {
           const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
           const message = `🎉 New Order Received!\n\nWholesale Ref: ${wholesaleRef}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
           
           try {
             // WhatsApp notification (simplified)
-            if (wholesaler.whatsappEnabled) {
-              if (wholesaler.whatsappAccessToken && wholesaler.whatsappBusinessPhoneId) {
-                await whatsAppBusinessService.sendMessage(wholesaler.businessPhone, message, {
-                  accessToken: wholesaler.whatsappAccessToken,
-                  phoneNumberId: wholesaler.whatsappBusinessPhoneId
+            if ((wholesaler as any).whatsappEnabled) {
+              if ((wholesaler as any).whatsappAccessToken && (wholesaler as any).whatsappBusinessPhoneId) {
+                await whatsAppBusinessService.sendMessage((wholesaler as any).businessPhone, message, {
+                  accessToken: (wholesaler as any).whatsappAccessToken,
+                  phoneNumberId: (wholesaler as any).whatsappBusinessPhoneId
                 });
               }
             }
