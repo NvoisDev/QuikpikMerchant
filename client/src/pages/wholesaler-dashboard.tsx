@@ -405,7 +405,7 @@ export default function WholesalerDashboard() {
         {/* Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
           {/* Priority Stripe Setup Notification */}
-          {user?.role === 'wholesaler' && stripeStatus && !(stripeStatus as any).paymentsEnabled && (
+          {(user?.role === 'wholesaler' && stripeStatus && !(stripeStatus as any).paymentsEnabled) && (
             <div className="mb-6 sm:mb-8">
               <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-400 rounded-lg p-4 sm:p-6 shadow-lg">
                 <div className="flex items-start">
