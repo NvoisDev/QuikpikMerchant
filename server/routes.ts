@@ -590,43 +590,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
-  // Stripe Connect endpoint - Manual auth to bypass session issues
-  app.post('/api/stripe/connect', async (req: any, res) => {
-    // Manual authentication check
+  // Stripe Connect endpoint - Using standard auth middleware
+  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
     try {
-      console.log('🔗 Stripe Connect - Manual auth check');
-      
-      let user = null;
-      
-      // Check session user first
-      if (req.session?.user?.id) {
-        user = await storage.getUser(req.session.user.id);
-        console.log('✅ Found user via session:', user?.email);
-      } 
-      // SECURITY FIX: Remove hardcoded fallback authentication that was causing data leaks
-      // Users MUST be properly authenticated - no fallbacks allowed
-      else {
-        console.log('❌ No valid session found - authentication required');
-        return res.status(401).json({ error: 'Authentication required - please log in again' });
-      }
-      
-      if (!user || user.role !== 'wholesaler') {
-        console.log('❌ Authentication failed - no valid user found');
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-      
-      // Set user on request for the rest of the function
-      req.user = user;
-      console.log('✅ Authentication successful, proceeding with Stripe Connect');
-      
-    } catch (authError) {
-      console.error('❌ Manual auth error:', authError);
-      return res.status(401).json({ error: 'Authentication failed' });
-    }
-    try {
-      console.log('🔗 Stripe Connect request received');
+      console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);
       console.log('🔑 Stripe key exists:', !!process.env.STRIPE_SECRET_KEY);
+      console.log('👤 User role:', req.user?.role);
       
       if (!stripe) {
         console.error('❌ Stripe not configured - missing STRIPE_SECRET_KEY');
