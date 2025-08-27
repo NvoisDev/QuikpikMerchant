@@ -253,8 +253,12 @@ export class StockAlertService {
     }
 
     try {
-      await this.smsService.sendMessage(wholesaler.wholesalerPhone, message);
-      console.log(`📱 SMS stock alert sent to ${wholesaler.wholesalerName}`);
+      const result = await ReliableSMSService.sendVerificationSMS(wholesaler.wholesalerPhone, message, wholesaler.wholesalerName);
+      if (result.success) {
+        console.log(`📱 SMS stock alert sent to ${wholesaler.wholesalerName}`);
+      } else {
+        console.error(`❌ Failed to send SMS stock alert to ${wholesaler.wholesalerName}: ${result.error}`);
+      }
     } catch (error) {
       console.error(`❌ Failed to send SMS stock alert to ${wholesaler.wholesalerName}:`, error);
     }
@@ -270,7 +274,24 @@ export class StockAlertService {
     }
 
     try {
-      await whatsAppBusinessService.sendMessage(wholesaler.wholesalerPhone, message, 'text', undefined);
+      // Get wholesaler's WhatsApp credentials from the database
+      const wholesalerUser = await db
+        .select({
+          whatsappAccessToken: users.whatsappAccessToken,
+          whatsappBusinessPhoneId: users.whatsappBusinessPhoneId
+        })
+        .from(users)
+        .where(eq(users.id, wholesaler.wholesalerId))
+        .limit(1);
+
+      if (wholesalerUser.length === 0 || !wholesalerUser[0].whatsappAccessToken || !wholesalerUser[0].whatsappBusinessPhoneId) {
+        throw new Error('WhatsApp Business API credentials not configured');
+      }
+
+      await whatsAppBusinessService.sendMessage(wholesaler.wholesalerPhone, message, {
+        accessToken: wholesalerUser[0].whatsappAccessToken,
+        phoneNumberId: wholesalerUser[0].whatsappBusinessPhoneId
+      });
       console.log(`💬 WhatsApp stock alert sent to ${wholesaler.wholesalerName}`);
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp stock alert to ${wholesaler.wholesalerName}:`, error);
