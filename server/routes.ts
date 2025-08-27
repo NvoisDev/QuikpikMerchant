@@ -201,7 +201,7 @@ async function createAndSendStripeInvoice(order: any, items: any[], wholesaler: 
         invoice: invoice.id,
         amount: Math.round(parseFloat(order.platformFee) * 100),
         currency: (wholesaler.preferredCurrency || 'gbp').toLowerCase(),
-        description: `Platform Service Fee (5%)`,
+        description: `Platform Service Fee (3.3%)`,
         metadata: {
           feeType: 'platform_fee'
         }
