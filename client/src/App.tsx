@@ -49,6 +49,8 @@ import CustomerRegistrationRequests from "@/pages/customer-registration-requests
 import UpgradeSuccess from "@/pages/upgrade-success";
 import AuthSuccess from "@/pages/auth-success";
 import SuperAdmin from "@/pages/super-admin";
+import { LoadingDemo } from "@/pages/loading-demo";
+import { LoadingOverlay } from "@/components/ui/loading-spinner";
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -83,26 +85,7 @@ function AuthenticatedRoutes() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          {/* Enhanced Loading Animation */}
-          <div className="flex space-x-1">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="w-3 h-10 bg-gradient-to-t from-blue-500 to-indigo-600 rounded-full animate-pulse"
-                style={{
-                  animationDelay: `${i * 0.15}s`,
-                  animationDuration: '1.4s'
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-sm text-gray-500 text-center">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay message="Loading your wholesale platform..." />;
   }
 
   if (!isAuthenticated) {
@@ -138,6 +121,7 @@ function AuthenticatedRoutes() {
             <Route path="/stock-alerts" component={StockAlerts} />
             <Route path="/team-management" component={TeamManagement} />
             <Route path="/help" component={Help} />
+            <Route path="/loading-demo" component={LoadingDemo} />
             <Route path="/preview-store" component={CustomerPortal} />
             <Route path="/preview-store/:id" component={CustomerPortal} />
             <Route path="/store/:id" component={CustomerPortal} />

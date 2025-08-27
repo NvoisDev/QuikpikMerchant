@@ -36,7 +36,8 @@ import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressMan
 import { FirstTimeAddressSetup } from "@/components/customer/FirstTimeAddressSetup";
 import { AddressSelector } from "@/components/customer/AddressSelector";
 import { useOptimizedQuery, useCriticalQuery } from "@/hooks/useOptimizedQuery";
-import { LoadingSpinner, ProductGridSkeleton } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ProductGridSkeleton } from "@/components/ui/loading-skeletons";
 import { ThemeSwitcher, useCustomerTheme } from "@/components/ui/theme-switcher";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
