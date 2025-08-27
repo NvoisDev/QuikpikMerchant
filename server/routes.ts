@@ -30,7 +30,6 @@ import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 import { parseCustomerName } from "./order-processor";
 import { quickOrderService } from "./services/quickOrderService";
-import { productivityPulseService } from "./services/productivityPulseService";
 import { db } from "./db";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
 import { 
@@ -15252,33 +15251,6 @@ The Quikpik Team
         return res.status(404).json({ message: "Product not found" });
       }
       res.status(500).json({ message: "Failed to fetch product stock status" });
-    }
-  });
-
-  // Productivity Pulse endpoints
-  app.get('/api/productivity-pulse', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      const pulseData = await productivityPulseService.getProductivityPulse(userId);
-      res.json(pulseData);
-    } catch (error) {
-      console.error('Error fetching productivity pulse:', error);
-      res.status(500).json({ error: 'Failed to fetch productivity data' });
-    }
-  });
-
-  app.post('/api/productivity-pulse/track', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { activityType, value } = req.body;
-      
-      await productivityPulseService.updateDailyMetrics(userId, activityType, value);
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error tracking productivity activity:', error);
-      res.status(500).json({ error: 'Failed to track activity' });
     }
   });
 

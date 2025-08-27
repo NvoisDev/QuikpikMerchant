@@ -10,7 +10,6 @@ import {
   decimal,
   boolean,
   uuid,
-  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -856,37 +855,6 @@ export const campaignOrdersRelations = relations(campaignOrders, ({ one }) => ({
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-
-// Productivity Pulse - User engagement and activity tracking
-export const productivityMetrics = pgTable("productivity_metrics", {
-  id: serial("id").primaryKey(),
-  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
-  date: date("date").notNull(),
-  
-  // Core activity metrics
-  ordersProcessed: integer("orders_processed").default(0),
-  customersAdded: integer("customers_added").default(0),
-  productsUpdated: integer("products_updated").default(0),
-  campaignsSent: integer("campaigns_sent").default(0),
-  
-  // Engagement metrics
-  loginCount: integer("login_count").default(0),
-  sessionDuration: integer("session_duration").default(0), // in minutes
-  pagesViewed: integer("pages_viewed").default(0),
-  
-  // Revenue metrics
-  dailyRevenue: decimal("daily_revenue", { precision: 10, scale: 2 }).default("0.00"),
-  newCustomerRevenue: decimal("new_customer_revenue", { precision: 10, scale: 2 }).default("0.00"),
-  
-  // Productivity score (0-100)
-  productivityScore: integer("productivity_score").default(0),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export type ProductivityMetric = typeof productivityMetrics.$inferSelect;
-export type InsertProductivityMetric = typeof productivityMetrics.$inferInsert;
 
 // User Badges types
 export const insertUserBadgeSchema = createInsertSchema(userBadges);
