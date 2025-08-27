@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { subDays, startOfToday, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
+import ProductivityPulseWidget from "@/components/ProductivityPulseWidget";
 
 import { AnalyticsCardSkeleton, OrderCardSkeleton, ProductCardSkeleton } from "@/components/ui/loading-skeletons";
 import { 
@@ -845,6 +846,11 @@ export default function WholesalerDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Productivity Pulse Widget */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <ProductivityPulseWidget />
           </div>
 
           {/* Recent Orders & Top Products */}
