@@ -106,8 +106,24 @@ export default function Settings() {
   const handleStripeConnect = async () => {
     setIsConnectingStripe(true);
     try {
-      const response = await apiRequest('POST', '/api/stripe/connect');
-      const data = await response.json();
+      // First attempt
+      let response = await apiRequest('POST', '/api/stripe/connect');
+      let data = await response.json();
+      
+      // If authentication failed, try refreshing and retry once
+      if (response.status === 401 && data.retry) {
+        console.log('Authentication failed, refreshing page...');
+        toast({
+          title: "Session Refresh",
+          description: "Refreshing your session. Please try again in a moment.",
+        });
+        
+        // Wait a moment then refresh
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+        return;
+      }
       
       if (data.url) {
         // Redirect to Stripe Connect onboarding

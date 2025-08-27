@@ -186,6 +186,19 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       if (user) {
         // SECURITY: Block customer/retailer access to wholesaler dashboard
         if (user.role === 'retailer' || user.role === 'customer') {
+          console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard via legacy session`);
+          return res.status(403).json({ 
+            error: 'Access denied. Customers cannot access the wholesaler dashboard.',
+            userType: user.role,
+            redirectUrl: '/customer-login'
+          });
+        }
+        
+        console.log(`✅ Legacy session auth successful for user ${user.email} (${req.url})`);
+        req.user = user;
+        return next();
+        // SECURITY: Block customer/retailer access to wholesaler dashboard
+        if (user.role === 'retailer' || user.role === 'customer') {
           console.log(`🚫 SECURITY: Blocked ${user.role} (${user.email}) from accessing wholesaler dashboard`);
           return res.status(403).json({ 
             error: 'Access denied. Customers cannot access the wholesaler dashboard.',

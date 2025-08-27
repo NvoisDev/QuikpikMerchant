@@ -590,8 +590,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ debug: 'success', timestamp: new Date().toISOString() });
   });
 
-  // Stripe Connect endpoint - Using standard auth middleware
-  app.post('/api/stripe/connect', requireAuth, async (req: any, res) => {
+  // Stripe Connect endpoint - With enhanced auth handling
+  app.post('/api/stripe/connect', async (req: any, res) => {
+    // Enhanced authentication check for Stripe Connect specifically
+    try {
+      console.log('🔗 Stripe Connect - Enhanced auth check');
+      console.log('Session debug:', {
+        sessionExists: !!req.session,
+        sessionId: req.sessionID,
+        sessionUser: (req.session as any)?.user ? 'exists' : 'missing',
+        sessionUserId: (req.session as any)?.userId || 'missing',
+        cookies: !!req.headers.cookie
+      });
+      
+      let user = null;
+      
+      // Try session user first
+      if ((req.session as any)?.user?.id) {
+        user = await storage.getUser((req.session as any).user.id);
+        console.log('✅ Found user via session.user:', user?.email);
+      }
+      // Try session userId
+      else if ((req.session as any)?.userId) {
+        user = await storage.getUser((req.session as any).userId);
+        console.log('✅ Found user via session.userId:', user?.email);
+      }
+      
+      if (!user || user.role !== 'wholesaler') {
+        console.log('❌ Authentication failed for Stripe Connect');
+        return res.status(401).json({ 
+          error: 'Authentication required. Please refresh the page and try again.',
+          retry: true
+        });
+      }
+      
+      req.user = user;
+      console.log('✅ Authentication successful for Stripe Connect:', user.email);
+      
+    } catch (authError) {
+      console.error('❌ Auth error in Stripe Connect:', authError);
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
     try {
       console.log('🔗 Stripe Connect request received for user:', req.user?.email);
       console.log('📋 Stripe configured:', !!stripe);
