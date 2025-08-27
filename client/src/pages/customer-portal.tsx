@@ -3214,22 +3214,22 @@ export default function CustomerPortal() {
                                           addToCart(product, product.moq, 'units');
                                         }
                                       }}
-                                      disabled={product.stock === 0}
+                                      disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
                                       className="text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                      style={{background: product.stock === 0 ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                      style={{background: (product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
                                       onMouseEnter={(e) => {
                                         const target = e.target as HTMLElement;
-                                        if (product.stock !== 0) {
+                                        if (!(product.stock === 0 && ((product as any).palletStock || 0) === 0)) {
                                           target.style.backgroundColor = 'var(--theme-secondary)';
                                         }
                                       }}
                                       onMouseLeave={(e) => {
                                         const target = e.target as HTMLElement;  
-                                        if (product.stock !== 0) {
+                                        if (!(product.stock === 0 && ((product as any).palletStock || 0) === 0)) {
                                           target.style.backgroundColor = 'var(--theme-primary)';
                                         }
                                       }}
-                                      title={product.stock === 0 ? 'Out of stock' : product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
+                                      title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : product.moq > 1 ? `Add ${product.moq} units (minimum order)` : 'Add to cart'}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add
@@ -3594,9 +3594,9 @@ export default function CustomerPortal() {
                                             addToCart(product, product.moq || 1, 'units');
                                           }
                                         }}
-                                        disabled={product.stock === 0}
+                                        disabled={product.stock === 0 && ((product as any).palletStock || 0) === 0}
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        title={product.stock === 0 ? 'Out of stock' : 'Add to cart'}
+                                        title={(product.stock === 0 && ((product as any).palletStock || 0) === 0) ? 'Out of stock' : 'Add to cart'}
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
                                         Add
