@@ -33,6 +33,7 @@ import * as XLSX from "xlsx";
 import LoadingSkeleton from "@/components/ui/loading-skeleton";
 import ButtonLoader from "@/components/ui/button-loader";
 import { DynamicTooltip, HelpTooltip, WarningTooltip, FeatureTooltip } from "@/components/ui/dynamic-tooltip";
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { ContextualHelp, QuickHelp } from "@/components/ui/contextual-help";
 import { WhimsicalError, NetworkError, DatabaseError } from "@/components/ui/whimsical-error";
 import { FloatingHelp } from "@/components/ui/floating-help";
@@ -1314,19 +1315,26 @@ export default function ProductManagement() {
             {/* Action Buttons Section */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
-                  onClick={() => {
-                    const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
-                    window.open(`/customer/${effectiveUserId}`, '_blank');
-                  }}
+                <DynamicTooltip 
+                  content="Preview your customer store exactly as customers will see it. Test the shopping experience without needing customer authentication."
+                  type="feature"
+                  placement="bottom"
                 >
-                  <Package className="mr-2 h-4 w-4" />
-                  <span className="hidden xs:inline">Preview Store</span>
-                  <span className="xs:hidden">Preview</span>
-                </Button>
+                  <AnimatedButton 
+                    size="sm"
+                    variant="outline" 
+                    animation="scale"
+                    className="border-2 border-green-200 hover:bg-green-50 hover:text-green-800 text-green-700 flex-1 sm:flex-none"
+                    onClick={() => {
+                      const effectiveUserId = user?.role === 'team_member' && (user as any)?.wholesalerId ? (user as any).wholesalerId : user?.id;
+                      window.open(`/preview-store/${effectiveUserId}`, '_blank');
+                    }}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    <span className="hidden xs:inline">Preview Store</span>
+                    <span className="xs:hidden">Preview</span>
+                  </AnimatedButton>
+                </DynamicTooltip>
                 
                 <Button variant="outline" size="sm" onClick={downloadTemplate} className="flex-1 sm:flex-none">
                   <Download className="mr-2 h-4 w-4" />
