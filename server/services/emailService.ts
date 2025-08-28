@@ -189,7 +189,8 @@ Powered by Quikpik - Modern B2B Commerce Platform
 
     await mailService.send({
       to: customerEmail,
-      from: wholesalerEmail,
+      from: 'hello@quikpik.co', // Use verified SendGrid sender
+      replyTo: wholesalerEmail, // Replies go to wholesaler
       subject: subject,
       text: textContent,
       html: htmlContent,

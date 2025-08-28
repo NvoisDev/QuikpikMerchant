@@ -21,6 +21,14 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
       return false;
     }
 
+    // Log detailed Twilio configuration for debugging
+    console.log('📱 Twilio WhatsApp Configuration:', {
+      hasSID: !!accountSid,
+      hasToken: !!authToken,
+      hasPhone: !!twilioPhoneNumber,
+      phoneNumber: twilioPhoneNumber
+    });
+
     const client = twilio(accountSid, authToken);
     
     // Format phone number to international format
