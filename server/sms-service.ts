@@ -75,18 +75,29 @@ export class ReliableSMSService {
       console.log(`📤 Attempting SMS to ${phoneNumber}`);
       
       const storeLink = wholesalerId ? `https://quikpik.app/store/${wholesalerId}` : 'https://quikpik.app';
+      
+      // Send verification code first
+      const codeMessage = await this.twilioClient.messages.create({
+        body: `Your ${businessName} verification code: ${code}`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phoneNumber,
+        riskCheck: 'disable'
+      });
+      
+      // Send welcome message separately
       const message = await this.twilioClient.messages.create({
-        body: `Welcome to ${businessName}!\n\nYour verification code: ${code}\n\nAccess our store and start ordering here:\n${storeLink}\n\nPowered by Quikpik`,
+        body: `Welcome to ${businessName}!\n\nYour account is ready. Access our store and start ordering here:\n${storeLink}\n\nPowered by Quikpik`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: phoneNumber,
         riskCheck: 'disable' // Prevent legitimate messages from being blocked by spam filtering
       });
 
-      console.log(`✅ SMS sent successfully: ${message.sid}`);
+      console.log(`✅ SMS verification code sent: ${codeMessage.sid}`);
+      console.log(`✅ SMS welcome message sent: ${message.sid}`);
       
       return {
         success: true,
-        messageId: message.sid
+        messageId: `${codeMessage.sid},${message.sid}`
       };
     } catch (error: any) {
       console.error('❌ SMS sending failed:', error.message);
