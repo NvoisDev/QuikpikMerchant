@@ -70,43 +70,55 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
           <div class="content">
             <div class="welcome-message">
               <h2 style="margin-top: 0; color: #667eea;">Hello ${customerName}!</h2>
-              <p>We're excited to welcome you to our wholesale platform. You now have access to our complete product catalog, competitive wholesale pricing, and streamlined ordering system.</p>
+              <p>Your <strong>${wholesalerName} Customer Portal</strong> is now active! This intelligent B2B platform transforms how you manage wholesale purchasing - from browsing to billing, with exciting value-added features coming soon.</p>
             </div>
 
-            <h3 style="color: #333; margin-bottom: 20px;">What you can do with your portal:</h3>
+            <h3 style="color: #333; margin-bottom: 20px;">🚀 Your Portal Features (Available Now):</h3>
             
             <div class="features">
               <div class="feature">
                 <div class="feature-icon">🛒</div>
                 <div class="feature-content">
-                  <h3>Browse & Order Products</h3>
-                  <p>View our complete product catalog with real-time stock levels and wholesale pricing</p>
+                  <h3>Smart Product Discovery</h3>
+                  <p>Browse complete catalogs with real-time pricing, stock levels, and instant order processing</p>
                 </div>
               </div>
               
               <div class="feature">
-                <div class="feature-icon">💬</div>
+                <div class="feature-icon">⚡</div>
                 <div class="feature-content">
-                  <h3>Negotiate Prices</h3>
-                  <p>Submit price negotiation requests directly through the platform for better deals</p>
-                </div>
-              </div>
-              
-              <div class="feature">
-                <div class="feature-icon">🚚</div>
-                <div class="feature-content">
-                  <h3>Flexible Delivery Options</h3>
-                  <p>Choose between collection, local delivery, or nationwide shipping with live quotes</p>
+                  <h3>24/7 Instant Ordering</h3>
+                  <p>Place orders anytime with immediate confirmation, secure payments, and delivery scheduling</p>
                 </div>
               </div>
               
               <div class="feature">
                 <div class="feature-icon">📊</div>
                 <div class="feature-content">
-                  <h3>Order Tracking</h3>
-                  <p>Track your order history, view invoices, and monitor delivery status in real-time</p>
+                  <h3>Complete Order Management</h3>
+                  <p>Track deliveries, view order history, manage invoices, and access exclusive wholesale rates</p>
                 </div>
               </div>
+              
+              <div class="feature">
+                <div class="feature-icon">💬</div>
+                <div class="feature-content">
+                  <h3>Direct Supplier Communication</h3>
+                  <p>Message suppliers, negotiate pricing, and coordinate special requirements seamlessly</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px;">
+              <h3 style="margin-top: 0; color: #667eea;">🔮 Coming Soon - Value-Added Intelligence:</h3>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #333;">
+                <li><strong>AI Ordering Assistant</strong> - Get personalized product recommendations based on your buying patterns</li>
+                <li><strong>Predictive Inventory Management</strong> - Never run out of stock with intelligent reorder suggestions</li>
+                <li><strong>Dynamic Pricing Optimization</strong> - Access the best rates through market-driven pricing</li>
+                <li><strong>Trade Financing Integration</strong> - Flexible payment terms and working capital solutions</li>
+                <li><strong>Multi-Supplier Consolidation</strong> - Manage multiple wholesalers from one unified dashboard</li>
+                <li><strong>Advanced Business Analytics</strong> - Track spending patterns, forecast needs, and optimize purchases</li>
+              </ul>
             </div>
 
             <div style="text-align: center;">
@@ -121,17 +133,23 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
               <p style="margin-bottom: 0;"><em>We typically respond within 2-4 hours during business days.</em></p>
             </div>
 
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              <strong>Getting Started Tips:</strong><br>
-              • Browse products by category to find what you need<br>
-              • Check minimum order quantities (MOQ) before ordering<br>
-              • Use the search function to quickly find specific products<br>
-              • Contact us for bulk pricing on large orders
-            </p>
+            <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 20px; margin: 30px 0; border-radius: 8px;">
+              <h4 style="margin-top: 0; color: #333;">🚀 Getting Started - Your B2B Advantage:</h4>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #666; font-size: 14px; line-height: 1.6;">
+                <li><strong>Start Simple:</strong> Browse by category, use smart search, check MOQs for optimal ordering</li>
+                <li><strong>Maximize Value:</strong> Access exclusive wholesale rates and bulk discounts automatically</li>
+                <li><strong>Stay Connected:</strong> Message suppliers directly for custom requirements or special pricing</li>
+                <li><strong>Plan Ahead:</strong> Use order history to track patterns and optimize future purchases</li>
+                <li><strong>Scale Smart:</strong> As we add AI features, your portal will learn and suggest better buying decisions</li>
+              </ul>
+              <p style="margin-bottom: 0; font-style: italic; color: #667eea; font-size: 13px;">
+                💡 <strong>Pro Tip:</strong> Your portal evolves with your business. The more you use it, the smarter our upcoming AI recommendations become!
+              </p>
+            </div>
           </div>
           
           <div class="footer">
-            <p>This email was sent because you were added as a customer to ${wholesalerName}'s wholesale platform.</p>
+            <p>Welcome to the future of B2B commerce! You've been added to ${wholesalerName}'s intelligent wholesale platform.</p>
             <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef;">
               <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -140,7 +158,8 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
                 </svg>
                 <span style="color: #666; font-size: 14px;">Powered by <strong style="color: #10b981;">Quikpik</strong></span>
               </div>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #999;">Modern B2B Commerce Platform</p>
+              <p style="margin: 5px 0 0 0; font-size: 12px; color: #999;">Transforming B2B Commerce with Intelligence & Value</p>
+              <p style="margin: 5px 0 0 0; font-size: 11px; color: #aaa;">Your portal continuously evolves to maximize your business potential</p>
             </div>
           </div>
         </div>

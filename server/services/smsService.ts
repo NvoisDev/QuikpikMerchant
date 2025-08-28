@@ -58,13 +58,15 @@ export function createWelcomeSMSMessage(params: {
 }): string {
   const { customerName, wholesalerName, wholesalerEmail, wholesalerPhone, portalUrl } = params;
 
-  return `🎉 Welcome to ${wholesalerName}!
+  return `Welcome ${customerName}!
 
-Hello ${customerName}! You now have access to our wholesale platform with exclusive pricing and streamlined ordering.
+Your ${wholesalerName} customer portal is ready. Access exclusive wholesale pricing, place orders 24/7, track deliveries, and manage your account seamlessly.
 
-Access your portal: ${portalUrl}
+Future features: AI ordering assistance, predictive inventory, bulk discounts, and integrated financing.
 
-Need help? Email: ${wholesalerEmail}${wholesalerPhone ? ` Phone: ${wholesalerPhone}` : ''}
+Access portal: ${portalUrl}
 
-Powered by Quikpik`;
+Questions? ${wholesalerEmail}${wholesalerPhone ? ` | ${wholesalerPhone}` : ''}
+
+Start ordering today!`;
 }

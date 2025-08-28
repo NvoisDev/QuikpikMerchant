@@ -119,28 +119,35 @@ function createWelcomeWhatsAppMessage(params: {
 }): string {
   const { customerName, wholesalerName, wholesalerEmail, wholesalerPhone, portalUrl } = params;
 
-  return `🎉 *Welcome to ${wholesalerName}!*
+  return `🎉 *Welcome ${customerName}!*
 
-Hello ${customerName}! 👋
+Your *${wholesalerName} Customer Portal* is now active! This is your gateway to modern B2B commerce - transforming how you order, track, and manage your wholesale purchases.
 
-We're excited to welcome you to our wholesale platform. You now have access to our complete product catalog and can place orders directly online.
+*🚀 What's Available Now:*
+• Browse complete product catalogs with real-time pricing
+• Place orders 24/7 with instant confirmation
+• Track deliveries and manage order history
+• Access exclusive wholesale rates and bulk discounts
+• Streamlined checkout with multiple payment options
+• Direct communication with your supplier
 
-*What you can do:*
-🛒 Browse our full product range
-💰 View wholesale pricing  
-📱 Place orders anytime
-🚚 Choose delivery options
-💬 Negotiate prices directly
+*🔮 Coming Soon - Value-Added Features:*
+• AI-powered ordering recommendations
+• Predictive inventory management
+• Dynamic pricing optimization
+• Integrated trade financing options
+• Advanced analytics dashboard
+• Multi-supplier consolidation
 
-*Access your portal:*
+*Access Your Portal:*
 ${portalUrl}
 
-*Need help?*
+*Need Support?*
 📧 ${wholesalerEmail}${wholesalerPhone ? `\n📞 ${wholesalerPhone}` : ''}
 
-We're here to support your business success! 🚀
+Start ordering smarter today! Your business growth journey begins here.
 
-_Powered by Quikpik - Modern B2B Commerce_`;
+_Powered by Quikpik - The Future of B2B Commerce_`;
 }
 
 export { createWelcomeWhatsAppMessage };
