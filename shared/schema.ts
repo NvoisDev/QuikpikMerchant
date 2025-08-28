@@ -252,6 +252,54 @@ export const tabPermissions = pgTable("tab_permissions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Wholesaler-Customer Relationships table for multi-wholesaler support
+export const wholesalerCustomerRelationships = pgTable("wholesaler_customer_relationships", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status").notNull().default("pending"), // 'pending', 'active', 'suspended', 'rejected'
+  invitedAt: timestamp("invited_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  notes: text("notes"), // Internal notes about this customer relationship
+  customPricing: boolean("custom_pricing").default(false), // Whether this customer has custom pricing
+  paymentTerms: varchar("payment_terms").default("immediate"), // Payment terms for this relationship
+  creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }), // Credit limit if applicable
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    customerIdIdx: index("wcr_customer_id_idx").on(table.customerId),
+    wholesalerIdIdx: index("wcr_wholesaler_id_idx").on(table.wholesalerId),
+    statusIdx: index("wcr_status_idx").on(table.status),
+    // Ensure unique relationship between customer and wholesaler
+    customerWholesalerIdx: index("wcr_customer_wholesaler_unique").on(table.customerId, table.wholesalerId),
+  };
+});
+
+// Customer invitation tokens for secure invitation links
+export const customerInvitationTokens = pgTable("customer_invitation_tokens", {
+  id: serial("id").primaryKey(),
+  token: varchar("token").notNull().unique(), // Secure random token
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: varchar("email").notNull(), // Email of customer being invited
+  phoneNumber: varchar("phone_number"), // Phone number if provided
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  customMessage: text("custom_message"), // Personal invitation message
+  status: varchar("status").notNull().default("pending"), // 'pending', 'used', 'expired'
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    tokenIdx: index("cit_token_idx").on(table.token),
+    wholesalerIdIdx: index("cit_wholesaler_id_idx").on(table.wholesalerId),
+    emailIdx: index("cit_email_idx").on(table.email),
+    statusIdx: index("cit_status_idx").on(table.status),
+  };
+});
+
 // Gamification: User badges and achievements tracking
 export const userBadges = pgTable("user_badges", {
   id: serial("id").primaryKey(),
@@ -865,6 +913,23 @@ export type UserBadge = typeof userBadges.$inferSelect;
 export const insertOnboardingMilestoneSchema = createInsertSchema(onboardingMilestones);
 export type InsertOnboardingMilestone = typeof onboardingMilestones.$inferInsert;
 export type OnboardingMilestone = typeof onboardingMilestones.$inferSelect;
+
+// Wholesaler-Customer Relationships types
+export const insertWholesalerCustomerRelationshipSchema = createInsertSchema(wholesalerCustomerRelationships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWholesalerCustomerRelationship = z.infer<typeof insertWholesalerCustomerRelationshipSchema>;
+export type WholesalerCustomerRelationship = typeof wholesalerCustomerRelationships.$inferSelect;
+
+// Customer Invitation Tokens types
+export const insertCustomerInvitationTokenSchema = createInsertSchema(customerInvitationTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCustomerInvitationToken = z.infer<typeof insertCustomerInvitationTokenSchema>;
+export type CustomerInvitationToken = typeof customerInvitationTokens.$inferSelect;
 
 
 

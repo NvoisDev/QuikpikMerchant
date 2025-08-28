@@ -42,6 +42,8 @@ import TeamManagement from "@/pages/team-management";
 import TeamInvitation from "@/pages/team-invitation";
 import Signup from "@/pages/signup";
 import SignupComplete from "@/pages/signup-complete";
+import WholesalerSelection from "@/pages/WholesalerSelection";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
 import Customers from "@/pages/customers";
@@ -73,6 +75,8 @@ function PublicRoutes() {
       <Route path="/advertising-preview" component={AdvertisingPreview} />
       <Route path="/upgrade-success" component={UpgradeSuccess} />
       <Route path="/auth-success" component={AuthSuccess} />
+      <Route path="/select-wholesaler" component={WholesalerSelection} />
+      <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       <Route component={NotFound} />

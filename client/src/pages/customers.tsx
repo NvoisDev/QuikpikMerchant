@@ -54,6 +54,7 @@ import { helpContent } from "@/data/whatsapp-help-content";
 import { SubscriptionUpgradeModal } from "@/components/SubscriptionUpgradeModal";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
+import CustomerInvitationModal from "@/components/CustomerInvitationModal";
 
 // Form Schemas
 const customerGroupFormSchema = z.object({
@@ -208,6 +209,9 @@ export default function Customers() {
   const [mergeSearchQuery, setMergeSearchQuery] = useState('');
   const [selectedCustomersForMerge, setSelectedCustomersForMerge] = useState<Customer[]>([]);
   const [mergeMode, setMergeMode] = useState<'automatic' | 'manual'>('automatic');
+  
+  // Multi-wholesaler invitation state
+  const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
 
   // Forms
   const createGroupForm = useForm<CustomerGroupFormData>({
@@ -872,6 +876,15 @@ export default function Customers() {
             <span>Registration Requests</span>
           </Button>
         </Link>
+        
+        <Button 
+          variant="outline" 
+          className="flex items-center space-x-2"
+          onClick={() => setIsInvitationModalOpen(true)}
+        >
+          <Send className="h-4 w-4" />
+          <span>Invite Customer</span>
+        </Button>
       </div>
 
       <Tabs defaultValue={defaultTab} className="space-y-6">
@@ -2590,6 +2603,12 @@ export default function Customers() {
         onOpenChange={() => setShowUpgradeModal(false)}
         reason="customer_group_limit"
         currentPlan="free"
+      />
+      
+      {/* Customer Invitation Modal */}
+      <CustomerInvitationModal 
+        isOpen={isInvitationModalOpen}
+        onOpenChange={setIsInvitationModalOpen}
       />
     </div>
   );

@@ -30,6 +30,7 @@ import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
 import { quickOrderService } from "./services/quickOrderService";
+import { multiWholesalerService } from "./services/multiWholesalerService";
 import { db } from "./db";
 import { eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull } from "drizzle-orm";
 import { 
@@ -15409,6 +15410,134 @@ The Quikpik Team
         return res.status(404).json({ message: "Product not found" });
       }
       res.status(500).json({ message: "Failed to fetch product stock status" });
+    }
+  });
+
+  // Multi-Wholesaler API Routes
+  
+  // Get all wholesaler relationships for the authenticated customer
+  app.get('/api/customer/wholesalers', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.user.id;
+      const relationships = await multiWholesalerService.getCustomerWholesalers(customerId);
+      res.json(relationships);
+    } catch (error) {
+      console.error('Error fetching customer wholesalers:', error);
+      res.status(500).json({ message: 'Failed to fetch wholesaler relationships' });
+    }
+  });
+
+  // Get all customers for the authenticated wholesaler
+  app.get('/api/wholesaler/customers', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.id;
+      const relationships = await multiWholesalerService.getWholesalerCustomers(wholesalerId);
+      res.json(relationships);
+    } catch (error) {
+      console.error('Error fetching wholesaler customers:', error);
+      res.status(500).json({ message: 'Failed to fetch customer relationships' });
+    }
+  });
+
+  // Invite a customer to the wholesaler's platform
+  app.post('/api/wholesaler/invite-customer', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.id;
+      const { email, phoneNumber, firstName, lastName, customMessage } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+      
+      const result = await multiWholesalerService.inviteCustomer(wholesalerId, {
+        email,
+        phoneNumber,
+        firstName,
+        lastName,
+        customMessage
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error inviting customer:', error);
+      res.status(500).json({ message: 'Failed to send customer invitation' });
+    }
+  });
+
+  // Accept invitation using token (public endpoint for new customers)
+  app.post('/api/customer/accept-invitation', async (req, res) => {
+    try {
+      const { token, email, phoneNumber, firstName, lastName } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ message: 'Invitation token is required' });
+      }
+      
+      const result = await multiWholesalerService.acceptInvitation(token, {
+        email,
+        phoneNumber,
+        firstName,
+        lastName
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      res.status(500).json({ message: 'Failed to accept invitation' });
+    }
+  });
+
+  // Check if customer has access to a specific wholesaler
+  app.get('/api/customer/wholesaler-access/:wholesalerId', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.user.id;
+      const { wholesalerId } = req.params;
+      
+      const hasAccess = await multiWholesalerService.hasWholesalerAccess(customerId, wholesalerId);
+      res.json({ hasAccess });
+    } catch (error) {
+      console.error('Error checking wholesaler access:', error);
+      res.status(500).json({ message: 'Failed to check access' });
+    }
+  });
+
+  // Update last accessed time for customer-wholesaler relationship
+  app.post('/api/customer/update-last-accessed/:wholesalerId', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.user.id;
+      const { wholesalerId } = req.params;
+      
+      await multiWholesalerService.updateLastAccessed(customerId, wholesalerId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating last accessed:', error);
+      res.status(500).json({ message: 'Failed to update last accessed time' });
+    }
+  });
+
+  // Remove customer relationship
+  app.delete('/api/wholesaler/customer/:customerId', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.id;
+      const { customerId } = req.params;
+      
+      const result = await multiWholesalerService.removeCustomerRelationship(customerId, wholesalerId);
+      res.json(result);
+    } catch (error) {
+      console.error('Error removing customer relationship:', error);
+      res.status(500).json({ message: 'Failed to remove customer relationship' });
+    }
+  });
+
+  // Get pending invitations for wholesaler
+  app.get('/api/wholesaler/pending-invitations', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user.id;
+      const invitations = await multiWholesalerService.getPendingInvitations(wholesalerId);
+      res.json(invitations);
+    } catch (error) {
+      console.error('Error fetching pending invitations:', error);
+      res.status(500).json({ message: 'Failed to fetch pending invitations' });
     }
   });
 

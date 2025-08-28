@@ -481,6 +481,35 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth }: Custom
           title: "Verification Successful!",
           description: `Welcome ${data.customer.name}, you're now securely logged in.`,
         });
+        
+        // Check if customer has multiple wholesaler relationships
+        try {
+          const wholesalersResponse = await fetch('/api/customer/wholesalers', {
+            credentials: 'include'
+          });
+          
+          if (wholesalersResponse.ok) {
+            const wholesalers = await wholesalersResponse.json();
+            
+            // If customer has multiple wholesalers, redirect to selection page
+            if (wholesalers.length > 1) {
+              window.location.href = '/select-wholesaler';
+              return;
+            } else if (wholesalers.length === 1) {
+              // If only one wholesaler, check if it's the current one
+              const currentWholesaler = wholesalers[0].wholesaler.id;
+              if (currentWholesaler !== wholesalerId) {
+                // Redirect to the correct wholesaler's portal
+                window.location.href = `/customer-portal/${currentWholesaler}`;
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking wholesaler relationships:', error);
+          // Continue with normal flow if check fails
+        }
+        
         onAuthSuccess(data.customer);
       } else {
         setError(data.error || "Invalid verification code. Please try again.");
