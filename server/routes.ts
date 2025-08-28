@@ -14570,6 +14570,16 @@ The Quikpik Team
         
         // Send welcome messages (email and WhatsApp)
         try {
+          console.log('🚀 STARTING WELCOME MESSAGE PROCESS FOR CUSTOMER:', {
+            customerName,
+            customerEmail: email,
+            customerPhone: formattedPhone,
+            wholesalerName,
+            wholesalerEmail: wholesaler.email,
+            hasWholesalerEmail: !!wholesaler.email,
+            portalUrl
+          });
+          
           const welcomeResult = await sendWelcomeMessages({
             customerName,
             customerEmail: email,
@@ -14580,7 +14590,7 @@ The Quikpik Team
             portalUrl
           });
           
-          console.log('Welcome messages result:', welcomeResult);
+          console.log('✅ WELCOME MESSAGES COMPLETED. RESULT:', welcomeResult);
           
           // Add welcome message status to response
           res.json({
