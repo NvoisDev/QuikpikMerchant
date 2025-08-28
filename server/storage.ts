@@ -1656,9 +1656,9 @@ export class DatabaseStorage implements IStorage {
 
   async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; storeTagline?: string; location?: string; rating?: number }[]> {
     try {
-      console.log(`Finding accessible wholesalers for customer with last 4 digits: ${lastFourDigits}`);
+      console.log(`🔍 Finding accessible wholesalers for customer with last 4 digits: ${lastFourDigits}`);
       
-      // Find all wholesalers where this customer is registered
+      // Find all wholesalers where this customer has active relationships using the new multi-wholesaler system
       const accessibleWholesalers = await db.execute(sql`
         SELECT DISTINCT
           u.id,
@@ -1666,35 +1666,21 @@ export class DatabaseStorage implements IStorage {
           u.profile_image_url as logoUrl,
           u.business_description as storeTagline,
           u.business_address as location,
-          5.0 as rating
+          5.0 as rating,
+          wcr.status as relationship_status,
+          wcr.created_at as relationship_created
         FROM users u
+        JOIN wholesaler_customer_relationships wcr ON u.id = wcr.wholesaler_id
+        JOIN users c ON wcr.customer_id = c.id
         WHERE u.role = 'wholesaler'
           AND u.business_name IS NOT NULL
           AND u.business_name != ''
+          AND wcr.status = 'active'
+          AND c.role = 'customer'
           AND (
-            -- Customer directly belongs to this wholesaler
-            EXISTS (
-              SELECT 1 FROM users customer 
-              WHERE customer.wholesaler_id = u.id
-                AND (
-                  (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
-                  OR 
-                  (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
-                )
-            )
-            OR
-            -- Customer is in a group owned by this wholesaler
-            EXISTS (
-              SELECT 1 FROM customer_groups cg 
-              JOIN customer_group_members cgm ON cg.id = cgm.group_id
-              JOIN users customer ON cgm.customer_id = customer.id
-              WHERE cg.wholesaler_id = u.id
-                AND (
-                  (customer.phone_number IS NOT NULL AND RIGHT(customer.phone_number, 4) = ${lastFourDigits})
-                  OR 
-                  (customer.business_phone IS NOT NULL AND RIGHT(customer.business_phone, 4) = ${lastFourDigits})
-                )
-            )
+            (c.phone_number IS NOT NULL AND RIGHT(c.phone_number, 4) = ${lastFourDigits})
+            OR 
+            (c.business_phone IS NOT NULL AND RIGHT(c.business_phone, 4) = ${lastFourDigits})
           )
         ORDER BY u.business_name
       `);
@@ -1708,7 +1694,9 @@ export class DatabaseStorage implements IStorage {
         rating: parseFloat(row.rating) || 5.0
       }));
 
-      console.log(`✅ Found ${result.length} accessible wholesalers for customer`);
+      console.log(`✅ Found ${result.length} accessible wholesalers for customer with phone ending in ${lastFourDigits}`);
+      result.forEach(w => console.log(`  - ${w.businessName} (${w.id})`));
+      
       return result;
     } catch (error) {
       console.error('Error finding accessible wholesalers:', error);
