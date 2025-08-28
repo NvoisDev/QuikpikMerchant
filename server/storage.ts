@@ -4119,10 +4119,10 @@ export class DatabaseStorage implements IStorage {
         AND (
           -- Customer has direct relationship with this wholesaler (NEW)
           EXISTS (
-            SELECT 1 FROM customer_wholesaler_relationships cwr
-            WHERE cwr.customer_id = u.id 
-              AND cwr.wholesaler_id = ${wholesalerId}
-              AND cwr.is_active = true
+            SELECT 1 FROM wholesaler_customer_relationships wcr
+            WHERE wcr.customer_id = u.id 
+              AND wcr.wholesaler_id = ${wholesalerId}
+              AND wcr.status = 'active'
           )
           OR
           -- Customer directly belongs to this wholesaler (LEGACY)
