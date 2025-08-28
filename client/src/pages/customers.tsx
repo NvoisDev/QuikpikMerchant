@@ -46,7 +46,8 @@ import {
   Smartphone,
   ContactRound,
   Check,
-  ChevronDown
+  ChevronDown,
+  Send
 } from "lucide-react";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
@@ -524,6 +525,34 @@ export default function Customers() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendWelcomeMessageMutation = useMutation({
+    mutationFn: (customerId: string) => apiRequest('POST', `/api/customers/${customerId}/send-welcome`),
+    onSuccess: (data: any) => {
+      const { customerName, welcomeMessages } = data;
+      const { emailSent, whatsappSent, errors } = welcomeMessages;
+      
+      let description = `Welcome message sent to ${customerName}:\n`;
+      if (emailSent) description += "✓ Email sent successfully\n";
+      if (whatsappSent) description += "✓ WhatsApp message sent successfully\n";
+      if (errors && errors.length > 0) {
+        description += `⚠️ ${errors.join(', ')}`;
+      }
+      
+      toast({
+        title: "Welcome Message Sent",
+        description: description,
+        variant: emailSent || whatsappSent ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Welcome Message",
+        description: error.message || "Could not send welcome message to customer",
         variant: "destructive",
       });
     },
@@ -1451,6 +1480,13 @@ export default function Customers() {
                               Edit Customer
                             </DropdownMenuItem>
                             <DropdownMenuItem 
+                              onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
+                              disabled={sendWelcomeMessageMutation.isPending}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Welcome
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               className="text-red-600"
                               onClick={() => {
                                 if (confirm(`Are you sure you want to delete ${customer?.firstName || 'this customer'} ${customer?.lastName || ''}? This action cannot be undone.`)) {
@@ -1511,6 +1547,16 @@ export default function Customers() {
                             title="Edit Customer"
                           >
                             <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => sendWelcomeMessageMutation.mutate(customer?.id)}
+                            title="Send Welcome Message"
+                            disabled={sendWelcomeMessageMutation.isPending}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Send className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"

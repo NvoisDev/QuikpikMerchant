@@ -14630,6 +14630,70 @@ The Quikpik Team
     }
   });
 
+  // Send welcome message manually
+  app.post('/api/customers/:id/send-welcome', requireAuth, async (req: any, res) => {
+    try {
+      const customerId = req.params.id;
+      const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
+      
+      // Verify the customer belongs to this user
+      const customers = await storage.getAllCustomers(targetUserId);
+      const customer = customers.find(c => c.id === customerId);
+      
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      
+      // Get wholesaler details for welcome messages
+      const wholesaler = await storage.getUser(targetUserId);
+      
+      if (!wholesaler) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      
+      const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      
+      console.log('🔄 Manual welcome message request for customer:', customerName);
+      
+      // Send welcome messages (email and WhatsApp)
+      try {
+        const welcomeResult = await sendWelcomeMessages({
+          customerName,
+          customerEmail: customer.email,
+          customerPhone: customer.phoneNumber,
+          wholesalerName,
+          wholesalerEmail: wholesaler.email || 'support@quikpik.co',
+          wholesalerPhone: wholesaler.phoneNumber,
+          portalUrl
+        });
+        
+        console.log('✅ Manual welcome messages sent. Result:', welcomeResult);
+        
+        res.json({
+          success: true,
+          customerName,
+          welcomeMessages: {
+            emailSent: welcomeResult.emailSent,
+            whatsappSent: welcomeResult.whatsappSent,
+            errors: welcomeResult.errors
+          }
+        });
+      } catch (welcomeError) {
+        console.error('❌ Error sending manual welcome messages:', welcomeError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to send welcome messages',
+          details: welcomeError.message
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error in manual welcome message endpoint:', error);
+      res.status(500).json({ error: 'Failed to send welcome message', details: error.message });
+    }
+  });
+
   app.get('/api/customers/search', requireAuth, async (req: any, res) => {
     try {
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId ? req.user.wholesalerId : req.user.id;
