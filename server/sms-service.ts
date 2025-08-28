@@ -41,7 +41,7 @@ export class ReliableSMSService {
   }
 
   // Send SMS with comprehensive error handling and debugging
-  static async sendVerificationSMS(phoneNumber: string, code: string, businessName: string): Promise<{
+  static async sendVerificationSMS(phoneNumber: string, code: string, businessName: string, wholesalerId?: string): Promise<{
     success: boolean;
     messageId?: string;
     error?: string;
@@ -74,8 +74,9 @@ export class ReliableSMSService {
     try {
       console.log(`📤 Attempting SMS to ${phoneNumber}`);
       
+      const storeLink = wholesalerId ? `https://quikpik.app/store/${wholesalerId}` : 'https://quikpik.app';
       const message = await this.twilioClient.messages.create({
-        body: `Your ${businessName} verification code: ${code}. This code expires in 5 minutes.`,
+        body: `${businessName}: Your verification code is ${code}. Valid for 5 minutes.\n\nAccess your store: ${storeLink}\n\nPowered by Quikpik`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: phoneNumber,
         riskCheck: 'disable' // Prevent legitimate messages from being blocked by spam filtering
@@ -109,6 +110,63 @@ export class ReliableSMSService {
       return {
         success: false,
         error: error.message || 'SMS sending failed'
+      };
+    }
+  }
+
+  // Send stock alert SMS
+  static async sendStockAlertSMS(phoneNumber: string, businessName: string, alertType: string, productCount: number, wholesalerId: string): Promise<{
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    this.initialize();
+    
+    console.log(`📤 Sending stock alert SMS to ${phoneNumber}`);
+
+    if (!this.twilioClient) {
+      return {
+        success: false,
+        error: 'SMS service not configured'
+      };
+    }
+
+    if (!process.env.TWILIO_PHONE_NUMBER) {
+      return {
+        success: false,
+        error: 'SMS phone number not configured'
+      };
+    }
+
+    try {
+      const storeLink = `https://quikpik.app/store/${wholesalerId}`;
+      
+      let message: string;
+      if (alertType === 'low_stock') {
+        message = `${businessName}: ${productCount} product${productCount > 1 ? 's' : ''} running low on stock. Check your inventory now.\n\nManage stock: ${storeLink}\n\nPowered by Quikpik`;
+      } else {
+        message = `${businessName}: Stock alert for ${productCount} product${productCount > 1 ? 's' : ''}.\n\nView details: ${storeLink}\n\nPowered by Quikpik`;
+      }
+
+      const twilioMessage = await this.twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phoneNumber,
+        riskCheck: 'disable'
+      });
+
+      console.log(`✅ Stock alert SMS sent successfully: ${twilioMessage.sid}`);
+      
+      return {
+        success: true,
+        messageId: twilioMessage.sid
+      };
+    } catch (error: any) {
+      console.error('❌ Stock alert SMS sending failed:', error.message);
+      
+      return {
+        success: false,
+        error: error.message || 'Stock alert SMS sending failed'
       };
     }
   }

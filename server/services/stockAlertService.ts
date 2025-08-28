@@ -120,7 +120,7 @@ export class StockAlertService {
     // Send via all available channels
     await Promise.allSettled([
       this.sendEmailAlert(wholesaler, messages.email),
-      this.sendSMSAlert(wholesaler, messages.sms),
+      this.sendSMSAlert(wholesaler, alerts),
       this.sendWhatsAppAlert(wholesaler, messages.whatsapp)
     ]);
 
@@ -246,14 +246,20 @@ export class StockAlertService {
   /**
    * Send SMS alert
    */
-  private async sendSMSAlert(wholesaler: StockAlert, message: string): Promise<void> {
+  private async sendSMSAlert(wholesaler: StockAlert, alerts: StockAlert[]): Promise<void> {
     if (!wholesaler.wholesalerPhone) {
       console.log(`📱 No phone number for ${wholesaler.wholesalerName} - skipping SMS alert`);
       return;
     }
 
     try {
-      const result = await ReliableSMSService.sendVerificationSMS(wholesaler.wholesalerPhone, message, wholesaler.wholesalerName);
+      const result = await ReliableSMSService.sendStockAlertSMS(
+        wholesaler.wholesalerPhone, 
+        wholesaler.wholesalerName, 
+        'low_stock', 
+        alerts.length,
+        wholesaler.wholesalerId
+      );
       if (result.success) {
         console.log(`📱 SMS stock alert sent to ${wholesaler.wholesalerName}`);
       } else {

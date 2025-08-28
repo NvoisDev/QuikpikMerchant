@@ -1116,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate and send SMS code
       const code = ReliableSMSService.generateVerificationCode();
       console.log(`🔄 Generated verification code: ${code}`);
-      const result = await ReliableSMSService.sendVerificationSMS(customer.phone, code, wholesaler?.businessName || 'Business');
+      const result = await ReliableSMSService.sendVerificationSMS(customer.phone, code, wholesaler?.businessName || 'Business', wholesalerId);
       console.log(`📋 SMS service result:`, result);
       
       // Always store verification code in database, regardless of SMS success
