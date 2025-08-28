@@ -8,6 +8,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, or } from "drizzle-orm";
 import crypto from 'crypto';
+import { sendWelcomeMessages } from './welcomeMessageService.js';
 
 export class MultiWholesalerService {
 
@@ -145,6 +146,30 @@ export class MultiWholesalerService {
           acceptedAt: new Date(),
         });
 
+        // Get wholesaler details for welcome notification
+        const wholesaler = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, wholesalerId))
+          .limit(1);
+
+        if (wholesaler[0]) {
+          // Send welcome notification to existing customer
+          const portalUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}/customer-portal`;
+          
+          const welcomeResult = await sendWelcomeMessages({
+            customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Customer',
+            customerEmail: customer.email || undefined,
+            customerPhone: customer.phoneNumber || undefined,
+            wholesalerName: wholesaler[0].businessName || `${wholesaler[0].firstName || ''} ${wholesaler[0].lastName || ''}`.trim() || 'Wholesaler',
+            wholesalerEmail: wholesaler[0].email || '',
+            wholesalerPhone: wholesaler[0].phoneNumber || undefined,
+            portalUrl
+          });
+
+          console.log(`📧 Welcome notifications sent to existing customer ${customer.email}:`, welcomeResult);
+        }
+
         return { 
           success: true, 
           message: 'Customer successfully connected to your wholesale account' 
@@ -235,6 +260,31 @@ export class MultiWholesalerService {
           usedAt: new Date(),
         })
         .where(eq(customerInvitationTokens.token, token));
+
+      // Get wholesaler details for welcome notification
+      const wholesaler = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, invitation[0].wholesalerId))
+        .limit(1);
+
+      if (wholesaler[0]) {
+        // Send welcome notification to new customer
+        const portalUrl = `${process.env.CLIENT_URL || 'http://localhost:5000'}/customer-portal`;
+        const customerName = `${customerData.firstName || invitation[0].firstName || ''} ${customerData.lastName || invitation[0].lastName || ''}`.trim() || customerData.email || invitation[0].email || 'Customer';
+        
+        const welcomeResult = await sendWelcomeMessages({
+          customerName,
+          customerEmail: customerData.email || invitation[0].email || undefined,
+          customerPhone: customerData.phoneNumber || invitation[0].phoneNumber || undefined,
+          wholesalerName: wholesaler[0].businessName || `${wholesaler[0].firstName || ''} ${wholesaler[0].lastName || ''}`.trim() || 'Wholesaler',
+          wholesalerEmail: wholesaler[0].email || '',
+          wholesalerPhone: wholesaler[0].phoneNumber || undefined,
+          portalUrl
+        });
+
+        console.log(`📧 Welcome notifications sent to new customer ${customerData.email || invitation[0].email}:`, welcomeResult);
+      }
 
       return { 
         success: true, 
