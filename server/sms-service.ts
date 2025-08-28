@@ -76,7 +76,7 @@ export class ReliableSMSService {
       
       const storeLink = wholesalerId ? `https://quikpik.app/store/${wholesalerId}` : 'https://quikpik.app';
       const message = await this.twilioClient.messages.create({
-        body: `Hello from ${businessName}! Your verification code is ${code}. Valid for 5 minutes.\n\nAccess your store: ${storeLink}\n\nPowered by Quikpik`,
+        body: `Welcome to ${businessName}!\n\nYour verification code: ${code}\n\nAccess our store and start ordering here:\n${storeLink}\n\nPowered by Quikpik`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: phoneNumber,
         riskCheck: 'disable' // Prevent legitimate messages from being blocked by spam filtering
@@ -143,9 +143,9 @@ export class ReliableSMSService {
       
       let message: string;
       if (alertType === 'low_stock') {
-        message = `Hello from ${businessName}! You have ${productCount} product${productCount > 1 ? 's' : ''} running low on stock. Please check your inventory.\n\nManage stock: ${storeLink}\n\nPowered by Quikpik`;
+        message = `${businessName} - Stock Alert\n\n${productCount} product${productCount > 1 ? 's' : ''} running low on stock.\n\nManage inventory here:\n${storeLink}\n\nPowered by Quikpik`;
       } else {
-        message = `Hello from ${businessName}! Stock alert for ${productCount} product${productCount > 1 ? 's' : ''}.\n\nView details: ${storeLink}\n\nPowered by Quikpik`;
+        message = `${businessName} - Stock Alert\n\nStock alert for ${productCount} product${productCount > 1 ? 's' : ''}.\n\nView details here:\n${storeLink}\n\nPowered by Quikpik`;
       }
 
       const twilioMessage = await this.twilioClient.messages.create({
