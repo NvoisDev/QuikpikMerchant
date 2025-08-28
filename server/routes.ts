@@ -1355,9 +1355,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ authenticated: false, message: "No customer session found" });
       }
       
-      // Check if session matches the wholesaler
-      if (customerAuth.wholesalerId !== wholesalerId) {
-        return res.status(401).json({ authenticated: false, message: "Session does not match wholesaler" });
+      // MULTI-WHOLESALER FIX: Check if customer has access to the requested wholesaler
+      // instead of requiring exact session match
+      const hasAccess = await multiWholesalerService.hasWholesalerAccess(customerAuth.customerId, wholesalerId);
+      if (!hasAccess) {
+        return res.status(401).json({ authenticated: false, message: "No access to this wholesaler" });
       }
       
       // Check if session is expired (24 hours)
@@ -1395,6 +1397,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Customer auth check error:", error);
       res.status(500).json({ error: "Failed to check authentication" });
+    }
+  });
+
+  // Customer wholesaler switching endpoint - allows authenticated customers to switch between wholesalers
+  app.post('/api/customer-auth/switch-wholesaler', async (req, res) => {
+    try {
+      const { targetWholesalerId } = req.body;
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      // Fallback to cookie if session not found
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId,
+              name: cookieData.name,
+              email: cookieData.email || '',
+              phone: cookieData.phone || '',
+              groupId: cookieData.groupId || null,
+              groupName: cookieData.groupName || '',
+              expiresAt: new Date(cookieData.expires).toISOString()
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "No active customer session" });
+      }
+      
+      if (!targetWholesalerId) {
+        return res.status(400).json({ error: "Target wholesaler ID required" });
+      }
+      
+      // Verify customer has access to target wholesaler
+      const hasAccess = await multiWholesalerService.hasWholesalerAccess(customerAuth.customerId, targetWholesalerId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to target wholesaler" });
+      }
+      
+      // Create updated session for new wholesaler
+      const updatedSessionData = {
+        ...customerAuth,
+        wholesalerId: targetWholesalerId,
+        authenticatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Reset to 24 hours
+      };
+      
+      // Update session
+      (req.session as any).customerAuth = updatedSessionData;
+      
+      // Update cookie
+      const cookieData = {
+        customerId: customerAuth.customerId,
+        wholesalerId: targetWholesalerId,
+        name: customerAuth.name,
+        email: customerAuth.email,
+        phone: customerAuth.phone,
+        groupId: customerAuth.groupId,
+        groupName: customerAuth.groupName,
+        expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      };
+      
+      res.cookie('customer_auth', Buffer.from(JSON.stringify(cookieData)).toString('base64'), {
+        httpOnly: true,
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax'
+      });
+      
+      console.log(`🔄 Customer ${customerAuth.name} switched from wholesaler ${customerAuth.wholesalerId} to ${targetWholesalerId}`);
+      
+      res.json({
+        success: true,
+        message: "Wholesaler switched successfully",
+        newWholesalerId: targetWholesalerId
+      });
+    } catch (error) {
+      console.error("Wholesaler switching error:", error);
+      res.status(500).json({ error: "Failed to switch wholesaler" });
     }
   });
 

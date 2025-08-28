@@ -2111,9 +2111,33 @@ export default function CustomerPortal() {
                           ? 'hover:bg-gray-50 cursor-pointer' 
                           : 'bg-gray-50 border-2 border-dashed border-gray-300'
                       }`}
-                      onClick={wholesalerItem.isAccessible ? () => {
+                      onClick={wholesalerItem.isAccessible ? async () => {
                         setShowWholesalerSearch(false);
-                        window.location.href = `/store/${wholesalerItem.id}`;
+                        
+                        // Use wholesaler switching for authenticated customers
+                        try {
+                          const response = await fetch('/api/customer-auth/switch-wholesaler', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                              targetWholesalerId: wholesalerItem.id
+                            })
+                          });
+                          
+                          if (response.ok) {
+                            // Switch successful, redirect to new store
+                            window.location.href = `/store/${wholesalerItem.id}`;
+                          } else {
+                            // If switching fails, try direct navigation (fallback)
+                            window.location.href = `/store/${wholesalerItem.id}`;
+                          }
+                        } catch (error) {
+                          // Network error, try direct navigation (fallback)
+                          window.location.href = `/store/${wholesalerItem.id}`;
+                        }
                       } : undefined}
                     >
                       {/* Wholesaler Logo */}
