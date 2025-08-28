@@ -1149,6 +1149,10 @@ export class DatabaseStorage implements IStorage {
           const orderedQuantity = item.quantity;
           const sellingType = item.sellingType || 'units'; // Default to units if not specified
           
+          // Get customer name for stock movement tracking
+          const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
+          const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
+          
           if (sellingType === 'pallets') {
             // For pallet orders, reduce pallet_stock
             const currentPalletStock = currentProduct.palletStock || 0;
@@ -1158,6 +1162,20 @@ export class DatabaseStorage implements IStorage {
               .update(products)
               .set({ palletStock: newPalletStock })
               .where(eq(products.id, item.productId));
+            
+            // Record pallet stock movement
+            await tx.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId: order.wholesalerId,
+              movementType: 'purchase',
+              quantity: -orderedQuantity, // Negative for stock reduction
+              unitType: 'pallets',
+              stockBefore: currentPalletStock,
+              stockAfter: newPalletStock,
+              reason: `Order sale - ${orderedQuantity} pallets sold`,
+              orderId: newOrder.id,
+              customerName: customerName
+            });
             
             console.log(`📦 PALLET Stock reduced for product ${item.productId}: ${currentPalletStock} → ${newPalletStock} pallets (${orderedQuantity} ordered)`);
             
@@ -1182,6 +1200,20 @@ export class DatabaseStorage implements IStorage {
               .set({ stock: newUnitStock })
               .where(eq(products.id, item.productId));
               
+            // Record unit stock movement for pallet order
+            await tx.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId: order.wholesalerId,
+              movementType: 'purchase',
+              quantity: -unitsOrdered, // Negative for stock reduction
+              unitType: 'units',
+              stockBefore: currentUnitStock,
+              stockAfter: newUnitStock,
+              reason: `Order sale - ${unitsOrdered} units (${orderedQuantity} pallets @ ${unitsPerPallet} units/pallet)`,
+              orderId: newOrder.id,
+              customerName: customerName
+            });
+              
             console.log(`📦 UNIT Stock also reduced for pallet order: ${currentUnitStock} → ${newUnitStock} units (${unitsOrdered} units from ${orderedQuantity} pallets)`);
             
           } else {
@@ -1193,6 +1225,20 @@ export class DatabaseStorage implements IStorage {
               .update(products)
               .set({ stock: newStock })
               .where(eq(products.id, item.productId));
+            
+            // Record unit stock movement
+            await tx.insert(stockMovements).values({
+              productId: item.productId,
+              wholesalerId: order.wholesalerId,
+              movementType: 'purchase',
+              quantity: -orderedQuantity, // Negative for stock reduction
+              unitType: 'units',
+              stockBefore: currentStock,
+              stockAfter: newStock,
+              reason: `Order sale - ${orderedQuantity} units sold`,
+              orderId: newOrder.id,
+              customerName: customerName
+            });
             
             console.log(`📦 UNIT Stock reduced for product ${item.productId}: ${currentStock} → ${newStock} units (${orderedQuantity} ordered)`);
             
