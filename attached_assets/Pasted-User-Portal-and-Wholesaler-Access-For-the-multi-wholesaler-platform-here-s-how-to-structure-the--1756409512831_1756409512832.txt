@@ -1,0 +1,47 @@
+User Portal and Wholesaler Access
+
+
+
+For the multi-wholesaler platform, here's how to structure the user portal and wholesaler access:
+
+
+
+Unique User Accounts: Each customer should have one unique account, tied to their email address or telephone. This prevents a customer from having multiple logins.
+
+
+
+Wholesaler-Specific Permissions: A customer's account should be linked to specific wholesalers. When a wholesaler invites a customer, their unique ID (e.g., email or telephone) is added to that wholesaler's list of authorized users.
+
+
+
+Login and Redirection: When a customer logs in, the system checks which wholesalers they're associated with. If they're linked to only Wholesaler A, they're redirected to A's customer portal. If they're linked to both A and B, they will be presented with a choice on a central dashboard to access either A's portal or B's portal (find seller).
+
+
+
+Key Considerations 
+
+Database Structure:
+
+Users Table: This table holds a single record for each customer with their telephone number or email
+
+Wholesalers Table: This table stores information about each wholesaler.
+
+Relationships Table: A many-to-many relationship table is crucial. It links users to wholesalers. This table should have columns like customer_id, wholesaler_id, and join_date to manage the connections.
+
+User Invitation Flow:
+
+When a wholesaler invites a customer, the system should check if the customer's email or telephone already exists in the users table.
+
+If the user exists: The system creates a new entry in the relationships table, linking the existing customer_id to the inviting wholesaler_id.
+
+If the customer does not exist: The system creates a new user record and then links it to the inviting wholesaler in the relationships table.
+
+Security and Data Isolation:
+
+Ensure that a customer can only see products, prices, and order history from the specific wholesaler they're currently accessing within the customer portal
+
+The backend logic must strictly filter all data queries based on the wholesaler_id associated with the current user session to prevent data from being exposed to the wrong customer.
+
+Scalability:
+
+The architecture should be able to handle thousands of wholesalers and millions of customer relationships without performance degradation. Using efficient database indexing and a well-structured schema is key.
