@@ -700,6 +700,7 @@ export default function CustomerPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedCustomer, setAuthenticatedCustomer] = useState<any>(null);
   const [showFirstTimeAddressSetup, setShowFirstTimeAddressSetup] = useState(false);
+  const [isSwitchingWholesaler, setIsSwitchingWholesaler] = useState(false);
 
   // Customer order statistics query
   const { data: customerOrderStats } = useQuery({
@@ -1770,13 +1771,17 @@ export default function CustomerPortal() {
       return;
     }
     
-    // No valid authentication - show authentication screen
-    console.log('🔐 No valid authentication found, showing auth screen');
-    setIsAuthenticated(false);
-    setAuthenticatedCustomer(null);
-    setShowAuth(true);
-    setIsGuestMode(true);
-  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam]);
+    // No valid authentication - show authentication screen only if not switching wholesalers
+    if (!isSwitchingWholesaler) {
+      console.log('🔐 No valid authentication found, showing auth screen');
+      setIsAuthenticated(false);
+      setAuthenticatedCustomer(null);
+      setShowAuth(true);
+      setIsGuestMode(true);
+    } else {
+      console.log('🔄 Currently switching wholesaler, not showing auth screen');
+    }
+  }, [isEnhancedPreviewMode, isWholesalerOwnStore, user, wholesalerId, sessionLoading, sessionData, forceLoginParam, isSwitchingWholesaler]);
 
 
 
@@ -1818,8 +1823,32 @@ export default function CustomerPortal() {
     );
   }
 
-  // Show authentication screen (3-step process)
-  if (showAuth && !isEnhancedPreviewMode && wholesalerId) {
+  // Show switching wholesaler loading state
+  if (isSwitchingWholesaler) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          {/* Enhanced Loading Animation */}
+          <div className="flex space-x-1">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-6 bg-gradient-to-t from-green-400 to-emerald-500 rounded-full animate-pulse"
+                style={{
+                  animationDelay: `${i * 0.15}s`,
+                  animationDuration: '1.6s'
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-gray-600 text-center">Switching to new store...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication screen (3-step process) - but not during wholesaler switching
+  if (showAuth && !isEnhancedPreviewMode && wholesalerId && !isSwitchingWholesaler) {
     console.log('🔐 Showing 3-step authentication screen');
     return <CustomerAuth 
       wholesalerId={wholesalerId} 
@@ -2113,6 +2142,7 @@ export default function CustomerPortal() {
                       }`}
                       onClick={wholesalerItem.isAccessible ? async () => {
                         setShowWholesalerSearch(false);
+                        setIsSwitchingWholesaler(true);
                         
                         // Use wholesaler switching for authenticated customers
                         try {
@@ -2132,10 +2162,12 @@ export default function CustomerPortal() {
                             window.location.href = `/store/${wholesalerItem.id}`;
                           } else {
                             // If switching fails, try direct navigation (fallback)
+                            setIsSwitchingWholesaler(false);
                             window.location.href = `/store/${wholesalerItem.id}`;
                           }
                         } catch (error) {
                           // Network error, try direct navigation (fallback)
+                          setIsSwitchingWholesaler(false);
                           window.location.href = `/store/${wholesalerItem.id}`;
                         }
                       } : undefined}
