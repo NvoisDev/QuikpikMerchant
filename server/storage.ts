@@ -22,6 +22,7 @@ import {
   teamMembers,
   tabPermissions,
   deliveryAddresses,
+  customerWholesalerRelationships,
   type User,
   type UpsertUser,
   type Product,
@@ -64,6 +65,8 @@ import {
   type SelectCustomerProfileUpdateNotification,
   type DeliveryAddress,
   type InsertDeliveryAddress,
+  type CustomerWholesalerRelationship,
+  type InsertCustomerWholesalerRelationship,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
@@ -4041,11 +4044,9 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // CRITICAL SECURITY FIX: Only return customers that actually belong to this wholesaler
-    // Customers belong to a wholesaler if they are:
-    // 1. Members of customer groups owned by this wholesaler, OR
-    // 2. Have order history with this wholesaler
-    console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
+    // NEW: Multi-wholesaler customer support using customer_wholesaler_relationships table
+    // Customers can now be shared between multiple wholesalers
+    console.log(`🔒 DATA ISOLATION: Fetching shared customers for wholesaler ${wholesalerId}`);
     
     const allCustomers = await db.execute(sql`
       SELECT DISTINCT
@@ -4082,7 +4083,15 @@ export class DatabaseStorage implements IStorage {
         AND u.id != ${wholesalerId} 
         AND u.archived = false
         AND (
-          -- Customer directly belongs to this wholesaler
+          -- Customer has direct relationship with this wholesaler (NEW)
+          EXISTS (
+            SELECT 1 FROM customer_wholesaler_relationships cwr
+            WHERE cwr.customer_id = u.id 
+              AND cwr.wholesaler_id = ${wholesalerId}
+              AND cwr.is_active = true
+          )
+          OR
+          -- Customer directly belongs to this wholesaler (LEGACY)
           u.wholesaler_id = ${wholesalerId}
           OR
           -- Customer is in a group owned by this wholesaler

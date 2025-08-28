@@ -1245,6 +1245,25 @@ export const deliveryAddresses = pgTable("delivery_addresses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Customer-Wholesaler Relationships Table - Support shared customers across multiple wholesalers
+export const customerWholesalerRelationships = pgTable("customer_wholesaler_relationships", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Relationship metadata
+  relationshipType: varchar("relationship_type").default("standard"), // standard, preferred, exclusive
+  addedBy: varchar("added_by").references(() => users.id), // Who added this relationship
+  notes: text("notes"), // Optional notes about the relationship
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Tab permissions types
 export const insertTabPermissionSchema = createInsertSchema(tabPermissions).omit({
   id: true,
@@ -1262,5 +1281,14 @@ export const insertDeliveryAddressSchema = createInsertSchema(deliveryAddresses)
 });
 export type InsertDeliveryAddress = z.infer<typeof insertDeliveryAddressSchema>;
 export type DeliveryAddress = typeof deliveryAddresses.$inferSelect;
+
+// Customer-Wholesaler Relationships types
+export const insertCustomerWholesalerRelationshipSchema = createInsertSchema(customerWholesalerRelationships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCustomerWholesalerRelationship = z.infer<typeof insertCustomerWholesalerRelationshipSchema>;
+export type CustomerWholesalerRelationship = typeof customerWholesalerRelationships.$inferSelect;
 
 
