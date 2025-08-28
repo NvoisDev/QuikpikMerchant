@@ -1529,7 +1529,7 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Finding customer with last 4 digits: ${lastFourDigits}, wholesaler: ${wholesalerId}`);
       
-      // CRITICAL FIX: Only search customers belonging to the specific wholesaler
+      // CRITICAL FIX: Search customers using new multi-wholesaler relationship system
       const wholesalerCustomers = await db.execute(sql`
         SELECT DISTINCT
           u.id as customer_id,
@@ -1547,8 +1547,19 @@ export class DatabaseStorage implements IStorage {
         WHERE ((u.phone_number IS NOT NULL AND u.phone_number != '')
           OR (u.business_phone IS NOT NULL AND u.business_phone != ''))
           AND (
+            -- Customer has direct relationship with this wholesaler (NEW)
+            EXISTS (
+              SELECT 1 FROM wholesaler_customer_relationships wcr
+              WHERE wcr.customer_id = u.id 
+                AND wcr.wholesaler_id = ${wholesalerId}
+                AND wcr.status = 'active'
+            )
+            OR
+            -- Customer directly belongs to this wholesaler (LEGACY)
             u.wholesaler_id = ${wholesalerId}
-            OR cg.wholesaler_id = ${wholesalerId}
+            OR
+            -- Customer is in a group owned by this wholesaler (LEGACY)
+            cg.wholesaler_id = ${wholesalerId}
           )
       `);
       
