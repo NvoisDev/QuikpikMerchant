@@ -703,6 +703,149 @@ After sending, you can monitor:
 - Monitor response rates and adjust strategy
 - Ensure compliance with WhatsApp Business policies
         `
+      },
+      {
+        title: "Welcome Message Troubleshooting",
+        content: `
+### Customer Welcome Message System
+
+When you add new customers to your platform, the system automatically sends welcome messages via email and WhatsApp to help them get started with your wholesale portal.
+
+#### How Welcome Messages Work
+
+**Automatic Triggers:**
+- New customer creation through Customer Directory
+- Customer registration requests (when approved)
+- Manual customer addition through Customer Groups
+
+**Message Content Includes:**
+- Welcome greeting with customer's name
+- Your business name and contact information
+- Direct link to your customer portal
+- Instructions on how to browse products and place orders
+- Professional branding with Quikpik platform signature
+
+#### Email Welcome Messages
+
+**✅ When Email Messages Work:**
+- Customer has valid email address
+- SendGrid is configured with verified sender
+- All email templates load correctly
+
+**❌ Common Email Issues and Solutions:**
+
+**Problem: "403 Forbidden" SendGrid Error**
+- **Cause**: Sender email address not verified in SendGrid
+- **Solution**: 
+  1. Go to SendGrid Dashboard → Settings → Sender Authentication
+  2. Add and verify your business email as authenticated sender
+  3. System will automatically use verified sender (hello@quikpik.co)
+  4. Customer replies will go to your business email
+
+**Problem: Email not received by customer**
+- **Cause**: Customer email in spam folder or invalid
+- **Solution**: 
+  1. Check customer's spam/junk folder
+  2. Verify email address is correct
+  3. Ask customer to whitelist hello@quikpik.co
+
+**Problem: Welcome email has wrong business information**
+- **Cause**: Business profile not completed
+- **Solution**: Update Settings → Business Settings with correct information
+
+#### WhatsApp Welcome Messages
+
+**✅ When WhatsApp Messages Work:**
+- Customer has valid UK phone number (+44 format)
+- Twilio WhatsApp Business API is activated
+- WhatsApp number can receive business messages
+
+**❌ Common WhatsApp Issues and Solutions:**
+
+**Problem: "Twilio could not find a Channel" Error (Code 63007)**
+- **Cause**: Your Twilio number needs WhatsApp Business API activation
+- **Solution**: 
+  1. Contact Twilio support to activate WhatsApp Business API
+  2. Apply for WhatsApp Business account approval
+  3. Your phone number will be enabled for WhatsApp messaging
+
+**Problem: "Invalid phone number" Error (Code 21211)**
+- **Cause**: Customer phone number format is incorrect
+- **Solution**: 
+  1. Ensure phone numbers use international format (+44XXXXXXXXX)
+  2. Verify customer's WhatsApp is active on that number
+  3. Check phone number doesn't have extra characters
+
+**Problem: Messages sent but customer didn't receive**
+- **Cause**: Customer blocked business numbers or doesn't have WhatsApp
+- **Solution**: 
+  1. Ask customer to check WhatsApp blocked contacts
+  2. Verify customer uses WhatsApp on provided number
+  3. Try sending test message manually
+
+#### Configuration Status Check
+
+**Email Configuration:**
+- SendGrid API Key: Required
+- Verified Sender: hello@quikpik.co (must be verified)
+- Business Email: Used for customer replies
+
+**WhatsApp Configuration:**
+- Twilio Account SID: Required  
+- Twilio Auth Token: Required
+- Twilio Phone Number: Required
+- WhatsApp Business API: Must be activated
+
+#### Testing Welcome Messages
+
+**To test email system:**
+1. Add test customer with your email address
+2. Check for welcome email delivery
+3. Verify business information appears correctly
+4. Test reply functionality
+
+**To test WhatsApp system:**
+1. Add test customer with your WhatsApp number
+2. Check for welcome message delivery
+3. Verify portal link works correctly
+4. Test customer can reply
+
+#### Message Delivery Status
+
+When adding customers, the system returns delivery status:
+- **emailSent: true/false** - Email delivery success
+- **whatsappSent: true/false** - WhatsApp delivery success
+- **errors: []** - Array of any error messages
+
+#### Best Practices
+
+**For Reliable Email Delivery:**
+- Keep business email updated in settings
+- Monitor SendGrid dashboard for delivery issues
+- Ask customers to whitelist hello@quikpik.co
+- Include clear subject lines with your business name
+
+**For Reliable WhatsApp Delivery:**
+- Use proper international phone number format
+- Verify customer WhatsApp numbers before adding
+- Consider WhatsApp Business API upgrade for higher volume
+- Include clear business identification in messages
+
+#### Getting Help
+
+**If welcome messages still don't work:**
+1. Check Settings → Integrations for configuration status
+2. Test with your own email/phone number first  
+3. Verify customer contact information is correct
+4. Contact support with specific error messages
+
+**API Integration Status:**
+- Settings → Integrations shows real-time status
+- Green indicators mean services are working
+- Red indicators show configuration needed
+
+The welcome message system helps create professional first impressions and guides customers to start ordering from your wholesale platform immediately.
+        `
       }
     ]
   },
