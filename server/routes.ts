@@ -14615,10 +14615,31 @@ The Quikpik Team
         console.log('Using existing customer:', customer);
         
         // Ensure the wholesaler-customer relationship exists
-        const { MultiWholesalerService } = await import('./services/multiWholesalerService');
-        const multiWholesalerService = new MultiWholesalerService();
-        await multiWholesalerService.createWholesalerCustomerRelationship(targetUserId, customer.id);
-        console.log('✅ Ensured wholesaler-customer relationship exists for existing customer');
+        const { db } = await import('../db');
+        const { wholesalerCustomerRelationships } = await import('../../shared/schema');
+        const { and, eq } = await import('drizzle-orm');
+        
+        // Check if relationship already exists
+        const existingRelationship = await db
+          .select()
+          .from(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, customer.id),
+            eq(wholesalerCustomerRelationships.wholesalerId, targetUserId)
+          ))
+          .limit(1);
+          
+        if (existingRelationship.length === 0) {
+          // Create new relationship
+          await db.insert(wholesalerCustomerRelationships).values({
+            customerId: customer.id,
+            wholesalerId: targetUserId,
+            status: 'active',
+          });
+          console.log('✅ Created new wholesaler-customer relationship for existing customer');
+        } else {
+          console.log('✅ Wholesaler-customer relationship already exists');
+        }
       } else {
         // Check for existing customer with same email and 'customer' role
         if (email) {
@@ -14641,9 +14662,14 @@ The Quikpik Team
         });
         
         // Create the wholesaler-customer relationship for multi-wholesaler platform
-        const { MultiWholesalerService } = await import('./services/multiWholesalerService');
-        const multiWholesalerService = new MultiWholesalerService();
-        await multiWholesalerService.createWholesalerCustomerRelationship(targetUserId, customer.id);
+        const { db } = await import('../db');
+        const { wholesalerCustomerRelationships } = await import('../../shared/schema');
+        
+        await db.insert(wholesalerCustomerRelationships).values({
+          customerId: customer.id,
+          wholesalerId: targetUserId,
+          status: 'active',
+        });
         console.log('✅ Created wholesaler-customer relationship for multi-wholesaler platform');
       }
       
