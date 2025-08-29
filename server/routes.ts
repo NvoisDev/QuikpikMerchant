@@ -14735,6 +14735,7 @@ The Quikpik Team
             ...customer,
             welcomeMessages: {
               emailSent: welcomeResult.emailSent,
+              smsSent: welcomeResult.smsSent,
               whatsappSent: welcomeResult.whatsappSent,
               errors: welcomeResult.errors
             }
@@ -14746,6 +14747,7 @@ The Quikpik Team
             ...customer,
             welcomeMessages: {
               emailSent: false,
+              smsSent: false,
               whatsappSent: false,
               errors: [`Failed to send welcome messages: ${welcomeError.message}`]
             }
@@ -14757,6 +14759,7 @@ The Quikpik Team
           ...customer,
           welcomeMessages: {
             emailSent: false,
+            smsSent: false,
             whatsappSent: false,
             errors: ['No wholesaler account found to send welcome messages from']
           }
@@ -14790,7 +14793,7 @@ The Quikpik Team
       }
       
       const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/store/${targetUserId}`;
       const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
       
       console.log('🔄 Manual welcome message request for customer:', customerName);
@@ -14814,6 +14817,7 @@ The Quikpik Team
           customerName,
           welcomeMessages: {
             emailSent: welcomeResult.emailSent,
+            smsSent: welcomeResult.smsSent,
             whatsappSent: welcomeResult.whatsappSent,
             errors: welcomeResult.errors
           }
