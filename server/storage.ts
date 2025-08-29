@@ -4089,95 +4089,32 @@ export class DatabaseStorage implements IStorage {
     lastOrderDate?: Date;
     groupIds: number[];
   })[]> {
-    // NEW: Multi-wholesaler customer support using customer_wholesaler_relationships table
-    // Customers can now be shared between multiple wholesalers
-    console.log(`🔒 DATA ISOLATION: Fetching shared customers for wholesaler ${wholesalerId}`);
+    console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
     
-    const allCustomers = await db.execute(sql`
-      SELECT DISTINCT
-        u.id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.phone_number,
-        u.business_name,
-        u.street_address,
-        u.city,
-        u.state,
-        u.postal_code,
-        u.country,
-        u.created_at,
-        COALESCE(
-          NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 
-          u.first_name, 
-          'Customer'
-        ) as full_name,
-        COALESCE(STRING_AGG(DISTINCT cg.name, ', '), '') as group_names,
-        COALESCE(STRING_AGG(DISTINCT cg.id::text, ','), '') as group_ids,
-        COUNT(DISTINCT o.id) as total_orders,
-        COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled', 'completed') THEN o.subtotal::numeric * 0.967 ELSE 0 END), 0) as total_spent,
-        MAX(o.created_at) as last_order_date
-      FROM users u
-      LEFT JOIN customer_group_members cgm ON u.id = cgm.customer_id
-      LEFT JOIN customer_groups cg ON cgm.group_id = cg.id AND cg.wholesaler_id = ${wholesalerId}
-      LEFT JOIN orders o ON (
-        (u.id = o.retailer_id AND o.wholesaler_id = ${wholesalerId}) OR
-        (u.id = o.wholesaler_id AND o.retailer_id = ${wholesalerId})
-      )
-      WHERE u.role IN ('retailer', 'customer') 
-        AND u.id != ${wholesalerId} 
-        AND u.archived = false
-        AND (
-          -- Customer has direct relationship with this wholesaler (NEW)
-          EXISTS (
-            SELECT 1 FROM wholesaler_customer_relationships wcr
-            WHERE wcr.customer_id = u.id 
-              AND wcr.wholesaler_id = ${wholesalerId}
-              AND wcr.status = 'active'
-          )
-          OR
-          -- Customer directly belongs to this wholesaler (LEGACY)
-          u.wholesaler_id = ${wholesalerId}
-          OR
-          -- Customer is in a group owned by this wholesaler
-          EXISTS (
-            SELECT 1 FROM customer_group_members cgm2 
-            INNER JOIN customer_groups cg2 ON cgm2.group_id = cg2.id 
-            WHERE cgm2.customer_id = u.id AND cg2.wholesaler_id = ${wholesalerId}
-          )
-          OR
-          -- Customer has order history with this wholesaler
-          EXISTS (
-            SELECT 1 FROM orders o2 
-            WHERE (o2.retailer_id = u.id AND o2.wholesaler_id = ${wholesalerId})
-              OR (o2.wholesaler_id = u.id AND o2.retailer_id = ${wholesalerId})
-          )
-        )
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone_number, u.business_name,
-               u.street_address, u.city, u.state, u.postal_code, u.country, u.created_at
-      ORDER BY total_spent DESC, u.first_name ASC
-    `);
+    // SIMPLIFIED: Get customers directly through wholesaler_customer_relationships
+    const customerRelationships = await db
+      .select({
+        user: users,
+      })
+      .from(wholesalerCustomerRelationships)
+      .innerJoin(users, eq(wholesalerCustomerRelationships.customerId, users.id))
+      .where(and(
+        eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+        eq(wholesalerCustomerRelationships.status, 'active'),
+        eq(users.archived, false)
+      ));
 
-    return allCustomers.rows.map((customer: any) => ({
-      id: customer.id,
-      firstName: customer.first_name,
-      lastName: customer.last_name,
-      email: customer.email,
-      phoneNumber: customer.phone_number,
-      businessName: customer.business_name,
-      streetAddress: customer.street_address,
-      city: customer.city,
-      state: customer.state,
-      postalCode: customer.postal_code,
-      country: customer.country,
-      createdAt: customer.created_at,
-      role: 'retailer' as const,
-      groupNames: customer.group_names ? customer.group_names.split(', ') : [],
-      groupIds: customer.group_ids ? customer.group_ids.split(',').map(Number) : [],
-      totalOrders: parseInt(customer.total_orders) || 0,
-      totalSpent: parseFloat(customer.total_spent) || 0,
-      lastOrderDate: customer.last_order_date ? new Date(customer.last_order_date) : undefined
+    // Format the results to match expected interface
+    const customers = customerRelationships.map(row => ({
+      ...row.user,
+      groupNames: [] as string[],
+      totalOrders: 0,
+      totalSpent: 0,
+      lastOrderDate: undefined as Date | undefined,
+      groupIds: [] as number[]
     }));
+
+    return customers;
   }
 
   async getCustomerDetails(customerId: string): Promise<(User & { 
