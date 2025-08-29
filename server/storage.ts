@@ -1153,74 +1153,74 @@ export class DatabaseStorage implements IStorage {
           const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
           const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
           
-          // CRITICAL FIX: Use Base Unit Inventory Logic
+          // SEPARATE STOCK TRACKING: Units reduce unit stock, Pallets reduce pallet stock
           const { InventoryCalculator } = await import('../shared/inventory-calculator');
           
           const inventoryData = {
-            baseUnitStock: (currentProduct as any).baseUnitStock || 0,
+            stock: currentProduct.stock || 0,
+            palletStock: currentProduct.palletStock || 0,
             quantityInPack: (currentProduct as any).quantityInPack || 1,
             unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
           };
           
-          // Calculate what to subtract from base unit stock
+          // Calculate new stock levels using separate tracking
           const orderResult = InventoryCalculator.processOrder(
             orderedQuantity,
             sellingType as 'units' | 'pallets',
             inventoryData
           );
           
-          const newBaseUnitStock = orderResult.newBaseUnitStock;
+          const newUnitStock = orderResult.newUnitStock;
+          const newPalletStock = orderResult.newPalletStock;
           const decrementInfo = orderResult.decrementInfo;
           
-          // Update base unit stock (single source of truth)
+          // Update SEPARATE stock fields (unit stock and pallet stock)
           await tx
             .update(products)
             .set({ 
-              baseUnitStock: newBaseUnitStock,
-              // Update legacy fields for compatibility
-              stock: sellingType === 'units' ? (currentProduct.stock || 0) - orderedQuantity : currentProduct.stock,
-              palletStock: sellingType === 'pallets' ? Math.max(0, (currentProduct.palletStock || 0) - orderedQuantity) : currentProduct.palletStock
+              stock: newUnitStock,
+              palletStock: newPalletStock
             })
             .where(eq(products.id, item.productId));
           
-          // Record stock movement with base unit tracking
+          // Record stock movement with proper unit type
+          const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
+          const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
+          
           await tx.insert(stockMovements).values({
             productId: item.productId,
             wholesalerId: order.wholesalerId,
             movementType: 'purchase',
-            quantity: -decrementInfo.baseUnitsToSubtract,
-            unitType: 'base_units',
-            stockBefore: inventoryData.baseUnitStock,
-            stockAfter: newBaseUnitStock,
-            reason: `Order sale - ${decrementInfo.conversionDetails}`,
+            quantity: -orderedQuantity, // Actual ordered quantity, not base units
+            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
+            stockBefore: stockBefore,
+            stockAfter: stockAfter,
+            reason: `Order sale - ${orderedQuantity} ${sellingType}`,
             orderId: newOrder.id,
             customerName: customerName
           });
           
-          console.log(`📦 BASE UNIT Stock reduced for product ${item.productId}: ${inventoryData.baseUnitStock} → ${newBaseUnitStock} base units`);
-          console.log(`📊 Order conversion: ${decrementInfo.conversionDetails}`);
-          
-          // Calculate derived inventory for warnings
-          const derivedInventory = InventoryCalculator.calculateDerivedInventory({
-            baseUnitStock: newBaseUnitStock,
-            quantityInPack: inventoryData.quantityInPack,
-            unitsPerPallet: inventoryData.unitsPerPallet
-          });
+          console.log(`📦 SEPARATE Stock reduced for product ${item.productId}:`);
+          if (sellingType === 'pallets') {
+            console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
+          } else {
+            console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
+          }
           
           // Log warnings based on selling type
           if (sellingType === 'pallets') {
-            if (derivedInventory.availablePallets <= 5) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${derivedInventory.availablePallets} pallets remaining`);
+            if (newPalletStock <= 5) {
+              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newPalletStock} pallets remaining`);
             }
-            if (derivedInventory.availablePallets === 0) {
+            if (newPalletStock === 0) {
               console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name}) has no pallets remaining`);
             }
           } else {
-            if (newBaseUnitStock <= (currentProduct.lowStockThreshold || 10)) {
-              console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newBaseUnitStock} base units remaining`);
+            if (newUnitStock <= (currentProduct.lowStockThreshold || 10)) {
+              console.log(`⚠️ LOW UNIT STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newUnitStock} units remaining`);
             }
-            if (newBaseUnitStock === 0) {
-              console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of base unit stock`);
+            if (newUnitStock === 0) {
+              console.log(`🚨 OUT OF UNIT STOCK: Product ${item.productId} (${currentProduct.name}) is now out of unit stock`);
             }
           }
         } else {

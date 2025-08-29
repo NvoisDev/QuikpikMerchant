@@ -8,9 +8,10 @@
  */
 
 export interface ProductInventoryData {
-  baseUnitStock: number;         // Master inventory count (source of truth)
-  quantityInPack: number;        // Base units per pack
-  unitsPerPallet: number;        // Number of PACKS per pallet (not base units)
+  stock: number;                 // Individual units stock
+  palletStock: number;          // Pallet stock
+  quantityInPack: number;       // Base units per pack
+  unitsPerPallet: number;       // Number of PACKS per pallet (not base units)
 }
 
 export interface DerivedInventoryCalculations {
@@ -118,24 +119,40 @@ export class InventoryCalculator {
   }
   
   /**
-   * Process an order and return new base unit stock after decrement
+   * Process an order and return new stock levels after decrement
+   * SEPARATE STOCK TRACKING: Units reduce unit stock, Pallets reduce pallet stock
    */
   static processOrder(
     orderQuantity: number,
     sellingType: 'units' | 'pallets',
     currentData: ProductInventoryData
-  ): { newBaseUnitStock: number; decrementInfo: OrderDecrement } {
-    const validation = this.canFulfillOrder(orderQuantity, sellingType, currentData);
-    
-    if (!validation.canFulfill) {
-      throw new Error(validation.reason);
+  ): { newUnitStock: number; newPalletStock: number; decrementInfo: OrderDecrement } {
+    // Validate stock availability
+    if (sellingType === 'units') {
+      if (orderQuantity > (currentData.stock || 0)) {
+        throw new Error(`Insufficient stock. Requested: ${orderQuantity} units, Available: ${currentData.stock || 0} units`);
+      }
+    } else if (sellingType === 'pallets') {
+      if (orderQuantity > (currentData.palletStock || 0)) {
+        throw new Error(`Insufficient stock. Requested: ${orderQuantity} pallets, Available: ${currentData.palletStock || 0} pallets`);
+      }
     }
     
     const decrementInfo = this.calculateOrderDecrement(orderQuantity, sellingType, currentData);
-    const newBaseUnitStock = currentData.baseUnitStock - decrementInfo.baseUnitsToSubtract;
+    
+    // SEPARATE STOCK TRACKING
+    let newUnitStock = currentData.stock || 0;
+    let newPalletStock = currentData.palletStock || 0;
+    
+    if (sellingType === 'units') {
+      newUnitStock = (currentData.stock || 0) - orderQuantity;
+    } else if (sellingType === 'pallets') {
+      newPalletStock = (currentData.palletStock || 0) - orderQuantity;
+    }
     
     return {
-      newBaseUnitStock,
+      newUnitStock,
+      newPalletStock,
       decrementInfo
     };
   }
