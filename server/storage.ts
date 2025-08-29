@@ -22,7 +22,7 @@ import {
   teamMembers,
   tabPermissions,
   deliveryAddresses,
-  customerWholesalerRelationships,
+  wholesalerCustomerRelationships,
   type User,
   type UpsertUser,
   type Product,
@@ -65,8 +65,8 @@ import {
   type SelectCustomerProfileUpdateNotification,
   type DeliveryAddress,
   type InsertDeliveryAddress,
-  type CustomerWholesalerRelationship,
-  type InsertCustomerWholesalerRelationship,
+  type WholesalerCustomerRelationship,
+  type InsertWholesalerCustomerRelationship,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
