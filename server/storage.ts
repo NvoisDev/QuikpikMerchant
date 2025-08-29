@@ -1154,7 +1154,7 @@ export class DatabaseStorage implements IStorage {
           const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
           
           // CRITICAL FIX: Use Base Unit Inventory Logic
-          const { InventoryCalculator } = await import('../../shared/inventory-calculator');
+          const { InventoryCalculator } = await import('../shared/inventory-calculator');
           
           const inventoryData = {
             baseUnitStock: (currentProduct as any).baseUnitStock || 0,
@@ -3538,101 +3538,7 @@ export class DatabaseStorage implements IStorage {
     return result[0].count;
   }
 
-  // Tab permission operations
-  async getTabPermissions(wholesalerId: string): Promise<TabPermission[]> {
-    const permissions = await db
-      .select()
-      .from(tabPermissions)
-      .where(eq(tabPermissions.wholesalerId, wholesalerId));
-    
-    return permissions;
-  }
 
-  async updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles?: string[]): Promise<TabPermission> {
-    const existingPermission = await db
-      .select()
-      .from(tabPermissions)
-      .where(
-        and(
-          eq(tabPermissions.wholesalerId, wholesalerId),
-          eq(tabPermissions.tabName, tabName)
-        )
-      );
-
-    if (existingPermission.length > 0) {
-      const [updated] = await db
-        .update(tabPermissions)
-        .set({
-          isRestricted,
-          allowedRoles: allowedRoles || ['owner', 'admin', 'member'],
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(tabPermissions.wholesalerId, wholesalerId),
-            eq(tabPermissions.tabName, tabName)
-          )
-        )
-        .returning();
-      return updated;
-    } else {
-      const [created] = await db
-        .insert(tabPermissions)
-        .values({
-          wholesalerId,
-          tabName,
-          isRestricted,
-          allowedRoles: allowedRoles || ['owner', 'admin', 'member'],
-        })
-        .returning();
-      return created;
-    }
-  }
-
-  async createDefaultTabPermissions(wholesalerId: string): Promise<void> {
-    const defaultTabs = [
-      'dashboard',
-      'products', 
-      'orders',
-      'customers',
-      'campaigns',
-      'analytics',
-      'marketplace',
-      'team-management',
-      'subscription',
-      'settings'
-    ];
-
-    for (const tabName of defaultTabs) {
-      await this.updateTabPermission(wholesalerId, tabName, false, ['owner', 'admin', 'member']);
-    }
-  }
-
-  async checkTabAccess(wholesalerId: string, tabName: string, userRole: string): Promise<boolean> {
-    const [permission] = await db
-      .select()
-      .from(tabPermissions)
-      .where(
-        and(
-          eq(tabPermissions.wholesalerId, wholesalerId),
-          eq(tabPermissions.tabName, tabName)
-        )
-      );
-
-    if (!permission) {
-      // If no permission is set, default to allowing access
-      return true;
-    }
-
-    if (!permission.isRestricted) {
-      // If not restricted, allow access
-      return true;
-    }
-
-    // Check if user role is in allowed roles
-    const allowedRoles = permission.allowedRoles as string[] || [];
-    return allowedRoles.includes(userRole);
-  }
 
   // Gamification operations implementation
   async getUserBadges(userId: string): Promise<UserBadge[]> {
