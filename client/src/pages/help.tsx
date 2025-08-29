@@ -1449,6 +1449,7 @@ A: This display issue has been fixed. All email confirmations now show actual pr
 
 #### When Contacting Support
 Please include:
+- Your account name: Ibk Test
 - Your account email
 - Detailed description of the issue
 - Screenshots if relevant
