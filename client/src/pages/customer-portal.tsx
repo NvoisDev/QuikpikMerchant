@@ -490,6 +490,12 @@ const PaymentFormContent = ({
           if (response.ok) {
             const orderData = await response.json();
             console.log('✅ Order created successfully:', orderData);
+            console.log('🔍 Order response fields:', {
+              orderNumber: orderData.orderNumber,
+              orderId: orderData.orderId,
+              id: orderData.id,
+              success: orderData.success
+            });
             
             // Success callback with order data for thank you page
             // Get accurate values from payment intent metadata
@@ -499,8 +505,11 @@ const PaymentFormContent = ({
             const actualTransactionFee = parseFloat(metadata.customerTransactionFee || '0');
             const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
             
+            // FIXED: Use proper order number from API response
+            const displayOrderNumber = orderData.orderNumber || `Order #${orderData.orderId || orderData.id}`;
+            
             onSuccess({
-              orderNumber: orderData.orderNumber || `Order #${orderData.orderId}`,
+              orderNumber: displayOrderNumber,
               cart: [],
               customerData: {},  
               totalAmount: actualTotal,
@@ -511,10 +520,11 @@ const PaymentFormContent = ({
             
             toast({
               title: "Payment Successful!",
-              description: `Order #${orderData.orderNumber || orderData.id} has been placed successfully. You'll receive a confirmation email shortly.`,
+              description: `${displayOrderNumber} has been placed successfully. You'll receive a confirmation email shortly.`,
             });
           } else {
-            console.error('❌ Order creation failed:', response.status);
+            const errorText = await response.text();
+            console.error('❌ Order creation failed:', response.status, errorText);
             toast({
               title: "Payment Successful!",
               description: "Payment processed successfully. If you don't receive a confirmation email within 5 minutes, please contact the wholesaler.",
@@ -529,7 +539,7 @@ const PaymentFormContent = ({
             const actualTotal = parseFloat(metadata.totalCustomerPays || '0');
             
             onSuccess({
-              orderNumber: `Order #${paymentIntent.id.slice(-8)}`,
+              orderNumber: `Order #${paymentIntent.id.slice(-8)}`, // Fallback - API failed but payment succeeded
               cart: [],
               customerData: {},
               totalAmount: actualTotal,
