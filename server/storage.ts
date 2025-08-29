@@ -1133,17 +1133,8 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`📋 TRANSACTION DEBUG: Processing ${items.length} order items for order ${newOrder.id} (${newOrder.orderNumber})`);
-      
       // Insert order items and reduce stock within transaction
       for (const item of items) {
-        console.log(`📝 INSERTING ORDER ITEM:`, {
-          productId: item.productId,
-          quantity: item.quantity,
-          sellingType: item.sellingType,
-          unitPrice: item.unitPrice
-        });
-        
         // Insert order item
         await tx.insert(orderItems).values({ ...item, orderId: newOrder.id });
         
@@ -1362,87 +1353,13 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(eq(products.id, item.productId));
         
-        // STOCK DECREMENTING: Reduce product stock based on ordered quantity and selling type
-        if (currentProduct) {
-          const orderedQuantity = item.quantity;
-          const sellingType = item.sellingType || 'units'; // Default to units if not specified
-          
-          // Get customer name for stock movement tracking
-          const customer = await trx.select().from(users).where(eq(users.id, orderData.retailerId)).limit(1);
-          const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
-          
-          // CRITICAL FIX: Use Base Unit Inventory Logic
-          const { InventoryCalculator } = await import('../shared/inventory-calculator');
-          
-          const inventoryData = {
-            baseUnitStock: (currentProduct as any).baseUnitStock || 0,
-            quantityInPack: (currentProduct as any).quantityInPack || 1,
-            unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
-          };
-          
-          // Calculate what to subtract from base unit stock
-          const orderResult = InventoryCalculator.processOrder(
-            orderedQuantity,
-            sellingType as 'units' | 'pallets',
-            inventoryData
-          );
-          
-          const newBaseUnitStock = orderResult.newBaseUnitStock;
-          const decrementInfo = orderResult.decrementInfo;
-          
-          // Update base unit stock (single source of truth)
-          await trx
-            .update(products)
-            .set({ 
-              baseUnitStock: newBaseUnitStock,
-              // Update legacy fields for compatibility
-              stock: sellingType === 'units' ? (currentProduct.stock || 0) - orderedQuantity : currentProduct.stock,
-              palletStock: sellingType === 'pallets' ? Math.max(0, (currentProduct.palletStock || 0) - orderedQuantity) : currentProduct.palletStock
-            })
-            .where(eq(products.id, item.productId));
-          
-          // Record stock movement with base unit tracking
-          await trx.insert(stockMovements).values({
-            productId: item.productId,
-            wholesalerId: orderData.wholesalerId,
-            movementType: 'purchase',
-            quantity: -decrementInfo.baseUnitsToSubtract,
-            unitType: 'base_units',
-            stockBefore: inventoryData.baseUnitStock,
-            stockAfter: newBaseUnitStock,
-            reason: `Order sale - ${decrementInfo.conversionDetails}`,
-            orderId: newOrder.id,
-            customerName: customerName
-          });
-          
-          console.log(`📦 BASE UNIT Stock reduced for product ${item.productId}: ${inventoryData.baseUnitStock} → ${newBaseUnitStock} base units`);
-          console.log(`📊 Order conversion: ${decrementInfo.conversionDetails}`);
-          
-          // Calculate derived inventory for warnings
-          const derivedInventory = InventoryCalculator.calculateDerivedInventory({
-            baseUnitStock: newBaseUnitStock,
-            quantityInPack: inventoryData.quantityInPack,
-            unitsPerPallet: inventoryData.unitsPerPallet
-          });
-          
-          // Log warnings based on selling type
-          if (sellingType === 'pallets') {
-            if (derivedInventory.availablePallets <= 5) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${derivedInventory.availablePallets} pallets remaining`);
-            }
-            if (derivedInventory.availablePallets === 0) {
-              console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name}) has no pallets remaining`);
-            }
-          } else {
-            if (newBaseUnitStock <= (currentProduct.lowStockThreshold || 10)) {
-              console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newBaseUnitStock} base units remaining`);
-            }
-            if (newBaseUnitStock === 0) {
-              console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of base unit stock`);
-            }
-          }
-        } else {
-          console.log(`⚠️ Product ${item.productId} not found - cannot reduce stock`);
+        // REMOVED: Legacy stock decrementation system
+        // Stock decrementation is now handled by the Base Unit Inventory System 
+        // in the main createOrder() method to prevent duplication
+        console.log(`📦 Order item added for product ${item.productId}: ${item.quantity} × ${item.sellingType || 'units'}`);
+        
+        if (!currentProduct) {
+          console.log(`⚠️ Product ${item.productId} not found during order creation`);
         }
       }
     }
