@@ -14608,11 +14608,24 @@ The Quikpik Team
       let customer = await storage.getUserByPhone(formattedPhone);
       
       if (customer) {
-        // Update existing customer info if needed
+        // FIXED: Unarchive and update existing customer info if needed
+        const updates: any = {};
         if (email && customer.email !== email) {
-          customer = await storage.updateCustomer(customer.id, { email });
+          updates.email = email;
         }
-        console.log('Using existing customer:', customer);
+        // Always unarchive if customer is archived 
+        if (customer.archived) {
+          updates.archived = false;
+          updates.archivedAt = null;
+          console.log('🔄 Unarchiving existing customer:', customer.id);
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          customer = await storage.updateCustomer(customer.id, updates);
+          console.log('✅ Updated and unarchived existing customer:', customer);
+        } else {
+          console.log('Using existing active customer:', customer);
+        }
         
         // Ensure the wholesaler-customer relationship exists
         const { db } = await import('./db.js');
@@ -14861,8 +14874,8 @@ The Quikpik Team
         return res.status(404).json({ error: 'Customer not found' });
       }
       
-      // Attempt to delete or archive the customer
-      const result = await storage.deleteCustomer(customerId);
+      // Attempt to delete or archive the customer (pass wholesalerId for multi-wholesaler logic)
+      const result = await storage.deleteCustomer(customerId, targetUserId);
       
       if (result.success) {
         res.json({ 
