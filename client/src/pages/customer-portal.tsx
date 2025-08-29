@@ -1494,25 +1494,7 @@ export default function CustomerPortal() {
           sellingType: item.sellingType
         })),
         shippingInfo: {
-          option: (() => {
-            // CRITICAL DEBUG: Log all customer data to understand what we have
-            console.log('🚚 CHECKOUT DEBUG: Customer data analysis:', {
-              customerData,
-              selectedDeliveryAddress: customerData.selectedDeliveryAddress,
-              address: customerData.address,
-              shippingOption,
-              hasSelectedAddress: !!customerData.selectedDeliveryAddress?.addressLine1,
-              hasBasicAddress: !!(customerData.address && customerData.address.trim() !== '')
-            });
-            
-            // RESPECT CUSTOMER CHOICE: Only force delivery if they explicitly selected delivery
-            // Don't auto-force based on address data - let customer choose
-            if (shippingOption === 'delivery') {
-              console.log('🚚 CUSTOMER SELECTED DELIVERY: Respecting explicit delivery choice');
-              return 'delivery';
-            }
-            return shippingOption || 'pickup';
-          })()
+          option: shippingOption || 'pickup'
         }
       };
       
