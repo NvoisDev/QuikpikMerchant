@@ -4591,6 +4591,7 @@ The Quikpik Team`
         let order, wholesaleRef;
         
         try {
+          console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Starting transaction for payment ${paymentIntentId}`);
           const result = await db.transaction(async (trx) => {
             // CRITICAL FIX: Check for existing order WITHIN the transaction for true atomicity
             const existingOrderResult = await trx
@@ -4655,8 +4656,14 @@ The Quikpik Team`
               sellingType: item.sellingType || 'units' // Add missing sellingType column
             }));
 
+            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: About to call createOrderWithTransaction`);
+            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Order data:`, orderData);
+            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: Items:`, orderItemsData);
+            
             // Use transaction-aware storage method with integrity check
             const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItemsData);
+            
+            console.log(`🚨 WEBHOOK TRANSACTION DEBUG: createOrderWithTransaction completed, order ID: ${createdOrder.id}`);
             
             // 🔒 DATA INTEGRITY: Verify all items were saved correctly
             const savedItems = await trx.select().from(orderItems).where(eq(orderItems.orderId, createdOrder.id));

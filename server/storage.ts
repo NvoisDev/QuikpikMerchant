@@ -1332,6 +1332,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrderWithTransaction(trx: any, orderData: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+    console.log(`🔄 TRANSACTION ORDER: Creating order with ${items.length} items`);
+    console.log(`📦 ITEMS: ${items.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`).join(', ')}`);
+    
     // Create order within transaction
     const [newOrder] = await trx
       .insert(orders)
@@ -1341,10 +1344,15 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .returning();
+      
+    console.log(`✅ ORDER CREATED: ID ${newOrder.id}`);
 
     // Create order items with the order ID AND reduce stock
     if (items.length > 0) {
+      console.log(`🔄 PROCESSING: ${items.length} items for stock reduction`);
       for (const item of items) {
+        console.log(`📦 ITEM: ${item.productId}, qty: ${item.quantity}, type: ${item.sellingType}`);
+        
         // Insert order item
         await trx.insert(orderItems).values({ ...item, orderId: newOrder.id });
         
@@ -1355,9 +1363,14 @@ export class DatabaseStorage implements IStorage {
           .where(eq(products.id, item.productId));
         
         if (currentProduct) {
+          console.log(`📦 PRODUCT: ${currentProduct.name} (ID: ${item.productId})`);
+          console.log(`📊 CURRENT STOCK: units: ${currentProduct.stock}, pallets: ${currentProduct.palletStock}`);
+          
           // CRITICAL FIX: Use proper separate stock tracking based on selling type
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;
+          
+          console.log(`🛒 ORDER: ${orderedQuantity} ${sellingType}`);
           
           // Use InventoryCalculator for proper separate stock tracking
           const orderResult = InventoryCalculator.processOrder(orderedQuantity, sellingType, {
@@ -1368,6 +1381,8 @@ export class DatabaseStorage implements IStorage {
           });
           
           const { newUnitStock, newPalletStock } = orderResult;
+          
+          console.log(`📊 NEW STOCK: units: ${newUnitStock}, pallets: ${newPalletStock}`);
           
           // Update SEPARATE stock fields (unit stock and pallet stock)
           await trx
@@ -1394,6 +1409,8 @@ export class DatabaseStorage implements IStorage {
             reason: `Order sale - ${orderedQuantity} ${sellingType}`,
             orderId: newOrder.id
           });
+          
+          console.log(`✅ STOCK MOVEMENT: Recorded ${orderedQuantity} ${sellingType} reduction`);
           
           console.log(`📦 SEPARATE Stock reduced for product ${item.productId}:`);
           if (sellingType === 'pallets') {

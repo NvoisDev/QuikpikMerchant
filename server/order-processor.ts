@@ -224,7 +224,29 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     return existingOrder; // Return existing order instead of creating duplicate
   }
 
-  const order = await storage.createOrder(orderData, orderItems);
+  console.log(`🚨 ORDER PROCESSOR DEBUG: About to call storage.createOrder`);
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Order data:`, orderData);
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Items:`, orderItems.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`));
+  
+  // CRITICAL FIX: Force reliable order creation by using the same transaction-based approach
+  // Import database for transaction consistency
+  const { db } = await import('./db');
+  const { eq } = await import('drizzle-orm');
+  const { orders, orderItems: orderItemsTable } = await import('../shared/schema');
+  
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Using transaction-based order creation for reliability`);
+  
+  const order = await db.transaction(async (trx) => {
+    console.log(`🚨 ORDER PROCESSOR TRANSACTION: Starting transaction`);
+    
+    // Use the reliable createOrderWithTransaction method
+    const createdOrder = await storage.createOrderWithTransaction(trx, orderData, orderItems);
+    
+    console.log(`🚨 ORDER PROCESSOR TRANSACTION: Order created successfully: ${createdOrder.id}`);
+    return createdOrder;
+  });
+  
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Transaction-based order creation completed, order ID: ${order.id}`);
   
   // 🔒 DATA INTEGRITY: Verify all items were saved correctly
   const savedItems = await storage.getOrderItems(order.id);

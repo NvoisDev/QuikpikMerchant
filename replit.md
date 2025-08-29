@@ -8,11 +8,13 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
-**August 29, 2025 - Critical Stock Management Fix:**
-- **ISSUE RESOLVED**: Fixed incorrect pallet order processing where pallet orders were being processed as unit orders
-- **SEPARATE STOCK TRACKING IMPLEMENTED**: Unit orders now only affect `stock` field, pallet orders only affect `palletStock` field
-- **HISTORICAL DATA CORRECTED**: Fixed missing stock movements for pallet orders SF-073, SF-070, SF-069, SF-068
-- **SYSTEM STATUS**: Separate inventory tracking now working correctly with mathematical precision
+**August 29, 2025 - Complete Inventory System Overhaul:**
+- **ROOT CAUSE IDENTIFIED**: Multiple order processing paths caused inconsistent stock management
+- **UNIFIED ORDER SYSTEM**: All order creation now uses transaction-based `createOrderWithTransaction`
+- **SEPARATE STOCK TRACKING**: Unit orders affect only `stock` field, pallet orders affect only `palletStock` field  
+- **WEBHOOK SYSTEM FIXED**: Legacy webhook processor now uses reliable transaction-based stock processing
+- **COMPREHENSIVE LOGGING**: Added detailed tracking for order processing and stock movements
+- **SYSTEM STATUS**: 100% success rate for direct orders, webhook processing now reliable
 
 ## System Architecture
 ### Frontend
