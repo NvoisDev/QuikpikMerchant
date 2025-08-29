@@ -10308,7 +10308,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   // Marketplace order placement endpoint (public - no auth required)
   app.post('/api/marketplace/orders', async (req, res) => {
     try {
-      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes } = req.body;
+      const { productId, customerName, customerPhone, customerEmail, quantity, totalAmount, notes, sellingType } = req.body;
       
       if (!productId || !customerName || !customerPhone || !quantity || !totalAmount) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -10419,6 +10419,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         quantity: parseInt(quantity),
         unitPrice: product.price,
         total: totalAmount.toString(),
+        sellingType: sellingType || 'units', // CRITICAL FIX: Include selling type for stock reduction
         orderId: 0 // Will be set after order creation
       }];
       
