@@ -192,7 +192,20 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     stripePaymentIntentId: paymentIntent.id,
     deliveryAddress: customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null,
     // CRITICAL: Store selected delivery address ID for exact order-address tracking
-    deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' ? parseInt(selectedDeliveryAddressId) : null,
+    deliveryAddressId: await (async () => {
+      if (selectedDeliveryAddressId && selectedDeliveryAddressId !== '') {
+        return parseInt(selectedDeliveryAddressId);
+      }
+      // CRITICAL FIX: If this is a delivery order but no address ID provided, find customer's default address
+      if (fulfillmentType === 'delivery') {
+        const defaultAddress = await storage.getDefaultDeliveryAddress(customer.id, wholesalerId);
+        if (defaultAddress) {
+          console.log(`🏠 AUTO-LINK: Using customer's default delivery address ${defaultAddress.id} for delivery order`);
+          return defaultAddress.id;
+        }
+      }
+      return null;
+    })(),
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
     deliveryCarrier: null, // No carrier needed for simplified delivery system
