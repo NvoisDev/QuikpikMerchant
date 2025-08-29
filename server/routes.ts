@@ -10338,17 +10338,21 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         });
       }
       
-      // Validate quantity against MOQ and stock
-      if (quantity < product.moq) {
-        return res.status(400).json({ 
-          message: `Minimum order quantity is ${product.moq} units` 
-        });
-      }
+      // Validate quantity against MOQ and stock based on selling type
+      const currentSellingType = sellingType || 'units';
       
-      if (quantity > product.stock) {
-        return res.status(400).json({ 
-          message: `Only ${product.stock} units available in stock` 
-        });
+      if (currentSellingType === 'pallets') {
+        // For pallet orders, no MOQ validation needed (1 pallet is valid)
+        // Stock validation will be handled by InventoryCalculator
+      } else {
+        // For unit orders, validate against MOQ
+        if (quantity < product.moq) {
+          return res.status(400).json({ 
+            message: `Minimum order quantity is ${product.moq} units` 
+          });
+        }
+        
+        // Stock validation for units will be handled by InventoryCalculator
       }
       
       // Get or create customer (check by formatted phone first, then by email)
