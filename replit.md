@@ -8,14 +8,14 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
-**August 29, 2025 - Delivery/Collection Order Classification Fixed:**
-- **ISSUE IDENTIFIED**: Orders with delivery addresses were incorrectly saved as "pickup/collection" 
-- **ROOT CAUSE**: Customers provided delivery addresses but didn't explicitly select delivery radio button
-- **COMPREHENSIVE FIX**: Implemented automatic delivery detection when addresses are provided
-- **ADDRESS-BASED DETECTION**: System now forces delivery option when customer provides delivery address
-- **UI IMPROVEMENTS**: Auto-selection of delivery when addresses are chosen
-- **DATA CORRECTION**: Fixed existing orders SF-089, SF-090, SF-091, SF-092 to show correct delivery status
-- **MULTIPLE SAFETY NETS**: Payment creation, checkout flow, and address selection all enforce delivery detection
+**August 29, 2025 - Delivery/Collection Order Classification CORE FIX:**
+- **ROOT CAUSE IDENTIFIED**: Customer delivery addresses were being cleared after each order completion
+- **CORE ISSUE**: selectedDeliveryAddress reset to undefined after order, causing subsequent orders to default to pickup
+- **COMPREHENSIVE SOLUTION**: Preserve customer delivery address preference across multiple orders
+- **SMART DEFAULTS**: Automatically default to delivery option when customer has saved delivery address
+- **BACKEND ENHANCEMENTS**: Automatic delivery address linking and override logic for address data detection
+- **DATA CORRECTION**: Fixed all existing orders (SF-089, SF-090, SF-091, SF-092, SF-095, SF-096) to show correct delivery status
+- **CUSTOMER EXPERIENCE**: Seamless delivery ordering without requiring address re-selection every time
 
 **August 29, 2025 - Complete Inventory System Overhaul (RESOLVED):**
 - **ROOT CAUSE IDENTIFIED**: Multiple order processing paths caused inconsistent stock management

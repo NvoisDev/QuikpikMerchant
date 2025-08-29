@@ -4459,12 +4459,13 @@ export default function CustomerPortal() {
                       // Clear the cart after successful payment
                       setCart([]);
                       
-                      // 🔄 RESET SHIPPING OPTION: Always reset to pickup for next order to prevent errors
-                      console.log('🚚 Resetting shipping option to pickup for next order...');
+                      // 🔄 SMART RESET: Preserve customer's delivery preference for convenience
+                      console.log('🚚 Smart reset: preserving delivery address for next order...');
                       setCustomerData(prev => ({
                         ...prev,
-                        shippingOption: 'pickup',
-                        selectedDeliveryAddress: undefined,
+                        // CORE FIX: Default to delivery if customer has a saved address
+                        shippingOption: prev.selectedDeliveryAddress ? 'delivery' : 'pickup',
+                        // CORE FIX: Keep selectedDeliveryAddress so customer doesn't have to reselect
                         selectedShippingService: undefined
                       }));
                       
