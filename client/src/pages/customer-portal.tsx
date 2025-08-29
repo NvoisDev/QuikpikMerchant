@@ -1476,7 +1476,7 @@ export default function CustomerPortal() {
       
       console.log('🚚 PAYMENT REQUEST: Sending payment intent request with payload:', JSON.stringify(requestPayload, null, 2));
       
-      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      const response = await apiRequest("POST", "/api/marketplace/create-payment-intent", requestPayload);
       
       if (response.ok) {
         const data = await response.json();
