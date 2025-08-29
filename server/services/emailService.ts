@@ -105,7 +105,8 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
             <div class="contact-info">
               <h3 style="margin-top: 0; color: #374151;">Need assistance?</h3>
               <p>We're excited to partner with you. If you have any questions or need help, simply reply to this email.</p>
-              <p><strong>Email:</strong> ${wholesalerEmail}<br>
+              <p><strong>Account:</strong> IBK<br>
+              <strong>Email:</strong> ${wholesalerEmail}<br>
               <strong>Phone:</strong> +447507658669<br>
               <strong>Address:</strong> 58 Casa amouret, Barking, IG118FG, United Kingdom</p>
             </div>
@@ -141,6 +142,7 @@ Access Your Portal: ${portalUrl}
 Need assistance?
 We're excited to partner with you. If you have any questions or need help, simply reply to this email.
 
+Account: IBK
 Email: ${wholesalerEmail}
 Phone: +447507658669
 Address: 58 Casa amouret, Barking, IG118FG, United Kingdom

@@ -14938,7 +14938,7 @@ The Quikpik Team
       }
       
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${wholesalerId}`;
       
       console.log('🧪 Testing welcome messages with:', {
         customerName,
