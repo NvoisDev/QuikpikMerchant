@@ -1469,7 +1469,8 @@ export default function CustomerPortal() {
           state: customerData.state,
           postalCode: customerData.postalCode,
           country: customerData.country || 'United Kingdom',
-          selectedDeliveryAddress: customerData.selectedDeliveryAddress
+          selectedDeliveryAddress: customerData.selectedDeliveryAddress,
+          selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id
         },
         items: cart.map(item => ({
           productId: item.product.id,
@@ -1504,15 +1505,10 @@ export default function CustomerPortal() {
               hasBasicAddress: !!(customerData.address && customerData.address.trim() !== '')
             });
             
-            // CRITICAL FIX: Force delivery if customer has provided delivery address
-            const hasDeliveryAddress = 
-              customerData.selectedDeliveryAddress?.addressLine1 || 
-              (customerData.address && customerData.address.trim() !== '') ||
-              (customerData.city && customerData.city.trim() !== '') ||
-              (customerData.postalCode && customerData.postalCode.trim() !== '');
-            
-            if (hasDeliveryAddress) {
-              console.log('🚚 FORCE DELIVERY: Customer has address info, forcing delivery option');
+            // RESPECT CUSTOMER CHOICE: Only force delivery if they explicitly selected delivery
+            // Don't auto-force based on address data - let customer choose
+            if (shippingOption === 'delivery') {
+              console.log('🚚 CUSTOMER SELECTED DELIVERY: Respecting explicit delivery choice');
               return 'delivery';
             }
             return shippingOption || 'pickup';
@@ -4361,8 +4357,8 @@ export default function CustomerPortal() {
                             postalCode: address?.postalCode || '',
                             // Save complete delivery address object for order
                             selectedDeliveryAddress: address,
-                            // CRITICAL FIX: Automatically set delivery when address is selected
-                            shippingOption: address ? 'delivery' : 'pickup'
+                            // Address selected but let customer choose delivery/pickup explicitly
+                            // Don't auto-set shipping option
                           }));
                           
                           // Auto-create payment intent with correct shipping option
@@ -4459,13 +4455,13 @@ export default function CustomerPortal() {
                       // Clear the cart after successful payment
                       setCart([]);
                       
-                      // 🔄 SMART RESET: Preserve customer's delivery preference for convenience
-                      console.log('🚚 Smart reset: preserving delivery address for next order...');
+                      // 🔄 RESET FOR NEXT ORDER: Clear selection but preserve address data
+                      console.log('🚚 Resetting for next order - customer will choose delivery/pickup explicitly...');
                       setCustomerData(prev => ({
                         ...prev,
-                        // CORE FIX: Default to delivery if customer has a saved address
-                        shippingOption: prev.selectedDeliveryAddress ? 'delivery' : 'pickup',
-                        // CORE FIX: Keep selectedDeliveryAddress so customer doesn't have to reselect
+                        // Reset to no selection - customer chooses explicitly
+                        shippingOption: undefined,
+                        // Keep selectedDeliveryAddress available but don't auto-select delivery
                         selectedShippingService: undefined
                       }));
                       
