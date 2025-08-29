@@ -54,9 +54,10 @@ export function createWelcomeSMSMessage(params: {
   wholesalerName: string;
   wholesalerEmail: string;
   wholesalerPhone?: string;
+  wholesalerAccountName?: string;
   portalUrl: string;
 }): string {
-  const { customerName, wholesalerName, wholesalerEmail, wholesalerPhone, portalUrl } = params;
+  const { customerName, wholesalerName, wholesalerEmail, wholesalerPhone, wholesalerAccountName, portalUrl } = params;
 
   return `Welcome to ${wholesalerName}: You've been onboarded!
 
@@ -66,7 +67,7 @@ Access exclusive wholesale pricing, place orders 24/7, track Orders, and manage 
 
 
 Question?
-Contact name: Ibk Test
+Contact name: ${wholesalerAccountName || 'Ibk Test'}
 ${wholesalerEmail} | ${wholesalerPhone || '07521469170'}
 
 Start ordering today!

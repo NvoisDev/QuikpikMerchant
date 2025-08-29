@@ -67,6 +67,7 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
         wholesalerName,
         wholesalerEmail,
         wholesalerPhone,
+        wholesalerAccountName,
         portalUrl
       });
 
