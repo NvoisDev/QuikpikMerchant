@@ -1193,28 +1193,42 @@ export class DatabaseStorage implements IStorage {
             const unitsPerPallet = (currentProduct as any).unitsPerPallet || 48; // Default 48 units per pallet
             const unitsOrdered = orderedQuantity * unitsPerPallet;
             const currentUnitStock = currentProduct.stock || 0;
-            const newUnitStock = Math.max(0, currentUnitStock - unitsOrdered);
+            
+            // CRITICAL FIX: For pallet orders, ensure unit stock doesn't go negative
+            // If there aren't enough individual units, adjust the calculation to maintain stock integrity
+            let newUnitStock;
+            let adjustedUnitsReduction = unitsOrdered;
+            
+            if (currentUnitStock < unitsOrdered) {
+              // Not enough individual units to cover the full pallet conversion
+              // This is normal - pallet stock and unit stock track different inventory aspects
+              console.log(`📦 PALLET ORDER STOCK ADJUSTMENT: Product ${item.productId} has ${currentUnitStock} individual units but needs ${unitsOrdered} units for ${orderedQuantity} pallet(s). Adjusting unit stock to 0.`);
+              newUnitStock = 0;
+              adjustedUnitsReduction = currentUnitStock; // Only reduce what's actually available
+            } else {
+              newUnitStock = currentUnitStock - unitsOrdered;
+            }
             
             await tx
               .update(products)
               .set({ stock: newUnitStock })
               .where(eq(products.id, item.productId));
               
-            // Record unit stock movement for pallet order
+            // Record unit stock movement for pallet order (using adjusted reduction)
             await tx.insert(stockMovements).values({
               productId: item.productId,
               wholesalerId: order.wholesalerId,
               movementType: 'purchase',
-              quantity: -unitsOrdered, // Negative for stock reduction
+              quantity: -adjustedUnitsReduction, // Use adjusted amount to prevent negative tracking
               unitType: 'units',
               stockBefore: currentUnitStock,
               stockAfter: newUnitStock,
-              reason: `Order sale - ${unitsOrdered} units (${orderedQuantity} pallets @ ${unitsPerPallet} units/pallet)`,
+              reason: `Order sale - ${adjustedUnitsReduction} units (${orderedQuantity} pallets @ ${unitsPerPallet} units/pallet)${adjustedUnitsReduction < unitsOrdered ? ' - adjusted for available stock' : ''}`,
               orderId: newOrder.id,
               customerName: customerName
             });
               
-            console.log(`📦 UNIT Stock also reduced for pallet order: ${currentUnitStock} → ${newUnitStock} units (${unitsOrdered} units from ${orderedQuantity} pallets)`);
+            console.log(`📦 UNIT Stock also reduced for pallet order: ${currentUnitStock} → ${newUnitStock} units (${adjustedUnitsReduction} units from ${orderedQuantity} pallets)${adjustedUnitsReduction < unitsOrdered ? ' - ADJUSTED to prevent negative stock' : ''}`);
             
           } else {
             // For unit orders, reduce regular stock
