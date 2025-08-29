@@ -3922,7 +3922,10 @@ The Quikpik Team`
         status: 'confirmed' // Auto-confirm orders immediately
       });
 
-      const order = await storage.createOrder(orderData, orderItems);
+      // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
+      const order = await db.transaction(async (trx) => {
+        return await storage.createOrderWithTransaction(trx, orderData, orderItems);
+      });
       
       // Get wholesaler and customer details for confirmation email
       const wholesaler = await storage.getUser(wholesalerId);
@@ -10417,7 +10420,10 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         orderId: 0 // Will be set after order creation
       }];
       
-      const order = await storage.createOrder(orderData, orderItems);
+      // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
+      const order = await db.transaction(async (trx) => {
+        return await storage.createOrderWithTransaction(trx, orderData, orderItems);
+      });
       
       // Send confirmation email to customer
       const wholesaler = await storage.getUser(product.wholesalerId);
@@ -10622,27 +10628,31 @@ Please contact the customer to confirm this order.
       const platformFee = subtotal * 0.05;
       const finalTotal = subtotal;
 
-      // Create the order with customer details
-      const order = await storage.createOrder(
-        {
-          orderNumber: await generateOrderNumber(firstProduct.wholesalerId),
-          retailerId: customer.id,
-          wholesalerId: firstProduct.wholesalerId,
-          customerName, // Store customer name
-          customerEmail, // Store customer email 
-          customerPhone, // Store customer phone
-          subtotal: subtotal.toFixed(2),
-          platformFee: platformFee.toFixed(2),
-          total: finalTotal.toFixed(2),
-          status: 'confirmed',
-          deliveryAddress: customerAddress,
-          notes: notes || ''
-        },
-        items.map((item: any) => ({
-          ...item,
-          orderId: 0 // Will be set by the storage layer
-        }))
-      );
+      // Create the order with customer details using transaction-based approach
+      const orderData = {
+        orderNumber: await generateOrderNumber(firstProduct.wholesalerId),
+        retailerId: customer.id,
+        wholesalerId: firstProduct.wholesalerId,
+        customerName, // Store customer name
+        customerEmail, // Store customer email 
+        customerPhone, // Store customer phone
+        subtotal: subtotal.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        total: finalTotal.toFixed(2),
+        status: 'confirmed',
+        deliveryAddress: customerAddress,
+        notes: notes || ''
+      };
+
+      const orderItems = items.map((item: any) => ({
+        ...item,
+        orderId: 0 // Will be set by the storage layer
+      }));
+
+      // CRITICAL FIX: Use transaction-based order creation for reliable stock processing
+      const order = await db.transaction(async (trx) => {
+        return await storage.createOrderWithTransaction(trx, orderData, orderItems);
+      });
 
       // Get wholesaler info for email
       const wholesaler = await storage.getUser(firstProduct.wholesalerId);
