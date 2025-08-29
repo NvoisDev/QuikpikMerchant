@@ -1494,10 +1494,25 @@ export default function CustomerPortal() {
         })),
         shippingInfo: {
           option: (() => {
+            // CRITICAL DEBUG: Log all customer data to understand what we have
+            console.log('🚚 CHECKOUT DEBUG: Customer data analysis:', {
+              customerData,
+              selectedDeliveryAddress: customerData.selectedDeliveryAddress,
+              address: customerData.address,
+              shippingOption,
+              hasSelectedAddress: !!customerData.selectedDeliveryAddress?.addressLine1,
+              hasBasicAddress: !!(customerData.address && customerData.address.trim() !== '')
+            });
+            
             // CRITICAL FIX: Force delivery if customer has provided delivery address
-            if (customerData.selectedDeliveryAddress?.addressLine1 || 
-                (customerData.address && customerData.address.trim() !== '')) {
-              console.log('🚚 FORCE DELIVERY: Customer has address, forcing delivery option');
+            const hasDeliveryAddress = 
+              customerData.selectedDeliveryAddress?.addressLine1 || 
+              (customerData.address && customerData.address.trim() !== '') ||
+              (customerData.city && customerData.city.trim() !== '') ||
+              (customerData.postalCode && customerData.postalCode.trim() !== '');
+            
+            if (hasDeliveryAddress) {
+              console.log('🚚 FORCE DELIVERY: Customer has address info, forcing delivery option');
               return 'delivery';
             }
             return shippingOption || 'pickup';

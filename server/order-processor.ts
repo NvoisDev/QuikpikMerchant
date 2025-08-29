@@ -153,8 +153,15 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     console.log(`🚚 ORDER-PROCESSOR: Customer chose delivery for payment ${paymentIntent.id} - will create DELIVERY order`);
   }
   
-  // Use actual order shipping choice, not saved customer preference
-  const fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
+  // ENHANCED LOGIC: Force delivery if customer has address data, regardless of radio button
+  const hasAddressData = customerAddress && customerAddress !== '{}' && customerAddress !== 'null';
+  let fulfillmentType = shippingInfo.option === 'delivery' ? 'delivery' : 'pickup';
+  
+  // CRITICAL FIX: Override to delivery if customer provided address data
+  if (hasAddressData && fulfillmentType === 'pickup') {
+    console.log(`🚚 BACKEND OVERRIDE: Customer has address data but selected pickup - forcing delivery`);
+    fulfillmentType = 'delivery';
+  }
   
   console.log('🚚 ORDER-PROCESSOR: Using actual order shipping choice:', {
     customerId: customer.id,
