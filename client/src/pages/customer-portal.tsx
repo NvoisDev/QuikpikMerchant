@@ -4333,16 +4333,33 @@ export default function CustomerPortal() {
                     onSuccess={(orderData) => {
                       console.log('🛒 Payment successful, received order data:', orderData);
                       
-                      // Set completed order data for thank you page with current cart state
+                      // Set completed order data for thank you page with backend order items
                       const subtotal = cartStats.subtotal;
                       const shipping = 0; // Delivery arranged directly by supplier
                       const beforeFees = subtotal + shipping;
                       const transactionFee = (beforeFees * 0.055) + 0.50;
                       const totalAmount = beforeFees + transactionFee;
                       
+                      // CRITICAL FIX: Map cart to backend-compatible order items with correct selling types
+                      const orderItems = cart.map(cartItem => ({
+                        product: {
+                          ...cartItem.product,
+                          id: cartItem.product.id,
+                          name: cartItem.product.name,
+                          price: cartItem.product.price,
+                          image: cartItem.product.image,
+                          promoPrice: cartItem.product.promoPrice,
+                          promoActive: cartItem.product.promoActive,
+                          promotionalOffers: cartItem.product.promotionalOffers,
+                          palletPrice: (cartItem.product as any).palletPrice
+                        },
+                        quantity: cartItem.quantity,
+                        sellingType: cartItem.sellingType // Preserve the correct selling type from cart
+                      }));
+                      
                       const orderDataWithCart = {
                         ...orderData,
-                        cart: cart,
+                        cart: orderItems, // Use properly formatted order items instead of raw cart
                         customerData: customerData,
                         wholesaler: wholesaler,
                         // Financial breakdown for ThankYouPage
