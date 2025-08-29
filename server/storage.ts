@@ -1353,13 +1353,30 @@ export class DatabaseStorage implements IStorage {
           .from(products)
           .where(eq(products.id, item.productId));
         
-        // REMOVED: Legacy stock decrementation system
-        // Stock decrementation is now handled by the Base Unit Inventory System 
-        // in the main createOrder() method to prevent duplication
-        console.log(`📦 Order item added for product ${item.productId}: ${item.quantity} × ${item.sellingType || 'units'}`);
-        
-        if (!currentProduct) {
-          console.log(`⚠️ Product ${item.productId} not found during order creation`);
+        if (currentProduct) {
+          // Reduce product stock
+          await trx
+            .update(products)
+            .set({ 
+              stock: sql`${products.stock} - ${item.quantity}`,
+              updatedAt: new Date()
+            })
+            .where(eq(products.id, item.productId));
+          
+          const newStockLevel = currentProduct.stock - item.quantity;
+          console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+          
+          // Track stock movement for auditing
+          console.log(`📦 Stock movement tracked for product ${item.productId}: ${item.quantity} units ordered`);
+          
+          // Check for low stock and log warnings
+          if (newStockLevel <= 10 && currentProduct.stock > 10) {
+            console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
+          } else if (newStockLevel <= 0) {
+            console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+          }
+        } else {
+          console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
         }
       }
     }
