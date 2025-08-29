@@ -879,7 +879,7 @@ export default function Orders() {
                                   ) : order.fulfillmentType === 'pickup' ? (
                                     <div className="flex items-center gap-1">
                                       <Hand className="h-3 w-3 text-green-600" />
-                                      <span className="font-medium text-gray-700">Pick up</span>
+                                      <span className="font-medium text-gray-700">Collection</span>
                                     </div>
                                   ) : (
                                     <span className="font-medium text-gray-500">Not specified</span>
@@ -943,7 +943,8 @@ export default function Orders() {
                           <h3 className="font-semibold text-lg">{order.orderNumber || `Order #${order.id}`}</h3>
                           {getStatusBadge(order.status)}
                           
-                          {/* Fulfillment Type Tags */}
+                          {/* Fulfillment Type Tags - DEBUGGING */}
+                          {console.log('DEBUG: Order fulfillment type:', order.orderNumber, order.fulfillmentType)}
                           {order.fulfillmentType === 'delivery' && (
                             <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
                               <Truck className="h-3 w-3" />
@@ -954,6 +955,13 @@ export default function Orders() {
                             <Badge variant="secondary" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
                               <Hand className="h-3 w-3" />
                               Collection
+                            </Badge>
+                          )}
+                          {/* Show fallback if no fulfillment type */}
+                          {!order.fulfillmentType && (
+                            <Badge variant="outline" className="flex items-center gap-1 bg-gray-50 text-gray-600 border-gray-300">
+                              <AlertCircle className="h-3 w-3" />
+                              No Method
                             </Badge>
                           )}
                           
