@@ -28,7 +28,7 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
     const { customerEmail, customerName, wholesalerName, wholesalerEmail, portalUrl } = params;
     console.log('📧 Sending welcome email to:', customerEmail);
     
-    const subject = `Welcome to ${wholesalerName} - Your Wholesale Portal Access`;
+    const subject = `Welcome to ${wholesalerName}! Your Wholesale Portal is Ready`;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -40,64 +40,82 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f7f9fc; }
           .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; }
           .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
           .header p { margin: 10px 0 0 0; font-size: 16px; opacity: 0.9; }
           .content { padding: 40px 30px; }
-          .welcome-message { background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px; }
-          .features { display: grid; grid-template-columns: 1fr; gap: 15px; margin: 30px 0; }
-          .feature { display: flex; align-items: flex-start; padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; background-color: #f8f9fa; }
-          .feature-icon { width: 40px; height: 40px; background-color: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0; }
-          .feature-content h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; }
-          .feature-content p { margin: 0; font-size: 14px; color: #666; }
-          .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; margin: 30px 0; text-align: center; transition: transform 0.2s; }
+          .welcome-message { background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; text-align: center; transition: transform 0.2s; }
           .cta-button:hover { transform: translateY(-2px); }
-          .contact-info { background-color: #e9ecef; padding: 20px; border-radius: 8px; margin: 30px 0; }
-          .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef; }
+          .contact-info { background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+          .steps { margin: 20px 0; }
+          .step { display: flex; align-items: flex-start; margin-bottom: 15px; }
+          .step-number { background-color: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
           @media (max-width: 600px) {
             .content { padding: 20px; }
-            .features { grid-template-columns: 1fr; }
           }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to ${wholesalerName}!</h1>
-            <p>Your wholesale portal is ready</p>
+            <h1>Welcome to the ${wholesalerName} family!</h1>
+            <p>Your wholesale account has been successfully set up</p>
           </div>
           
           <div class="content">
             <div class="welcome-message">
-              <h2 style="margin-top: 0; color: #667eea;">Hello ${customerName}!</h2>
-              <p>Your account with <strong>${wholesalerName}</strong> is now ready. Access our store to browse products, place orders, and manage your account.</p>
-              <p><strong>To get started:</strong> Visit the portal below and add your phone number to enable SMS notifications and streamlined ordering.</p>
+              <h2 style="margin-top: 0; color: #059669;">Hi ${customerName}!</h2>
+              <p>You now have full access to our catalog, pricing, and seamless ordering system.</p>
+            </div>
+
+            <h3 style="color: #374151; margin-bottom: 15px;">Here's how to get started:</h3>
+            
+            <div class="steps">
+              <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                  <strong>Log in to your portal:</strong><br>
+                  Access your personalized wholesale portal using the link below.
+                </div>
+              </div>
+              
+              <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                  <strong>Explore our products:</strong><br>
+                  Browse our wide range of high-quality products with wholesale pricing.
+                </div>
+              </div>
+              
+              <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                  <strong>Place your first order:</strong><br>
+                  Our simple checkout process makes ordering quick and easy.
+                </div>
+              </div>
             </div>
 
             <div style="text-align: center;">
-              <a href="${portalUrl}" class="cta-button">Access Your Portal Now</a>
+              <a href="${portalUrl}" class="cta-button">Access Your Portal</a>
             </div>
 
             <div class="contact-info">
-              <h3 style="margin-top: 0; color: #333;">Need Help?</h3>
-              <p>Contact us directly:</p>
-              <p><strong>Email:</strong> ${wholesalerEmail}</p>
-              <p><strong>Business:</strong> ${wholesalerName}</p>
+              <h3 style="margin-top: 0; color: #374151;">Need assistance?</h3>
+              <p>We're excited to partner with you. If you have any questions or need help, simply reply to this email.</p>
+              <p><strong>Email:</strong> ${wholesalerEmail}<br>
+              <strong>Phone:</strong> +447507658669<br>
+              <strong>Address:</strong> 58 Casa amouret, Barking, IG118FG, United Kingdom</p>
             </div>
           </div>
           
           <div class="footer">
-            <p>Welcome to the future of B2B commerce! You've been added to ${wholesalerName}'s intelligent wholesale platform.</p>
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef;">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" fill="#10b981" stroke="#065f46" stroke-width="1"/>
-                  <path d="M8 12 L11 15 L16 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span style="color: #666; font-size: 14px;">Powered by <strong style="color: #10b981;">Quikpik</strong></span>
-              </div>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #999;">Transforming B2B Commerce with Intelligence & Value</p>
-              <p style="margin: 5px 0 0 0; font-size: 11px; color: #aaa;">Your portal continuously evolves to maximize your business potential</p>
+            <p style="margin: 0; color: #10b981; font-weight: 600;">Happy ordering,</p>
+            <p style="margin: 5px 0 0 0; font-weight: 600;">The ${wholesalerName} Team</p>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; font-size: 12px; color: #9ca3af;">Powered by Quikpik - B2B Wholesale Platform</p>
             </div>
           </div>
         </div>
@@ -106,22 +124,31 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
     `;
 
     const textContent = `
-Welcome to ${wholesalerName}!
+Welcome to the ${wholesalerName} family!
 
-Hello ${customerName},
+Hi ${customerName}!
 
-Your account with ${wholesalerName} is now ready. Access our store to browse products, place orders, and manage your account.
+Your wholesale account has been successfully set up, and you now have full access to our catalog, pricing, and seamless ordering system.
 
-To get started: Visit the portal below and add your phone number to enable SMS notifications and streamlined ordering.
+Here's how to get started:
+
+1. Log in to your portal: Access your personalized wholesale portal using the link below
+2. Explore our products: Browse our wide range of high-quality products with wholesale pricing  
+3. Place your first order: Our simple checkout process makes ordering quick and easy
 
 Access Your Portal: ${portalUrl}
 
-Need Help?
-Contact us directly:
-Email: ${wholesalerEmail}
-Business: ${wholesalerName}
+Need assistance?
+We're excited to partner with you. If you have any questions or need help, simply reply to this email.
 
-Powered by Quikpik
+Email: ${wholesalerEmail}
+Phone: +447507658669
+Address: 58 Casa amouret, Barking, IG118FG, United Kingdom
+
+Happy ordering,
+The ${wholesalerName} Team
+
+Powered by Quikpik - B2B Wholesale Platform
     `;
 
     await mailService.send({
