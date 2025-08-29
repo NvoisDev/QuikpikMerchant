@@ -14694,7 +14694,7 @@ The Quikpik Team
       
       if (wholesaler) {
         const customerName = `${firstName} ${lastName || ''}`.trim();
-        const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
+        const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
         const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
         
         console.log('Sending welcome messages with params:', {
@@ -14793,7 +14793,7 @@ The Quikpik Team
       }
       
       const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
-      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/store/${targetUserId}`;
+      const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
       const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
       
       console.log('🔄 Manual welcome message request for customer:', customerName);
