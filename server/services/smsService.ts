@@ -66,7 +66,7 @@ Access exclusive wholesale pricing, place orders 24/7, track Orders, and manage 
 
 
 Question?
-Account: Ibk Test
+Contact name: Ibk Test
 ${wholesalerEmail} | ${wholesalerPhone || '07521469170'}
 
 Start ordering today!
