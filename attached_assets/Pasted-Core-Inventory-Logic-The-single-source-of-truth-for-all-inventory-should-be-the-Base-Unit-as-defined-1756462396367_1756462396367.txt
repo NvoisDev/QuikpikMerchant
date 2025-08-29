@@ -1,0 +1,34 @@
+Core Inventory Logic
+The single source of truth for all inventory should be the Base Unit as defined in the "Flexible Unit Configuration" section of your UI. All other quantities, like a pack or a pallet, are simply conversions of this base unit.
+
+Here is how the system should handle the data:
+
+Base Unit Inventory: In your database, each product should have one field that stores the total number of Base Units in stock (e.g., total number of cans, pieces, or bottles). This is the master inventory count.
+
+Conversion Factors: Your system should use the values entered by the wholesaler to calculate the total number of Base Units in each pack and on each pallet.
+
+Base Units per Pack: The value from the Quantity in Pack field.
+
+Base Units per Pallet: The value from the Units Per Pallet field multiplied by the Quantity in Pack value.
+
+Order Processing and Decrement Logic
+When a customer places an order, your system will convert the ordered quantity into Base Units and then subtract that number from the master inventory count.
+
+When a customer orders a pack: The system will find the product's Quantity in Pack and subtract that value from the product's total inventory count.
+
+Example: A customer orders one pack with a Quantity in Pack of 20. The system will subtract 20 from the total Base Unit stock.
+
+When a customer orders a pallet: The system will calculate the total number of Base Units on that pallet and subtract that value from the total inventory.
+
+Example: A customer orders one pallet where Units Per Pallet is 20 and Quantity in Pack is also 20. The system calculates 20 packs * 20 units/pack = 400 units. It will then subtract 400 from the total Base Unit stock.
+
+Key Considerations for the Developer
+Derived Fields: The Pallet Stock field in your UI should not be a standalone field in your database that a user can manually edit. It is a derived value that the system calculates automatically. It should be calculated as Total Base Units in Stock / (Units Per Pallet * Quantity in Pack). This prevents data inconsistencies.
+
+Initial Stock Input: When a wholesaler first adds a product, they should input the total number of Base Units they have in stock. The UI should then automatically calculate and display how many packs and pallets that total represents.
+
+Data Validation: Ensure that Quantity in Pack and Units Per Pallet are required fields and only accept positive integers. This will prevent calculation errors.
+
+UI Clarity: The user interface should clearly state that Units Per Pallet refers to the number of packs on a pallet, not individual units. This is a common point of confusion.
+
+Reporting: All inventory reports and order histories should consistently reference the Base Unit count to prevent confusion and maintain accuracy. You can then add a separate column to show the equivalent number of packs or pallets.

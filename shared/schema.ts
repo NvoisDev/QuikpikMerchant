@@ -345,7 +345,9 @@ export const products = pgTable("products", {
   promotionalOffers: jsonb("promotional_offers").$type<PromotionalOffer[]>().default([]),
   currency: varchar("currency").default("GBP"), // ISO currency code
   moq: integer("moq").notNull().default(1), // minimum order quantity
-  stock: integer("stock").notNull().default(0),
+  // CRITICAL FIX: Base Unit Inventory Logic - Single source of truth
+  baseUnitStock: integer("base_unit_stock").notNull().default(0), // Master inventory count in base units
+  stock: integer("stock").notNull().default(0), // Legacy field for compatibility
   imageUrl: varchar("image_url"), // Primary image (for backward compatibility)
   images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for multiple images
   category: varchar("category"),
@@ -355,12 +357,17 @@ export const products = pgTable("products", {
   minimumBidPrice: decimal("minimum_bid_price", { precision: 10, scale: 2 }), // Lowest acceptable bid price
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   
-  // Pallet selling format fields
+  // Core Inventory Configuration - Following Base Unit Logic
+  quantityInPack: integer("quantity_in_pack").notNull().default(1), // Base units per pack (source of truth)
+  unitsPerPallet: integer("units_per_pallet").notNull().default(1), // Number of PACKS per pallet (not base units)
+  
+  // Selling format and pricing
   sellingFormat: varchar("selling_format").default("units"), // 'units' | 'pallets' | 'both'
   palletPrice: decimal("pallet_price", { precision: 10, scale: 2 }), // Price per pallet
   palletMoq: integer("pallet_moq").default(1), // Minimum order quantity for pallets
-  palletStock: integer("pallet_stock").default(0), // Stock in pallets
-  unitsPerPallet: integer("units_per_pallet").default(1), // How many units per pallet
+  
+  // DEPRECATED: Legacy fields for backward compatibility (will be removed)
+  palletStock: integer("pallet_stock").default(0), // DEPRECATED - derived from baseUnitStock
   palletWeight: decimal("pallet_weight", { precision: 10, scale: 2 }), // Weight per pallet in kg
   unitWeight: decimal("unit_weight", { precision: 10, scale: 2 }), // Weight per unit in kg
   unit_weight: decimal("unit_weight_legacy", { precision: 10, scale: 2 }), // Legacy field for compatibility

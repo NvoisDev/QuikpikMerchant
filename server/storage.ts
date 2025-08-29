@@ -1153,117 +1153,74 @@ export class DatabaseStorage implements IStorage {
           const customer = await tx.select().from(users).where(eq(users.id, order.retailerId)).limit(1);
           const customerName = customer[0] ? `${customer[0].firstName || ''} ${customer[0].lastName || ''}`.trim() || customer[0].businessName || 'Unknown Customer' : 'Unknown Customer';
           
+          // CRITICAL FIX: Use Base Unit Inventory Logic
+          const { InventoryCalculator } = await import('../../shared/inventory-calculator');
+          
+          const inventoryData = {
+            baseUnitStock: (currentProduct as any).baseUnitStock || 0,
+            quantityInPack: (currentProduct as any).quantityInPack || 1,
+            unitsPerPallet: (currentProduct as any).unitsPerPallet || 1
+          };
+          
+          // Calculate what to subtract from base unit stock
+          const orderResult = InventoryCalculator.processOrder(
+            orderedQuantity,
+            sellingType as 'units' | 'pallets',
+            inventoryData
+          );
+          
+          const newBaseUnitStock = orderResult.newBaseUnitStock;
+          const decrementInfo = orderResult.decrementInfo;
+          
+          // Update base unit stock (single source of truth)
+          await tx
+            .update(products)
+            .set({ 
+              baseUnitStock: newBaseUnitStock,
+              // Update legacy fields for compatibility
+              stock: sellingType === 'units' ? (currentProduct.stock || 0) - orderedQuantity : currentProduct.stock,
+              palletStock: sellingType === 'pallets' ? Math.max(0, (currentProduct.palletStock || 0) - orderedQuantity) : currentProduct.palletStock
+            })
+            .where(eq(products.id, item.productId));
+          
+          // Record stock movement with base unit tracking
+          await tx.insert(stockMovements).values({
+            productId: item.productId,
+            wholesalerId: order.wholesalerId,
+            movementType: 'purchase',
+            quantity: -decrementInfo.baseUnitsToSubtract,
+            unitType: 'base_units',
+            stockBefore: inventoryData.baseUnitStock,
+            stockAfter: newBaseUnitStock,
+            reason: `Order sale - ${decrementInfo.conversionDetails}`,
+            orderId: newOrder.id,
+            customerName: customerName
+          });
+          
+          console.log(`📦 BASE UNIT Stock reduced for product ${item.productId}: ${inventoryData.baseUnitStock} → ${newBaseUnitStock} base units`);
+          console.log(`📊 Order conversion: ${decrementInfo.conversionDetails}`);
+          
+          // Calculate derived inventory for warnings
+          const derivedInventory = InventoryCalculator.calculateDerivedInventory({
+            baseUnitStock: newBaseUnitStock,
+            quantityInPack: inventoryData.quantityInPack,
+            unitsPerPallet: inventoryData.unitsPerPallet
+          });
+          
+          // Log warnings based on selling type
           if (sellingType === 'pallets') {
-            // For pallet orders, reduce pallet_stock
-            const currentPalletStock = currentProduct.palletStock || 0;
-            const newPalletStock = Math.max(0, currentPalletStock - orderedQuantity); // Prevent negative stock
-            
-            await tx
-              .update(products)
-              .set({ palletStock: newPalletStock })
-              .where(eq(products.id, item.productId));
-            
-            // Record pallet stock movement
-            await tx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId: order.wholesalerId,
-              movementType: 'purchase',
-              quantity: -orderedQuantity, // Negative for stock reduction
-              unitType: 'pallets',
-              stockBefore: currentPalletStock,
-              stockAfter: newPalletStock,
-              reason: `Order sale - ${orderedQuantity} pallets sold`,
-              orderId: newOrder.id,
-              customerName: customerName
-            });
-            
-            console.log(`📦 PALLET Stock reduced for product ${item.productId}: ${currentPalletStock} → ${newPalletStock} pallets (${orderedQuantity} ordered)`);
-            
-            // Log low stock warning for pallets
-            if (newPalletStock <= ((currentProduct as any).palletLowStockThreshold || 5)) {
-              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newPalletStock} pallets remaining`);
+            if (derivedInventory.availablePallets <= 5) {
+              console.log(`⚠️ LOW PALLET STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${derivedInventory.availablePallets} pallets remaining`);
             }
-            
-            // Log out of stock warning for pallets
-            if (newPalletStock === 0) {
+            if (derivedInventory.availablePallets === 0) {
               console.log(`🚨 OUT OF PALLET STOCK: Product ${item.productId} (${currentProduct.name}) has no pallets remaining`);
             }
-            
-            // Also reduce total unit stock based on pallets sold
-            const unitsPerPallet = (currentProduct as any).unitsPerPallet || 48; // Default 48 units per pallet
-            const unitsOrdered = orderedQuantity * unitsPerPallet;
-            const currentUnitStock = currentProduct.stock || 0;
-            
-            // CRITICAL FIX: For pallet orders, ensure unit stock doesn't go negative
-            // If there aren't enough individual units, adjust the calculation to maintain stock integrity
-            let newUnitStock;
-            let adjustedUnitsReduction = unitsOrdered;
-            
-            if (currentUnitStock < unitsOrdered) {
-              // Not enough individual units to cover the full pallet conversion
-              // This is normal - pallet stock and unit stock track different inventory aspects
-              console.log(`📦 PALLET ORDER STOCK ADJUSTMENT: Product ${item.productId} has ${currentUnitStock} individual units but needs ${unitsOrdered} units for ${orderedQuantity} pallet(s). Adjusting unit stock to 0.`);
-              newUnitStock = 0;
-              adjustedUnitsReduction = currentUnitStock; // Only reduce what's actually available
-            } else {
-              newUnitStock = currentUnitStock - unitsOrdered;
-            }
-            
-            await tx
-              .update(products)
-              .set({ stock: newUnitStock })
-              .where(eq(products.id, item.productId));
-              
-            // Record unit stock movement for pallet order (using adjusted reduction)
-            await tx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId: order.wholesalerId,
-              movementType: 'purchase',
-              quantity: -adjustedUnitsReduction, // Use adjusted amount to prevent negative tracking
-              unitType: 'units',
-              stockBefore: currentUnitStock,
-              stockAfter: newUnitStock,
-              reason: `Order sale - ${adjustedUnitsReduction} units (${orderedQuantity} pallets @ ${unitsPerPallet} units/pallet)${adjustedUnitsReduction < unitsOrdered ? ' - adjusted for available stock' : ''}`,
-              orderId: newOrder.id,
-              customerName: customerName
-            });
-              
-            console.log(`📦 UNIT Stock also reduced for pallet order: ${currentUnitStock} → ${newUnitStock} units (${adjustedUnitsReduction} units from ${orderedQuantity} pallets)${adjustedUnitsReduction < unitsOrdered ? ' - ADJUSTED to prevent negative stock' : ''}`);
-            
           } else {
-            // For unit orders, reduce regular stock
-            const currentStock = currentProduct.stock || 0;
-            const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
-            
-            await tx
-              .update(products)
-              .set({ stock: newStock })
-              .where(eq(products.id, item.productId));
-            
-            // Record unit stock movement
-            await tx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId: order.wholesalerId,
-              movementType: 'purchase',
-              quantity: -orderedQuantity, // Negative for stock reduction
-              unitType: 'units',
-              stockBefore: currentStock,
-              stockAfter: newStock,
-              reason: `Order sale - ${orderedQuantity} units sold`,
-              orderId: newOrder.id,
-              customerName: customerName
-            });
-            
-            console.log(`📦 UNIT Stock reduced for product ${item.productId}: ${currentStock} → ${newStock} units (${orderedQuantity} ordered)`);
-            
-            // Log low stock warning
-            if (newStock <= (currentProduct.lowStockThreshold || 10)) {
-              console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newStock} units remaining`);
+            if (newBaseUnitStock <= (currentProduct.lowStockThreshold || 10)) {
+              console.log(`⚠️ LOW STOCK ALERT: Product ${item.productId} (${currentProduct.name}) now has ${newBaseUnitStock} base units remaining`);
             }
-            
-            // Log out of stock warning  
-            if (newStock === 0) {
-              console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of stock`);
+            if (newBaseUnitStock === 0) {
+              console.log(`🚨 OUT OF STOCK: Product ${item.productId} (${currentProduct.name}) is now out of base unit stock`);
             }
           }
         } else {
