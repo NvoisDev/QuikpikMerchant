@@ -1405,11 +1405,21 @@ export class DatabaseStorage implements IStorage {
           // Track stock movement for auditing
           console.log(`📦 Stock movement tracked for product ${item.productId}: ${orderedQuantity} ${sellingType} ordered`);
           
-          // Check for low stock and log warnings
-          if (newStockLevel <= 10 && currentProduct.stock > 10) {
-            console.log(`⚠️ LOW STOCK ALERT: Product "${currentProduct.name}" now has ${newStockLevel} units remaining!`);
-          } else if (newStockLevel <= 0) {
-            console.log(`🚨 OUT OF STOCK: Product "${currentProduct.name}" is now out of stock!`);
+          // Check for low stock and log warnings based on selling type
+          if (sellingType === 'pallets') {
+            if (newPalletStock <= 5) {
+              console.log(`⚠️ LOW PALLET STOCK ALERT: Product "${currentProduct.name}" now has ${newPalletStock} pallets remaining!`);
+            }
+            if (newPalletStock <= 0) {
+              console.log(`🚨 OUT OF PALLET STOCK: Product "${currentProduct.name}" is now out of pallet stock!`);
+            }
+          } else {
+            if (newUnitStock <= 10 && currentProduct.stock > 10) {
+              console.log(`⚠️ LOW UNIT STOCK ALERT: Product "${currentProduct.name}" now has ${newUnitStock} units remaining!`);
+            }
+            if (newUnitStock <= 0) {
+              console.log(`🚨 OUT OF UNIT STOCK: Product "${currentProduct.name}" is now out of unit stock!`);
+            }
           }
         } else {
           console.log(`⚠️ Product ${item.productId} not found for stock reduction`);
