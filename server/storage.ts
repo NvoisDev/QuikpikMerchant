@@ -2073,7 +2073,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, customerId));
   }
 
-  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string }): Promise<User> {
+  async updateCustomer(customerId: string, updates: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; archived?: boolean; archivedAt?: Date | null }): Promise<User> {
     const updateData: any = {
       updatedAt: new Date()
     };
@@ -2082,6 +2082,8 @@ export class DatabaseStorage implements IStorage {
     if (updates.lastName !== undefined) updateData.lastName = updates.lastName;
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.phoneNumber !== undefined) updateData.phoneNumber = updates.phoneNumber;
+    if (updates.archived !== undefined) updateData.archived = updates.archived;
+    if (updates.archivedAt !== undefined) updateData.archivedAt = updates.archivedAt;
     
     const [updatedUser] = await db
       .update(users)
