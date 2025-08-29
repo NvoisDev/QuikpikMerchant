@@ -876,7 +876,7 @@ export default function Orders() {
                                       <Truck className="h-3 w-3 text-blue-600" />
                                       <span className="font-medium text-gray-700">Delivery</span>
                                     </div>
-                                  ) : order.fulfillmentType === 'collection' || order.fulfillmentType === 'pickup' ? (
+                                  ) : order.fulfillmentType === 'pickup' ? (
                                     <div className="flex items-center gap-1">
                                       <Hand className="h-3 w-3 text-green-600" />
                                       <span className="font-medium text-gray-700">Pick up</span>
@@ -950,7 +950,7 @@ export default function Orders() {
                               Delivery
                             </Badge>
                           )}
-                          {(order.fulfillmentType === 'collection' || order.fulfillmentType === 'pickup') && (
+                          {order.fulfillmentType === 'pickup' && (
                             <Badge variant="secondary" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
                               <Hand className="h-3 w-3" />
                               Collection
@@ -1627,8 +1627,8 @@ function OrderDetailsModal({ order }: { order: Order }) {
                               ) : (
                                 <Truck className="h-3 w-3 text-green-600" />
                               )}
-                              <span className="font-medium text-gray-900 capitalize">
-                                {selectedOrder.fulfillmentType || 'Pickup'}
+                              <span className="font-medium text-gray-900">
+                                {selectedOrder.fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
                               </span>
                             </div>
                           </div>
