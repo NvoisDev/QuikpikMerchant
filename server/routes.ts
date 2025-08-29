@@ -14615,7 +14615,7 @@ The Quikpik Team
         console.log('Using existing customer:', customer);
         
         // Ensure the wholesaler-customer relationship exists
-        const { db } = await import('./db');
+        const { db } = await import('./db.js');
         const { wholesalerCustomerRelationships } = await import('../shared/schema');
         const { and, eq } = await import('drizzle-orm');
         
@@ -14662,7 +14662,7 @@ The Quikpik Team
         });
         
         // Create the wholesaler-customer relationship for multi-wholesaler platform
-        const { db } = await import('./db');
+        const { db } = await import('./db.js');
         const { wholesalerCustomerRelationships } = await import('../shared/schema');
         
         await db.insert(wholesalerCustomerRelationships).values({
