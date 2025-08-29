@@ -932,6 +932,17 @@ export default function CustomerPortal() {
     );
   }
   
+  // Cache invalidation when wholesaler ID changes
+  useEffect(() => {
+    if (wholesalerId) {
+      console.log('🧹 Cache invalidation: Wholesaler ID changed to:', wholesalerId);
+      // Clear all relevant caches when switching wholesalers
+      queryClient.invalidateQueries({ queryKey: ['wholesaler'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer-auth/check'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+    }
+  }, [wholesalerId]);
+
   // Auto-refresh state - enable polling after orders
   const [enableAutoRefresh, setEnableAutoRefresh] = useState(false);
   
@@ -1089,10 +1100,10 @@ export default function CustomerPortal() {
     },
     enabled: !!wholesalerId,
     retry: 1,
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
-    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes - shorter to prevent logo confusion
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: true, // Refresh when window regains focus
+    refetchOnMount: true, // Refresh on component mount
     refetchInterval: false,
     refetchOnReconnect: false,
     refetchIntervalInBackground: false,
