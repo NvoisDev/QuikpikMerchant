@@ -8,6 +8,15 @@ Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
 ## Recent Changes
+**August 29, 2025 - Delivery/Collection Order Classification Fixed:**
+- **ISSUE IDENTIFIED**: Orders with delivery addresses were incorrectly saved as "pickup/collection" 
+- **ROOT CAUSE**: Customers provided delivery addresses but didn't explicitly select delivery radio button
+- **COMPREHENSIVE FIX**: Implemented automatic delivery detection when addresses are provided
+- **ADDRESS-BASED DETECTION**: System now forces delivery option when customer provides delivery address
+- **UI IMPROVEMENTS**: Auto-selection of delivery when addresses are chosen
+- **DATA CORRECTION**: Fixed existing orders SF-089, SF-090, SF-091, SF-092 to show correct delivery status
+- **MULTIPLE SAFETY NETS**: Payment creation, checkout flow, and address selection all enforce delivery detection
+
 **August 29, 2025 - Complete Inventory System Overhaul (RESOLVED):**
 - **ROOT CAUSE IDENTIFIED**: Multiple order processing paths caused inconsistent stock management
 - **UNIFIED ORDER SYSTEM**: All order creation now uses transaction-based `createOrderWithTransaction`

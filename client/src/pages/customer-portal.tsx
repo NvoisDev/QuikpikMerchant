@@ -992,7 +992,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'pickup'
+    shippingOption: 'pickup' // Will be auto-detected if delivery address provided
   });
   
   // Update customer data when authenticated customer becomes available
@@ -1493,7 +1493,15 @@ export default function CustomerPortal() {
           sellingType: item.sellingType
         })),
         shippingInfo: {
-          option: shippingOption || 'pickup'
+          option: (() => {
+            // CRITICAL FIX: Force delivery if customer has provided delivery address
+            if (customerData.selectedDeliveryAddress?.addressLine1 || 
+                (customerData.address && customerData.address.trim() !== '')) {
+              console.log('🚚 FORCE DELIVERY: Customer has address, forcing delivery option');
+              return 'delivery';
+            }
+            return shippingOption || 'pickup';
+          })()
         }
       };
       
