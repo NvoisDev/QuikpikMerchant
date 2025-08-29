@@ -1994,7 +1994,7 @@ The Quikpik Team
           if (wholesaler) {
             const customerName = `${firstName} ${lastName}`.trim();
             const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
-            const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for approved customer ${customerName}`);
             
@@ -4475,7 +4475,7 @@ The Quikpik Team`
             if (wholesaler) {
               const customerName = `${firstName} ${lastName}`.trim();
               const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
-              const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               
@@ -10348,7 +10348,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           if (wholesaler) {
             const customerName = `${firstName} ${lastName}`.trim();
             const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
-            const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+            const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
             
             console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
             
@@ -10572,7 +10572,7 @@ Please contact the customer to confirm this order.
             if (wholesaler) {
               const customerName = `${firstName} ${lastName}`.trim();
               const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
-              const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+              const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
               
               console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
               
@@ -11237,7 +11237,7 @@ Please contact the customer to confirm this order.
               if (wholesaler) {
                 const customerName = `${firstName} ${lastName}`.trim();
                 const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
-                const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+                const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim() || 'Your Wholesale Partner';
                 
                 console.log(`📧 Sending welcome messages for new customer ${customerName} linked to wholesaler ${wholesalerName}`);
                 
@@ -14695,7 +14695,7 @@ The Quikpik Team
       if (wholesaler) {
         const customerName = `${firstName} ${lastName || ''}`.trim();
         const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
-        const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+        const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
         
         console.log('Sending welcome messages with params:', {
           customerName,
@@ -14794,7 +14794,7 @@ The Quikpik Team
       
       const customerName = `${customer.firstName} ${customer.lastName || ''}`.trim();
       const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${targetUserId}`;
-      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       
       console.log('🔄 Manual welcome message request for customer:', customerName);
       
@@ -14907,7 +14907,7 @@ The Quikpik Team
         return res.status(400).json({ error: 'No wholesaler account found' });
       }
       
-      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
       
       const welcomeResult = await sendWelcomeMessages({
@@ -14937,7 +14937,7 @@ The Quikpik Team
         return res.status(400).json({ error: 'Wholesaler not found' });
       }
       
-      const wholesalerName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || wholesaler.businessName || 'Your Wholesale Partner';
+      const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
       const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal`;
       
       console.log('🧪 Testing welcome messages with:', {
