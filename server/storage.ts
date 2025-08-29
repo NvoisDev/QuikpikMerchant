@@ -4148,11 +4148,11 @@ export class DatabaseStorage implements IStorage {
       customerRelationships.map(async (row) => {
         const customerId = row.user.id;
         
-        // Get order stats specific to this wholesaler
+        // Get order stats specific to this wholesaler (net amount after platform fees)
         const orderStats = await db
           .select({
             totalOrders: count(orders.id),
-            totalSpent: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
+            totalSpent: sql<number>`COALESCE(SUM(${orders.total} - COALESCE(${orders.platformFee}, 0)), 0)`,
             lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
           })
           .from(orders)
