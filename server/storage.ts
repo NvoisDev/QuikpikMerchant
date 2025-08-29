@@ -71,6 +71,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, sql, sum, count, or, ilike, isNull } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "./passwordUtils";
+import { InventoryCalculator } from "../shared/inventory-calculator.js";
 
 export interface IStorage {
   // User operations (required for auth)
@@ -1354,20 +1355,55 @@ export class DatabaseStorage implements IStorage {
           .where(eq(products.id, item.productId));
         
         if (currentProduct) {
-          // Reduce product stock
+          // CRITICAL FIX: Use proper separate stock tracking based on selling type
+          const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
+          const orderedQuantity = item.quantity;
+          
+          // Use InventoryCalculator for proper separate stock tracking
+          const orderResult = InventoryCalculator.processOrder(orderedQuantity, sellingType, {
+            stock: currentProduct.stock,
+            palletStock: currentProduct.palletStock,
+            quantityInPack: currentProduct.quantityInPack,
+            unitsPerPallet: currentProduct.unitsPerPallet
+          });
+          
+          const { newUnitStock, newPalletStock } = orderResult;
+          
+          // Update SEPARATE stock fields (unit stock and pallet stock)
           await trx
             .update(products)
             .set({ 
-              stock: sql`${products.stock} - ${item.quantity}`,
+              stock: newUnitStock,
+              palletStock: newPalletStock,
               updatedAt: new Date()
             })
             .where(eq(products.id, item.productId));
           
-          const newStockLevel = currentProduct.stock - item.quantity;
-          console.log(`📦 Stock reduced for product ${item.productId}: ${currentProduct.stock} → ${newStockLevel} units`);
+          // Record stock movement with proper unit type
+          const stockBefore = sellingType === 'pallets' ? (currentProduct.palletStock || 0) : (currentProduct.stock || 0);
+          const stockAfter = sellingType === 'pallets' ? newPalletStock : newUnitStock;
+          
+          await trx.insert(stockMovements).values({
+            productId: item.productId,
+            wholesalerId: orderData.wholesalerId,
+            movementType: 'purchase',
+            quantity: -orderedQuantity, // Negative for stock reduction
+            unitType: sellingType === 'pallets' ? 'pallets' : 'units',
+            stockBefore: stockBefore,
+            stockAfter: stockAfter,
+            reason: `Order sale - ${orderedQuantity} ${sellingType}`,
+            orderId: newOrder.id
+          });
+          
+          console.log(`📦 SEPARATE Stock reduced for product ${item.productId}:`);
+          if (sellingType === 'pallets') {
+            console.log(`📦 Pallet stock: ${currentProduct.palletStock || 0} → ${newPalletStock} pallets`);
+          } else {
+            console.log(`📦 Unit stock: ${currentProduct.stock || 0} → ${newUnitStock} units`);
+          }
           
           // Track stock movement for auditing
-          console.log(`📦 Stock movement tracked for product ${item.productId}: ${item.quantity} units ordered`);
+          console.log(`📦 Stock movement tracked for product ${item.productId}: ${orderedQuantity} ${sellingType} ordered`);
           
           // Check for low stock and log warnings
           if (newStockLevel <= 10 && currentProduct.stock > 10) {
