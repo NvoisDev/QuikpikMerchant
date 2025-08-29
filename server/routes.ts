@@ -14615,7 +14615,8 @@ The Quikpik Team
         console.log('Using existing customer:', customer);
         
         // Ensure the wholesaler-customer relationship exists
-        const multiWholesalerService = new (await import('./services/multiWholesalerService')).MultiWholesalerService();
+        const { MultiWholesalerService } = await import('./services/multiWholesalerService');
+        const multiWholesalerService = new MultiWholesalerService();
         await multiWholesalerService.createWholesalerCustomerRelationship(targetUserId, customer.id);
         console.log('✅ Ensured wholesaler-customer relationship exists for existing customer');
       } else {
@@ -14640,7 +14641,8 @@ The Quikpik Team
         });
         
         // Create the wholesaler-customer relationship for multi-wholesaler platform
-        const multiWholesalerService = new (await import('./services/multiWholesalerService')).MultiWholesalerService();
+        const { MultiWholesalerService } = await import('./services/multiWholesalerService');
+        const multiWholesalerService = new MultiWholesalerService();
         await multiWholesalerService.createWholesalerCustomerRelationship(targetUserId, customer.id);
         console.log('✅ Created wholesaler-customer relationship for multi-wholesaler platform');
       }
