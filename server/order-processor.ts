@@ -65,6 +65,12 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   }
 
   const items = JSON.parse(itemsJson);
+  
+  // ENHANCED LOGGING: Debug quantity processing issue
+  console.log(`🔍 QUANTITY DEBUG: Parsed items from payment metadata:`);
+  items.forEach((item: any, index: number) => {
+    console.log(`   Item ${index + 1}: Product ${item.productId}, Quantity: ${item.quantity}, Selling Type: ${item.sellingType}, Unit Price: ${item.unitPrice}`);
+  });
 
   // Create customer if doesn't exist or update existing one
   let customer = await storage.getUserByPhone(customerPhone);
@@ -224,7 +230,19 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     return existingOrder; // Return existing order instead of creating duplicate
   }
 
+  console.log(`🚀 CALLING storage.createOrder with:`, {
+    orderNumber: orderData.orderNumber,
+    itemCount: orderItems.length,
+    itemDetails: orderItems.map(item => `Product ${item.productId}: ${item.quantity} × ${item.sellingType}`)
+  });
+  
   const order = await storage.createOrder(orderData, orderItems);
+  
+  console.log(`✅ ORDER CREATION RETURNED:`, {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status
+  });
   
   // 🔒 DATA INTEGRITY: Verify all items were saved correctly
   const savedItems = await storage.getOrderItems(order.id);

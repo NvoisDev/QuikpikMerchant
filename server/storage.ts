@@ -1133,8 +1133,17 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
+      console.log(`📋 TRANSACTION DEBUG: Processing ${items.length} order items for order ${newOrder.id} (${newOrder.orderNumber})`);
+      
       // Insert order items and reduce stock within transaction
       for (const item of items) {
+        console.log(`📝 INSERTING ORDER ITEM:`, {
+          productId: item.productId,
+          quantity: item.quantity,
+          sellingType: item.sellingType,
+          unitPrice: item.unitPrice
+        });
+        
         // Insert order item
         await tx.insert(orderItems).values({ ...item, orderId: newOrder.id });
         
