@@ -1352,7 +1352,7 @@ export default function CustomerPortal() {
     if (quantity < minQuantity && availableStock >= minQuantity) {
       toast({
         title: "Minimum Order Required",
-        description: `Minimum order for ${product.name} is ${minQuantity} ${sellingType === "pallets" ? "pallets" : "units"}`,
+        description: `Minimum order for ${product.name} is ${minQuantity} ${sellingType === "pallets" ? "pallets" : "packs"}`,
         variant: "destructive",
       });
       return;
@@ -1370,7 +1370,7 @@ export default function CustomerPortal() {
       return [...prevCart, { product, quantity, sellingType }];
     });
     
-    const unitLabel = sellingType === "pallets" ? "pallets" : "units";
+    const unitLabel = sellingType === "pallets" ? "pallets" : "packs";
     
     // Standard toast message for all products
     toast({
@@ -2681,7 +2681,7 @@ export default function CustomerPortal() {
                                         
                                         {showMOQWarnings[product.id] && (
                                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
-                                            Min: {product.moq} units
+                                            Min: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"}
                                             <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
                                           </div>
                                         )}
@@ -3087,8 +3087,8 @@ export default function CustomerPortal() {
                                     </span>
                                   )}
                                   {product.moq && product.moq > 1 && (
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
-                                      Min: {product.moq} units
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"} required`}>
+                                      Min: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"}
                                     </span>
                                   )}
                                   {/* Stock indicator replaced with enhanced component */}
@@ -3145,7 +3145,7 @@ export default function CustomerPortal() {
                                     {product.stock < product.moq ? (
                                       <>💡 Last {product.stock} units available (normally {product.moq} min)</>
                                     ) : (
-                                      <>💡 Minimum order: {product.moq} units required to add to cart</>
+                                      <>💡 Minimum order: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"} required to add to cart</>
                                     )}
                                   </div>
                                 )}
@@ -3269,7 +3269,7 @@ export default function CustomerPortal() {
                                         
                                         {showMOQWarnings[product.id] && (
                                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
-                                            Min: {product.moq} units
+                                            Min: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"}
                                             <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
                                           </div>
                                         )}
@@ -3521,8 +3521,8 @@ export default function CustomerPortal() {
                                       </span>
                                     )}
                                     {product.moq && product.moq > 1 && (
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} units required`}>
-                                        Min: {product.moq} units
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium" title={`Minimum order: ${product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"} required`}>
+                                        Min: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"}
                                       </span>
                                     )}
                                     {product.stock && (
@@ -3539,7 +3539,7 @@ export default function CustomerPortal() {
                                   {/* MOQ Helper Message for List View */}
                                   {product.moq && product.moq > 1 && (
                                     <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 inline-block">
-                                      💡 Minimum {product.moq} units required
+                                      💡 Minimum {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"} required
                                     </div>
                                   )}
                                 </div>
@@ -3651,7 +3651,7 @@ export default function CustomerPortal() {
                                           
                                           {showMOQWarnings[product.id] && (
                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-20 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 whitespace-nowrap shadow-sm">
-                                              Min: {product.moq} units
+                                              Min: {product.moq} {product.sellingFormat === "pallets" ? "pallets" : "packs"}
                                               <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-100 border-l border-t border-amber-300 rotate-45"></div>
                                             </div>
                                           )}
@@ -4797,7 +4797,7 @@ export default function CustomerPortal() {
                           <div className="flex justify-center space-x-4 text-gray-600 font-medium">
                             <span>
                               Minimum: {selectedModalType === 'units' 
-                                ? `${selectedProductForModal.moq || 1} units`
+                                ? `${selectedProductForModal.moq || 1} packs`
                                 : `${(selectedProductForModal as any).palletMoq || 1} pallets`}
                             </span>
                             <span>
@@ -4805,7 +4805,7 @@ export default function CustomerPortal() {
                                 const availableStock = selectedModalType === 'units' 
                                   ? selectedProductForModal.stock 
                                   : ((selectedProductForModal as any).palletStock || 0);
-                                return `${availableStock} ${selectedModalType === 'units' ? 'units' : 'pallets'}`;
+                                return `${availableStock} ${selectedModalType === 'units' ? 'packs' : 'pallets'}`;
                               })()}
                             </span>
                           </div>
@@ -4822,7 +4822,7 @@ export default function CustomerPortal() {
                             if (availableStock < minQuantity) {
                               return (
                                 <p className="text-amber-600 font-medium">
-                                  ⭐ Last {availableStock} units available! (normally {minQuantity} minimum)
+                                  ⭐ Last {availableStock} {selectedModalType === 'units' ? 'packs' : 'pallets'} available! (normally {minQuantity} minimum)
                                 </p>
                               );
                             }
