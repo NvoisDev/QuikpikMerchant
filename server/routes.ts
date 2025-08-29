@@ -10240,13 +10240,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: "Product not found" });
       }
       
-      console.log('Product weight data debug:', {
+      console.log('STOCK DEBUG - Raw product from database:', {
         productId: product.id,
         name: product.name,
-        unitWeight: product.unitWeight,
-        unit_weight: product.unit_weight,
-        palletWeight: product.palletWeight,
-        pallet_weight: product.pallet_weight
+        stock: product.stock,
+        palletStock: product.palletStock,
+        baseUnitStock: (product as any).baseUnitStock
       });
       
       if (product.id === 23) {
@@ -10260,32 +10259,16 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // CRITICAL FIX: Calculate derived inventory from Base Unit Inventory System
-      const { InventoryCalculator } = await import('../shared/inventory-calculator');
-      
-      const inventoryData = {
-        baseUnitStock: (product as any).baseUnitStock || 0,
-        quantityInPack: (product as any).quantityInPack || 1,
-        unitsPerPallet: (product as any).unitsPerPallet || 1
-      };
-      
-      // Calculate derived inventory values
-      const derivedInventory = InventoryCalculator.calculateDerivedInventory(inventoryData);
-      
-      // Return product with calculated stock values and wholesaler information
+      // SEPARATE STOCK TRACKING: Use actual stock fields directly
+      // Return product with actual separate stock values and wholesaler information
       res.json({
         ...product,
-        // Override legacy stock fields with calculated values from Base Unit Inventory
-        stock: derivedInventory.availablePacks, // Available packs (base units / quantity per pack)
-        palletStock: derivedInventory.availablePallets, // Available pallets (packs / units per pallet)
-        // Include base unit data for transparency
-        baseUnitStock: inventoryData.baseUnitStock,
-        quantityInPack: inventoryData.quantityInPack,
-        unitsPerPallet: inventoryData.unitsPerPallet,
-        // Derived calculations for frontend
-        availablePacks: derivedInventory.availablePacks,
-        availablePallets: derivedInventory.availablePallets,
-        baseUnitsPerPallet: derivedInventory.baseUnitsPerPallet,
+        // Use actual separate stock fields (no calculations needed)
+        stock: product.stock || 0, // Individual units stock
+        palletStock: product.palletStock || 0, // Pallet stock
+        // Legacy compatibility fields
+        availablePacks: product.stock || 0, // For display purposes, show units as "packs"
+        availablePallets: product.palletStock || 0, // Show actual pallet stock
         wholesaler: {
           id: wholesaler.id,
           businessName: wholesaler.businessName || 'Business',
