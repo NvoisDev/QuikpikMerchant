@@ -2005,6 +2005,7 @@ The Quikpik Team
               wholesalerName,
               wholesalerEmail: wholesaler.email || 'support@quikpik.co',
               wholesalerPhone: wholesaler.phoneNumber || '',
+              wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
               portalUrl
             });
             
@@ -4486,6 +4487,7 @@ The Quikpik Team`
                 wholesalerName,
                 wholesalerEmail: wholesaler.email || 'support@quikpik.co',
                 wholesalerPhone: wholesaler.phoneNumber || '',
+                wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
                 portalUrl
               });
               
@@ -14725,6 +14727,7 @@ The Quikpik Team
             wholesalerName,
             wholesalerEmail: wholesaler.email || 'support@quikpik.co',
             wholesalerPhone: wholesaler.phoneNumber,
+            wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
             portalUrl
           });
           
@@ -14917,6 +14920,7 @@ The Quikpik Team
         wholesalerName,
         wholesalerEmail: wholesaler.email || 'support@quikpik.co',
         wholesalerPhone: wholesaler.phoneNumber,
+        wholesalerAccountName: `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK',
         portalUrl
       });
       
@@ -14938,6 +14942,7 @@ The Quikpik Team
       }
       
       const wholesalerName = wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'Your Wholesale Partner';
+      const wholesalerAccountName = `${wholesaler.firstName} ${wholesaler.lastName || ''}`.trim() || 'IBK';
       const portalUrl = `${process.env.REPLIT_DEV_DOMAIN || 'https://quikpik.app'}/customer-portal?wholesaler=${wholesalerId}`;
       
       console.log('🧪 Testing welcome messages with:', {
@@ -14945,7 +14950,8 @@ The Quikpik Team
         customerEmail,
         customerPhone,
         wholesalerName,
-        wholesalerEmail: wholesaler.email
+        wholesalerEmail: wholesaler.email,
+        wholesalerAccountName
       });
       
       const welcomeResult = await sendWelcomeMessages({
@@ -14955,6 +14961,7 @@ The Quikpik Team
         wholesalerName,
         wholesalerEmail: wholesaler.email || 'support@quikpik.co',
         wholesalerPhone: wholesaler.phoneNumber,
+        wholesalerAccountName,
         portalUrl
       });
       

@@ -9,6 +9,7 @@ interface WelcomeMessageParams {
   wholesalerName: string;
   wholesalerEmail: string;
   wholesalerPhone?: string;
+  wholesalerAccountName?: string;
   portalUrl: string;
 }
 
@@ -27,6 +28,7 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
     wholesalerName, 
     wholesalerEmail,
     wholesalerPhone,
+    wholesalerAccountName,
     portalUrl 
   } = params;
 
@@ -45,6 +47,7 @@ export async function sendWelcomeMessages(params: WelcomeMessageParams): Promise
         customerName,
         wholesalerName,
         wholesalerEmail,
+        wholesalerAccountName,
         portalUrl
       });
       result.emailSent = emailSuccess;

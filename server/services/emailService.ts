@@ -12,6 +12,7 @@ interface WelcomeEmailParams {
   customerName: string;
   wholesalerName: string;
   wholesalerEmail: string;
+  wholesalerAccountName?: string;
   portalUrl: string;
 }
 
@@ -25,7 +26,7 @@ interface EmailParams {
 
 export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<boolean> {
   try {
-    const { customerEmail, customerName, wholesalerName, wholesalerEmail, portalUrl } = params;
+    const { customerEmail, customerName, wholesalerName, wholesalerEmail, wholesalerAccountName, portalUrl } = params;
     console.log('📧 Sending welcome email to:', customerEmail);
     
     const subject = `Welcome to ${wholesalerName}! Your Wholesale Portal is Ready`;
@@ -105,7 +106,7 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
             <div class="contact-info">
               <h3 style="margin-top: 0; color: #374151;">Need assistance?</h3>
               <p>We're excited to partner with you. If you have any questions or need help, simply reply to this email.</p>
-              <p><strong>Account:</strong> IBK<br>
+              <p><strong>Account:</strong> ${wholesalerAccountName || 'IBK'}<br>
               <strong>Email:</strong> ${wholesalerEmail}<br>
               <strong>Phone:</strong> +447507658669<br>
               <strong>Address:</strong> 58 Casa amouret, Barking, IG118FG, United Kingdom</p>
@@ -142,7 +143,7 @@ Access Your Portal: ${portalUrl}
 Need assistance?
 We're excited to partner with you. If you have any questions or need help, simply reply to this email.
 
-Account: IBK
+Account: ${wholesalerAccountName || 'IBK'}
 Email: ${wholesalerEmail}
 Phone: +447507658669
 Address: 58 Casa amouret, Barking, IG118FG, United Kingdom
