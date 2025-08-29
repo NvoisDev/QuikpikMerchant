@@ -1024,6 +1024,16 @@ export default function CustomerPortal() {
     }
   }, [showCheckout, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
 
+  // CRITICAL FIX: Auto-detect delivery when address is provided but no shipping option selected
+  useEffect(() => {
+    if (showCheckout && 
+        (!customerData.shippingOption || customerData.shippingOption === 'pickup') && 
+        customerData.selectedDeliveryAddress?.addressLine1) {
+      console.log('🚚 AUTO-DETECT: Customer has delivery address but pickup selected, switching to delivery');
+      setCustomerData(prev => ({ ...prev, shippingOption: 'delivery' }));
+    }
+  }, [showCheckout, customerData.selectedDeliveryAddress, customerData.shippingOption]);
+
   // Personalized welcome microinteraction effect
   useEffect(() => {
     if (authenticatedCustomer && customerOrderStats && isAuthenticated) {
@@ -4327,8 +4337,16 @@ export default function CustomerPortal() {
                             city: address?.city || '',
                             postalCode: address?.postalCode || '',
                             // Save complete delivery address object for order
-                            selectedDeliveryAddress: address
+                            selectedDeliveryAddress: address,
+                            // CRITICAL FIX: Automatically set delivery when address is selected
+                            shippingOption: address ? 'delivery' : 'pickup'
                           }));
+                          
+                          // Auto-create payment intent with correct shipping option
+                          if (address) {
+                            console.log('🚚 AUTO-SELECT: Address selected, automatically creating delivery payment intent');
+                            createPaymentIntentForCheckout('delivery');
+                          }
                         }}
                         compact={true}
                       />
