@@ -7,6 +7,13 @@ Quikpik is a comprehensive B2B wholesale platform designed to empower businesses
 Preferred communication style: Simple, everyday language.
 CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portals. Remove complexity, reduce authentication methods, streamline all features.
 
+## Recent Changes
+**August 29, 2025 - Critical Stock Management Fix:**
+- **ISSUE RESOLVED**: Fixed incorrect pallet order processing where pallet orders were being processed as unit orders
+- **SEPARATE STOCK TRACKING IMPLEMENTED**: Unit orders now only affect `stock` field, pallet orders only affect `palletStock` field
+- **HISTORICAL DATA CORRECTED**: Fixed missing stock movements for pallet orders SF-073, SF-070, SF-069, SF-068
+- **SYSTEM STATUS**: Separate inventory tracking now working correctly with mathematical precision
+
 ## System Architecture
 ### Frontend
 - **Framework**: React 18 with TypeScript, Vite, Tailwind CSS with shadcn/ui.
