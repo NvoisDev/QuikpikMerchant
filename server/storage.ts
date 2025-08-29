@@ -4130,7 +4130,7 @@ export class DatabaseStorage implements IStorage {
   })[]> {
     console.log(`🔒 DATA ISOLATION: Fetching customers for wholesaler ${wholesalerId}`);
     
-    // SIMPLIFIED: Get customers directly through wholesaler_customer_relationships
+    // Get customers directly through wholesaler_customer_relationships
     const customerRelationships = await db
       .select({
         user: users,
@@ -4143,17 +4143,51 @@ export class DatabaseStorage implements IStorage {
         eq(users.archived, false)
       ));
 
-    // Format the results to match expected interface
-    const customers = customerRelationships.map(row => ({
-      ...row.user,
-      groupNames: [] as string[],
-      totalOrders: 0,
-      totalSpent: 0,
-      lastOrderDate: undefined as Date | undefined,
-      groupIds: [] as number[]
-    }));
+    // Calculate wholesaler-specific order statistics for each customer
+    const customersWithStats = await Promise.all(
+      customerRelationships.map(async (row) => {
+        const customerId = row.user.id;
+        
+        // Get order stats specific to this wholesaler
+        const orderStats = await db
+          .select({
+            totalOrders: count(orders.id),
+            totalSpent: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
+            lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
+          })
+          .from(orders)
+          .where(and(
+            eq(orders.retailerId, customerId),
+            eq(orders.wholesalerId, wholesalerId)
+          ));
+        
+        // Get customer group information
+        const groupMemberships = await db
+          .select({
+            groupId: customerGroupMembers.groupId,
+            groupName: customerGroups.name
+          })
+          .from(customerGroupMembers)
+          .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+          .where(and(
+            eq(customerGroupMembers.customerId, customerId),
+            eq(customerGroups.wholesalerId, wholesalerId)
+          ));
 
-    return customers;
+        const stats = orderStats[0] || { totalOrders: 0, totalSpent: 0, lastOrderDate: null };
+        
+        return {
+          ...row.user,
+          groupNames: groupMemberships.map(g => g.groupName),
+          totalOrders: Number(stats.totalOrders),
+          totalSpent: Number(stats.totalSpent),
+          lastOrderDate: stats.lastOrderDate,
+          groupIds: groupMemberships.map(g => g.groupId)
+        };
+      })
+    );
+
+    return customersWithStats;
   }
 
   async getCustomerDetails(customerId: string): Promise<(User & { 
