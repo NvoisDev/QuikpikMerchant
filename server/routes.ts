@@ -10260,9 +10260,32 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         return res.status(404).json({ message: "Wholesaler not found" });
       }
       
-      // Return product with wholesaler information
+      // CRITICAL FIX: Calculate derived inventory from Base Unit Inventory System
+      const { InventoryCalculator } = await import('../shared/inventory-calculator');
+      
+      const inventoryData = {
+        baseUnitStock: (product as any).baseUnitStock || 0,
+        quantityInPack: (product as any).quantityInPack || 1,
+        unitsPerPallet: (product as any).unitsPerPallet || 1
+      };
+      
+      // Calculate derived inventory values
+      const derivedInventory = InventoryCalculator.calculateDerivedInventory(inventoryData);
+      
+      // Return product with calculated stock values and wholesaler information
       res.json({
         ...product,
+        // Override legacy stock fields with calculated values from Base Unit Inventory
+        stock: derivedInventory.availablePacks, // Available packs (base units / quantity per pack)
+        palletStock: derivedInventory.availablePallets, // Available pallets (packs / units per pallet)
+        // Include base unit data for transparency
+        baseUnitStock: inventoryData.baseUnitStock,
+        quantityInPack: inventoryData.quantityInPack,
+        unitsPerPallet: inventoryData.unitsPerPallet,
+        // Derived calculations for frontend
+        availablePacks: derivedInventory.availablePacks,
+        availablePallets: derivedInventory.availablePallets,
+        baseUnitsPerPallet: derivedInventory.baseUnitsPerPallet,
         wholesaler: {
           id: wholesaler.id,
           businessName: wholesaler.businessName || 'Business',
