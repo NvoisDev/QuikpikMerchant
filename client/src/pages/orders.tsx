@@ -943,8 +943,7 @@ export default function Orders() {
                           <h3 className="font-semibold text-lg">{order.orderNumber || `Order #${order.id}`}</h3>
                           {getStatusBadge(order.status)}
                           
-                          {/* Fulfillment Type Tags - DEBUGGING */}
-                          {console.log('DEBUG: Order fulfillment type:', order.orderNumber, order.fulfillmentType)}
+                          {/* Fulfillment Type Tags */}
                           {order.fulfillmentType === 'delivery' && (
                             <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
                               <Truck className="h-3 w-3" />
@@ -957,13 +956,7 @@ export default function Orders() {
                               Collection
                             </Badge>
                           )}
-                          {/* Show fallback if no fulfillment type */}
-                          {!order.fulfillmentType && (
-                            <Badge variant="outline" className="flex items-center gap-1 bg-gray-50 text-gray-600 border-gray-300">
-                              <AlertCircle className="h-3 w-3" />
-                              No Method
-                            </Badge>
-                          )}
+
                           
                           {/* Show shipping status */}
                           {(user?.role === 'wholesaler' || user?.role === 'team_member') && (
