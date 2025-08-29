@@ -1379,12 +1379,25 @@ export default function CustomerPortal() {
     });
   }, [toast, isPreviewMode]);
 
-  // Simplified payment intent creation - no shipping metadata needed
+  // Simplified payment intent creation - automatically detect delivery from address
   const createPaymentIntentForCheckout = useCallback(async (explicitShippingOption?: 'pickup' | 'delivery') => {
-    const shippingOption = explicitShippingOption || customerData.shippingOption;
+    let shippingOption = explicitShippingOption || customerData.shippingOption;
+    
+    // CRITICAL FIX: Auto-detect delivery if customer has provided a real delivery address
+    const hasDeliveryAddress = customerData.selectedDeliveryAddress?.addressLine1 || 
+                              (customerData.address && customerData.address.trim() !== '');
+    
+    if (!explicitShippingOption && hasDeliveryAddress && shippingOption !== 'delivery') {
+      console.log('🚚 AUTO-DETECT: Customer has delivery address, automatically setting to delivery');
+      console.log('🚚 AUTO-DETECT: Address found:', customerData.selectedDeliveryAddress?.addressLine1 || customerData.address);
+      shippingOption = 'delivery';
+      // Update the UI state to match
+      setCustomerData(prev => ({ ...prev, shippingOption: 'delivery' }));
+    }
+    
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     console.log('🚚 CRITICAL FIX: Using explicit shipping option:', explicitShippingOption, 'or current state:', customerData.shippingOption);
-    console.log('🚚 FINAL SHIPPING OPTION USED:', shippingOption);
+    console.log('🚚 AUTO-DETECT: Final shipping option after detection:', shippingOption);
     console.log('🚚 DEBUG: Full customerData at payment creation:', JSON.stringify({
       name: customerData.name,
       phone: customerData.phone,
