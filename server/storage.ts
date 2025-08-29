@@ -1892,46 +1892,83 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async deleteCustomer(customerId: string): Promise<{ success: boolean; archived?: boolean; message: string }> {
+  async deleteCustomer(customerId: string, wholesalerId: string): Promise<{ success: boolean; archived?: boolean; message: string }> {
     try {
-      // Check if customer has any orders
+      // FIXED: Check if customer has orders with THIS SPECIFIC WHOLESALER only
       const customerOrders = await db
         .select({ count: count() })
         .from(orders)
-        .where(eq(orders.retailerId, customerId));
+        .where(and(
+          eq(orders.retailerId, customerId),
+          eq(orders.wholesalerId, wholesalerId)
+        ));
       
-      const hasOrders = customerOrders[0]?.count > 0;
+      const hasOrdersWithThisWholesaler = customerOrders[0]?.count > 0;
       
-      if (hasOrders) {
-        // Archive the customer instead of deleting
+      if (hasOrdersWithThisWholesaler) {
+        // Customer has orders with this wholesaler - only remove relationship, don't touch user record
         await db
-          .update(users)
-          .set({ 
-            archived: true, 
-            archivedAt: new Date() 
-          })
-          .where(eq(users.id, customerId));
-        
-        return {
-          success: true,
-          archived: true,
-          message: 'Customer has existing orders and has been archived instead of deleted'
-        };
-      } else {
-        // Safe to delete - no orders exist
-        await db
-          .delete(customerGroupMembers)
-          .where(eq(customerGroupMembers.customerId, customerId));
-        
-        await db
-          .delete(users)
-          .where(eq(users.id, customerId));
+          .delete(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, customerId),
+            eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+          ));
         
         return {
           success: true,
           archived: false,
-          message: 'Customer deleted successfully'
+          message: 'Customer relationship removed. Customer keeps account and orders with other wholesalers.'
         };
+      } else {
+        // Customer has no orders with this wholesaler - safe to remove relationship
+        // Check if customer has relationships with other wholesalers
+        const otherRelationships = await db
+          .select({ count: count() })
+          .from(wholesalerCustomerRelationships)
+          .where(and(
+            eq(wholesalerCustomerRelationships.customerId, customerId),
+            sql`${wholesalerCustomerRelationships.wholesalerId} != ${wholesalerId}`
+          ));
+          
+        const hasOtherWholesalers = otherRelationships[0]?.count > 0;
+        
+        if (hasOtherWholesalers) {
+          // Customer has other wholesaler relationships - only remove this relationship
+          await db
+            .delete(wholesalerCustomerRelationships)
+            .where(and(
+              eq(wholesalerCustomerRelationships.customerId, customerId),
+              eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+            ));
+            
+          return {
+            success: true,
+            archived: false,
+            message: 'Customer relationship removed. Customer maintains access through other wholesalers.'
+          };
+        } else {
+          // Customer has no other wholesaler relationships - can safely archive user
+          await db
+            .delete(wholesalerCustomerRelationships)
+            .where(and(
+              eq(wholesalerCustomerRelationships.customerId, customerId),
+              eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId)
+            ));
+            
+          await db
+            .update(users)
+            .set({ 
+              archived: true, 
+              archivedAt: new Date() 
+            })
+            .where(eq(users.id, customerId));
+          
+          return {
+            success: true,
+            archived: true,
+            message: 'Customer archived as final wholesaler relationship removed'
+          };
+        }
       }
     } catch (error) {
       console.error('Error in deleteCustomer:', error);
