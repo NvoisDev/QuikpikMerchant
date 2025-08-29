@@ -538,10 +538,16 @@ export default function Customers() {
     mutationFn: (customerId: string) => apiRequest('POST', `/api/customers/${customerId}/send-welcome`),
     onSuccess: (data: any) => {
       const { customerName, welcomeMessages } = data;
-      const { emailSent, whatsappSent, errors } = welcomeMessages;
+      
+      // Safely extract welcome message data with defaults
+      const emailSent = welcomeMessages?.emailSent || false;
+      const smsSent = welcomeMessages?.smsSent || false;
+      const whatsappSent = welcomeMessages?.whatsappSent || false;
+      const errors = welcomeMessages?.errors || [];
       
       let description = `Welcome message sent to ${customerName}:\n`;
       if (emailSent) description += "✓ Email sent successfully\n";
+      if (smsSent) description += "✓ SMS sent successfully\n";
       if (whatsappSent) description += "✓ WhatsApp message sent successfully\n";
       if (errors && errors.length > 0) {
         description += `⚠️ ${errors.join(', ')}`;
@@ -550,7 +556,7 @@ export default function Customers() {
       toast({
         title: "Welcome Message Sent",
         description: description,
-        variant: emailSent || whatsappSent ? "default" : "destructive",
+        variant: emailSent || smsSent || whatsappSent ? "default" : "destructive",
       });
     },
     onError: (error: any) => {
