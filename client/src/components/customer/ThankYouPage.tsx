@@ -308,6 +308,24 @@ export const ThankYouPage = ({
                   </div>
                 </div>
 
+                {/* Delivery Address in Order Details */}
+                {customerData.shippingOption === "delivery" && customerData.selectedDeliveryAddress && (
+                  <div className="border-t pt-4">
+                    <h5 className="font-medium text-gray-900 mb-2">Delivery Address</h5>
+                    <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700">
+                      <div>{customerData.selectedDeliveryAddress.addressLine1}</div>
+                      {customerData.selectedDeliveryAddress.addressLine2 && (
+                        <div>{customerData.selectedDeliveryAddress.addressLine2}</div>
+                      )}
+                      <div>{customerData.selectedDeliveryAddress.city}</div>
+                      <div>{customerData.selectedDeliveryAddress.postalCode}</div>
+                      {customerData.selectedDeliveryAddress.country && (
+                        <div>{customerData.selectedDeliveryAddress.country}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Collection/Delivery Info */}
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h5 className="font-medium text-blue-900 mb-2">
@@ -329,7 +347,7 @@ export const ThankYouPage = ({
                         <div className="bg-white p-3 rounded border border-blue-200 mt-3">
                           <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
                           <div className="text-sm text-gray-700">
-                            <div>{customerData.selectedDeliveryAddress.addressLine1}</div>
+                            <div className="font-medium">{customerData.selectedDeliveryAddress.addressLine1}</div>
                             {customerData.selectedDeliveryAddress.addressLine2 && (
                               <div>{customerData.selectedDeliveryAddress.addressLine2}</div>
                             )}

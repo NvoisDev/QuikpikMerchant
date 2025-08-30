@@ -4420,8 +4420,9 @@ export default function CustomerPortal() {
                         cart: orderItems, // Use properly formatted order items instead of raw cart
                         customerData: {
                           ...customerData,
-                          // Ensure ThankYou page gets the correct shipping option
-                          shippingOption: currentShippingOption
+                          // Ensure ThankYou page gets the correct shipping option and delivery address
+                          shippingOption: currentShippingOption,
+                          selectedDeliveryAddress: customerData.selectedDeliveryAddress
                         },
                         wholesaler: wholesaler,
                         // Financial breakdown for ThankYouPage
