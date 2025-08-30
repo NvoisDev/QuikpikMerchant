@@ -1024,15 +1024,7 @@ export default function CustomerPortal() {
     }
   }, [showCheckout, customerData.shippingOption, clientSecret, isCreatingIntent, cart.length]);
 
-  // CRITICAL FIX: Auto-detect delivery when address is provided but no shipping option selected
-  useEffect(() => {
-    if (showCheckout && 
-        (!customerData.shippingOption || customerData.shippingOption === 'pickup') && 
-        customerData.selectedDeliveryAddress?.addressLine1) {
-      console.log('🚚 AUTO-DETECT: Customer has delivery address but pickup selected, switching to delivery');
-      setCustomerData(prev => ({ ...prev, shippingOption: 'delivery' }));
-    }
-  }, [showCheckout, customerData.selectedDeliveryAddress, customerData.shippingOption]);
+
 
   // Personalized welcome microinteraction effect
   useEffect(() => {
@@ -4255,36 +4247,8 @@ export default function CustomerPortal() {
                           console.log('🚚 RADIO BUTTON: User clicked delivery option');
                           console.log('🚚 DEBUG: Current customerData.shippingOption before change:', customerData.shippingOption);
                           
-                          // Auto-select default delivery address if none is selected
-                          if (!customerData.selectedDeliveryAddress && wholesaler?.id && authenticatedCustomer?.id) {
-                            try {
-                              const response = await fetch(`/api/customer/delivery-addresses/${wholesaler.id}`, {
-                                credentials: 'include'
-                              });
-                              if (response.ok) {
-                                const addresses = await response.json();
-                                const defaultAddress = addresses.find((addr: any) => addr.isDefault);
-                                if (defaultAddress) {
-                                  console.log('🏠 Auto-selecting default delivery address:', defaultAddress);
-                                  setCustomerData(prev => ({
-                                    ...prev,
-                                    shippingOption: 'delivery',
-                                    address: defaultAddress ? `${defaultAddress.addressLine1}${defaultAddress.addressLine2 ? ', ' + defaultAddress.addressLine2 : ''}` : '',
-                                    city: defaultAddress?.city || '',
-                                    postalCode: defaultAddress?.postalCode || '',
-                                    selectedDeliveryAddress: defaultAddress
-                                  }));
-                                } else {
-                                  setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
-                                }
-                              }
-                            } catch (error) {
-                              console.error('🏠 Error fetching delivery addresses:', error);
-                              setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
-                            }
-                          } else {
-                            setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
-                          }
+                          // Simply set delivery option - let customer choose address manually
+                          setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
                           
                           // Save to backend if customer is authenticated
                           if (authenticatedCustomer?.id) {
