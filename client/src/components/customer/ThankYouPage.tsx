@@ -67,11 +67,6 @@ export const ThankYouPage = ({
   onContinueShopping, 
   onViewOrders 
 }: ThankYouPageProps) => {
-  // Debug: Log customer data to see what's being passed
-  console.log('🎉 THANKYOU PAGE: customerData received:', customerData);
-  console.log('🎉 THANKYOU PAGE: selectedDeliveryAddress:', customerData?.selectedDeliveryAddress);
-  console.log('🎉 THANKYOU PAGE: shippingOption:', customerData?.shippingOption);
-
   // Animation states
   const [showConfetti, setShowConfetti] = useState(true);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(true);
@@ -345,14 +340,22 @@ export const ThankYouPage = ({
                             )}
                           </div>
                         </div>
+                      ) : customerData.address && customerData.city ? (
+                        // Fallback: Use individual address fields if selectedDeliveryAddress is missing
+                        <div className="bg-white p-3 rounded border border-blue-200 mt-3">
+                          <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
+                          <div className="text-sm text-gray-700">
+                            <div className="font-medium">{customerData.address}</div>
+                            <div>{customerData.city}</div>
+                            {customerData.postalCode && <div>{customerData.postalCode}</div>}
+                            {customerData.country && <div>{customerData.country}</div>}
+                          </div>
+                        </div>
                       ) : (
-                        <div className="bg-amber-50 p-3 rounded border border-amber-200 mt-3">
-                          <p className="text-sm text-amber-800">
-                            <strong>Debug:</strong> No delivery address found in customerData.
+                        <div className="bg-blue-50 p-3 rounded border border-blue-200 mt-3">
+                          <p className="text-sm text-blue-800">
+                            The supplier will contact you to confirm the delivery address and arrange delivery.
                           </p>
-                          <pre className="text-xs text-amber-700 mt-1 whitespace-pre-wrap">
-                            {JSON.stringify(customerData, null, 2)}
-                          </pre>
                         </div>
                       )}
 
