@@ -4204,27 +4204,38 @@ export default function CustomerPortal() {
                         name="shipping"
                         checked={customerData.shippingOption === 'pickup'}
                         onChange={async () => {
-                          setCustomerData(prev => ({...prev, shippingOption: 'pickup'}));
-                          // Save to backend if customer is authenticated
-                          if (authenticatedCustomer?.id) {
-                            try {
+                          console.log('🚚 PICKUP RADIO: User clicked pickup option');
+                          console.log('🚚 DEBUG: Current shippingOption before change:', customerData.shippingOption);
+                          
+                          try {
+                            // First, update the state immediately
+                            setCustomerData(prev => {
+                              console.log('🚚 STATE UPDATE: Setting shippingOption to pickup');
+                              return {...prev, shippingOption: 'pickup'};
+                            });
+                            
+                            // Then save to backend if authenticated
+                            if (authenticatedCustomer?.id) {
+                              console.log('🚚 BACKEND SAVE: Saving pickup choice for authenticated user');
                               const response = await apiRequest("POST", "/api/customer/shipping-choice", {
                                 customerId: authenticatedCustomer.id,
                                 shippingChoice: 'pickup'
                               });
                               if (response.ok) {
-                                console.log('🚚 Successfully saved pickup choice to backend');
-                                // ✅ CRITICAL FIX: Create payment intent AFTER pickup selection is confirmed
-                                console.log('🚚 Creating payment intent with pickup option after successful save');
-                                await createPaymentIntentForCheckout('pickup');
+                                console.log('🚚 SUCCESS: Pickup choice saved to backend');
+                              } else {
+                                console.error('🚚 ERROR: Failed to save pickup choice to backend');
                               }
-                            } catch (error) {
-                              console.error('🚚 Error saving pickup choice:', error);
+                            } else {
+                              console.log('🚚 GUEST USER: No backend save needed');
                             }
-                          } else {
-                            // ✅ CRITICAL FIX: Create payment intent for guest users too  
-                            console.log('🚚 Creating payment intent with pickup option for guest user');
+                            
+                            // Create payment intent after successful state update
+                            console.log('🚚 PAYMENT INTENT: Creating for pickup option');
                             await createPaymentIntentForCheckout('pickup');
+                            
+                          } catch (error) {
+                            console.error('🚚 PICKUP SELECTION ERROR:', error);
                           }
                         }}
                         className="w-4 h-4 text-emerald-600"
@@ -4244,35 +4255,39 @@ export default function CustomerPortal() {
                         name="shipping"
                         checked={customerData.shippingOption === 'delivery'}
                         onChange={async () => {
-                          console.log('🚚 RADIO BUTTON: User clicked delivery option');
-                          console.log('🚚 DEBUG: Current customerData.shippingOption before change:', customerData.shippingOption);
+                          console.log('🚚 DELIVERY RADIO: User clicked delivery option');
+                          console.log('🚚 DEBUG: Current shippingOption before change:', customerData.shippingOption);
                           
-                          // Simply set delivery option - let customer choose address manually
-                          setCustomerData(prev => ({...prev, shippingOption: 'delivery'}));
-                          
-                          // Save to backend if customer is authenticated
-                          if (authenticatedCustomer?.id) {
-                            try {
+                          try {
+                            // First, update the state immediately
+                            setCustomerData(prev => {
+                              console.log('🚚 STATE UPDATE: Setting shippingOption to delivery');
+                              return {...prev, shippingOption: 'delivery'};
+                            });
+                            
+                            // Then save to backend if authenticated
+                            if (authenticatedCustomer?.id) {
+                              console.log('🚚 BACKEND SAVE: Saving delivery choice for authenticated user');
                               const response = await apiRequest("POST", "/api/customer/shipping-choice", {
                                 customerId: authenticatedCustomer.id,
                                 shippingChoice: 'delivery'
                               });
                               if (response.ok) {
-                                console.log('🚚 Successfully saved delivery choice to backend');
-                                // ✅ CRITICAL FIX: Create payment intent AFTER shipping selection is confirmed
-                                console.log('🚚 Creating payment intent with delivery option after successful save');
-                                await createPaymentIntentForCheckout('delivery');
+                                console.log('🚚 SUCCESS: Delivery choice saved to backend');
+                              } else {
+                                console.error('🚚 ERROR: Failed to save delivery choice to backend');
                               }
-                            } catch (error) {
-                              console.error('🚚 Error saving delivery choice:', error);
+                            } else {
+                              console.log('🚚 GUEST USER: No backend save needed');
                             }
-                          } else {
-                            // ✅ CRITICAL FIX: Create payment intent for guest users too
-                            console.log('🚚 Creating payment intent with delivery option for guest user');
+                            
+                            // Create payment intent after successful state update
+                            console.log('🚚 PAYMENT INTENT: Creating for delivery option');
                             await createPaymentIntentForCheckout('delivery');
+                            
+                          } catch (error) {
+                            console.error('🚚 DELIVERY SELECTION ERROR:', error);
                           }
-                          
-                          console.log('🚚 DEBUG: customerData.shippingOption AFTER setting to delivery:', customerData.shippingOption);
                         }}
                         className="w-4 h-4 text-emerald-600"
                       />
