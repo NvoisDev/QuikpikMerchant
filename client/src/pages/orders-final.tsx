@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck, Camera, Upload } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +115,11 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
       </div>
     </div>
   );
+};
+
+// Helper function to format delivery address lines for display
+const formatDeliveryAddressLines = (address: string): string[] => {
+  return formatDeliveryAddress(address);
 };
 
 export default function OrdersFinal() {
@@ -558,10 +564,17 @@ export default function OrdersFinal() {
                     <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />
                   )}
                   {selectedOrder.deliveryAddress && !selectedOrder.deliveryAddressId && (
-                    <p className="text-sm flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {selectedOrder.deliveryAddress}
-                    </p>
+                    <div className="text-sm">
+                      <div className="flex items-center gap-1 mb-1">
+                        <MapPin className="h-3 w-3" />
+                        <span className="font-medium">Delivery Address:</span>
+                      </div>
+                      <div className="bg-gray-50 p-2 rounded text-xs space-y-1 ml-4">
+                        {formatDeliveryAddressLines(selectedOrder.deliveryAddress).map((line, index) => (
+                          <div key={index}>{line}</div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

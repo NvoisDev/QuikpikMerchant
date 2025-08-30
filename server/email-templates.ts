@@ -1,63 +1,18 @@
 // Email templates for Quikpik platform notifications
 
+import { formatDeliveryAddress, formatDeliveryAddressHTML } from '../shared/utils/address-formatter';
+
 // Helper function to format delivery address for HTML emails
-function formatDeliveryAddress(address: string): string {
+function formatDeliveryAddressForEmail(address: string): string {
   if (!address) return '';
-  
-  try {
-    // If it's a JSON string, parse it first
-    if (address.includes('{')) {
-      const parsed = JSON.parse(address);
-      return [
-        parsed.addressLine1,
-        parsed.addressLine2,
-        parsed.city,
-        parsed.postalCode,
-        parsed.country
-      ].filter(Boolean).join('<br>');
-    }
-    
-    // If it's already a comma-separated string, split and format
-    if (address.includes(',')) {
-      return address.split(',').map(part => part.trim()).filter(Boolean).join('<br>');
-    }
-    
-    // Return as-is if it's a single line
-    return address;
-  } catch (error) {
-    // Fallback: split by comma and join with line breaks
-    return address.split(',').map(part => part.trim()).filter(Boolean).join('<br>');
-  }
+  return formatDeliveryAddressHTML(address);
 }
 
 // Helper function to format delivery address for plain text emails
 function formatDeliveryAddressPlainText(address: string): string {
   if (!address) return '';
-  
-  try {
-    // If it's a JSON string, parse it first
-    if (address.includes('{')) {
-      const parsed = JSON.parse(address);
-      return [
-        parsed.addressLine1,
-        parsed.addressLine2,
-        parsed.city,
-        parsed.postalCode,
-        parsed.country
-      ].filter(Boolean).join('\n');
-    }
-    
-    // If it's already a comma-separated string, split and format
-    if (address.includes(',')) {
-      return address.split(',').map(part => part.trim()).filter(Boolean).join('\n');
-    }
-    
-    // Return as-is if it's a single line
-    return address;
-  } catch (error) {
-    // Fallback: split by comma and join with line breaks
-    return address.split(',').map(part => part.trim()).filter(Boolean).join('\n');
-  }
+  const addressLines = formatDeliveryAddress(address);
+  return addressLines.join('\n');
 }
 
 export interface OrderEmailData {
@@ -147,7 +102,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.customerAddress ? `<p><strong>Address:</strong><br>${formatDeliveryAddress(data.customerAddress)}</p>` : ''}
+            ${data.customerAddress ? `<p><strong>Address:</strong><br>${formatDeliveryAddressForEmail(data.customerAddress)}</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>

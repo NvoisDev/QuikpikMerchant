@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
+import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -67,28 +68,8 @@ interface Order {
 const formatAddress = (addressData?: string): string => {
   if (!addressData) return 'Address not provided';
   
-  try {
-    // Try to parse as JSON first
-    const parsed = JSON.parse(addressData);
-    if (typeof parsed === 'object' && parsed !== null) {
-      // Handle comprehensive address object with multiple possible field names
-      const addressParts = [
-        parsed.street || parsed.property || parsed.address1 || parsed.address,
-        parsed.address2,
-        parsed.town || parsed.city,
-        parsed.county || parsed.state,
-        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip
-      ].filter(part => part && part.trim() !== '');
-      
-      if (addressParts.length > 0) {
-        return addressParts.join(', ');
-      }
-    }
-    return addressData;
-  } catch {
-    // If parsing fails, return as regular string
-    return addressData;
-  }
+  const addressLines = formatDeliveryAddress(addressData);
+  return addressLines.length > 0 ? addressLines.join(', ') : 'Address not provided';
 };
 
 const parseDeliveryAddress = (address: string | undefined): any => {
@@ -240,13 +221,17 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                         </div>
                       );
                     } else {
-                      // Only show fallback if it's not just country information
-                      const addressText = formatAddress(order.deliveryAddress!);
-                      if (addressText && addressText !== "United Kingdom" && addressText !== "UK") {
+                      // Use the shared utility for consistent address formatting
+                      const addressLines = formatDeliveryAddress(order.deliveryAddress!);
+                      if (addressLines.length > 0) {
                         return (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-green-600" />
-                            <div className="text-xs">{addressText}</div>
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-green-600 mt-0.5" />
+                            <div className="text-xs space-y-1">
+                              {addressLines.map((line, index) => (
+                                <div key={index}>{line}</div>
+                              ))}
+                            </div>
                           </div>
                         );
                       }
@@ -269,7 +254,7 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-xs break-words">{item.productName}</div>
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} {item.sellingType || 'units'} × {formatCurrency(item.unitPrice)}
+                    Quantity: {item.quantity} units × {formatCurrency(item.unitPrice)}
                   </div>
                 </div>
                 <div className="text-left sm:text-right flex-shrink-0">

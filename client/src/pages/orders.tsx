@@ -50,34 +50,14 @@ import ShippingIntegration from "@/components/shipping-integration";
 import ShippingQuoteModal from "@/components/shipping-quote-modal";
 import ShippingSettings from "@/pages/shipping-settings";
 import ShippingTracking from "@/pages/shipping-tracking";
+import { formatDeliveryAddress as formatAddressUtil } from "@shared/utils/address-formatter";
 
 // Helper function to format address from JSON string or regular string
 const formatAddress = (addressData?: string): string => {
   if (!addressData) return 'Address not provided';
   
-  try {
-    // Try to parse as JSON first
-    const parsed = JSON.parse(addressData);
-    if (typeof parsed === 'object' && parsed !== null) {
-      // Handle comprehensive address object with multiple possible field names
-      const addressParts = [
-        parsed.street || parsed.property || parsed.address1 || parsed.address,
-        parsed.address2,
-        parsed.town || parsed.city,
-        parsed.county || parsed.state,
-        parsed.postcode || parsed.postalCode || parsed.zipCode || parsed.zip,
-        parsed.country
-      ].filter(part => part && part.trim() !== '');
-      
-      if (addressParts.length > 0) {
-        return addressParts.join(', ');
-      }
-    }
-    return addressData;
-  } catch {
-    // If parsing fails, return as regular string
-    return addressData;
-  }
+  const addressLines = formatAddressUtil(addressData);
+  return addressLines.length > 0 ? addressLines.join(', ') : 'Address not provided';
 };
 
 // Helper function to format delivery address object
@@ -1040,7 +1020,14 @@ export default function Orders() {
                           {order.deliveryAddress && (
                             <div className="flex items-center gap-1 max-w-xs mt-2">
                               <MapPin className="h-3 w-3" />
-                              <span className="truncate text-sm text-muted-foreground">{formatAddress(order.deliveryAddress)}</span>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                {formatAddressUtil(order.deliveryAddress).slice(0, 2).map((line, idx) => (
+                                  <div key={idx} className="truncate">{line}</div>
+                                ))}
+                                {formatAddressUtil(order.deliveryAddress).length > 2 && (
+                                  <div className="text-xs text-gray-400">...</div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1843,7 +1830,11 @@ function OrderDetailsModal({ order }: { order: Order }) {
                           <MapPin className="h-4 w-4" />
                           Delivery Address
                         </h4>
-                        <p className="text-sm text-blue-800">{formatAddress(selectedOrder.deliveryAddress)}</p>
+                        <div className="text-sm text-blue-800 space-y-1">
+                          {formatAddressUtil(selectedOrder.deliveryAddress).map((line, index) => (
+                            <div key={index}>{line}</div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {(selectedOrder.fulfillmentType === 'collection' || selectedOrder.fulfillmentType === 'pickup') && (
