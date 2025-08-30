@@ -1,5 +1,65 @@
 // Email templates for Quikpik platform notifications
 
+// Helper function to format delivery address for HTML emails
+function formatDeliveryAddress(address: string): string {
+  if (!address) return '';
+  
+  try {
+    // If it's a JSON string, parse it first
+    if (address.includes('{')) {
+      const parsed = JSON.parse(address);
+      return [
+        parsed.addressLine1,
+        parsed.addressLine2,
+        parsed.city,
+        parsed.postalCode,
+        parsed.country
+      ].filter(Boolean).join('<br>');
+    }
+    
+    // If it's already a comma-separated string, split and format
+    if (address.includes(',')) {
+      return address.split(',').map(part => part.trim()).filter(Boolean).join('<br>');
+    }
+    
+    // Return as-is if it's a single line
+    return address;
+  } catch (error) {
+    // Fallback: split by comma and join with line breaks
+    return address.split(',').map(part => part.trim()).filter(Boolean).join('<br>');
+  }
+}
+
+// Helper function to format delivery address for plain text emails
+function formatDeliveryAddressPlainText(address: string): string {
+  if (!address) return '';
+  
+  try {
+    // If it's a JSON string, parse it first
+    if (address.includes('{')) {
+      const parsed = JSON.parse(address);
+      return [
+        parsed.addressLine1,
+        parsed.addressLine2,
+        parsed.city,
+        parsed.postalCode,
+        parsed.country
+      ].filter(Boolean).join('\n');
+    }
+    
+    // If it's already a comma-separated string, split and format
+    if (address.includes(',')) {
+      return address.split(',').map(part => part.trim()).filter(Boolean).join('\n');
+    }
+    
+    // Return as-is if it's a single line
+    return address;
+  } catch (error) {
+    // Fallback: split by comma and join with line breaks
+    return address.split(',').map(part => part.trim()).filter(Boolean).join('\n');
+  }
+}
+
 export interface OrderEmailData {
   orderNumber: string;
   customerName: string;
@@ -18,6 +78,7 @@ export interface OrderEmailData {
     quantity: number;
     unitPrice: string;
     total: string;
+    sellingType?: string;
   }>;
   wholesaler: {
     businessName: string;
@@ -86,7 +147,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.customerAddress ? `<p><strong>Address:</strong> ${typeof data.customerAddress === 'string' && data.customerAddress.includes('{') ? data.customerAddress.replace(/[{}":]/g, '').replace(/,/g, ', ') : data.customerAddress}</p>` : ''}
+            ${data.customerAddress ? `<p><strong>Address:</strong><br>${formatDeliveryAddress(data.customerAddress)}</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>
@@ -167,7 +228,7 @@ Fulfillment: ${data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery
 Name: ${data.customerName}
 Email: ${data.customerEmail}
 Phone: ${data.customerPhone}
-${data.customerAddress ? `Address: ${typeof data.customerAddress === 'string' && data.customerAddress.includes('{') ? data.customerAddress.replace(/[{}":]/g, '').replace(/,/g, ', ') : data.customerAddress}` : ''}
+${data.customerAddress ? `Address:\n${formatDeliveryAddressPlainText(data.customerAddress)}` : ''}
 
 🛍️ ORDER ITEMS
 ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} ${item.sellingType === 'pallets' ? 'pallet(s)' : 'units'} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}
