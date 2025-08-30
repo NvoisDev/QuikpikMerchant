@@ -1635,6 +1635,69 @@ function OrderDetailsModal({ order }: { order: Order }) {
                           </div>
                         </div>
                       </div>
+
+                      {/* Customer Information */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                          <User className="h-4 w-4 mr-2 text-blue-600" />
+                          Your Information
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="text-gray-600">Name: </span>
+                            <span className="font-medium text-gray-900">
+                              {[selectedOrder.retailer?.firstName, selectedOrder.retailer?.lastName].filter(Boolean).join(' ') || 'Not provided'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Email: </span>
+                            <span className="font-medium text-gray-900 underline text-blue-600">
+                              {selectedOrder.retailer?.email || 'Not provided'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Phone: </span>
+                            <span className="font-medium text-gray-900 underline text-blue-600">
+                              {selectedOrder.retailer?.phoneNumber || selectedOrder.retailer?.phone || 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delivery Address Section */}
+                      {selectedOrder.fulfillmentType === 'delivery' && (
+                        <div className="bg-white rounded-lg p-4 shadow-sm">
+                          <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                            <MapPin className="h-4 w-4 mr-2 text-green-600" />
+                            Delivery Address
+                          </h3>
+                          <div className="text-sm text-gray-700">
+                            {customerDeliveryAddress ? (
+                              <div className="space-y-1">
+                                {customerDeliveryAddress.addressLine1 && (
+                                  <div className="font-medium">{customerDeliveryAddress.addressLine1}</div>
+                                )}
+                                {customerDeliveryAddress.addressLine2 && (
+                                  <div>{customerDeliveryAddress.addressLine2}</div>
+                                )}
+                                {customerDeliveryAddress.city && (
+                                  <div>{customerDeliveryAddress.city}</div>
+                                )}
+                                {customerDeliveryAddress.postalCode && (
+                                  <div>{customerDeliveryAddress.postalCode}</div>
+                                )}
+                                {customerDeliveryAddress.country && (
+                                  <div>{customerDeliveryAddress.country}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-gray-500 italic">
+                                No delivery address available
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
