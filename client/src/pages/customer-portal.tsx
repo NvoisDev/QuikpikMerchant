@@ -992,7 +992,7 @@ export default function CustomerPortal() {
     postalCode: '',
     country: '',
     notes: '',
-    shippingOption: 'pickup' // Will be auto-detected if delivery address provided
+    shippingOption: undefined // Customer must explicitly choose pickup or delivery
   });
   
   // Update customer data when authenticated customer becomes available
@@ -1005,8 +1005,8 @@ export default function CustomerPortal() {
         email: authenticatedCustomer.email || 'mogunjemilua@gmail.com',
         phone: authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550',
         businessName: authenticatedCustomer.businessName || '',
-        // CRITICAL FIX: Explicitly preserve shipping selection to prevent override
-        shippingOption: prevData.shippingOption || 'pickup'
+        // CRITICAL FIX: Preserve shipping selection - don't default to pickup
+        shippingOption: prevData.shippingOption
       }));
     }
   }, [authenticatedCustomer]); // CRITICAL FIX: Remove customerData fields from dependency array to prevent loops
@@ -4202,7 +4202,12 @@ export default function CustomerPortal() {
 
                 {/* Shipping Options */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold">Delivery Options</h3>
+                  <h3 className="font-semibold">
+                    Delivery Options 
+                    {!customerData.shippingOption && (
+                      <span className="text-red-500 ml-2 text-sm">*Required</span>
+                    )}
+                  </h3>
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <input
