@@ -4385,10 +4385,17 @@ export default function CustomerPortal() {
                         sellingType: cartItem.sellingType // Preserve the correct selling type from cart
                       }));
                       
+                      // CRITICAL FIX: Capture current shipping option before resetting
+                      const currentShippingOption = customerData.shippingOption;
+                      
                       const orderDataWithCart = {
                         ...orderData,
                         cart: orderItems, // Use properly formatted order items instead of raw cart
-                        customerData: customerData,
+                        customerData: {
+                          ...customerData,
+                          // Ensure ThankYou page gets the correct shipping option
+                          shippingOption: currentShippingOption
+                        },
                         wholesaler: wholesaler,
                         // Financial breakdown for ThankYouPage
                         subtotal: subtotal,
