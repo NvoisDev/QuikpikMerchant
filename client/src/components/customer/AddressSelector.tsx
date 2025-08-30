@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +71,14 @@ export function AddressSelector({
   // Get default address if no address is selected
   const defaultAddress = addresses.find(addr => addr.isDefault);
   const displayAddress = selectedAddress || defaultAddress;
+
+  // Auto-select default address when available and no address is currently selected
+  useEffect(() => {
+    if (defaultAddress && !selectedAddress && addresses.length > 0) {
+      console.log('🏠 AUTO-SELECTING: Default address found, auto-selecting for customer convenience:', defaultAddress.addressLine1);
+      onAddressSelect(defaultAddress);
+    }
+  }, [defaultAddress, selectedAddress, onAddressSelect, addresses.length]);
 
   const handleAddressSelect = (address: DeliveryAddress) => {
     onAddressSelect(address);

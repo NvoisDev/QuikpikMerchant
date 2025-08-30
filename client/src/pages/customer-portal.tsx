@@ -4330,8 +4330,8 @@ export default function CustomerPortal() {
                             postalCode: address?.postalCode || '',
                             // Save complete delivery address object for order
                             selectedDeliveryAddress: address,
-                            // Address selected but let customer choose delivery/pickup explicitly
-                            // Don't auto-set shipping option
+                            // Auto-set shipping option to delivery when address is selected
+                            shippingOption: address ? 'delivery' : prev.shippingOption
                           }));
                           
                           // Auto-create payment intent with correct shipping option
