@@ -1386,7 +1386,23 @@ export default function CustomerPortal() {
     // CRITICAL FIX: Use explicit shipping option only - no auto-detection
     let shippingOption = explicitShippingOption || customerData.shippingOption;
     
-    console.log('🚚 PAYMENT INTENT: Using shipping option from radio buttons:', shippingOption);
+    console.log('🚚 PAYMENT INTENT: Input values:', {
+      explicitShippingOption,
+      customerDataShippingOption: customerData.shippingOption,
+      finalShippingOption: shippingOption
+    });
+    
+    // CRITICAL FIX: Don't allow undefined shipping option
+    if (!shippingOption) {
+      console.error('🚚 ERROR: No shipping option provided - this should not happen');
+      toast({
+        title: "Please select delivery option",
+        description: "You must choose pickup or delivery before checkout",
+        variant: "destructive",
+      });
+      setIsCreatingIntent(false);
+      return;
+    }
     
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     console.log('🚚 CRITICAL FIX: Using explicit shipping option:', explicitShippingOption, 'or current state:', customerData.shippingOption);
@@ -1477,7 +1493,7 @@ export default function CustomerPortal() {
           sellingType: item.sellingType
         })),
         shippingInfo: {
-          option: shippingOption || 'pickup'
+          option: shippingOption
         }
       };
       
