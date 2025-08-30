@@ -4718,7 +4718,9 @@ The Quikpik Team`
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
-              address: typeof customerAddress === 'string' ? customerAddress : JSON.parse(customerAddress).address
+              address: selectedDeliveryAddress ? 
+                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? '\n' + selectedDeliveryAddress.addressLine2 : ''}\n${selectedDeliveryAddress.city}\n${selectedDeliveryAddress.postalCode}\n${selectedDeliveryAddress.country || 'United Kingdom'}` : 
+                customerAddress
             }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
 
@@ -4773,8 +4775,9 @@ The Quikpik Team`
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              customerAddress: typeof customerAddress === 'string' ? customerAddress : 
-                (customerAddress ? JSON.stringify(customerAddress) : undefined),
+              customerAddress: selectedDeliveryAddress ? 
+                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? '\n' + selectedDeliveryAddress.addressLine2 : ''}\n${selectedDeliveryAddress.city}\n${selectedDeliveryAddress.postalCode}\n${selectedDeliveryAddress.country || 'United Kingdom'}` : 
+                customerAddress,
               total: correctTotal,
               subtotal: productSubtotal,
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),

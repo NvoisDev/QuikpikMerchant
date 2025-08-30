@@ -287,8 +287,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       transactionFee: parseFloat(customerTransactionFee || '0'),
       totalPaid: parseFloat(totalCustomerPays || '0'),
       wholesalerName: wholesaler?.businessName || wholesaler?.firstName || 'Your Wholesaler',
-      shippingAddress: typeof customerAddress === 'string' ? customerAddress : 
-        (customerAddress ? Object.values(customerAddress).join(', ') : undefined),
+      shippingAddress: (customerAddress && typeof customerAddress === 'object') ? 
+        `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
+        customerAddress,
       estimatedDelivery: undefined // Can be enhanced with shipping data later
     };
 
@@ -336,8 +337,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerName,
         customerEmail: customerEmail || '',
         customerPhone,
-        customerAddress: typeof customerAddress === 'string' ? customerAddress : 
-          (customerAddress ? JSON.stringify(customerAddress) : undefined),
+        customerAddress: (customerAddress && typeof customerAddress === 'object') ? 
+          `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
+          customerAddress,
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
