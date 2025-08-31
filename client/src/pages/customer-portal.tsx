@@ -1463,11 +1463,12 @@ export default function CustomerPortal() {
           name: customerData.name,
           email: customerData.email,
           phone: customerData.phone,
-          address: customerData.address,
-          city: customerData.city,
-          state: customerData.state,
-          postalCode: customerData.postalCode,
-          country: customerData.country || 'United Kingdom',
+          // CRITICAL FIX: Use selectedDeliveryAddress data if available, otherwise fall back to individual fields
+          address: customerData.selectedDeliveryAddress?.addressLine1 || customerData.address,
+          city: customerData.selectedDeliveryAddress?.city || customerData.city,
+          state: customerData.selectedDeliveryAddress?.state || customerData.state,
+          postalCode: customerData.selectedDeliveryAddress?.postalCode || customerData.postalCode,
+          country: customerData.selectedDeliveryAddress?.country || customerData.country || 'United Kingdom',
           selectedDeliveryAddress: customerData.selectedDeliveryAddress,
           selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id
         },
