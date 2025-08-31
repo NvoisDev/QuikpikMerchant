@@ -353,7 +353,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
         wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
         shippingTotal: '0.00', // No shipping costs
-        fulfillmentType: fulfillmentType, // Use actual fulfillment type from shipping choice
+        fulfillmentType: 'pickup',
         items: enrichedItemsForEmail,
         wholesaler: {
           businessName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`,
