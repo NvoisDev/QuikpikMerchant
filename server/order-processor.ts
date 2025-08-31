@@ -238,7 +238,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   console.log(`🚨 ORDER PROCESSOR DEBUG: About to call storage.createOrder`);
   console.log(`🚨 ORDER PROCESSOR DEBUG: Order data:`, orderData);
-  console.log(`🚨 ORDER PROCESSOR DEBUG: Items:`, orderItems.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`));
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Items:`, orderItems.map((i: any) => `${i.productId}:${i.quantity}:${i.sellingType}`));
   
   // CRITICAL FIX: Force reliable order creation by using the same transaction-based approach
   // Import database for transaction consistency
@@ -312,13 +312,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   }
 
   // Send WhatsApp notification to wholesaler with wholesale reference
-  if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
+  if (wholesaler && (wholesaler as any).twilioAuthToken && (wholesaler as any).twilioPhoneNumber) {
     const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
     const message = `🎉 New Order Received!\n\nOrder: ${order.orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
     
     try {
-      const { whatsappService } = await import('./whatsapp');
-      await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
+      // Note: WhatsApp service currently disabled - focus on email confirmations
+      console.log('📱 WhatsApp notification would be sent (service currently disabled):', message);
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
     }
