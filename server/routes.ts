@@ -1697,6 +1697,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wholesalerPhone: wholesalerUser.businessPhone || ''
         } : null;
 
+        // Get delivery address details if deliveryAddressId exists
+        let deliveryAddressDetails = null;
+        if (order.deliveryAddressId) {
+          try {
+            const address = await storage.getDeliveryAddress(order.deliveryAddressId);
+            if (address) {
+              deliveryAddressDetails = {
+                address: address.addressLine1 + (address.addressLine2 ? `, ${address.addressLine2}` : ''),
+                city: address.city,
+                state: address.state || '',
+                postalCode: address.postalCode,
+                country: address.country || 'United Kingdom'
+              };
+              console.log(`📍 Populated delivery address for order ${order.orderNumber}: ${address.addressLine1}, ${address.city}`);
+            }
+          } catch (error) {
+            console.error(`❌ Failed to fetch delivery address ${order.deliveryAddressId} for order ${order.orderNumber}:`, error);
+          }
+        }
+
         return {
           ...order,
           items: items.map(item => ({
@@ -1711,7 +1731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
             email: wholesalerDetails.wholesalerEmail || '',
             phone: wholesalerDetails.wholesalerPhone || '',
-          } : null
+          } : null,
+          // Pass delivery address details for later use
+          deliveryAddressDetails
         };
       }));
       
@@ -1756,6 +1778,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerEmail: order.customerEmail,
           deliveryAddress: order.deliveryAddress,
           deliveryAddressId: order.deliveryAddressId,
+          // Populate customer data with actual delivery address if available
+          customerData: order.deliveryAddressDetails ? {
+            name: order.customerName || 'Customer',
+            email: order.customerEmail || '',
+            phone: order.customerPhone || '',
+            address: order.deliveryAddressDetails.address,
+            city: order.deliveryAddressDetails.city,
+            state: order.deliveryAddressDetails.state,
+            postalCode: order.deliveryAddressDetails.postalCode,
+            country: order.deliveryAddressDetails.country
+          } : {
+            name: order.customerName || 'Customer',
+            email: order.customerEmail || '',
+            phone: order.customerPhone || '',
+            address: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            country: 'United Kingdom'
+          },
           paymentMethod: "Card Payment",
           paymentStatus: "paid",
           fulfillmentType: order.fulfillmentType,
