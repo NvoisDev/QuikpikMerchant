@@ -10082,28 +10082,20 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
 
       // validatedTotalAmount is the product subtotal (without transaction fee)
-      // Add shipping cost if delivery option is selected
-      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
-        ? (shippingInfo.service && shippingInfo.service.price 
-           ? parseFloat(shippingInfo.service.price) 
-           : 90.00) // Default delivery cost for "Custom Quote Required" orders
-        : 0;
+      // FIXED: No shipping costs - simplified pricing model
+      const shippingCost = 0; // No shipping costs for customers
       
-      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
+      console.log('🚚 PAYMENT INTENT: Using simplified model - no shipping costs');
       
-      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
+      // Customer pays only subtotal + 5.5% + £0.50 transaction fee (NO shipping)
       const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
+      const totalAmountWithFee = validatedTotalAmount + customerTransactionFee; // NO shipping costs
       
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
       
-      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
-      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
-      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
-      const wholesalerAmount = autoPayDelivery 
-        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
-        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
+      // FIXED: Wholesaler gets only product subtotal minus platform fee (NO shipping costs)
+      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
@@ -10149,7 +10141,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               wholesalerPlatformFee: platformFee.toFixed(2),
               wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'true',
-              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
+              autoPayDelivery: 'false', // No auto-pay delivery in simplified model
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
                 service: shippingInfo.service ? {
