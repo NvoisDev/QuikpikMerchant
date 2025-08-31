@@ -60,6 +60,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     wholesalerReceives
   } = paymentIntent.metadata;
 
+  console.log('🏠 ORDER PROCESSOR DEBUG: selectedDeliveryAddressId from metadata:', selectedDeliveryAddressId);
+  console.log('🏠 ORDER PROCESSOR DEBUG: customerAddress from metadata:', customerAddress);
+
   if (orderType !== 'customer_portal') {
     throw new Error('Invalid order type for customer portal processing');
   }
