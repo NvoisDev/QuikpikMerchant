@@ -10105,6 +10105,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                     postalCode: customerData.postalCode,
                     country: customerData.country
                   }),
+              // CRITICAL: Store selected delivery address ID for exact order-address tracking
+              selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id ? customerData.selectedDeliveryAddress.id.toString() : '',
               totalAmount: validatedTotalAmount.toString(),
               shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
@@ -10153,6 +10155,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
                     postalCode: customerData.postalCode,
                     country: customerData.country
                   }),
+              // CRITICAL: Store selected delivery address ID for exact order-address tracking
+              selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id ? customerData.selectedDeliveryAddress.id.toString() : '',
               totalAmount: validatedTotalAmount.toString(),
               shippingCost: shippingCost.toFixed(2),
               platformFee: platformFee.toFixed(2),
@@ -10189,13 +10193,17 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
             customerName: customerData.name,
             customerEmail: customerData.email,
             customerPhone: customerData.phone,
-            customerAddress: JSON.stringify({
-              street: customerData.address,
-              city: customerData.city,
-              state: customerData.state,
-              postalCode: customerData.postalCode,
-              country: customerData.country
-            }),
+            customerAddress: customerData.selectedDeliveryAddress 
+              ? JSON.stringify(customerData.selectedDeliveryAddress) 
+              : JSON.stringify({
+                  street: customerData.address,
+                  city: customerData.city,
+                  state: customerData.state,
+                  postalCode: customerData.postalCode,
+                  country: customerData.country
+                }),
+            // CRITICAL: Store selected delivery address ID for exact order-address tracking
+            selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id ? customerData.selectedDeliveryAddress.id.toString() : '',
             totalAmount: validatedTotalAmount.toString(),
             shippingCost: shippingCost.toFixed(2),
             platformFee: platformFee.toFixed(2),
