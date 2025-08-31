@@ -172,6 +172,7 @@ export default function Orders() {
   const [fulfillingOrders, setFulfillingOrders] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [businessAddress, setBusinessAddress] = useState<any>(null);
 
   // Function to handle order click and parse delivery address from saved order data
   const handleOrderClick = (order: Order) => {
@@ -424,6 +425,46 @@ export default function Orders() {
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
+    );
+  };
+
+  // TimelineItem component for order timeline display
+  const TimelineItem = ({ 
+    icon, 
+    title, 
+    time, 
+    completed = false, 
+    current = false 
+  }: { 
+    icon: any; 
+    title: string; 
+    time?: string; 
+    completed?: boolean; 
+    current?: boolean; 
+  }) => {
+    const Icon = icon;
+    return (
+      <div className="flex items-start space-x-3">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+          completed ? 'bg-green-100 text-green-600' : 
+          current ? 'bg-blue-100 text-blue-600' : 
+          'bg-gray-100 text-gray-400'
+        }`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium ${
+            completed ? 'text-green-900' : 
+            current ? 'text-blue-900' : 
+            'text-gray-500'
+          }`}>
+            {title}
+          </p>
+          {time && (
+            <p className="text-xs text-gray-500">{time}</p>
+          )}
+        </div>
+      </div>
     );
   };
 
@@ -1149,11 +1190,264 @@ export default function Orders() {
                 setCustomerDeliveryAddress(null);
               }
             }}>
-              <OrderDetailsModal order={selectedOrder} />
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{selectedOrder.orderNumber || `Order #${selectedOrder.id}`} Details</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  {/* Enhanced Header Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Customer Information */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                          <User className="h-4 w-4 mr-2 text-blue-600" />
+                          Customer Information
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <span className="text-gray-600 w-16">Email:</span>
+                            <span className="font-medium text-gray-900">
+                              {(selectedOrder.customerEmail || selectedOrder.retailer?.email) || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-600 w-16">Phone:</span>
+                            <span className="font-medium text-gray-900">
+                              {(selectedOrder.customerPhone || selectedOrder.retailer?.phoneNumber) || 'N/A'}
+                            </span>
+                          </div>
+                          {/* Delivery Address Section */}
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-start">
+                              <MapPin className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-900 block mb-1">Delivery Address</span>
+                                {customerDeliveryAddress ? (
+                                  <div className="space-y-1">
+                                    {(() => {
+                                      const Icon = getLabelIcon(customerDeliveryAddress.label);
+                                      return (
+                                        <div className="space-y-1">
+                                          <div className="flex items-center gap-2">
+                                            <Icon className="h-4 w-4 text-green-600" />
+                                            <div className="text-sm">
+                                              <div className="font-medium">{customerDeliveryAddress.addressLine1}</div>
+                                              {customerDeliveryAddress.addressLine2 && (
+                                                <div>{customerDeliveryAddress.addressLine2}</div>
+                                              )}
+                                              <div>
+                                                {customerDeliveryAddress.city}
+                                                {customerDeliveryAddress.state && `, ${customerDeliveryAddress.state}`}
+                                                {customerDeliveryAddress.postalCode && ` ${customerDeliveryAddress.postalCode}`}
+                                              </div>
+                                              {customerDeliveryAddress.country && (
+                                                <div className="font-medium">{customerDeliveryAddress.country}</div>
+                                              )}
+                                            </div>
+                                          </div>
+                                          {customerDeliveryAddress.label && (
+                                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
+                                              {customerDeliveryAddress.label}
+                                            </div>
+                                          )}
+                                          {customerDeliveryAddress.instructions && (
+                                            <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                              <span className="font-medium">Instructions:</span> {customerDeliveryAddress.instructions}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                ) : selectedOrder.fulfillmentType === 'delivery' ? (
+                                  <div className="text-sm text-gray-500 italic">Loading delivery address...</div>
+                                ) : (
+                                  <div className="text-sm text-gray-500 italic">Collection order - no delivery address needed</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Order Information */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold mb-3 flex items-center text-gray-900">
+                          <Package className="h-4 w-4 mr-2 text-blue-600" />
+                          Order Information
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            {getStatusBadge(selectedOrder.status)}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-medium text-gray-900">
+                              {new Date(selectedOrder.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Items:</span>
+                            <span className="font-medium text-gray-900">{selectedOrder.items.length}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Fulfillment:</span>
+                            <div className="flex items-center gap-1">
+                              {selectedOrder.fulfillmentType === 'pickup' ? (
+                                <Hand className="h-3 w-3 text-blue-600" />
+                              ) : (
+                                <Truck className="h-3 w-3 text-green-600" />
+                              )}
+                              <span className="font-medium text-gray-900 capitalize">
+                                {selectedOrder.fulfillmentType || 'Pickup'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
+                  {/* Enhanced Order Items Section */}
+                  <div>
+                    <h3 className="font-medium mb-3 text-base">Items ({selectedOrder.items.length})</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      {selectedOrder.items.map((item: any, index: number) => (
+                        <div key={item.id || index} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900 text-sm mb-1">{item.product?.name || 'Unknown Product'}</h4>
+                              <div className="flex items-center gap-4 text-xs text-gray-600">
+                                <span>Quantity: <strong>{item.quantity}</strong> × {formatCurrency(parseFloat(item.unitPrice), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-sm text-gray-900">
+                                {formatCurrency(parseFloat(item.total), selectedOrder.wholesaler?.preferredCurrency || 'GBP')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Order Timeline */}
+                  <div>
+                    <h3 className="font-medium mb-3 text-base">Order Timeline</h3>
+                    <div className="space-y-3">
+                      <TimelineItem
+                        icon={CreditCard}
+                        title="Customer payment received"
+                        time={new Date(selectedOrder.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        completed={true}
+                      />
+                      <TimelineItem
+                        icon={Mail}
+                        title="Order notification received"
+                        time={new Date(selectedOrder.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        completed={true}
+                      />
+                      <TimelineItem
+                        icon={CheckCircle}
+                        title="Customer confirmation sent"
+                        time={new Date(selectedOrder.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        completed={true}
+                      />
+                      <TimelineItem
+                        icon={Package}
+                        title="Prepare order items"
+                        completed={false}
+                        current={selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending'}
+                      />
+                      <TimelineItem
+                        icon={selectedOrder.fulfillmentType === 'pickup' ? Hand : Truck}
+                        title={selectedOrder.fulfillmentType === 'pickup' ? 'Package for collection' : 'Package for delivery'}
+                        completed={false}
+                      />
+                      <TimelineItem
+                        icon={CheckCircle}
+                        title="Mark as fulfilled when ready"
+                        completed={selectedOrder.status === 'fulfilled'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-center mt-6">
+                    <Button
+                      onClick={() => {
+                        if (user?.role !== 'retailer') {
+                          updateOrderStatusMutation.mutate({ 
+                            orderId: selectedOrder.id, 
+                            status: 'fulfilled' 
+                          });
+                        }
+                      }}
+                      disabled={
+                        selectedOrder.status === 'fulfilled' || 
+                        fulfillingOrders.has(selectedOrder.id) ||
+                        user?.role === 'retailer'
+                      }
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {fulfillingOrders.has(selectedOrder.id) ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Fulfilling...
+                        </>
+                      ) : selectedOrder.status === 'fulfilled' ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Order Fulfilled
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark as Fulfilled
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
             </Dialog>
           )}
-        </div>
-      )}
+        </TabsContent>
+
+        {/* Shipping Settings Tab */}
+        <TabsContent value="shipping-settings">
+          <ShippingSettings />
+        </TabsContent>
+
+        {/* Shipping Tracking Tab */}
+        <TabsContent value="shipping-tracking">
+          <ShippingTracking />
+        </TabsContent>
+
+      </Tabs>
     </div>
   );
 }
