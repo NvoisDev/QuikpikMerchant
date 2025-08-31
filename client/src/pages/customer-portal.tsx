@@ -4102,26 +4102,13 @@ export default function CustomerPortal() {
                         />
                       </div>
                       
-                      {customerData.shippingOption === 'delivery' && customerData.selectedShippingService && (
-                        <div className="flex justify-between">
-                          <span>Delivery ({customerData.selectedShippingService.serviceName})</span>
-                          <PriceDisplay
-                            price={customerData.selectedShippingService.price}
-                            currency="GBP"
-                            isGuestMode={false}
-                            size="small"
-                          />
-                        </div>
-                      )}
                       
                       <div className="flex justify-between text-gray-600">
                         <span>Transaction Fee (5.5% + £0.50)</span>
                         <PriceDisplay
                           price={(() => {
                             const subtotal = cartStats.subtotal; // Use pure product subtotal
-                            const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-                              ? customerData.selectedShippingService.price 
-                              : 0;
+                            const shipping = 0; // Delivery arranged directly by supplier
                             const beforeFees = subtotal + shipping;
                             return (beforeFees * 0.055) + 0.50;
                           })()}
@@ -4138,9 +4125,7 @@ export default function CustomerPortal() {
                       <PriceDisplay
                         price={(() => {
                           const subtotal = cartStats.subtotal; // Use pure product subtotal
-                          const shipping = customerData.shippingOption === 'delivery' && customerData.selectedShippingService 
-                            ? customerData.selectedShippingService.price 
-                            : 0;
+                          const shipping = 0; // Delivery arranged directly by supplier
                           const beforeFees = subtotal + shipping;
                           const transactionFee = (beforeFees * 0.055) + 0.50;
                           return beforeFees + transactionFee;
