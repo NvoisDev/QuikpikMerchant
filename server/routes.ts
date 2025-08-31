@@ -9978,8 +9978,6 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       
       console.log('🚚 MARKETPLACE PAYMENT DEBUG: Received shippingInfo from frontend:', JSON.stringify(shippingInfo, null, 2));
       console.log('🚚 MARKETPLACE PAYMENT DEBUG: customerData.shippingOption:', customerData?.shippingOption);
-      console.log('🏠 ADDRESS DEBUG: Received customerData.selectedDeliveryAddress:', JSON.stringify(customerData?.selectedDeliveryAddress, null, 2));
-      console.log('🏠 ADDRESS DEBUG: selectedDeliveryAddress ID:', customerData?.selectedDeliveryAddress?.id);
       
       console.log(`💰 Payment intent request: totalAmount=${totalAmount}, items=${JSON.stringify(items)}, wholesalerId=${wholesalerId}`);
       

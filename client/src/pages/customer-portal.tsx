@@ -4344,6 +4344,16 @@ export default function CustomerPortal() {
                         compact={true}
                       />
                       
+                      {/* Address Required Warning */}
+                      {!customerData.selectedDeliveryAddress && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <h5 className="font-medium text-amber-800 mb-1">Address Required</h5>
+                          <p className="text-sm text-amber-700">
+                            Please add and select a delivery address to continue with your order.
+                          </p>
+                        </div>
+                      )}
+                      
                       {/* Delivery Information Note */}
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <h5 className="font-medium text-blue-800 mb-1">Delivery Arrangement</h5>
@@ -4374,7 +4384,16 @@ export default function CustomerPortal() {
                   {console.log('🚚 CHECKOUT MODAL: Opening with shipping option:', customerData.shippingOption)}
                   {console.log('🚚 CHECKOUT MODAL: Client secret exists:', !!clientSecret)}
                   
-                  <StripeCheckoutForm
+                  {/* Validation: Ensure delivery orders have an address selected */}
+                  {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                      <h4 className="font-medium text-amber-800 mb-2">Address Required</h4>
+                      <p className="text-sm text-amber-700">
+                        Please add and select a delivery address above to complete your order.
+                      </p>
+                    </div>
+                  ) : (
+                    <StripeCheckoutForm
                     cart={cart}
                     customerData={customerData}
                     wholesaler={wholesaler}
@@ -4461,6 +4480,7 @@ export default function CustomerPortal() {
                       setShowThankYou(true);
                     }}
                   />
+                  )}
                 </div>
               </div>
             )}
