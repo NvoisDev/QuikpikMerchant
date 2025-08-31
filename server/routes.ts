@@ -1928,7 +1928,7 @@ The Quikpik Team
           
           await sendEmail({
             to: wholesaler.email,
-            from: 'notifications@quikpik.app',
+            from: 'hello@quikpik.co',
             subject: emailSubject,
             text: emailContent
           });
@@ -2065,7 +2065,7 @@ The Quikpik Team
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'notifications@quikpik.app',
+              from: 'hello@quikpik.co',
               subject: `Registration Approved - Welcome to ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -2096,7 +2096,7 @@ The Quikpik Team`
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'notifications@quikpik.app',
+              from: 'hello@quikpik.co',
               subject: `Registration Request Update - ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -6046,7 +6046,7 @@ This message was sent by Quikpik Merchant Platform
 
               const emailSuccess = await sendEmail({
                 to: customer.email,
-                from: wholesaler?.email || 'notifications@quikpik.app',
+                from: wholesaler?.email || 'hello@quikpik.co',
                 subject: emailSubject,
                 text: emailContent
               });
@@ -15751,6 +15751,38 @@ The Quikpik Team
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
       res.status(500).json({ message: 'Failed to fetch pending invitations' });
+    }
+  });
+
+  // Email test endpoint for debugging
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email address required" });
+      }
+      
+      console.log(`🧪 Testing email service by sending to: ${email}`);
+      
+      const success = await sendEmail({
+        to: email,
+        from: 'hello@quikpik.co',
+        subject: 'Quikpik Email Service Test',
+        text: 'This is a test email to verify the email service is working properly.',
+        html: '<p>This is a test email to verify the email service is working properly.</p><p><strong>Status:</strong> Email service is functional ✅</p>'
+      });
+      
+      if (success) {
+        console.log(`✅ Test email sent successfully to ${email}`);
+        res.json({ success: true, message: "Test email sent successfully" });
+      } else {
+        console.log(`❌ Test email failed to send to ${email}`);
+        res.status(500).json({ error: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("❌ Email test error:", error);
+      res.status(500).json({ error: "Email test failed", details: error.message });
     }
   });
 
