@@ -21,7 +21,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send({
       to: params.to,
-      from: 'noreply@quikpik.co', // Use verified sender identity
+      from: 'hello@quikpik.co', // Use verified sender identity from SendGrid
       subject: params.subject,
       text: params.text || '',
       html: params.html || '',
