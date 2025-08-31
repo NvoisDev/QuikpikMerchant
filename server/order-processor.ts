@@ -135,8 +135,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     : totalAmount;
 
   // Use the correct total from metadata instead of recalculating
-  // CRITICAL FIX: Include shipping cost in total calculation
-  const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+  // SIMPLIFIED: No shipping costs - only subtotal + transaction fee
   
   // MAJOR FIX: Properly calculate total - never use totalAmount as productSubtotal fallback
   // totalAmount might already include fees, causing double-counting
@@ -146,8 +145,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   
   const actualCustomerTransactionFee = parseFloat(customerTransactionFee || transactionFee || '0');
   
-  // CORRECT CALCULATION: Only add subtotal + transaction fee + shipping
-  const correctTotal = totalCustomerPays || (actualProductSubtotal + actualCustomerTransactionFee + shippingCost).toFixed(2);
+  // CORRECT CALCULATION: Only add subtotal + transaction fee (no shipping)
+  const correctTotal = totalCustomerPays || (actualProductSubtotal + actualCustomerTransactionFee).toFixed(2);
 
   // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -208,8 +207,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     })(),
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
-    deliveryCarrier: null, // No carrier needed for simplified delivery system
-    deliveryCost: '0.00', // No delivery cost - arranged directly with customer
+    deliveryCarrier: null, // No carrier needed
+    deliveryCost: '0.00', // No delivery cost
     shippingTotal: '0.00' // No shipping total
   };
   
@@ -353,7 +352,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
         customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
         wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
-        shippingTotal: '0.00',
+        shippingTotal: '0.00', // No shipping costs
         fulfillmentType: 'pickup',
         items: enrichedItemsForEmail,
         wholesaler: {

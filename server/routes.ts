@@ -4165,18 +4165,10 @@ The Quikpik Team`
         });
       }
 
-      // Include delivery cost in fee calculation
-      console.log('🚚 Shipping cost debug:', {
-        hasShippingInfo: !!shippingInfo,
-        hasService: !!shippingInfo?.service,
-        servicePriceRaw: shippingInfo?.service?.price,
-        servicePriceType: typeof shippingInfo?.service?.price
-      });
-
-      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
-      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
+      // No shipping costs - using simplified pricing model
+      const deliveryCost = 0; // No delivery costs
       
-      const amountBeforeFees = productSubtotal + deliveryCost;
+      const amountBeforeFees = productSubtotal; // Only product subtotal, no shipping
       console.log('💰 Subtotal calculation:', {
         productSubtotal,
         deliveryCost,
@@ -4187,7 +4179,7 @@ The Quikpik Team`
       });
       
       // NEW FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
+      // Customer Transaction Fee: 5.5% of product subtotal + £0.50 fixed fee (no shipping costs)
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
