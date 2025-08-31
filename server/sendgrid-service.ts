@@ -209,4 +209,110 @@ export async function sendOrderPhotoNotificationEmail(orderData: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail };
+// Wholesaler order notification email template
+export async function sendWholesalerOrderNotification(orderData: {
+  wholesalerEmail: string;
+  wholesalerName: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  orderItems: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
+  subtotal: number;
+  totalAmount: number;
+  fulfillmentType: string;
+  deliveryAddress?: string;
+}): Promise<boolean> {
+  const itemsHtml = orderData.orderItems.map(item => `
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 10px; text-align: left;">${item.productName}</td>
+      <td style="padding: 10px; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; text-align: right;">£${item.unitPrice.toFixed(2)}</td>
+      <td style="padding: 10px; text-align: right;">£${item.total.toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>New Order Received - ${orderData.orderNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #10B981; margin-bottom: 5px;">🛍️ New Order Received!</h1>
+        <p style="color: #666; font-size: 16px;">Order #${orderData.orderNumber}</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Customer Information</h2>
+        <p><strong>Name:</strong> ${orderData.customerName}</p>
+        <p><strong>Email:</strong> ${orderData.customerEmail}</p>
+        <p><strong>Phone:</strong> ${orderData.customerPhone}</p>
+        <p><strong>Fulfillment:</strong> ${orderData.fulfillmentType === 'delivery' ? '🚛 Delivery' : '🏪 Pickup'}</p>
+        ${orderData.deliveryAddress ? `<p><strong>Delivery Address:</strong> ${orderData.deliveryAddress}</p>` : ''}
+      </div>
+
+      <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+        <div style="background: #10B981; color: white; padding: 15px;">
+          <h3 style="margin: 0;">Order Items</h3>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead style="background: #f8f9fa;">
+            <tr>
+              <th style="padding: 10px; text-align: left;">Product</th>
+              <th style="padding: 10px; text-align: center;">Qty</th>
+              <th style="padding: 10px; text-align: right;">Price</th>
+              <th style="padding: 10px; text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        
+        <div style="padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span>Subtotal:</span>
+            <span>£${orderData.subtotal.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid #ddd; padding-top: 10px;">
+            <span>Total Order Value:</span>
+            <span style="color: #10B981;">£${orderData.totalAmount.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #f0f9ff; border: 1px solid #10B981; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+        <h3 style="color: #0f766e; margin-top: 0;">📋 Next Steps</h3>
+        ${orderData.fulfillmentType === 'delivery' 
+          ? '<p style="margin: 10px 0; color: #0f766e;">Contact the customer within 24 hours to arrange delivery details.</p>'
+          : '<p style="margin: 10px 0; color: #0f766e;">Contact the customer to arrange pickup details.</p>'
+        }
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #999;">
+          This notification was sent to ${orderData.wholesalerEmail}<br>
+          Powered by Quikpik
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({
+    to: orderData.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject: `New Order Received - ${orderData.orderNumber}`,
+    html: html
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification };

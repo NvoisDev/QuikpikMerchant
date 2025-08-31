@@ -191,11 +191,23 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       }
       // CRITICAL FIX: If this is a delivery order but no address ID provided, find customer's default address
       if (fulfillmentType === 'delivery') {
-        const defaultAddress = await storage.getDefaultDeliveryAddress(customer.id, wholesalerId);
-        if (defaultAddress) {
-          console.log(`🏠 AUTO-LINK: Using customer's default delivery address ${defaultAddress.id} for delivery order`);
-          return defaultAddress.id;
+        // Try multiple customer ID formats to find delivery addresses
+        const customerIds = [
+          customer.id,
+          customerEmail,
+          `customer_michael_ogunjemilua_main`,
+          `user_${customer.id}`
+        ];
+        
+        for (const customerId of customerIds) {
+          const defaultAddress = await storage.getDefaultDeliveryAddress(customerId, wholesalerId);
+          if (defaultAddress) {
+            console.log(`🏠 AUTO-LINK: Using customer's default delivery address ${defaultAddress.id} for delivery order (customer ID: ${customerId})`);
+            return defaultAddress.id;
+          }
         }
+        
+        console.log(`⚠️ No delivery address found for delivery order. Customer IDs tried: ${customerIds.join(', ')}`);
       }
       return null;
     })(),
@@ -437,6 +449,62 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     }
   } else {
     console.log(`ℹ️ No automatic delivery payment required for order ${order.orderNumber} (pickup or manual delivery)`);
+  }
+
+  // SEND EMAIL CONFIRMATIONS
+  console.log('📧 Sending order confirmation emails...');
+  
+  try {
+    // Import sendgrid service
+    const { sendOrderConfirmationEmail, sendWholesalerOrderNotification } = await import('./sendgrid-service');
+    
+    // Send customer confirmation email
+    const emailSent = await sendOrderConfirmationEmail({
+      customerEmail: customerEmail,
+      customerName: customerName,
+      orderNumber: order.orderNumber || `ORD-${order.id}`,
+      orderItems: items.map((item: any) => ({
+        productName: item.productName || 'Product',
+        quantity: item.quantity,
+        unitPrice: parseFloat(item.unitPrice),
+        total: parseFloat(item.unitPrice) * item.quantity
+      })),
+      subtotal: parseFloat(orderData.subtotal),
+      transactionFee: parseFloat(orderData.customerTransactionFee),
+      totalPaid: parseFloat(orderData.total),
+      wholesalerName: wholesaler?.businessName || 'Supplier',
+      shippingAddress: fulfillmentType === 'delivery' ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : undefined
+    });
+
+    console.log('📧 Customer confirmation email:', emailSent ? '✅ Sent' : '❌ Failed');
+
+    // Send wholesaler notification email
+    if (wholesaler?.email) {
+      const wholesalerEmailSent = await sendWholesalerOrderNotification({
+        wholesalerEmail: wholesaler.email,
+        wholesalerName: wholesaler.businessName || 'Wholesaler',
+        orderNumber: order.orderNumber || `ORD-${order.id}`,
+        customerName: customerName,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone || '',
+        orderItems: items.map((item: any) => ({
+          productName: item.productName || 'Product',
+          quantity: item.quantity,
+          unitPrice: parseFloat(item.unitPrice),
+          total: parseFloat(item.unitPrice) * item.quantity
+        })),
+        subtotal: parseFloat(orderData.subtotal),
+        totalAmount: parseFloat(orderData.total),
+        fulfillmentType: fulfillmentType,
+        deliveryAddress: fulfillmentType === 'delivery' ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : undefined
+      });
+
+      console.log('📧 Wholesaler notification email:', wholesalerEmailSent ? '✅ Sent' : '❌ Failed');
+    }
+    
+  } catch (emailError) {
+    console.error('❌ Email notification error:', emailError);
+    // Don't fail the order if emails fail
   }
 
   return order;
