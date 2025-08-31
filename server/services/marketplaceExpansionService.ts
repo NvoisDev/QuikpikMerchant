@@ -276,7 +276,7 @@ export class MarketplaceExpansionService {
             try {
               await sendEmail({
                 to: customer.email,
-                from: 'partnerships@quikpik.co',
+                from: 'hello@quikpik.co',
                 subject: messages.email.subject,
                 html: messages.email.body.replace('{{customerName}}', customer.name || 'Business Owner')
               });

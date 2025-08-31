@@ -11213,7 +11213,7 @@ Please contact the customer to confirm this order.
 
       await sgMail.send({
         to: customer.email,
-        from: 'invoices@quikpik.co',
+        from: 'hello@quikpik.co',
         subject: `Refund Receipt for Order #${order.id} - ${businessName}`,
         html: emailContent
       });

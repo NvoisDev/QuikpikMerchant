@@ -148,7 +148,7 @@ export class OrderNotificationService {
     try {
       await sendEmail({
         to: notification.customerEmail,
-        from: 'orders@quikpik.co',
+        from: 'hello@quikpik.co',
         subject: emailContent.subject,
         text: emailContent.body,
         html: `
