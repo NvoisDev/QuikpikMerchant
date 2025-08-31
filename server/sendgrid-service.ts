@@ -21,7 +21,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send({
       to: params.to,
-      from: params.from || 'hello@quikpik.co', // Use consistent verified domain
+      from: 'noreply@quikpik.co', // Use verified sender identity
       subject: params.subject,
       text: params.text || '',
       html: params.html || '',
@@ -138,7 +138,7 @@ export async function sendOrderConfirmationEmail(orderData: {
 
   return await sendEmail({
     to: orderData.customerEmail,
-    from: 'hello@quikpik.co', // Use consistent verified domain
+    from: 'noreply@quikpik.co', // Use verified sender identity
     subject: `Order Confirmation - ${orderData.orderNumber}`,
     html: html
   });
@@ -203,7 +203,7 @@ export async function sendOrderPhotoNotificationEmail(orderData: {
 
   return await sendEmail({
     to: orderData.customerEmail,
-    from: 'hello@quikpik.co', // Use consistent verified domain
+    from: 'noreply@quikpik.co', // Use verified sender identity
     subject: `📸 New Photos Added to Order ${orderData.orderNumber}`,
     html: html
   });

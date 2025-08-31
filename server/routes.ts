@@ -4295,13 +4295,13 @@ The Quikpik Team`
       const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      // Create stable idempotency key including Connect configuration to prevent conflicts
+      // FIXED: More stable idempotency key WITHOUT timestamp to prevent duplicate payments
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
       const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
       const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
-      const timestamp = Date.now().toString().slice(-6); // Add timestamp to force new keys during Connect testing
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${timestamp}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      // REMOVED timestamp to prevent duplicate payment intents for same order
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
