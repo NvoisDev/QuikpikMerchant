@@ -1697,26 +1697,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wholesalerPhone: wholesalerUser.businessPhone || ''
         } : null;
 
-        // Get delivery address details if deliveryAddressId exists
-        let deliveryAddressDetails = null;
-        if (order.deliveryAddressId) {
-          try {
-            const address = await storage.getDeliveryAddress(order.deliveryAddressId);
-            if (address) {
-              deliveryAddressDetails = {
-                address: address.addressLine1 + (address.addressLine2 ? `, ${address.addressLine2}` : ''),
-                city: address.city,
-                state: address.state || '',
-                postalCode: address.postalCode,
-                country: address.country || 'United Kingdom'
-              };
-              console.log(`📍 Populated delivery address for order ${order.orderNumber}: ${address.addressLine1}, ${address.city}`);
-            }
-          } catch (error) {
-            console.error(`❌ Failed to fetch delivery address ${order.deliveryAddressId} for order ${order.orderNumber}:`, error);
-          }
-        }
-
         return {
           ...order,
           items: items.map(item => ({
@@ -1731,9 +1711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             businessName: wholesalerDetails.wholesalerName || 'Unknown Business',
             email: wholesalerDetails.wholesalerEmail || '',
             phone: wholesalerDetails.wholesalerPhone || '',
-          } : null,
-          // Pass delivery address details for later use
-          deliveryAddressDetails
+          } : null
         };
       }));
       
@@ -1778,26 +1756,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerEmail: order.customerEmail,
           deliveryAddress: order.deliveryAddress,
           deliveryAddressId: order.deliveryAddressId,
-          // Populate customer data with actual delivery address if available
-          customerData: order.deliveryAddressDetails ? {
-            name: order.customerName || 'Customer',
-            email: order.customerEmail || '',
-            phone: order.customerPhone || '',
-            address: order.deliveryAddressDetails.address,
-            city: order.deliveryAddressDetails.city,
-            state: order.deliveryAddressDetails.state,
-            postalCode: order.deliveryAddressDetails.postalCode,
-            country: order.deliveryAddressDetails.country
-          } : {
-            name: order.customerName || 'Customer',
-            email: order.customerEmail || '',
-            phone: order.customerPhone || '',
-            address: '',
-            city: '',
-            state: '',
-            postalCode: '',
-            country: 'United Kingdom'
-          },
           paymentMethod: "Card Payment",
           paymentStatus: "paid",
           fulfillmentType: order.fulfillmentType,
@@ -1928,7 +1886,7 @@ The Quikpik Team
           
           await sendEmail({
             to: wholesaler.email,
-            from: 'hello@quikpik.co',
+            from: 'notifications@quikpik.app',
             subject: emailSubject,
             text: emailContent
           });
@@ -2065,7 +2023,7 @@ The Quikpik Team
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'hello@quikpik.co',
+              from: 'notifications@quikpik.app',
               subject: `Registration Approved - Welcome to ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -2096,7 +2054,7 @@ The Quikpik Team`
             
             await sendEmail({
               to: requestData.customerEmail,
-              from: 'hello@quikpik.co',
+              from: 'notifications@quikpik.app',
               subject: `Registration Request Update - ${businessName}`,
               text: `Hello ${requestData.customerName},
 
@@ -4207,10 +4165,18 @@ The Quikpik Team`
         });
       }
 
-      // No shipping costs - using simplified pricing model
-      const deliveryCost = 0; // No delivery costs
+      // Include delivery cost in fee calculation
+      console.log('🚚 Shipping cost debug:', {
+        hasShippingInfo: !!shippingInfo,
+        hasService: !!shippingInfo?.service,
+        servicePriceRaw: shippingInfo?.service?.price,
+        servicePriceType: typeof shippingInfo?.service?.price
+      });
+
+      const deliveryCost = parseFloat(shippingInfo?.service?.price || '0') || 0;
+      console.log('🚚 Parsed delivery cost:', deliveryCost, 'isNaN:', isNaN(deliveryCost));
       
-      const amountBeforeFees = productSubtotal; // Only product subtotal, no shipping
+      const amountBeforeFees = productSubtotal + deliveryCost;
       console.log('💰 Subtotal calculation:', {
         productSubtotal,
         deliveryCost,
@@ -4221,7 +4187,7 @@ The Quikpik Team`
       });
       
       // NEW FEE STRUCTURE:
-      // Customer Transaction Fee: 5.5% of product subtotal + £0.50 fixed fee (no shipping costs)
+      // Customer Transaction Fee: 5.5% of total amount (products + delivery) + £0.50 fixed fee
       const customerTransactionFee = (amountBeforeFees * 0.055) + 0.50;
       const totalCustomerPays = amountBeforeFees + customerTransactionFee;
       
@@ -4295,13 +4261,13 @@ The Quikpik Team`
       const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
       
-      // FIXED: More stable idempotency key WITHOUT timestamp to prevent duplicate payments
+      // Create stable idempotency key including Connect configuration to prevent conflicts
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
       const baseAmountKey = Math.round(amountBeforeFees * 100).toString(); // Use amount before transaction fees
       const phoneKey = (customerPhone || 'guest').replace(/[^0-9]/g, '').slice(-4) || 'guest'; // Clean phone number
       const connectFlag = useConnect ? 'c' : 'n'; // Include Connect usage in key
-      // REMOVED timestamp to prevent duplicate payment intents for same order
-      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}`.replace(/[^a-zA-Z0-9_-]/g, '');
+      const timestamp = Date.now().toString().slice(-6); // Add timestamp to force new keys during Connect testing
+      const baseKey = `${phoneKey}_${baseAmountKey}_${cartHash}_${connectFlag}_${timestamp}`.replace(/[^a-zA-Z0-9_-]/g, '');
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
@@ -6046,7 +6012,7 @@ This message was sent by Quikpik Merchant Platform
 
               const emailSuccess = await sendEmail({
                 to: customer.email,
-                from: wholesaler?.email || 'hello@quikpik.co',
+                from: wholesaler?.email || 'notifications@quikpik.app',
                 subject: emailSubject,
                 text: emailContent
               });
@@ -10082,20 +10048,28 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
       }
 
       // validatedTotalAmount is the product subtotal (without transaction fee)
-      // FIXED: No shipping costs - simplified pricing model
-      const shippingCost = 0; // No shipping costs for customers
+      // Add shipping cost if delivery option is selected
+      const shippingCost = (shippingInfo && shippingInfo.option === 'delivery') 
+        ? (shippingInfo.service && shippingInfo.service.price 
+           ? parseFloat(shippingInfo.service.price) 
+           : 90.00) // Default delivery cost for "Custom Quote Required" orders
+        : 0;
       
-      console.log('🚚 PAYMENT INTENT: Using simplified model - no shipping costs');
+      console.log('🚚 PAYMENT INTENT: Calculated shipping cost:', shippingCost, 'from shippingInfo:', shippingInfo);
       
-      // Customer pays only subtotal + 5.5% + £0.50 transaction fee (NO shipping)
+      // Customer pays subtotal + shipping + 5.5% + £0.50 transaction fee
       const customerTransactionFee = (validatedTotalAmount * 0.055) + 0.50;
-      const totalAmountWithFee = validatedTotalAmount + customerTransactionFee; // NO shipping costs
+      const totalAmountWithFee = validatedTotalAmount + shippingCost + customerTransactionFee;
       
       // Platform collects 3.3% from subtotal 
       const platformFee = validatedTotalAmount * 0.033;
       
-      // FIXED: Wholesaler gets only product subtotal minus platform fee (NO shipping costs)
-      const wholesalerAmount = (validatedTotalAmount - platformFee).toFixed(2);
+      // Calculate wholesaler amount: 96.7% of subtotal + delivery fee (if delivery company will be paid automatically)
+      // If we auto-pay delivery company, subtract shipping cost from wholesaler transfer
+      const autoPayDelivery = shippingInfo && shippingInfo.option === 'delivery' && shippingInfo.service && shippingInfo.service.serviceId;
+      const wholesalerAmount = autoPayDelivery 
+        ? (validatedTotalAmount - platformFee).toFixed(2) // Delivery cost will be auto-paid from platform
+        : (validatedTotalAmount - platformFee + shippingCost).toFixed(2); // Manual delivery, wholesaler gets shipping fee
 
       // Create payment intent with Stripe Connect (application fee)
       if (!stripe) {
@@ -10141,7 +10115,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
               wholesalerPlatformFee: platformFee.toFixed(2),
               wholesalerReceives: wholesalerAmount,
               connectAccountUsed: 'true',
-              autoPayDelivery: 'false', // No auto-pay delivery in simplified model
+              autoPayDelivery: autoPayDelivery ? 'true' : 'false',
               shippingInfo: JSON.stringify(shippingInfo ? {
                 option: shippingInfo.option,
                 service: shippingInfo.service ? {
@@ -11213,7 +11187,7 @@ Please contact the customer to confirm this order.
 
       await sgMail.send({
         to: customer.email,
-        from: 'hello@quikpik.co',
+        from: 'invoices@quikpik.co',
         subject: `Refund Receipt for Order #${order.id} - ${businessName}`,
         html: emailContent
       });
@@ -15743,38 +15717,6 @@ The Quikpik Team
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
       res.status(500).json({ message: 'Failed to fetch pending invitations' });
-    }
-  });
-
-  // Email test endpoint for debugging
-  app.post("/api/test-email", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ error: "Email address required" });
-      }
-      
-      console.log(`🧪 Testing email service by sending to: ${email}`);
-      
-      const success = await sendEmail({
-        to: email,
-        from: 'hello@quikpik.co',
-        subject: 'Quikpik Email Service Test',
-        text: 'This is a test email to verify the email service is working properly.',
-        html: '<p>This is a test email to verify the email service is working properly.</p><p><strong>Status:</strong> Email service is functional ✅</p>'
-      });
-      
-      if (success) {
-        console.log(`✅ Test email sent successfully to ${email}`);
-        res.json({ success: true, message: "Test email sent successfully" });
-      } else {
-        console.log(`❌ Test email failed to send to ${email}`);
-        res.status(500).json({ error: "Failed to send test email" });
-      }
-    } catch (error) {
-      console.error("❌ Email test error:", error);
-      res.status(500).json({ error: "Email test failed", details: error.message });
     }
   });
 

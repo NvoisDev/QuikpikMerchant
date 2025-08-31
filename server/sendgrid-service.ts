@@ -21,7 +21,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send({
       to: params.to,
-      from: 'hello@quikpik.co', // Use verified sender identity from SendGrid
+      from: params.from || 'noreply@quikpik.app',
       subject: params.subject,
       text: params.text || '',
       html: params.html || '',
@@ -138,7 +138,7 @@ export async function sendOrderConfirmationEmail(orderData: {
 
   return await sendEmail({
     to: orderData.customerEmail,
-    from: 'hello@quikpik.co', // Use verified sender identity
+    from: 'noreply@quikpik.co',
     subject: `Order Confirmation - ${orderData.orderNumber}`,
     html: html
   });
@@ -203,7 +203,7 @@ export async function sendOrderPhotoNotificationEmail(orderData: {
 
   return await sendEmail({
     to: orderData.customerEmail,
-    from: 'hello@quikpik.co', // Use verified sender identity
+    from: 'noreply@quikpik.co',
     subject: `📸 New Photos Added to Order ${orderData.orderNumber}`,
     html: html
   });

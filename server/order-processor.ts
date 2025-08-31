@@ -135,18 +135,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     : totalAmount;
 
   // Use the correct total from metadata instead of recalculating
-  // SIMPLIFIED: No shipping costs - only subtotal + transaction fee
-  
-  // MAJOR FIX: Properly calculate total - never use totalAmount as productSubtotal fallback
-  // totalAmount might already include fees, causing double-counting
-  const actualProductSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
-    ? parseFloat(productSubtotal)
-    : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-  
-  const actualCustomerTransactionFee = parseFloat(customerTransactionFee || transactionFee || '0');
-  
-  // CORRECT CALCULATION: Only add subtotal + transaction fee (no shipping)
-  const correctTotal = totalCustomerPays || (actualProductSubtotal + actualCustomerTransactionFee).toFixed(2);
+  // CRITICAL FIX: Include shipping cost in total calculation
+  const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
+  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
 
   // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -182,8 +173,10 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerName, // Store customer name
     customerEmail, // Store customer email
     customerPhone, // Store customer phone
-    // CRITICAL FIX: Use consistent subtotal calculation (matching the total calculation logic)
-    subtotal: actualProductSubtotal.toFixed(2),
+    // CRITICAL FIX: Calculate subtotal from items if metadata is missing
+    subtotal: productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
+      ? parseFloat(productSubtotal).toFixed(2) 
+      : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2),
     platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
     customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
     total: correctTotal, // Total = subtotal + customer transaction fee
@@ -207,8 +200,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     })(),
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
-    deliveryCarrier: null, // No carrier needed
-    deliveryCost: '0.00', // No delivery cost
+    deliveryCarrier: null, // No carrier needed for simplified delivery system
+    deliveryCost: '0.00', // No delivery cost - arranged directly with customer
     shippingTotal: '0.00' // No shipping total
   };
   
@@ -238,7 +231,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
   console.log(`🚨 ORDER PROCESSOR DEBUG: About to call storage.createOrder`);
   console.log(`🚨 ORDER PROCESSOR DEBUG: Order data:`, orderData);
-  console.log(`🚨 ORDER PROCESSOR DEBUG: Items:`, orderItems.map((i: any) => `${i.productId}:${i.quantity}:${i.sellingType}`));
+  console.log(`🚨 ORDER PROCESSOR DEBUG: Items:`, orderItems.map(i => `${i.productId}:${i.quantity}:${i.sellingType}`));
   
   // CRITICAL FIX: Force reliable order creation by using the same transaction-based approach
   // Import database for transaction consistency
@@ -312,13 +305,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   }
 
   // Send WhatsApp notification to wholesaler with wholesale reference
-  if (wholesaler && (wholesaler as any).twilioAuthToken && (wholesaler as any).twilioPhoneNumber) {
+  if (wholesaler && wholesaler.twilioAuthToken && wholesaler.twilioPhoneNumber) {
     const currencySymbol = wholesaler.preferredCurrency === 'GBP' ? '£' : '$';
     const message = `🎉 New Order Received!\n\nOrder: ${order.orderNumber}\nCustomer: ${customerName}\nPhone: ${customerPhone}\nEmail: ${customerEmail}\nTotal: ${currencySymbol}${totalAmount}\n\nOrder ID: ${order.id}\nStatus: Paid\n\nQuote this reference when communicating with the customer.`;
     
     try {
-      // Note: WhatsApp service currently disabled - focus on email confirmations
-      console.log('📱 WhatsApp notification would be sent (service currently disabled):', message);
+      const { whatsappService } = await import('./whatsapp');
+      await whatsappService.sendMessage(wholesaler.businessPhone || wholesaler.twilioPhoneNumber, message, wholesaler.id);
     } catch (error) {
       console.error('Failed to send WhatsApp notification:', error);
     }
@@ -352,7 +345,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
         customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2),
         wholesalerPlatformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
-        shippingTotal: '0.00', // No shipping costs
+        shippingTotal: '0.00',
         fulfillmentType: 'pickup',
         items: enrichedItemsForEmail,
         wholesaler: {
