@@ -137,7 +137,17 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // Use the correct total from metadata instead of recalculating
   // CRITICAL FIX: Include shipping cost in total calculation
   const shippingCost = parseFloat(paymentIntent.metadata.shippingCost || '0');
-  const correctTotal = totalCustomerPays || (parseFloat(productSubtotal || totalAmount) + parseFloat(customerTransactionFee || transactionFee || '0') + shippingCost).toFixed(2);
+  
+  // MAJOR FIX: Properly calculate total - never use totalAmount as productSubtotal fallback
+  // totalAmount might already include fees, causing double-counting
+  const actualProductSubtotal = productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
+    ? parseFloat(productSubtotal)
+    : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+  
+  const actualCustomerTransactionFee = parseFloat(customerTransactionFee || transactionFee || '0');
+  
+  // CORRECT CALCULATION: Only add subtotal + transaction fee + shipping
+  const correctTotal = totalCustomerPays || (actualProductSubtotal + actualCustomerTransactionFee + shippingCost).toFixed(2);
 
   // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
   const shippingInfoJson = paymentIntent.metadata.shippingInfo;
@@ -173,10 +183,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     customerName, // Store customer name
     customerEmail, // Store customer email
     customerPhone, // Store customer phone
-    // CRITICAL FIX: Calculate subtotal from items if metadata is missing
-    subtotal: productSubtotal && productSubtotal !== 'null' && productSubtotal !== 'undefined' 
-      ? parseFloat(productSubtotal).toFixed(2) 
-      : items.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice) * item.quantity), 0).toFixed(2),
+    // CRITICAL FIX: Use consistent subtotal calculation (matching the total calculation logic)
+    subtotal: actualProductSubtotal.toFixed(2),
     platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2), // 3.3% platform fee
     customerTransactionFee: parseFloat(customerTransactionFee || '0').toFixed(2), // Customer transaction fee (5.5% + £0.50)
     total: correctTotal, // Total = subtotal + customer transaction fee
