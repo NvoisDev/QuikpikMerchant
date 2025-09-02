@@ -1610,78 +1610,24 @@ export class DatabaseStorage implements IStorage {
         return null;
       }
 
-      // If multiple customers have the same last 4 digits, use better matching logic
-      let matchingCustomer = matchingCustomers[0];
+      // CRITICAL SECURITY FIX: Multiple customers cannot have the same last 4 digits for the same wholesaler
+      // This is a fundamental authentication security issue - if multiple customers share the same last 4 digits,
+      // we cannot authenticate safely using only last 4 digits
       if (matchingCustomers.length > 1) {
-        console.log(`Multiple customers found with last 4 digits: ${lastFourDigits}, using intelligent selection...`);
+        console.error(`🚨 CRITICAL SECURITY ISSUE: Multiple customers found with same last 4 digits: ${lastFourDigits} for wholesaler: ${wholesalerId}`);
+        console.error(`This represents a customer authentication security vulnerability!`);
         
-        // Get order counts and recent activity for each matching customer
-        const customerOrderCounts = await Promise.all(
-          matchingCustomers.map(async (customer: any) => {
-            const orderCount = await db.execute(sql`
-              SELECT COUNT(*) as count
-              FROM orders
-              WHERE retailer_id = ${customer.customer_id}
-            `);
-            const count = parseInt(String(orderCount.rows[0]?.count || '0'));
-            console.log(`Customer ${customer.name} (${customer.customer_id}): ${count} orders`);
-            return {
-              customer,
-              orderCount: count
-            };
-          })
-        );
+        // Log all matching customers for security audit
+        matchingCustomers.forEach((customer: any, index: number) => {
+          console.error(`  Customer ${index + 1}: ${customer.name} (${customer.customer_id}) - Phone: ${customer.phone}`);
+        });
         
-        // Enhanced customer selection logic for Phase 1 improvements
-        
-        // Priority 1: Exact phone number matches (after standardization)  
-        const exactPhoneMatches = customerOrderCounts.filter(c => 
-          c.customer.phone === `+44${lastFourDigits}` || 
-          c.customer.phone.endsWith(lastFourDigits) && c.customer.phone.length >= 10
-        );
-        
-        if (exactPhoneMatches.length === 1) {
-          matchingCustomer = exactPhoneMatches[0].customer;
-          console.log(`Selected customer with exact phone match: ${matchingCustomer.name}`);
-        } else {
-          // Priority 2: Customers with orders and valid business emails (not business owner accounts)
-          const customersWithOrders = customerOrderCounts.filter(c => 
-            c.orderCount > 0 && 
-            c.customer.email && 
-            c.customer.email.includes('@') && 
-            !c.customer.email.includes('hello@quikpik.co') && // Exclude business owner emails
-            !c.customer.email.includes('nvois.co') // Exclude internal test emails
-          );
-          
-          if (customersWithOrders.length > 0) {
-            // Among customers with orders, prefer one with more complete profile
-            const bestCustomer = customersWithOrders.reduce((best, current) => {
-              // Scoring system: orders + email quality + name completeness
-              const bestScore = best.orderCount + 
-                (best.customer.email?.includes('gmail') ? 2 : 1) +
-                (best.customer.name?.split(' ').length > 1 ? 1 : 0);
-              const currentScore = current.orderCount +
-                (current.customer.email?.includes('gmail') ? 2 : 1) +
-                (current.customer.name?.split(' ').length > 1 ? 1 : 0);
-              return currentScore > bestScore ? current : best;
-            });
-            
-            matchingCustomer = bestCustomer.customer;
-            console.log(`Selected customer with best profile score: ${matchingCustomer.name} (${bestCustomer.orderCount} orders, ${matchingCustomer.email})`);
-          } else {
-            // Priority 3: Any customer with email, prefer non-business accounts
-            const customersWithEmail = customerOrderCounts.filter(c => 
-              c.customer.email && 
-              !c.customer.email.includes('hello@quikpik.co')
-            );
-            
-            matchingCustomer = customersWithEmail.length > 0 
-              ? customersWithEmail[0].customer 
-              : customerOrderCounts[0].customer;
-            console.log(`Selected customer with email: ${matchingCustomer.name}`);
-          }
-        }
+        // SECURITY: Refuse authentication when multiple customers share same last 4 digits
+        // This prevents customer A from accessing customer B's data
+        throw new Error(`Authentication failed: Multiple customers found with same phone number suffix. This is a security risk. Please contact support.`);
       }
+
+      const matchingCustomer = matchingCustomers[0];
 
       
       console.log(`Customer found: ${matchingCustomer.name} (${matchingCustomer.phone}) for wholesaler: ${wholesalerId}`);

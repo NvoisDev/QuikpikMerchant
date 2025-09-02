@@ -1051,7 +1051,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Find the latest SMS verification code for this customer
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      let customer;
+      try {
+        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      } catch (error: any) {
+        // Handle security error when multiple customers share same last 4 digits
+        if (error.message.includes('Multiple customers found with same phone number suffix')) {
+          return res.status(400).json({ 
+            error: "Multiple customers found with the same phone number ending. Please contact support for assistance.",
+            securityIssue: true
+          });
+        }
+        throw error; // Re-throw other errors
+      }
+      
       if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
       }
@@ -1080,7 +1093,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find customer by last 4 digits
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      let customer;
+      try {
+        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      } catch (error: any) {
+        // Handle security error when multiple customers share same last 4 digits
+        if (error.message.includes('Multiple customers found with same phone number suffix')) {
+          return res.status(400).json({ 
+            error: "Multiple customers found with the same phone number ending. Please contact support for assistance.",
+            securityIssue: true
+          });
+        }
+        throw error; // Re-throw other errors
+      }
       
       if (!customer) {
         return res.status(401).json({ error: "Customer not found" });
@@ -1179,7 +1204,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find customer by last 4 digits
-      const customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      let customer;
+      try {
+        customer = await storage.findCustomerByLastFourDigits(wholesalerId, lastFourDigits);
+      } catch (error: any) {
+        // Handle security error when multiple customers share same last 4 digits
+        if (error.message.includes('Multiple customers found with same phone number suffix')) {
+          return res.status(400).json({ 
+            error: "Multiple customers found with the same phone number ending. Please contact support for assistance.",
+            securityIssue: true
+          });
+        }
+        throw error; // Re-throw other errors
+      }
       
       if (!customer) {
         return res.status(401).json({ error: "Customer not found" });
