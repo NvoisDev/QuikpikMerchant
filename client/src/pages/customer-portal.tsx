@@ -1404,6 +1404,18 @@ export default function CustomerPortal() {
       return;
     }
     
+    // CRITICAL VALIDATION: Ensure delivery orders have a selected address
+    if (shippingOption === 'delivery' && !customerData.selectedDeliveryAddress) {
+      console.log('🚚 ERROR: Delivery selected but no delivery address provided');
+      toast({
+        title: "Delivery address required",
+        description: "Please select a delivery address to continue with delivery option",
+        variant: "destructive",
+      });
+      setIsCreatingIntent(false);
+      return;
+    }
+    
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
     console.log('🚚 CRITICAL FIX: Using explicit shipping option:', explicitShippingOption, 'or current state:', customerData.shippingOption);
     console.log('🚚 AUTO-DETECT: Final shipping option after detection:', shippingOption);
@@ -1411,7 +1423,9 @@ export default function CustomerPortal() {
       name: customerData.name,
       phone: customerData.phone,
       shippingOption: shippingOption,
-      selectedDeliveryAddress: customerData.selectedDeliveryAddress
+      selectedDeliveryAddress: customerData.selectedDeliveryAddress,
+      hasSelectedDeliveryAddress: !!customerData.selectedDeliveryAddress,
+      addressKeys: customerData.selectedDeliveryAddress ? Object.keys(customerData.selectedDeliveryAddress) : 'none'
     }, null, 2));
     
     // CRITICAL FIX: Check if shipping option changed - if so, create new payment intent
