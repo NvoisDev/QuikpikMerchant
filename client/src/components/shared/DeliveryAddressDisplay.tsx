@@ -6,6 +6,7 @@ interface DeliveryAddress {
   addressLine1: string;
   addressLine2?: string;
   city: string;
+  state?: string;
   postalCode: string;
   country?: string;
   label?: string;
@@ -93,6 +94,7 @@ export const DeliveryAddressDisplay: React.FC<DeliveryAddressDisplayProps> = ({
             )}
             <div>
               {parsedAddress.city}
+              {parsedAddress.state && parsedAddress.state !== parsedAddress.city && `, ${parsedAddress.state}`}
               {parsedAddress.postalCode && ` ${parsedAddress.postalCode}`}
             </div>
             {parsedAddress.country && (
