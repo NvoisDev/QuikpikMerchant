@@ -1102,8 +1102,8 @@ export default function CustomerPortal() {
     },
     enabled: !!wholesalerId,
     retry: 1,
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes - shorter to prevent logo confusion
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    staleTime: 0, // No cache to prevent logo confusion
+    gcTime: 0, // No cache to prevent logo confusion
     refetchOnWindowFocus: true, // Refresh when window regains focus
     refetchOnMount: true, // Refresh on component mount
     refetchInterval: false,
