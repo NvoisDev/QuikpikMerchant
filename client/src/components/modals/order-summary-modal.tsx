@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,18 +37,44 @@ interface OrderSummaryModalProps {
   onClose: () => void;
   cartItems: CartItem[];
   formatCurrency: (amount: number | string) => string;
+  selectedDeliveryAddress?: any;
 }
 
 export default function OrderSummaryModal({
   isOpen,
   onClose,
   cartItems,
-  formatCurrency
+  formatCurrency,
+  selectedDeliveryAddress
 }: OrderSummaryModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Helper function to format delivery address
+  const formatDeliveryAddress = (address: any) => {
+    if (!address) return "";
+    
+    const parts = [
+      address.addressLine1,
+      address.addressLine2,
+      address.city,
+      address.state,
+      address.postalCode,
+      address.country
+    ].filter(Boolean);
+    
+    return parts.join(", ");
+  };
+
+  // Populate delivery address when selected address changes
+  useEffect(() => {
+    if (selectedDeliveryAddress) {
+      const formattedAddress = formatDeliveryAddress(selectedDeliveryAddress);
+      setDeliveryAddress(formattedAddress);
+    }
+  }, [selectedDeliveryAddress]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
