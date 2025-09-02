@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderCardSkeleton, TableRowSkeleton } from "@/components/ui/loading-skeletons";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currencies";
+import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 import { 
   Package, 
   Clock, 
@@ -1232,57 +1233,21 @@ function OrderDetailsModal({ order }: { order: Order }) {
                       {(order.customerPhone || order.retailer?.phoneNumber) || 'N/A'}
                     </span>
                   </div>
-                  {/* Delivery Address Section - Using direct lookup */}
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-start">
-                      <MapPin className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900 block mb-1">Delivery Address</span>
-                        {customerDeliveryAddress ? (
-                          <div className="space-y-1">
-                            {(() => {
-                              const Icon = getLabelIcon(customerDeliveryAddress.label);
-                              return (
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <Icon className="h-4 w-4 text-green-600" />
-                                    <div className="text-sm">
-                                      <div className="font-medium">{customerDeliveryAddress.addressLine1}</div>
-                                      {customerDeliveryAddress.addressLine2 && (
-                                        <div>{customerDeliveryAddress.addressLine2}</div>
-                                      )}
-                                      <div>
-                                        {customerDeliveryAddress.city}
-                                        {customerDeliveryAddress.state && `, ${customerDeliveryAddress.state}`}
-                                        {customerDeliveryAddress.postalCode && ` ${customerDeliveryAddress.postalCode}`}
-                                      </div>
-                                      {customerDeliveryAddress.country && (
-                                        <div className="font-medium">{customerDeliveryAddress.country}</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {customerDeliveryAddress.label && (
-                                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
-                                      {customerDeliveryAddress.label}
-                                    </div>
-                                  )}
-                                  {customerDeliveryAddress.instructions && (
-                                    <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                                      <span className="font-medium">Instructions:</span> {customerDeliveryAddress.instructions}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        ) : order.fulfillmentType === 'delivery' ? (
-                          <div className="text-sm text-gray-500 italic">Loading delivery address...</div>
-                        ) : (
-                          <div className="text-sm text-gray-500 italic">Collection order - no delivery address needed</div>
-                        )}
-                      </div>
+                  {/* Delivery Address Section - Using shared component */}
+                  {order.fulfillmentType === 'delivery' && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      {customerDeliveryAddress ? (
+                        <DeliveryAddressDisplay 
+                          address={customerDeliveryAddress}
+                          className="bg-transparent border-0 p-0"
+                          showLabel={true}
+                          showInstructions={true}
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-500 italic">Loading delivery address...</div>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
