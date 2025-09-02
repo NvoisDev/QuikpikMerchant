@@ -4373,17 +4373,23 @@ export default function CustomerPortal() {
                             selectedAddress={customerData.selectedDeliveryAddress}
                             onAddressSelect={(address) => {
                               console.log('🏠 Address selected in checkout:', address);
+                              console.log('🏠 Address object keys:', address ? Object.keys(address) : 'no address');
+                              console.log('🏠 Address data:', JSON.stringify(address, null, 2));
                               // Update customer data with selected address and save full address object
-                              setCustomerData(prev => ({
-                                ...prev,
-                                address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
-                                city: address?.city || '',
-                                postalCode: address?.postalCode || '',
-                                // Save complete delivery address object for order
-                                selectedDeliveryAddress: address,
-                                // Auto-set shipping option to delivery when address is selected
-                                shippingOption: address ? 'delivery' : prev.shippingOption
-                              }));
+                              setCustomerData(prev => {
+                                const newData = {
+                                  ...prev,
+                                  address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
+                                  city: address?.city || '',
+                                  postalCode: address?.postalCode || '',
+                                  // Save complete delivery address object for order
+                                  selectedDeliveryAddress: address,
+                                  // Auto-set shipping option to delivery when address is selected
+                                  shippingOption: address ? 'delivery' : prev.shippingOption
+                                };
+                                console.log('🏠 Updated customerData with selectedDeliveryAddress:', !!newData.selectedDeliveryAddress);
+                                return newData;
+                              });
                               
                               // Auto-create payment intent with correct shipping option
                               if (address) {
