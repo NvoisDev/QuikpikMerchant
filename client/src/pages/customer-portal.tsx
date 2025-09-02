@@ -4212,6 +4212,7 @@ export default function CustomerPortal() {
                         type="radio"
                         id="pickup"
                         name="shipping"
+                        value="pickup"
                         checked={customerData.shippingOption === 'pickup'}
                         onChange={async () => {
                           console.log('🚚 PICKUP RADIO: User clicked pickup option');
@@ -4263,6 +4264,7 @@ export default function CustomerPortal() {
                         type="radio"
                         id="delivery"
                         name="shipping"
+                        value="delivery"
                         checked={customerData.shippingOption === 'delivery'}
                         onChange={async () => {
                           console.log('🚚 DELIVERY RADIO: User clicked delivery option');
