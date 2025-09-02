@@ -4207,7 +4207,7 @@ export default function CustomerPortal() {
                     )}
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
+                    <div className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-colors ${customerData.shippingOption === 'pickup' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
                       <input
                         type="radio"
                         id="pickup"
@@ -4258,7 +4258,7 @@ export default function CustomerPortal() {
                         <p className="text-sm text-gray-600">Collect your order from our location</p>
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-colors ${customerData.shippingOption === 'delivery' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                       <input
                         type="radio"
                         id="delivery"
@@ -4272,7 +4272,10 @@ export default function CustomerPortal() {
                             // First, update the state immediately
                             setCustomerData(prev => {
                               console.log('🚚 STATE UPDATE: Setting shippingOption to delivery');
-                              return {...prev, shippingOption: 'delivery'};
+                              console.log('🚚 BEFORE UPDATE: prev.shippingOption =', prev.shippingOption);
+                              const newData = {...prev, shippingOption: 'delivery'};
+                              console.log('🚚 AFTER UPDATE: newData.shippingOption =', newData.shippingOption);
+                              return newData;
                             });
                             
                             // Then save to backend if authenticated
