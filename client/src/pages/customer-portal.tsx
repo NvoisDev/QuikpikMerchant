@@ -4002,7 +4002,7 @@ export default function CustomerPortal() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Phone className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">Phone: {wholesaler?.businessPhone || wholesaler?.phone || '+44750765955'}</span>
+                      <span className="text-sm">Phone: {wholesaler?.phoneNumber || wholesaler?.businessPhone}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Building className="h-4 w-4 text-gray-400" />
