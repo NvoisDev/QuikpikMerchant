@@ -166,6 +166,19 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const orderNumber = await storage.generateOrderNumber(wholesalerId);
   console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
   
+  // CRITICAL FIX: Extract and use the selected delivery address from payment metadata
+  const selectedDeliveryAddressData = paymentIntent.metadata.selectedDeliveryAddress;
+  let selectedDeliveryAddress = null;
+  
+  if (selectedDeliveryAddressData && selectedDeliveryAddressData !== 'null' && selectedDeliveryAddressData !== 'undefined' && selectedDeliveryAddressData !== '') {
+    try {
+      selectedDeliveryAddress = JSON.parse(selectedDeliveryAddressData);
+      console.log(`📍 PARSED: Selected delivery address from payment metadata:`, selectedDeliveryAddress);
+    } catch (error) {
+      console.error('❌ Failed to parse selectedDeliveryAddress from payment metadata:', error);
+    }
+  }
+
   // Create order with customer details AND SHIPPING DATA
   const orderData = {
     orderNumber, // Use pre-generated atomic order number
@@ -183,7 +196,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     total: correctTotal, // Total = subtotal + customer transaction fee
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
-    deliveryAddress: customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null,
+    // CRITICAL FIX: Use the selected delivery address if available, otherwise fall back to customer address
+    deliveryAddress: selectedDeliveryAddress ? JSON.stringify(selectedDeliveryAddress) : 
+                    (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
     // CRITICAL: Store selected delivery address ID for exact order-address tracking
     deliveryAddressId: await (async () => {
       if (selectedDeliveryAddressId && selectedDeliveryAddressId !== '') {
