@@ -491,6 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: testUser, authenticated: true });
   });
 
+
   // Test products endpoint (development only - bypasses auth for demo)
   app.get('/api/test-products', async (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
