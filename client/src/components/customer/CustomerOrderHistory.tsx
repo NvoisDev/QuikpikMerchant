@@ -10,6 +10,7 @@ import { useState, useMemo } from "react";
 import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
+import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -179,69 +180,13 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Delivery Address */}
+        {/* Delivery Address - Using Shared Component */}
         {(order.deliveryAddressId || order.deliveryAddress) && (
           <div>
-            {order.deliveryAddressId ? (
-              <DeliveryAddressDisplay addressId={order.deliveryAddressId} />
-            ) : (
-              <>
-                <h3 className="font-medium mb-1 text-sm sm:text-base">Delivery Address</h3>
-                <div className="bg-gray-50 p-2 sm:p-3 rounded-lg">
-                  {(() => {
-                    const deliveryAddr = parseDeliveryAddress(order.deliveryAddress!);
-                    if (deliveryAddr) {
-                      const Icon = getLabelIcon(deliveryAddr.label);
-                      return (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-green-600" />
-                            <div className="text-xs">
-                              <div className="font-medium">{deliveryAddr.addressLine1}</div>
-                              {deliveryAddr.addressLine2 && (
-                                <div>{deliveryAddr.addressLine2}</div>
-                              )}
-                              <div>
-                                {deliveryAddr.city}
-                                {deliveryAddr.state && `, ${deliveryAddr.state}`}
-                                {deliveryAddr.postalCode && ` ${deliveryAddr.postalCode}`}
-                              </div>
-                            </div>
-                          </div>
-                          {deliveryAddr.label && (
-                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
-                              {deliveryAddr.label}
-                            </div>
-                          )}
-                          {deliveryAddr.instructions && (
-                            <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                              <span className="font-medium">Instructions:</span> {deliveryAddr.instructions}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    } else {
-                      // Use the shared utility for consistent address formatting
-                      const addressLines = formatDeliveryAddress(order.deliveryAddress!);
-                      if (addressLines.length > 0) {
-                        return (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-green-600 mt-0.5" />
-                            <div className="text-xs space-y-1">
-                              {addressLines.map((line, index) => (
-                                <div key={index}>{line}</div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      return null;
-                    }
-                  })()}
-                </div>
-              </>
-            )}
+            <DeliveryAddressDisplay 
+              address={order.deliveryAddress}
+              className="bg-gray-50 border-gray-200"
+            />
           </div>
         )}
 
@@ -381,8 +326,8 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
   );
 };
 
-// Component to fetch and display delivery address details by ID
-const DeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
+// Component to fetch and display delivery address details by ID  
+const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
   const { data: address, isLoading, error } = useQuery<{
     addressLine1: string;
     addressLine2?: string;

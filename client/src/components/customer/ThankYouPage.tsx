@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { PromotionalPricingCalculator } from "@shared/promotional-pricing";
 import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
+import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
 // Image removed for production - using icon instead
 
 interface CartItem {
@@ -342,22 +343,12 @@ export const ThankYouPage = ({
                         Your order will be delivered by the supplier. The wholesaler will contact you directly to arrange delivery and discuss any associated costs.
                       </p>
                       
-                      {/* Display delivery address if available */}
+                      {/* Display delivery address using shared component */}
                       {customerData.selectedDeliveryAddress && (
-                        <div className="bg-white p-3 rounded border border-blue-200 mt-3">
-                          <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
-                          <div className="text-sm text-gray-700">
-                            <div className="font-medium">{customerData.selectedDeliveryAddress.addressLine1}</div>
-                            {customerData.selectedDeliveryAddress.addressLine2 && (
-                              <div>{customerData.selectedDeliveryAddress.addressLine2}</div>
-                            )}
-                            <div>{customerData.selectedDeliveryAddress.city}</div>
-                            <div>{customerData.selectedDeliveryAddress.postalCode}</div>
-                            {customerData.selectedDeliveryAddress.country && (
-                              <div>{customerData.selectedDeliveryAddress.country}</div>
-                            )}
-                          </div>
-                        </div>
+                        <DeliveryAddressDisplay 
+                          address={customerData.selectedDeliveryAddress}
+                          className="mt-3"
+                        />
                       )}
                     </div>
                   )}
