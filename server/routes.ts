@@ -1146,7 +1146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📋 SMS service result:`, result);
       
       // Always store verification code in database, regardless of SMS success
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
       const smsData = {
         customerId: customer.id,
         wholesalerId: wholesalerId,
@@ -1238,10 +1238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid verification code" });
       }
 
-      // Check if code is expired (5 minutes)
+      // Check if code is expired (15 minutes)
       const now = new Date();
       const expiryTime = new Date(verificationRecord.createdAt);
-      expiryTime.setMinutes(expiryTime.getMinutes() + 5);
+      expiryTime.setMinutes(expiryTime.getMinutes() + 15);
       
       if (now > expiryTime) {
         return res.status(401).json({ error: "Verification code has expired" });
