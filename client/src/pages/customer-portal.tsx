@@ -4296,18 +4296,8 @@ export default function CustomerPortal() {
                               console.log('🚚 GUEST USER: No backend save needed');
                             }
                             
-                            // Wait a brief moment for AddressSelector to auto-select default address, then create payment intent
-                            console.log('🚚 DELIVERY SELECTED: Allowing AddressSelector to auto-select default address');
-                            
-                            // Give AddressSelector time to auto-select default address, then create payment intent
-                            setTimeout(() => {
-                              if (customerData.selectedDeliveryAddress) {
-                                console.log('🚚 DEFAULT ADDRESS FOUND: Creating payment intent with default address');
-                                createPaymentIntentForCheckout('delivery');
-                              } else {
-                                console.log('🚚 NO DEFAULT ADDRESS: User will need to select an address manually');
-                              }
-                            }, 100); // Brief delay to allow auto-selection to complete
+                            // Let AddressSelector handle auto-selection and payment intent creation
+                            console.log('🚚 DELIVERY SELECTED: AddressSelector will auto-select default address and create payment intent');
                             
                           } catch (error) {
                             console.error('🚚 DELIVERY SELECTION ERROR:', error);
