@@ -1171,13 +1171,31 @@ function OrderDetailsModal({ order }: { order: Order }) {
           // If order has a specific delivery address ID, fetch that exact address
           if (order.deliveryAddressId) {
             console.log(`🎯 Fetching exact delivery address for order ${order.id}: address ID ${order.deliveryAddressId}`);
-            const response = await fetch(`/api/delivery-address/${order.deliveryAddressId}`, {
+            // Use wholesaler endpoint since this is accessed from wholesaler dashboard
+            const response = await fetch(`/api/wholesaler/delivery-address/${order.deliveryAddressId}`, {
               credentials: 'include'
             });
             if (response.ok) {
               const exactAddress = await response.json();
+              console.log(`✅ Successfully fetched delivery address:`, exactAddress);
               setCustomerDeliveryAddress(exactAddress);
               return;
+            } else {
+              console.error(`❌ Failed to fetch delivery address ${order.deliveryAddressId}: ${response.status} ${response.statusText}`);
+              
+              // FALLBACK: Try to parse the stored delivery address JSON string if API fails
+              if (order.deliveryAddress) {
+                try {
+                  const parsedAddress = typeof order.deliveryAddress === 'string' 
+                    ? JSON.parse(order.deliveryAddress) 
+                    : order.deliveryAddress;
+                  console.log('🔄 FALLBACK: Using stored delivery address JSON:', parsedAddress);
+                  setCustomerDeliveryAddress(parsedAddress);
+                  return;
+                } catch (parseError) {
+                  console.error('❌ Failed to parse stored delivery address:', parseError);
+                }
+              }
             }
           }
           
