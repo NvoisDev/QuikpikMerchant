@@ -4387,16 +4387,17 @@ export default function CustomerPortal() {
                                   postalCode: address?.postalCode || '',
                                   // Save complete delivery address object for order
                                   selectedDeliveryAddress: address,
-                                  // Auto-set shipping option to delivery when address is selected
-                                  shippingOption: address ? 'delivery' : prev.shippingOption
+                                  // Keep current shipping option - don't override user's explicit choice
+                                  shippingOption: prev.shippingOption === 'delivery' ? 'delivery' : prev.shippingOption
                                 };
                                 console.log('🏠 Updated customerData with selectedDeliveryAddress:', !!newData.selectedDeliveryAddress);
+                                console.log('🏠 Keeping shipping option as:', newData.shippingOption);
                                 return newData;
                               });
                               
-                              // Auto-create payment intent with correct shipping option
-                              if (address) {
-                                console.log('🚚 AUTO-SELECT: Address selected, automatically creating delivery payment intent');
+                              // Auto-create payment intent if delivery is already selected
+                              if (address && customerData.shippingOption === 'delivery') {
+                                console.log('🚚 ADDRESS SELECTED: Creating payment intent for delivery with address');
                                 createPaymentIntentForCheckout('delivery');
                               }
                             }}
@@ -4443,15 +4444,15 @@ export default function CustomerPortal() {
                   {console.log('🚚 CHECKOUT MODAL: Opening with shipping option:', customerData.shippingOption)}
                   {console.log('🚚 CHECKOUT MODAL: Client secret exists:', !!clientSecret)}
                   
-                  {/* Validation: Ensure delivery orders have an address selected */}
-                  {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress ? (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                      <h4 className="font-medium text-amber-800 mb-2">Address Required</h4>
-                      <p className="text-sm text-amber-700">
-                        Please add and select a delivery address above to complete your order.
+                  {/* Only show validation error if user tries to pay without address */}
+                  {customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress && clientSecret ? (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                      <h4 className="font-medium text-red-800 mb-2">Delivery address required</h4>
+                      <p className="text-sm text-red-700">
+                        Please select a delivery address to continue with delivery option
                       </p>
                     </div>
-                  ) : (
+                  ) : customerData.shippingOption ? (
                     <StripeCheckoutForm
                     cart={cart}
                     customerData={customerData}
@@ -4539,7 +4540,7 @@ export default function CustomerPortal() {
                       setShowThankYou(true);
                     }}
                   />
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}
