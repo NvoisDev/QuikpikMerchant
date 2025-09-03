@@ -16,9 +16,17 @@ export function useAuth() {
         if (res.status === 401) {
           // Not authenticated - check if this is a session issue vs new user
           const currentPath = window.location.pathname;
-          const isOnDashboard = currentPath.includes('dashboard') || currentPath === '/' || 
-                               currentPath.includes('products') || currentPath.includes('orders') ||
-                               currentPath.includes('customers') || currentPath.includes('analytics');
+          
+          // CRITICAL FIX: Exclude customer portal routes from wholesaler dashboard authentication
+          const isCustomerPortal = currentPath.startsWith('/store/') || 
+                                 currentPath.startsWith('/customer-login') ||
+                                 currentPath.includes('/preview-store');
+          
+          const isOnDashboard = !isCustomerPortal && (
+            currentPath.includes('dashboard') || currentPath === '/' || 
+            currentPath.includes('products') || currentPath.includes('orders') ||
+            currentPath.includes('customers') || currentPath.includes('analytics')
+          );
           
           if (isOnDashboard) {
             // User was trying to access dashboard but auth failed - likely session expired
