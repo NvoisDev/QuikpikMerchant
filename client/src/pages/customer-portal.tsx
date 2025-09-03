@@ -349,7 +349,18 @@ const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, clien
   return (
     <Elements 
       stripe={stripePromise} 
-      options={{ clientSecret }}
+      options={{ 
+        clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#22C55E', // Use brand green color
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          },
+        },
+        // Add default locale for consistency
+        locale: 'en'
+      }}
     >
       <PaymentFormContent 
         onSuccess={onSuccess} 
@@ -399,6 +410,13 @@ const PaymentFormContent = ({
 
     try {
       console.log('💳 Calling stripe.confirmPayment...');
+      
+      // Add additional validation before attempting payment
+      const cardElement = elements.getElement('card');
+      if (!cardElement) {
+        console.error('💳 No card element found');
+      }
+      
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -407,7 +425,14 @@ const PaymentFormContent = ({
         redirect: "if_required",
       });
 
-      console.log('💳 Payment confirmation result:', { error, paymentIntent });
+      console.log('💳 Payment confirmation result:', { 
+        hasError: !!error, 
+        errorType: error?.type,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        paymentIntentId: paymentIntent?.id,
+        paymentIntentStatus: paymentIntent?.status 
+      });
 
       if (error) {
         // Enhanced payment failure handling with detailed error messages
@@ -448,7 +473,25 @@ const PaymentFormContent = ({
         } else if (error.type === 'invalid_request_error') {
           // This could indicate Stripe account setup issues
           errorTitle = "Payment Configuration Issue";
-          errorMessage = "There's an issue with the payment setup. Please contact the business owner or try again later.";
+          
+          // Provide more helpful error messages based on specific error codes
+          if (error.code === 'payment_intent_invalid_parameter' || error.code === 'payment_intent_creation_failed') {
+            errorMessage = "The payment setup has an issue. Please try again, or contact the business owner if the problem persists.";
+          } else if (error.code === 'account_invalid' || error.message?.includes('account')) {
+            errorMessage = "The business payment account needs attention. Please contact the business owner to resolve this issue.";
+          } else if (error.code === 'setup_intent_invalid' || error.code === 'payment_method_invalid') {
+            errorMessage = "Payment method configuration issue. Please try refreshing the page and attempting payment again.";
+          } else {
+            errorMessage = "There's an issue with the payment setup. Please contact the business owner or try again later.";
+          }
+          
+          // Log detailed error for debugging
+          console.error('💳 INVALID REQUEST ERROR Details:', {
+            code: error.code,
+            message: error.message,
+            type: error.type,
+            decline_code: error.decline_code
+          });
         } else {
           errorMessage = error.message || "An unexpected payment error occurred. Please try again.";
         }
@@ -1550,6 +1593,14 @@ export default function CustomerPortal() {
       
       if (response.ok) {
         const data = await response.json();
+        
+        // Validate client secret format before using it
+        if (!data.clientSecret || !data.clientSecret.startsWith('pi_')) {
+          console.error('💳 Invalid client secret format received:', data.clientSecret);
+          throw new Error('Invalid payment setup received from server');
+        }
+        
+        console.log('✅ Valid client secret received:', data.clientSecret?.substring(0, 10) + '...');
         setClientSecret(data.clientSecret);
         setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery'); // Track the shipping option for this payment intent
         console.log('🚚 SIMPLIFIED: Payment intent created successfully with shipping option:', shippingOption);
@@ -1560,6 +1611,20 @@ export default function CustomerPortal() {
       } else {
         const errorText = await response.text();
         console.error('🚚 API request failed:', response.status, errorText);
+        
+        // Handle specific payment configuration errors
+        let userMessage = "Unable to set up payment. Please try again.";
+        if (response.status === 500 && errorText.includes('payment_config_error')) {
+          userMessage = "There's an issue with the payment setup. Please contact the business owner.";
+        } else if (response.status === 400 && errorText.includes('calculation_error')) {
+          userMessage = "Payment amount calculation error. Please refresh and try again.";
+        }
+        
+        toast({
+          title: "Payment Setup Failed",
+          description: userMessage,
+          variant: "destructive",
+        });
         throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
       }
     } catch (error) {
