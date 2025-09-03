@@ -74,9 +74,22 @@ export function AddressSelector({
 
   // Auto-select default address when available and no address is currently selected
   useEffect(() => {
+    console.log('🏠 ADDRESS SELECTOR DEBUG:', {
+      addressesLength: addresses.length,
+      hasDefaultAddress: !!defaultAddress,
+      hasSelectedAddress: !!selectedAddress,
+      defaultAddressData: defaultAddress ? defaultAddress.addressLine1 : 'none'
+    });
+    
     if (defaultAddress && !selectedAddress && addresses.length > 0) {
       console.log('🏠 AUTO-SELECTING: Default address found, auto-selecting for customer convenience:', defaultAddress.addressLine1);
       onAddressSelect(defaultAddress);
+    } else if (addresses.length === 0) {
+      console.log('🏠 NO ADDRESSES: Customer has no delivery addresses saved');
+    } else if (!defaultAddress && addresses.length > 0) {
+      console.log('🏠 NO DEFAULT: Customer has addresses but no default address set');
+    } else if (selectedAddress) {
+      console.log('🏠 ADDRESS ALREADY SELECTED: Using existing selection:', selectedAddress.addressLine1);
     }
   }, [defaultAddress, selectedAddress, onAddressSelect, addresses.length]);
 
@@ -142,7 +155,15 @@ export function AddressSelector({
       
       {/* Selected/Default Address Display */}
       {displayAddress ? (
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            if (!selectedAddress && displayAddress) {
+              console.log('🏠 MANUAL SELECT: User clicked address card, selecting:', displayAddress.addressLine1);
+              onAddressSelect(displayAddress);
+            }
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3 flex-1">
