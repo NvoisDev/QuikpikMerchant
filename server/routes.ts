@@ -4376,18 +4376,17 @@ The Quikpik Team`
           hasTransferData: !!paymentConfig.transfer_data
         });
 
-        // Add shipping information if delivery is selected
-        const paymentIntentConfig: any = {
+        paymentIntent = await stripe.paymentIntents.create({
           ...paymentConfig,
-          metadata: {
-            customerName,
-            customerEmail,
-            customerPhone,
-            customerAddress: JSON.stringify(customerAddress),
-            // CRITICAL: Store selected delivery address ID for exact order-address tracking
-            selectedDeliveryAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : '',
-            // CRITICAL FIX: Store the complete selected delivery address object
-            selectedDeliveryAddress: selectedDeliveryAddress ? JSON.stringify(selectedDeliveryAddress) : '',
+        metadata: {
+          customerName,
+          customerEmail,
+          customerPhone,
+          customerAddress: JSON.stringify(customerAddress),
+          // CRITICAL: Store selected delivery address ID for exact order-address tracking
+          selectedDeliveryAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : '',
+          // CRITICAL FIX: Store the complete selected delivery address object
+          selectedDeliveryAddress: selectedDeliveryAddress ? JSON.stringify(selectedDeliveryAddress) : '',
           productSubtotal: productSubtotal.toFixed(2),
           shippingCost: deliveryCost.toString(),
           customerTransactionFee: customerTransactionFee.toFixed(2),
@@ -4407,30 +4406,10 @@ The Quikpik Team`
             unitPrice: parseFloat(item.unitPrice),
             sellingType: item.sellingType || 'units' // CRITICAL: Preserve selling type for order creation
           })))
-          }
-        };
-
-        // Add shipping information to Stripe payment intent for delivery orders
-        if (shippingInfo?.option === 'delivery' && selectedDeliveryAddress) {
-          console.log('🚚 STRIPE SHIPPING: Adding delivery address to payment intent for Stripe display');
-          paymentIntentConfig.shipping = {
-            name: customerName,
-            phone: customerPhone,
-            address: {
-              line1: selectedDeliveryAddress.addressLine1,
-              line2: selectedDeliveryAddress.addressLine2 || '',
-              city: selectedDeliveryAddress.city,
-              state: selectedDeliveryAddress.state || '',
-              postal_code: selectedDeliveryAddress.postalCode,
-              country: selectedDeliveryAddress.country || 'GB'
-            }
-          };
-          console.log('🚚 STRIPE SHIPPING: Configured shipping details:', JSON.stringify(paymentIntentConfig.shipping, null, 2));
         }
-
-        paymentIntent = await stripe.paymentIntents.create(paymentIntentConfig, {
-          idempotencyKey: idempotencyKey
-        });
+      }, {
+        idempotencyKey: idempotencyKey
+      });
       
       console.log('✅ Payment intent created successfully:', paymentIntent.id);
       
