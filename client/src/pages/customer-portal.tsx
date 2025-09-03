@@ -4316,11 +4316,11 @@ export default function CustomerPortal() {
                     </div>
                   </div>
 
-                  {/* Delivery Address Selector */}
+                  {/* Delivery Address Selector - Always show when delivery is selected */}
                   {customerData.shippingOption === 'delivery' && wholesaler?.id && (
                     <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Delivery Address</h4>
+                        <h4 className="font-medium">Choose Delivery Address</h4>
                         {customerData.selectedDeliveryAddress && (
                           <Button
                             variant="ghost"
@@ -4344,81 +4344,39 @@ export default function CustomerPortal() {
                         )}
                       </div>
                       
-                      {/* Show selected address in read-only format */}
-                      {customerData.selectedDeliveryAddress ? (
-                        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <MapPin className="h-4 w-4 text-gray-500" />
-                                <span className="font-medium text-gray-900">
-                                  {customerData.selectedDeliveryAddress.label || 'Delivery Address'}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-700 space-y-1">
-                                <div>{customerData.selectedDeliveryAddress.addressLine1}</div>
-                                {customerData.selectedDeliveryAddress.addressLine2 && (
-                                  <div>{customerData.selectedDeliveryAddress.addressLine2}</div>
-                                )}
-                                <div>
-                                  {customerData.selectedDeliveryAddress.city}
-                                  {customerData.selectedDeliveryAddress.state && `, ${customerData.selectedDeliveryAddress.state}`}
-                                  {customerData.selectedDeliveryAddress.postalCode && ` ${customerData.selectedDeliveryAddress.postalCode}`}
-                                </div>
-                                <div>{customerData.selectedDeliveryAddress.country}</div>
-                                {customerData.selectedDeliveryAddress.instructions && (
-                                  <div className="text-xs text-gray-500 mt-2">
-                                    <span className="font-medium">Instructions:</span> {customerData.selectedDeliveryAddress.instructions}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <AddressSelector
-                            wholesalerId={wholesaler.id}
-                            selectedAddress={customerData.selectedDeliveryAddress}
-                            onAddressSelect={(address) => {
-                              console.log('🏠 Address selected in checkout:', address);
-                              console.log('🏠 Address object keys:', address ? Object.keys(address) : 'no address');
-                              console.log('🏠 Address data:', JSON.stringify(address, null, 2));
-                              // Update customer data with selected address and save full address object
-                              setCustomerData(prev => {
-                                const newData = {
-                                  ...prev,
-                                  address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
-                                  city: address?.city || '',
-                                  postalCode: address?.postalCode || '',
-                                  // Save complete delivery address object for order
-                                  selectedDeliveryAddress: address,
-                                  // Keep current shipping option - don't override user's explicit choice
-                                  shippingOption: prev.shippingOption === 'delivery' ? 'delivery' : prev.shippingOption
-                                };
-                                console.log('🏠 Updated customerData with selectedDeliveryAddress:', !!newData.selectedDeliveryAddress);
-                                console.log('🏠 Keeping shipping option as:', newData.shippingOption);
-                                return newData;
-                              });
-                              
-                              // Auto-create payment intent if delivery is already selected
-                              if (address && customerData.shippingOption === 'delivery') {
-                                console.log('🚚 ADDRESS SELECTED: Creating payment intent for delivery with address');
-                                createPaymentIntentForCheckout('delivery');
-                              }
-                            }}
-                            compact={true}
-                          />
+                      {/* Always show AddressSelector when delivery is selected - let it handle display logic */}
+                      <AddressSelector
+                        wholesalerId={wholesaler.id}
+                        selectedAddress={customerData.selectedDeliveryAddress}
+                        onAddressSelect={(address) => {
+                          console.log('🏠 Address selected in checkout:', address);
+                          console.log('🏠 Address object keys:', address ? Object.keys(address) : 'no address');
+                          console.log('🏠 Address data:', JSON.stringify(address, null, 2));
+                          // Update customer data with selected address and save full address object
+                          setCustomerData(prev => {
+                            const newData = {
+                              ...prev,
+                              address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
+                              city: address?.city || '',
+                              postalCode: address?.postalCode || '',
+                              // Save complete delivery address object for order
+                              selectedDeliveryAddress: address,
+                              // Keep current shipping option - don't override user's explicit choice
+                              shippingOption: 'delivery' // Ensure delivery stays selected when address is chosen
+                            };
+                            console.log('🏠 Updated customerData with selectedDeliveryAddress:', !!newData.selectedDeliveryAddress);
+                            console.log('🏠 Keeping shipping option as delivery');
+                            return newData;
+                          });
                           
-                          {/* Address Required Warning */}
-                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                            <h5 className="font-medium text-amber-800 mb-1">Address Required</h5>
-                            <p className="text-sm text-amber-700">
-                              Please add and select a delivery address to continue with your order.
-                            </p>
-                          </div>
-                        </>
-                      )}
+                          // Auto-create payment intent when address is selected for delivery
+                          if (address) {
+                            console.log('🚚 ADDRESS SELECTED: Creating payment intent for delivery with address');
+                            createPaymentIntentForCheckout('delivery');
+                          }
+                        }}
+                        compact={true}
+                      />
                       
                       {/* Delivery Information Note */}
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
