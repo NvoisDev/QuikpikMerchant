@@ -1404,16 +1404,37 @@ export default function CustomerPortal() {
       return;
     }
     
-    // CRITICAL VALIDATION: Ensure delivery orders have a selected address
-    if (shippingOption === 'delivery' && !customerData.selectedDeliveryAddress) {
-      console.log('🚚 ERROR: Delivery selected but no delivery address provided');
-      toast({
-        title: "Delivery address required",
-        description: "Please select a delivery address to continue with delivery option",
-        variant: "destructive",
-      });
-      setIsCreatingIntent(false);
-      return;
+    // CRITICAL VALIDATION: Ensure delivery orders have a selected address with complete data
+    if (shippingOption === 'delivery') {
+      if (!customerData.selectedDeliveryAddress) {
+        console.log('🚚 ERROR: Delivery selected but no delivery address provided');
+        toast({
+          title: "Delivery address required",
+          description: "Please select a delivery address to continue with delivery option",
+          variant: "destructive",
+        });
+        setIsCreatingIntent(false);
+        return;
+      }
+      
+      // Additional validation: Ensure address has required fields
+      const addr = customerData.selectedDeliveryAddress;
+      if (!addr.addressLine1 || !addr.city || !addr.postalCode) {
+        console.log('🚚 ERROR: Selected delivery address is missing required fields:', {
+          hasAddressLine1: !!addr.addressLine1,
+          hasCity: !!addr.city,
+          hasPostalCode: !!addr.postalCode
+        });
+        toast({
+          title: "Address incomplete",
+          description: "Please select a complete delivery address",
+          variant: "destructive",
+        });
+        setIsCreatingIntent(false);
+        return;
+      }
+      
+      console.log('✅ VALIDATION PASSED: Complete delivery address available:', addr.addressLine1);
     }
     
     console.log('🚚 SIMPLIFIED CHECKOUT: Creating payment intent');
@@ -1470,17 +1491,26 @@ export default function CustomerPortal() {
         return total + (unitPrice * item.quantity);
       }, 0);
 
+      // CRITICAL: Validate address data before payment intent creation
+      console.log('🏰 PAYMENT VALIDATION: Address data check:', {
+        shippingOption,
+        hasSelectedAddress: !!customerData.selectedDeliveryAddress,
+        addressLine1: customerData.selectedDeliveryAddress?.addressLine1,
+        addressCity: customerData.selectedDeliveryAddress?.city
+      });
+      
       const requestPayload = {
         customerData: {
           name: customerData.name,
           email: customerData.email,
           phone: customerData.phone,
-          // CRITICAL FIX: Use selectedDeliveryAddress data if available, otherwise fall back to individual fields
+          // BEST PRACTICE: Use selectedDeliveryAddress as primary source for delivery orders
           address: customerData.selectedDeliveryAddress?.addressLine1 || customerData.address,
           city: customerData.selectedDeliveryAddress?.city || customerData.city,
           state: customerData.selectedDeliveryAddress?.state || customerData.state,
           postalCode: customerData.selectedDeliveryAddress?.postalCode || customerData.postalCode,
           country: customerData.selectedDeliveryAddress?.country || customerData.country || 'United Kingdom',
+          // CRITICAL: Include complete address object for Stripe metadata
           selectedDeliveryAddress: customerData.selectedDeliveryAddress,
           selectedDeliveryAddressId: customerData.selectedDeliveryAddress?.id
         },
@@ -1510,7 +1540,11 @@ export default function CustomerPortal() {
         }
       };
       
-      console.log('🚚 PAYMENT REQUEST: Sending payment intent request with payload:', JSON.stringify(requestPayload, null, 2));
+      // CRITICAL: Log detailed address data being sent to backend
+      console.log('🚚 PAYMENT REQUEST: Creating payment intent with validated data:');
+      console.log('🚚 SHIPPING OPTION:', shippingOption);
+      console.log('🚚 ADDRESS DATA:', requestPayload.customerData.selectedDeliveryAddress);
+      console.log('🚚 FULL PAYLOAD:', JSON.stringify(requestPayload, null, 2));
       
       const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
       
@@ -4268,40 +4302,32 @@ export default function CustomerPortal() {
                         checked={customerData.shippingOption === 'delivery'}
                         onChange={async () => {
                           console.log('🚚 DELIVERY RADIO: User clicked delivery option');
-                          console.log('🚚 DEBUG: Current shippingOption before change:', customerData.shippingOption);
                           
-                          try {
-                            // First, update the state immediately
-                            setCustomerData(prev => {
-                              console.log('🚚 STATE UPDATE: Setting shippingOption to delivery');
-                              console.log('🚚 BEFORE UPDATE: prev.shippingOption =', prev.shippingOption);
-                              const newData = {...prev, shippingOption: 'delivery'};
-                              console.log('🚚 AFTER UPDATE: newData.shippingOption =', newData.shippingOption);
-                              return newData;
-                            });
-                            
-                            // Then save to backend if authenticated
-                            if (authenticatedCustomer?.id) {
-                              console.log('🚚 BACKEND SAVE: Saving delivery choice for authenticated user');
-                              const response = await apiRequest("POST", "/api/customer/shipping-choice", {
+                          // STEP 1: Update shipping option to delivery (no payment intent yet)
+                          setCustomerData(prev => ({
+                            ...prev, 
+                            shippingOption: 'delivery',
+                            // Clear any existing payment intent to force recreation with address
+                            clientSecret: null
+                          }));
+                          
+                          // STEP 2: Clear any existing payment intent to start fresh
+                          setClientSecret('');
+                          
+                          // STEP 3: Save preference to backend if authenticated
+                          if (authenticatedCustomer?.id) {
+                            try {
+                              await apiRequest("POST", "/api/customer/shipping-choice", {
                                 customerId: authenticatedCustomer.id,
                                 shippingChoice: 'delivery'
                               });
-                              if (response.ok) {
-                                console.log('🚚 SUCCESS: Delivery choice saved to backend');
-                              } else {
-                                console.error('🚚 ERROR: Failed to save delivery choice to backend');
-                              }
-                            } else {
-                              console.log('🚚 GUEST USER: No backend save needed');
+                              console.log('✅ Delivery preference saved to backend');
+                            } catch (error) {
+                              console.error('❌ Failed to save delivery preference:', error);
                             }
-                            
-                            // Let AddressSelector handle auto-selection and payment intent creation
-                            console.log('🚚 DELIVERY SELECTED: AddressSelector will auto-select default address and create payment intent');
-                            
-                          } catch (error) {
-                            console.error('🚚 DELIVERY SELECTION ERROR:', error);
                           }
+                          
+                          console.log('🚚 DELIVERY SELECTED: Waiting for address selection to create payment intent');
                         }}
                         className="w-4 h-4 text-emerald-600"
                       />
@@ -4358,20 +4384,30 @@ export default function CustomerPortal() {
                               address: address ? `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}` : '',
                               city: address?.city || '',
                               postalCode: address?.postalCode || '',
+                              state: address?.state || '',
+                              country: address?.country || '',
                               // Save complete delivery address object for order
                               selectedDeliveryAddress: address,
                               // Keep current shipping option - don't override user's explicit choice
                               shippingOption: 'delivery' // Ensure delivery stays selected when address is chosen
                             };
-                            console.log('🏠 Updated customerData with selectedDeliveryAddress:', !!newData.selectedDeliveryAddress);
-                            console.log('🏠 Keeping shipping option as delivery');
+                            console.log('🏠 ADDRESS STATE UPDATE: Complete address data saved');
+                            console.log('🏠 ADDRESS VALIDATION:', {
+                              hasAddressLine1: !!newData.selectedDeliveryAddress?.addressLine1,
+                              hasCity: !!newData.selectedDeliveryAddress?.city,
+                              hasPostalCode: !!newData.selectedDeliveryAddress?.postalCode,
+                              addressLine1: newData.selectedDeliveryAddress?.addressLine1
+                            });
                             return newData;
                           });
                           
-                          // Auto-create payment intent when address is selected for delivery
+                          // CRITICAL: Create payment intent immediately with fresh address data
                           if (address) {
-                            console.log('🚚 ADDRESS SELECTED: Creating payment intent for delivery with address');
-                            createPaymentIntentForCheckout('delivery');
+                            console.log('🚚 ADDRESS SELECTED: Creating payment intent with address:', address.addressLine1);
+                            // Use setTimeout to ensure state is updated before payment intent creation
+                            setTimeout(() => {
+                              createPaymentIntentForCheckout('delivery');
+                            }, 50);
                           }
                         }}
                         compact={true}
