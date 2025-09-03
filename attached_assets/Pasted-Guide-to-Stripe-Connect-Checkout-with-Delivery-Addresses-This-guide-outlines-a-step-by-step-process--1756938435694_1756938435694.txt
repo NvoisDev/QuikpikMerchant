@@ -1,0 +1,42 @@
+Guide to Stripe Connect Checkout with Delivery Addresses
+This guide outlines a step-by-step process and best practices for building a robust Stripe Connect checkout with delivery address management.
+Step 1: Backend Data Model
+Your database schema is the foundation. It must be designed to handle multiple addresses per user and store the specific delivery address for each order.
+ * User Address Table: This table stores addresses for a user.
+   * id
+   * user_id (links to your users)
+   * address_line1, address_line2, city, state, postal_code, country
+   * is_default (boolean)
+ * Order Table: This table stores a copy of the final delivery address used for a specific order.
+   * id
+   * user_id
+   * wholesaler_id
+   * delivery_address_id (foreign key)
+   * delivery_address_line1, delivery_city, etc.
+Step 2: Backend Logic for Checkout Session
+This is the core of the process. Your backend must handle the address data and create the Stripe session correctly.
+ * Receive Request: An endpoint on your server (e.g., /create-checkout-session) receives the customer's order and their chosen delivery address ID or a new address.
+ * Validate and Retrieve Address: Retrieve the address from the database and perform a crucial security check to ensure the user_id on the address matches the logged-in user.
+ * Create Stripe Checkout Session: Use the Stripe API to create a checkout.sessions object.
+   * Use the shipping_address_collection and shipping_details parameters to pre-populate the address.
+   * Add metadata to the session with the delivery_address_id and a copy of the full address. This will be used later for reconciliation.
+   * Stripe Connect: When creating the session, include the Stripe-Account header with the ID of the wholesaler's connected account.
+Step 3: Handling Stripe Webhooks
+Webhooks are the only reliable way to confirm an order.
+ * Listen for checkout.session.completed: Your server needs a webhook handler to listen for this event.
+ * Verify the Webhook: Always verify the webhook signature to ensure it's a legitimate request from Stripe.
+ * Process the Order:
+   * Retrieve the checkout.session object from the webhook payload.
+   * Extract the address details from the session's metadata.
+   * Create a new order record in your Order Table and save the final delivery address details from the webhook payload.
+Step 4: The Order Details View
+The front-end must display the correct delivery address to the customer and the wholesaler.
+ * Customer and Wholesaler Views: When an order is viewed, the front-end should pull the address details directly from the Order Table, not from the user's saved addresses. This ensures the address displayed is the one used for that specific transaction.
+Additional Considerations
+ * User Experience (UX): The front-end should provide a smooth experience, with dynamic forms for adding new addresses and clear error messages.
+ * Payment and Shipping Logic: Use Stripe's shipping_options and tax features for a more robust solution. The cost of shipping can be passed into the session and tied to the delivery address.
+ * Security & Data Integrity:
+   * Never trust the client. Always re-validate data on the backend.
+   * The webhook signature must always be verified.
+   * Once an order is placed, the delivery address should be considered immutable to prevent data inconsistency.
+ * Edge Cases: Be prepared for things to go wrong. Your system should handle webhook failures and browser closures after payment gracefully. Use idempotency keys to prevent duplicate charges.
