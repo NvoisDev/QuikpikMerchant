@@ -4295,9 +4295,45 @@ The Quikpik Team`
         return res.status(500).json({ message: "Stripe not configured" });
       }
       
-      // Check if wholesaler has Stripe Connect account FIRST
-      const useConnect = wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0;
+      // ENHANCED Connect account validation - check if account is fully functional
+      let useConnect = false;
+      let connectAccountStatus = 'no_account';
+      
+      if (wholesaler.stripeAccountId && wholesaler.stripeAccountId.length > 0) {
+        try {
+          // Validate that the Connect account is active and can receive transfers
+          const account = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+          
+          // Check if account can receive transfers (charges_enabled and details_submitted)
+          if (account.charges_enabled && account.details_submitted) {
+            useConnect = true;
+            connectAccountStatus = 'active';
+            console.log(`✅ Connect account ${wholesaler.stripeAccountId} is fully active`);
+          } else {
+            connectAccountStatus = 'incomplete';
+            console.log(`⚠️ Connect account ${wholesaler.stripeAccountId} exists but not ready:`, {
+              charges_enabled: account.charges_enabled,
+              details_submitted: account.details_submitted,
+              requirements: account.requirements?.currently_due
+            });
+          }
+        } catch (connectError: any) {
+          connectAccountStatus = 'error';
+          console.error(`❌ Connect account validation failed for ${wholesaler.stripeAccountId}:`, connectError.message);
+          // Don't use Connect if account verification fails
+        }
+      }
+      
       const applicationFeeAmount = useConnect ? stripeApplicationFee : 0;
+      
+      console.log('🔍 Connect Account Status:', {
+        stripeAccountId: wholesaler.stripeAccountId,
+        status: connectAccountStatus,
+        willUseConnect: useConnect,
+        reason: connectAccountStatus === 'active' ? 'Account fully activated' : 
+                connectAccountStatus === 'incomplete' ? 'Account exists but incomplete' :
+                connectAccountStatus === 'error' ? 'Account validation failed' : 'No account'
+      });
       
       // Create stable idempotency key for duplicate prevention (NO timestamp for stability)
       const cartHash = validatedItems.map(item => `${item.product.id}:${item.quantity}`).sort().join('-');
@@ -4361,13 +4397,29 @@ The Quikpik Team`
 
         // Add Stripe Connect configuration if wholesaler has Connect account
         if (useConnect) {
-          paymentConfig.transfer_data = {
-            destination: wholesaler.stripeAccountId,
-            amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
-          };
-          paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
-          console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
+          // Additional validation for transfer amounts
+          if (stripeWholesalerAmount <= 0) {
+            console.error(`❌ Invalid transfer amount for Connect account: ${stripeWholesalerAmount}`);
+            useConnect = false; // Fallback to direct payment
+          } else {
+            paymentConfig.transfer_data = {
+              destination: wholesaler.stripeAccountId,
+              amount: stripeWholesalerAmount // Amount wholesaler receives (platform keeps the rest)
+            };
+            paymentConfig.on_behalf_of = wholesaler.stripeAccountId;
+            console.log('💳 Connect transfer_data:', paymentConfig.transfer_data);
+          }
         }
+        
+        // Log final payment configuration for debugging
+        console.log('💳 Final payment configuration:', {
+          useConnect,
+          connectAccountStatus,
+          amount: paymentConfig.amount,
+          hasTransferData: !!paymentConfig.transfer_data,
+          destination: paymentConfig.transfer_data?.destination,
+          transferAmount: paymentConfig.transfer_data?.amount
+        });
 
         console.log('💳 About to call Stripe with config:', {
           amount: paymentConfig.amount,
@@ -4417,15 +4469,77 @@ The Quikpik Team`
       
       } catch (stripeError: any) {
         console.error("❌ Stripe payment intent creation error:", stripeError);
+        console.error("❌ Stripe error details:", {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          statusCode: stripeError.statusCode
+        });
         
-        if (stripeError.code === 'parameter_invalid_integer') {
+        // Handle specific Connect account errors and retry without Connect
+        if ((stripeError.type === 'StripeInvalidRequestError' || stripeError.code === 'account_invalid') && useConnect) {
+          console.log('🔄 Connect account error detected, retrying without Connect...');
+          
+          // Retry payment creation without Connect configuration
+          try {
+            const fallbackConfig = {
+              amount: stripeAmount,
+              currency: 'gbp',
+              receipt_email: customerEmail,
+              automatic_payment_methods: { enabled: true },
+              statement_descriptor_suffix: wholesaler.businessName?.slice(0, 10) || 'Quikpik',
+              description: `Purchase from ${wholesaler.businessName || 'Quikpik Wholesaler'}`,
+              metadata: {
+                customerName,
+                customerEmail,
+                customerPhone,
+                customerAddress: JSON.stringify(customerAddress),
+                selectedDeliveryAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : '',
+                selectedDeliveryAddress: selectedDeliveryAddress ? JSON.stringify(selectedDeliveryAddress) : '',
+                productSubtotal: productSubtotal.toFixed(2),
+                shippingCost: deliveryCost.toString(),
+                customerTransactionFee: customerTransactionFee.toFixed(2),
+                wholesalerPlatformFee: wholesalerPlatformFee.toFixed(2),
+                wholesalerReceives: wholesalerReceives.toFixed(2),
+                totalCustomerPays: totalCustomerPays.toFixed(2),
+                wholesalerId: firstProduct.wholesalerId,
+                wholesalerBusinessName: wholesaler.businessName || 'Quikpik Wholesaler',
+                orderType: 'customer_portal',
+                connectAccountUsed: 'false', // Mark as direct payment
+                shippingInfo: JSON.stringify(shippingInfo || { option: 'pickup' }),
+                items: JSON.stringify(validatedItems.map(item => ({
+                  productId: item.product.id,
+                  productName: item.product.name,
+                  quantity: item.quantity,
+                  unitPrice: parseFloat(item.unitPrice),
+                  sellingType: item.sellingType || 'units'
+                })))
+              }
+            };
+            
+            console.log('🔄 Creating fallback payment intent without Connect');
+            paymentIntent = await stripe.paymentIntents.create(fallbackConfig, {
+              idempotencyKey: `${idempotencyKey}_fallback`
+            });
+            
+            console.log('✅ Fallback payment intent created successfully:', paymentIntent.id);
+            
+          } catch (fallbackError: any) {
+            console.error("❌ Fallback payment creation also failed:", fallbackError);
+            return res.status(500).json({ 
+              message: "Payment setup failed. Please contact the business owner.",
+              error: 'payment_config_error'
+            });
+          }
+        } else if (stripeError.code === 'parameter_invalid_integer') {
           return res.status(400).json({ 
             message: "Invalid payment amount calculation. Please refresh and try again.",
             error: 'calculation_error'
           });
+        } else {
+          // Re-throw other errors to be caught by outer catch block
+          throw stripeError;
         }
-        
-        throw stripeError; // Re-throw to be caught by outer catch block
       }
 
       res.json({ 
