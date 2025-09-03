@@ -4326,10 +4326,16 @@ export default function CustomerPortal() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setCustomerData(prev => ({
-                                ...prev,
-                                selectedDeliveryAddress: null
-                              }));
+                              console.log('🏠 CHANGE ADDRESS: User clicked change address button');
+                              console.log('🏠 CURRENT ADDRESS: Before clearing:', customerData.selectedDeliveryAddress?.addressLine1);
+                              setCustomerData(prev => {
+                                const newData = {
+                                  ...prev,
+                                  selectedDeliveryAddress: null
+                                };
+                                console.log('🏠 ADDRESS CLEARED: selectedDeliveryAddress set to null');
+                                return newData;
+                              });
                             }}
                             className="text-blue-600 hover:text-blue-700"
                           >
