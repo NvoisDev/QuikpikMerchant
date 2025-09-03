@@ -4296,9 +4296,8 @@ export default function CustomerPortal() {
                               console.log('🚚 GUEST USER: No backend save needed');
                             }
                             
-                            // Create payment intent after successful state update
-                            console.log('🚚 PAYMENT INTENT: Creating for delivery option');
-                            await createPaymentIntentForCheckout('delivery');
+                            // DON'T create payment intent yet - wait for address selection
+                            console.log('🚚 DELIVERY SELECTED: Waiting for address selection before creating payment intent');
                             
                           } catch (error) {
                             console.error('🚚 DELIVERY SELECTION ERROR:', error);
