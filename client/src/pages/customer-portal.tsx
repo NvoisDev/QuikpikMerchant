@@ -1574,6 +1574,111 @@ export default function CustomerPortal() {
     }
   }, [isCreatingIntent, clientSecret, wholesaler, customerData, cart, toast]);
 
+  // Helper function to create payment intent with custom customer data (fixes race condition)
+  const createPaymentIntentWithCustomData = useCallback(async (customData: typeof customerData, shippingOption: 'pickup' | 'delivery') => {
+    if (isCreatingIntent || clientSecret) {
+      console.log('🚚 Payment intent already exists or is being created - SKIPPING');
+      return;
+    }
+    
+    if (!wholesaler) {
+      console.log('🚚 No wholesaler data - SKIPPING');
+      return;
+    }
+
+    setIsCreatingIntent(true);
+    
+    try {
+      // Calculate total amount for cart
+      const totalAmount = cart.reduce((total, item) => {
+        const unitPrice = (() => {
+          if (item.sellingType === 'pallets') {
+            return parseFloat((item.product as any).palletPrice || "0") || 0;
+          } else {
+            const basePrice = parseFloat(item.product.price) || 0;
+            const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+              basePrice,
+              item.quantity,
+              item.product.promotionalOffers || [],
+              item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+              item.product.promoActive
+            );
+            return pricing.effectivePrice;
+          }
+        })();
+        return total + (unitPrice * item.quantity);
+      }, 0);
+
+      const requestPayload = {
+        customerData: {
+          name: customData.name,
+          email: customData.email,
+          phone: customData.phone,
+          address: customData.selectedDeliveryAddress?.addressLine1 || customData.address,
+          city: customData.selectedDeliveryAddress?.city || customData.city,
+          state: customData.selectedDeliveryAddress?.state || customData.state,
+          postalCode: customData.selectedDeliveryAddress?.postalCode || customData.postalCode,
+          country: customData.selectedDeliveryAddress?.country || customData.country || 'United Kingdom',
+          selectedDeliveryAddress: customData.selectedDeliveryAddress,
+          selectedDeliveryAddressId: customData.selectedDeliveryAddress?.id
+        },
+        items: cart.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity || 0,
+          unitPrice: (() => {
+            if (item.sellingType === 'pallets') {
+              return parseFloat((item.product as any).palletPrice || "0") || 0;
+            } else {
+              const basePrice = parseFloat(item.product.price) || 0;
+              const pricing = PromotionalPricingCalculator.calculatePromotionalPricing(
+                basePrice,
+                item.quantity,
+                item.product.promotionalOffers || [],
+                item.product.promoPrice ? parseFloat(item.product.promoPrice) : undefined,
+                item.product.promoActive
+              );
+              return pricing.effectivePrice;
+            }
+          })(),
+          sellingType: item.sellingType
+        })),
+        shippingInfo: {
+          option: shippingOption
+        }
+      };
+      
+      console.log('🚚 CUSTOM DATA PAYMENT: Creating with fresh address data');
+      console.log('🚚 FRESH ADDRESS:', requestPayload.customerData.selectedDeliveryAddress);
+      
+      const response = await apiRequest("POST", "/api/customer/create-payment", requestPayload);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+        setLastUsedShippingOption(shippingOption);
+        console.log('✅ Payment intent created with fresh address data');
+        toast({
+          title: "Payment Ready",
+          description: "Your delivery address has been confirmed",
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('🚚 API request failed:', response.status, errorText);
+        throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error('🚚 Error creating payment intent with custom data:', error);
+      toast({
+        title: "Payment Setup Failed",
+        description: "Unable to set up payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingIntent(false);
+    }
+  }, [isCreatingIntent, clientSecret, wholesaler, cart, toast]);
+
   // Helper function to generate quantity suggestions
   const getQuantitySuggestions = useCallback((product: ExtendedProduct, currentQuantity?: number) => {
     const suggestions = [];
@@ -4403,11 +4508,30 @@ export default function CustomerPortal() {
                           
                           // CRITICAL: Create payment intent immediately with fresh address data
                           if (address) {
-                            console.log('🚚 ADDRESS SELECTED: Creating payment intent with address:', address.addressLine1);
-                            // Use setTimeout to ensure state is updated before payment intent creation
-                            setTimeout(() => {
-                              createPaymentIntentForCheckout('delivery');
-                            }, 50);
+                            console.log('🚚 ADDRESS SELECTED: Creating payment intent with fresh address:', address.addressLine1);
+                            
+                            // IMPORTANT: Create custom payment intent with fresh address data directly
+                            // Don't rely on state update - use the fresh address from callback parameter
+                            const updatedCustomerData = {
+                              ...customerData,
+                              address: `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}`,
+                              city: address.city,
+                              postalCode: address.postalCode,
+                              state: address.state || '',
+                              country: address.country || '',
+                              selectedDeliveryAddress: address,
+                              shippingOption: 'delivery' as const
+                            };
+                            
+                            console.log('🚚 FRESH ADDRESS DATA: Creating payment with immediately available address data');
+                            console.log('🚚 FRESH ADDRESS VALIDATION:', {
+                              addressLine1: address.addressLine1,
+                              city: address.city,
+                              postalCode: address.postalCode
+                            });
+                            
+                            // Create payment intent with fresh data immediately
+                            createPaymentIntentWithCustomData(updatedCustomerData, 'delivery');
                           }
                         }}
                         compact={true}
