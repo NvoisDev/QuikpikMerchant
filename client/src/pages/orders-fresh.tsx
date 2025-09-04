@@ -768,13 +768,15 @@ export default function OrdersFresh() {
                         deliveryAddress: selectedOrder.deliveryAddress 
                       });
                       
-                      // First check if we have a delivery address ID to fetch from API
-                      if (selectedOrder.deliveryAddressId) {
-                        console.log('✅ Using delivery address ID:', selectedOrder.deliveryAddressId);
+                      // FIXED: Prioritize stored text address over database ID lookup (same fix as customer portal)
+                      if (selectedOrder.deliveryAddress) {
+                        console.log('✅ Using stored delivery address text:', selectedOrder.deliveryAddress);
+                      } else if (selectedOrder.deliveryAddressId) {
+                        console.log('✅ Fallback to delivery address ID:', selectedOrder.deliveryAddressId);
                         return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
                       }
                       
-                      // Otherwise, try to parse the delivery address JSON for detailed info
+                      // Parse the delivery address text for detailed info
                       if (selectedOrder.deliveryAddress) {
                         try {
                           const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
