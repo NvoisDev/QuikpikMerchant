@@ -196,36 +196,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     total: correctTotal, // Total = subtotal + customer transaction fee
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
-    // CRITICAL FIX: Use the selected delivery address if available, otherwise fall back to customer address
-    deliveryAddress: selectedDeliveryAddress ? JSON.stringify(selectedDeliveryAddress) : 
-                    (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
-    // CRITICAL: Store selected delivery address ID for exact order-address tracking
-    deliveryAddressId: await (async () => {
-      if (selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined') {
-        return parseInt(selectedDeliveryAddressId);
-      }
-      // CRITICAL FIX: If this is a delivery order but no address ID provided, find customer's default address
-      if (fulfillmentType === 'delivery') {
-        // Try multiple customer ID formats to find delivery addresses
-        const customerIds = [
-          customer.id,
-          customerEmail,
-          `customer_michael_ogunjemilua_main`,
-          `user_${customer.id}`
-        ];
-        
-        for (const customerId of customerIds) {
-          const defaultAddress = await storage.getDefaultDeliveryAddress(customerId, wholesalerId);
-          if (defaultAddress) {
-            console.log(`🏠 AUTO-LINK: Using customer's default delivery address ${defaultAddress.id} for delivery order (customer ID: ${customerId})`);
-            return defaultAddress.id;
-          }
-        }
-        
-        console.log(`⚠️ No delivery address found for delivery order. Customer IDs tried: ${customerIds.join(', ')}`);
-      }
-      return null;
-    })(),
+    // SIMPLIFIED FIX: Store complete selected address as text instead of relying on complex ID system
+    deliveryAddress: selectedDeliveryAddress ? 
+      `${selectedDeliveryAddress.address_line1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code}, ${selectedDeliveryAddress.country}` :
+      (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
+    // Store the address ID only if explicitly provided (no complex fallback logic)
+    deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined' ? 
+      parseInt(selectedDeliveryAddressId) : null,
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
     deliveryCarrier: null, // No carrier needed for simplified delivery system
