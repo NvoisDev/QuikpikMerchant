@@ -1,0 +1,63 @@
+The best course of action is to have your developer implement a photo upload and storage system on the backend and link it to the specific order.
+
+Backend and Database Logic
+Order Photos Table: Create a new database table to store the photo data. This table will serve as the central repository for all images related to orders.
+
+id (Primary Key)
+
+order_id (Foreign Key linked to your Order table)
+
+image_url (The public URL where the image is stored)
+
+uploaded_by_user_id (ID of the wholesaler who uploaded the photo)
+
+uploaded_at (Timestamp)
+
+File Storage Service: Do not store images directly in the database. Your developer should use a dedicated cloud storage service, such as Amazon S3, Google Cloud Storage, or Cloudinary. This is the most scalable and reliable method for handling files.
+
+
+Licensed by Google
+* The backend will generate a secure, public URL for each uploaded image. This URL is what gets saved in your database's `image_url` column.
+Step-by-Step Developer Guide
+Wholesaler Photo Upload:
+
+Front-end: A file input field will be added to the wholesaler's order detail page. When a photo is selected, the front-end will send the image file to a new API endpoint on your backend.
+
+Back-end:
+
+Receive the image file and the order_id from the front-end.
+
+Use the file storage service's SDK to securely upload the image.
+
+After a successful upload, get the public URL of the stored image.
+
+Create a new record in the Order Photos table, saving the order_id and the image_url.
+
+Customer Photo View:
+
+Back-end: A new API endpoint will be created to fetch photos for a specific order. When a customer views their order details, the front-end will call this endpoint with the order_id.
+
+The back-end will query the Order Photos table and return all image_url records associated with that order_id.
+
+Front-end: The customer's order detail page will use the returned image_url to display the photos in a gallery or list.
+
+Key Considerations
+Security: Ensure the upload endpoint is authenticated and authorized so that only wholesalers can upload photos to their specific orders.
+
+Performance: Optimize image sizes and use image-compression techniques on the front-end before uploading to reduce file sizes and improve page load times for the customer.
+
+Error Handling: Implement robust error handling for failed uploads and invalid file types.
+
+UX: Provide clear visual feedback to the wholesaler during the upload process (e.g., a loading spinner).
+
+
+
+
+
+
+
+
+
+
+Tools
+
