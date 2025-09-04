@@ -1270,7 +1270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         groupId: customer.groupId || customer.group_id,
         groupName: customer.groupName || customer.group_name,
         authenticatedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
       };
 
       console.log('🔧 SMS Verification - Session data created:', sessionData);
@@ -1284,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set customer authentication data in session
       (req.session as any).customerAuth = sessionData;
       
-      console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 24 hours`);
+      console.log(`🔐 Customer session created for ${customer.name} (${customer.phone}) - expires in 30 days`);
 
       // Force session save using callback method with timeout
       const saveSession = () => {
@@ -1330,14 +1330,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         groupId: customer.groupId || customer.group_id,
         groupName: customer.groupName || customer.group_name,
         timestamp: Date.now(),
-        expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
       })).toString('base64');
       
       // Set a fallback cookie with customer authentication
       res.cookie('customer_auth', customerToken, {
         httpOnly: true,
         secure: false,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         sameSite: 'lax'
       });
       
@@ -1484,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...customerAuth,
         wholesalerId: targetWholesalerId,
         authenticatedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Reset to 24 hours
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // Reset to 30 days
       };
       
       // Update session
@@ -1499,13 +1499,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: customerAuth.phone,
         groupId: customerAuth.groupId,
         groupName: customerAuth.groupName,
-        expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
       };
       
       res.cookie('customer_auth', Buffer.from(JSON.stringify(cookieData)).toString('base64'), {
         httpOnly: true,
         secure: false,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         sameSite: 'lax'
       });
       
