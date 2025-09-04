@@ -145,41 +145,80 @@ export function ObjectUploader({
 
       console.log('🎥 Starting camera...');
       
-      // Try with basic constraints first, then fallback
+      // MOBILE FIX: Try with mobile-optimized constraints first, then fallback
       let stream;
       try {
+        // Mobile-optimized constraints
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: 'environment', // Use back camera on mobile
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 640, max: 1280 }, // Lower resolution for mobile
+            height: { ideal: 480, max: 720 },
+            frameRate: { ideal: 15, max: 30 } // Lower framerate for mobile
           } 
         });
       } catch (err) {
         console.log('🎥 Back camera failed, trying front camera...', err);
-        // Fallback to front camera
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        });
+        try {
+          // Fallback to front camera with mobile constraints
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 },
+              frameRate: { ideal: 15, max: 30 }
+            } 
+          });
+        } catch (err2) {
+          console.log('🎥 Both cameras failed, trying basic constraints...', err2);
+          // Final fallback with minimal constraints
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true // Just request any video input
+          });
+        }
       }
       
       console.log('✅ Camera stream obtained');
       setCameraStream(stream);
       setShowCamera(true);
       
-      // Set video source and ensure it plays
+      // Set video source and ensure it plays - MOBILE FIX
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
+        // MOBILE FIX: Force video dimensions for mobile browsers
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.setAttribute('webkit-playsinline', 'true');
+        
         // Wait for video to load metadata, then play
         videoRef.current.onloadedmetadata = () => {
+          console.log('📱 Video metadata loaded, attempting play...');
           if (videoRef.current) {
+            // MOBILE FIX: Multiple attempts to play with delays
+            const attemptPlay = async () => {
+              try {
+                await videoRef.current?.play();
+                console.log('✅ Video playing successfully');
+              } catch (err) {
+                console.error('❌ Video play failed, retrying...', err);
+                // Retry after a short delay for mobile browsers
+                setTimeout(() => {
+                  videoRef.current?.play().catch(e => {
+                    console.error('❌ Video play retry failed:', e);
+                  });
+                }, 100);
+              }
+            };
+            attemptPlay();
+          }
+        };
+        
+        // MOBILE FIX: Additional event handlers for mobile compatibility
+        videoRef.current.oncanplay = () => {
+          console.log('📱 Video can play - attempting autoplay');
+          if (videoRef.current && videoRef.current.paused) {
             videoRef.current.play().catch(err => {
-              console.error('❌ Video play failed:', err);
+              console.log('📱 Autoplay blocked, user interaction required');
             });
           }
         };
