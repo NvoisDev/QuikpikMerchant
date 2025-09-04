@@ -4346,6 +4346,12 @@ The Quikpik Team`
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
+      console.log('🏠 ADDRESS METADATA DEBUG:', {
+        hasSelectedDeliveryAddress: !!selectedDeliveryAddress,
+        selectedAddressId: selectedDeliveryAddress?.id,
+        selectedAddressLine1: selectedDeliveryAddress?.addressLine1,
+        willStoreAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : ''
+      });
       console.log('💰 Final payment details before Stripe:', {
         stripeAmount,
         stripeAmountType: typeof stripeAmount,
