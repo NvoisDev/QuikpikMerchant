@@ -207,16 +207,16 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             </div>
           ) : (
-            /* Delivery Address */
-            (order.deliveryAddressId || order.deliveryAddress) && (
+            /* Delivery Address - Prioritize stored text over database lookup */
+            (order.deliveryAddress || order.deliveryAddressId) && (
               <div>
-                {order.deliveryAddressId ? (
-                  <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
-                ) : (
+                {order.deliveryAddress ? (
                   <DeliveryAddressDisplay 
                     address={order.deliveryAddress}
                     className="bg-gray-50 border-gray-200"
                   />
+                ) : (
+                  <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
                 )}
               </div>
             )
