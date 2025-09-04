@@ -86,13 +86,7 @@ export const DeliveryAddressDisplay: React.FC<DeliveryAddressDisplayProps> = ({
   showLabel = true,
   showInstructions = true
 }) => {
-  // Debug logging to see what's being passed
-  console.log('🏠 DeliveryAddressDisplay - Raw address:', address);
-  console.log('🏠 DeliveryAddressDisplay - Address type:', typeof address);
-  
   const parsedAddress = parseDeliveryAddress(address);
-  
-  console.log('🏠 DeliveryAddressDisplay - Parsed address:', parsedAddress);
   
   if (!parsedAddress) {
     return (
