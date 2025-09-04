@@ -25,21 +25,24 @@ const parseDeliveryAddress = (address: string | DeliveryAddress | null | undefin
   if (!address) return null;
   
   if (typeof address === 'string') {
+    // Clean up the string - remove extra quotes and whitespace
+    let cleanAddress = address.trim();
+    
+    // Remove surrounding quotes (both single and double, including multiple quotes)
+    cleanAddress = cleanAddress.replace(/^["']+|["']+$/g, '');
+    
+    if (!cleanAddress) return null;
+
     try {
       // Try to parse as JSON first
-      const parsed = JSON.parse(address);
+      const parsed = JSON.parse(cleanAddress);
       return parsed;
     } catch {
-      // If not JSON, use the utility function to format
-      const lines = formatDeliveryAddress(address);
-      if (lines.length === 0) return null;
-      
-      // Create a basic address object from formatted lines
+      // If not JSON, treat as a simple address line and create a basic object
       return {
-        addressLine1: lines[0] || '',
-        addressLine2: lines[1] || undefined,
-        city: lines[2] || '',
-        postalCode: lines[3] || '',
+        addressLine1: cleanAddress,
+        city: '',
+        postalCode: '',
       };
     }
   }

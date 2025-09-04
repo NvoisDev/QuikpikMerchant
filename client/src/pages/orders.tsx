@@ -1163,63 +1163,13 @@ export default function Orders() {
 function OrderDetailsModal({ order }: { order: Order }) {
   const [customerDeliveryAddress, setCustomerDeliveryAddress] = useState<any>(null);
 
-  // CRITICAL: Fetch EXACT delivery address used for this specific order
+  // Show delivery address directly from database - no complex API calls needed
   useEffect(() => {
-    const fetchDeliveryAddress = async () => {
-      if (order && order.fulfillmentType === 'delivery') {
-        try {
-          // If order has a specific delivery address ID, fetch that exact address
-          if (order.deliveryAddressId) {
-            console.log(`🎯 Fetching exact delivery address for order ${order.id}: address ID ${order.deliveryAddressId}`);
-            // Use wholesaler endpoint since this is accessed from wholesaler dashboard
-            const response = await fetch(`/api/wholesaler/delivery-address/${order.deliveryAddressId}`, {
-              credentials: 'include'
-            });
-            if (response.ok) {
-              const exactAddress = await response.json();
-              console.log(`✅ Successfully fetched delivery address:`, exactAddress);
-              setCustomerDeliveryAddress(exactAddress);
-              return;
-            } else {
-              console.error(`❌ Failed to fetch delivery address ${order.deliveryAddressId}: ${response.status} ${response.statusText}`);
-              
-              // FALLBACK: Try to parse the stored delivery address JSON string if API fails
-              if (order.deliveryAddress) {
-                try {
-                  const parsedAddress = typeof order.deliveryAddress === 'string' 
-                    ? JSON.parse(order.deliveryAddress) 
-                    : order.deliveryAddress;
-                  console.log('🔄 FALLBACK: Using stored delivery address JSON:', parsedAddress);
-                  setCustomerDeliveryAddress(parsedAddress);
-                  return;
-                } catch (parseError) {
-                  console.error('❌ Failed to parse stored delivery address:', parseError);
-                }
-              }
-            }
-          }
-          
-          // Fallback to current method for older orders without delivery address IDs
-          console.log(`📦 Fallback: Using current default address for order ${order.id} (no specific address ID stored)`);
-          const customerId = order.retailerId || order.retailer?.id;
-          if (customerId) {
-            const response = await fetch(`/api/wholesaler/customer-delivery-addresses/${customerId}/${order.wholesalerId}`, {
-              credentials: 'include'
-            });
-            if (response.ok) {
-              const addresses = await response.json();
-              // Get default address or first available address
-              const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0];
-              setCustomerDeliveryAddress(defaultAddress || null);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to fetch delivery address:', error);
-          setCustomerDeliveryAddress(null);
-        }
-      }
-    };
-    fetchDeliveryAddress();
+    if (order && order.fulfillmentType === 'delivery' && order.deliveryAddress) {
+      // Use the delivery address directly from the order data
+      console.log('📍 Using delivery address from order database:', order.deliveryAddress);
+      setCustomerDeliveryAddress(order.deliveryAddress);
+    }
   }, [order]);
 
   return (
