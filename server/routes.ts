@@ -4722,6 +4722,15 @@ The Quikpik Team`
         const shippingInfoJson = paymentIntent.metadata.shippingInfo;
         const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
+        console.log(`🚚 DEBUGGING SF-145 ISSUE: Shipping metadata extraction:`, {
+          hasShippingInfoJson: !!shippingInfoJson,
+          shippingInfoRaw: shippingInfoJson,
+          parsedOption: shippingInfo?.option,
+          selectedAddressIdFromMetadata: selectedDeliveryAddressId,
+          selectedAddressFromMetadata: selectedDeliveryAddress,
+          paymentIntentId: paymentIntentId
+        });
+        
         // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
         if (!shippingInfoJson) {
           console.error(`🚨 CRITICAL: No shippingInfo in payment metadata for ${paymentIntentId}! This will default to pickup.`);
@@ -4821,6 +4830,14 @@ The Quikpik Team`
               deliveryCarrier: orderData.deliveryCarrier,
               isDeliveryOrder: orderData.fulfillmentType === 'delivery',
               supplierWillArrangeDelivery: orderData.fulfillmentType === 'delivery'
+            });
+            
+            console.log('🏠 ADDRESS ASSIGNMENT DEBUG:', {
+              selectedDeliveryAddressIdRaw: selectedDeliveryAddressId,
+              selectedAddressIdParsed: selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null,
+              finalAddressIdInOrder: orderData.deliveryAddressId,
+              deliveryAddressString: orderData.deliveryAddress,
+              orderWillSaveAsDelivery: orderData.fulfillmentType === 'delivery'
             });
 
             // Create order items with orderId for storage
