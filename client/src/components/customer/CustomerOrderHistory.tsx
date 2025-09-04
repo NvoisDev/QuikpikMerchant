@@ -180,13 +180,17 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Delivery Address - Using Shared Component */}
+        {/* Delivery Address */}
         {(order.deliveryAddressId || order.deliveryAddress) && (
           <div>
-            <DeliveryAddressDisplay 
-              address={order.deliveryAddress}
-              className="bg-gray-50 border-gray-200"
-            />
+            {order.deliveryAddressId ? (
+              <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
+            ) : (
+              <DeliveryAddressDisplay 
+                address={order.deliveryAddress}
+                className="bg-gray-50 border-gray-200"
+              />
+            )}
           </div>
         )}
 
