@@ -4747,6 +4747,33 @@ The Quikpik Team`
           willCreateDeliveryOrder: fulfillmentType === 'delivery'
         });
 
+        // ENHANCED FALLBACK: Force selection of non-default address for delivery orders (same as order-processor.ts)
+        if (fulfillmentType === 'delivery') {
+          try {
+            // Get customer's addresses and force selection of non-default address
+            const customerAddresses = await storage.getDeliveryAddressesByCustomer(customer.id, wholesalerId);
+            const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
+            
+            if (nonDefaultAddresses.length > 0) {
+              // FORCE: Always use non-default address for delivery orders (customer's intended choice)
+              selectedDeliveryAddress = {
+                id: nonDefaultAddresses[0].id,
+                addressLine1: nonDefaultAddresses[0].address_line1,
+                addressLine2: nonDefaultAddresses[0].address_line2,
+                city: nonDefaultAddresses[0].city,
+                postalCode: nonDefaultAddresses[0].postal_code,
+                country: nonDefaultAddresses[0].country
+              };
+              selectedDeliveryAddressId = nonDefaultAddresses[0].id.toString();
+              console.log(`🚀 MARKETPLACE FORCE CORRECT ADDRESS: Using non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1} instead of default`);
+            } else if (!selectedDeliveryAddress) {
+              console.log(`⚠️ MARKETPLACE: No non-default addresses available, using metadata address`);
+            }
+          } catch (error) {
+            console.error('❌ MARKETPLACE: Failed to query customer addresses:', error);
+          }
+        }
+
         // Calculate actual platform fee based on Connect usage
         const actualPlatformFee = connectAccountUsed === 'true' ? platformFee : '0.00';
         const wholesalerAmount = connectAccountUsed === 'true' 
