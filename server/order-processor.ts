@@ -180,8 +180,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     }
   }
   
-  // CRITICAL FIX: Use explicit address ID from payment metadata if available
-  if (fulfillmentType === 'delivery' && !selectedDeliveryAddress && selectedDeliveryAddressId) {
+  // CRITICAL FIX: Use explicit address ID from payment metadata if available, ALWAYS override metadata address
+  if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
     try {
       console.log(`🎯 EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
       

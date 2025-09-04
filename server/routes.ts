@@ -4747,8 +4747,8 @@ The Quikpik Team`
           willCreateDeliveryOrder: fulfillmentType === 'delivery'
         });
 
-        // CRITICAL FIX: Use explicit address ID from payment metadata if available (same fix as order-processor.ts)
-        if (fulfillmentType === 'delivery' && !selectedDeliveryAddress && selectedDeliveryAddressId) {
+        // CRITICAL FIX: Use explicit address ID from payment metadata if available, ALWAYS override metadata address
+        if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
           try {
             console.log(`🎯 MARKETPLACE EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
             
