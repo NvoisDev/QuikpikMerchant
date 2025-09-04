@@ -180,19 +180,48 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
-        {/* Delivery Address */}
-        {(order.deliveryAddressId || order.deliveryAddress) && (
-          <div>
-            {order.deliveryAddressId ? (
-              <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
-            ) : (
-              <DeliveryAddressDisplay 
-                address={order.deliveryAddress}
-                className="bg-gray-50 border-gray-200"
-              />
-            )}
-          </div>
-        )}
+        {/* Address Information */}
+        <div>
+          {order.fulfillmentType === 'pickup' ? (
+            /* Collection Address - Show business address */
+            <div>
+              <h3 className="font-medium mb-1 text-sm sm:text-base">Collection Address</h3>
+              <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-200">
+                <div className="flex items-start space-x-2">
+                  <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs">📦</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-600 mb-1">Collect from business</div>
+                    <div className="font-medium text-sm break-words">{order.wholesaler?.businessName || 'Business'}</div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Please contact the business to arrange collection time and get the exact address.
+                    </div>
+                    {order.wholesaler?.phone && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        <strong>Phone:</strong> {order.wholesaler.phone}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Delivery Address */
+            (order.deliveryAddressId || order.deliveryAddress) && (
+              <div>
+                {order.deliveryAddressId ? (
+                  <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
+                ) : (
+                  <DeliveryAddressDisplay 
+                    address={order.deliveryAddress}
+                    className="bg-gray-50 border-gray-200"
+                  />
+                )}
+              </div>
+            )
+          )}
+        </div>
 
         {/* Order Items */}
         <div>

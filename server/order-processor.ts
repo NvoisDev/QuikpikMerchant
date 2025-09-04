@@ -201,14 +201,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
                     (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
     // CRITICAL: Store selected delivery address ID for exact order-address tracking
     deliveryAddressId: await (async () => {
-      console.log(`🏠 ADDRESS ID DEBUG: selectedDeliveryAddressId="${selectedDeliveryAddressId}", type=${typeof selectedDeliveryAddressId}`);
       if (selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined') {
-        const addressId = parseInt(selectedDeliveryAddressId);
-        console.log(`✅ USING SELECTED ADDRESS: ID ${addressId}`);
-        return addressId;
+        return parseInt(selectedDeliveryAddressId);
       }
-      
-      console.log(`⚠️ NO SELECTED ADDRESS ID, checking for fallback...`);
       // CRITICAL FIX: If this is a delivery order but no address ID provided, find customer's default address
       if (fulfillmentType === 'delivery') {
         // Try multiple customer ID formats to find delivery addresses

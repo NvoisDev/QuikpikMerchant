@@ -4346,12 +4346,6 @@ The Quikpik Team`
       const idempotencyKey = `payment_${baseKey}`.slice(0, 255); // Stripe limit is 255 chars
       
       console.log('🔑 Creating payment with idempotency key:', idempotencyKey);
-      console.log('🏠 ADDRESS METADATA DEBUG:', {
-        hasSelectedDeliveryAddress: !!selectedDeliveryAddress,
-        selectedAddressId: selectedDeliveryAddress?.id,
-        selectedAddressLine1: selectedDeliveryAddress?.addressLine1,
-        willStoreAddressId: selectedDeliveryAddress?.id ? selectedDeliveryAddress.id.toString() : ''
-      });
       console.log('💰 Final payment details before Stripe:', {
         stripeAmount,
         stripeAmountType: typeof stripeAmount,
@@ -4722,14 +4716,6 @@ The Quikpik Team`
         const shippingInfoJson = paymentIntent.metadata.shippingInfo;
         const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
         
-        console.log(`🚚 DEBUGGING SF-145 ISSUE: Shipping metadata extraction:`, {
-          hasShippingInfoJson: !!shippingInfoJson,
-          shippingInfoRaw: shippingInfoJson,
-          parsedOption: shippingInfo?.option,
-          selectedAddressIdFromMetadata: selectedDeliveryAddressId,
-          selectedAddressFromMetadata: selectedDeliveryAddress,
-          paymentIntentId: paymentIntentId
-        });
         
         // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
         if (!shippingInfoJson) {
@@ -4832,13 +4818,6 @@ The Quikpik Team`
               supplierWillArrangeDelivery: orderData.fulfillmentType === 'delivery'
             });
             
-            console.log('🏠 ADDRESS ASSIGNMENT DEBUG:', {
-              selectedDeliveryAddressIdRaw: selectedDeliveryAddressId,
-              selectedAddressIdParsed: selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null,
-              finalAddressIdInOrder: orderData.deliveryAddressId,
-              deliveryAddressString: orderData.deliveryAddress,
-              orderWillSaveAsDelivery: orderData.fulfillmentType === 'delivery'
-            });
 
             // Create order items with orderId for storage
             const orderItemsData = items.map((item: any) => ({
