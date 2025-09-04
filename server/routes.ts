@@ -4602,6 +4602,15 @@ The Quikpik Team`
         selectedDeliveryAddress: selectedDeliveryAddressJson
       } = paymentIntent.metadata;
 
+      console.log(`🔍 DEBUGGING ADDRESS SELECTION - Payment Intent Metadata:`, {
+        paymentIntentId: paymentIntentId,
+        hasSelectedDeliveryAddressId: !!selectedDeliveryAddressId,
+        selectedDeliveryAddressIdValue: selectedDeliveryAddressId,
+        hasSelectedDeliveryAddress: !!selectedDeliveryAddressJson,
+        allMetadataKeys: Object.keys(paymentIntent.metadata || {}),
+        shippingInfo: paymentIntent.metadata.shippingInfo
+      });
+
       // Parse the selected delivery address from metadata
       let selectedDeliveryAddress = null;
       if (selectedDeliveryAddressJson) {
