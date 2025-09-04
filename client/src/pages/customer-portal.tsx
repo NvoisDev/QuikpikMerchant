@@ -404,18 +404,10 @@ const PaymentFormContent = ({
       return;
     }
 
-    console.log('💳 Starting payment confirmation process...');
     setIsProcessing(true);
     setPaymentSubmitted(true); // Prevent multiple submissions
 
     try {
-      console.log('💳 Calling stripe.confirmPayment...');
-      
-      // Add additional validation before attempting payment
-      const cardElement = elements.getElement('card');
-      if (!cardElement) {
-        console.error('💳 No card element found');
-      }
       
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
