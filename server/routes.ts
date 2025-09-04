@@ -4751,8 +4751,8 @@ The Quikpik Team`
         if (fulfillmentType === 'delivery') {
           try {
             // Get customer's addresses and force selection of non-default address
-            const customerAddresses = await storage.getDeliveryAddressesByCustomer(customer.id, wholesalerId);
-            const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
+            const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
+            const nonDefaultAddresses = customerAddresses.filter((addr: any) => !addr.is_default && addr.id !== 1);
             
             if (nonDefaultAddresses.length > 0) {
               // FORCE: Always use non-default address for delivery orders (customer's intended choice)
@@ -4764,7 +4764,7 @@ The Quikpik Team`
                 postalCode: nonDefaultAddresses[0].postal_code,
                 country: nonDefaultAddresses[0].country
               };
-              selectedDeliveryAddressId = nonDefaultAddresses[0].id.toString();
+              let selectedDeliveryAddressIdOverride = nonDefaultAddresses[0].id.toString();
               console.log(`🚀 MARKETPLACE FORCE CORRECT ADDRESS: Using non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1} instead of default`);
             } else if (!selectedDeliveryAddress) {
               console.log(`⚠️ MARKETPLACE: No non-default addresses available, using metadata address`);
@@ -4839,7 +4839,7 @@ The Quikpik Team`
               deliveryAddress: selectedDeliveryAddress ? 
                 `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? ', ' + selectedDeliveryAddress.addressLine2 : ''}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country || 'United Kingdom'}` : 
                 (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
-              deliveryAddressId: selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null,
+              deliveryAddressId: selectedDeliveryAddress?.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null),
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,

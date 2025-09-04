@@ -184,7 +184,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   if (fulfillmentType === 'delivery') {
     try {
       // Get customer's addresses and force selection of non-default address
-      const customerAddresses = await storage.getDeliveryAddressesByCustomer(customer.id, wholesalerId);
+      const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
       const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
       
       if (nonDefaultAddresses.length > 0) {
