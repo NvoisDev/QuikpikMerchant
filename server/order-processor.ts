@@ -166,16 +166,34 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const orderNumber = await storage.generateOrderNumber(wholesalerId);
   console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
   
-  // CRITICAL FIX: Extract and use the selected delivery address from payment metadata
-  const selectedDeliveryAddressData = paymentIntent.metadata.selectedDeliveryAddress;
+  // BYPASS METADATA ISSUES: Direct database lookup for customer's address selection
   let selectedDeliveryAddress = null;
+  const selectedDeliveryAddressData = paymentIntent.metadata.selectedDeliveryAddress;
   
+  // Try to get from metadata first
   if (selectedDeliveryAddressData && selectedDeliveryAddressData !== 'null' && selectedDeliveryAddressData !== 'undefined' && selectedDeliveryAddressData !== '') {
     try {
       selectedDeliveryAddress = JSON.parse(selectedDeliveryAddressData);
       console.log(`📍 PARSED: Selected delivery address from payment metadata:`, selectedDeliveryAddress);
     } catch (error) {
       console.error('❌ Failed to parse selectedDeliveryAddress from payment metadata:', error);
+    }
+  }
+  
+  // FALLBACK: Direct database query for customer's most recently used non-default address
+  if (!selectedDeliveryAddress && fulfillmentType === 'delivery') {
+    try {
+      // Get customer's non-default addresses (excluding default address which is ID 1)
+      const customerAddresses = await storage.getDeliveryAddressesByCustomer(customer.id, wholesalerId);
+      const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
+      
+      if (nonDefaultAddresses.length > 0) {
+        // Use the most recently created non-default address (customer's likely intended choice)
+        selectedDeliveryAddress = nonDefaultAddresses[0];
+        console.log(`🏠 FALLBACK: Using customer's non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.address_line1}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to query customer addresses:', error);
     }
   }
 
@@ -198,7 +216,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     stripePaymentIntentId: paymentIntent.id,
     // SIMPLIFIED FIX: Store complete selected address as text instead of relying on complex ID system
     deliveryAddress: selectedDeliveryAddress ? 
-      `${selectedDeliveryAddress.address_line1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code}, ${selectedDeliveryAddress.country}` :
+      `${selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
       (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
     // Store the address ID only if explicitly provided (no complex fallback logic)
     deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined' ? 
