@@ -429,6 +429,35 @@ export function ObjectUploader({
                       <Camera className="h-4 w-4 mr-2" />
                       Take Photo
                     </Button>
+                    
+                    {/* Mobile Camera Debug Tool */}
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      onClick={() => {
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                        const userAgent = navigator.userAgent;
+                        
+                        const diagnosticInfo = `📱 MOBILE CAMERA DEBUG:
+Device: ${isMobile ? 'Mobile' : 'Desktop'}
+Browser: ${userAgent.includes('Chrome') ? 'Chrome' : userAgent.includes('Safari') ? 'Safari' : 'Other'}
+Camera API: ${hasCamera ? 'Available' : 'Not Available'}
+Screen: ${screen.width}x${screen.height}`;
+                        
+                        console.log('🔍 MOBILE CAMERA DIAGNOSTIC:', {
+                          isMobile,
+                          hasCamera,
+                          userAgent,
+                          screen: { width: screen.width, height: screen.height }
+                        });
+                        
+                        alert(diagnosticInfo);
+                      }}
+                      className="text-xs"
+                    >
+                      🔍 Debug
+                    </Button>
                   </div>
                 </div>
               </>
