@@ -1802,6 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shippingStatus: order.shippingStatus,
           shippingTotal: order.shippingTotal,
           notes: order.notes,
+          orderImages: order.orderImages, // CRITICAL FIX: Include order images for customer display
           createdAt: order.createdAt,
           updatedAt: order.updatedAt
         };
