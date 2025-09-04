@@ -36,6 +36,20 @@ const parseDeliveryAddress = (address: string | DeliveryAddress | null | undefin
     try {
       // Try to parse as JSON first
       const parsed = JSON.parse(cleanAddress);
+      
+      // Handle different JSON formats - map "street" to "addressLine1"
+      if (parsed && typeof parsed === 'object') {
+        return {
+          addressLine1: parsed.street || parsed.addressLine1 || '',
+          addressLine2: parsed.addressLine2 || undefined,
+          city: parsed.city || '',
+          state: parsed.state || undefined,
+          postalCode: parsed.postalCode || parsed.postcode || '',
+          country: parsed.country || undefined,
+          label: parsed.label || undefined,
+          instructions: parsed.instructions || undefined,
+        };
+      }
       return parsed;
     } catch {
       // If not JSON, treat as a simple address line and create a basic object
