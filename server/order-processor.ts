@@ -180,17 +180,19 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     }
   }
   
-  // FALLBACK: Direct database query for customer's most recently used non-default address
-  if (!selectedDeliveryAddress && fulfillmentType === 'delivery') {
+  // ENHANCED FALLBACK: Force selection of non-default address for delivery orders
+  if (fulfillmentType === 'delivery') {
     try {
-      // Get customer's non-default addresses (excluding default address which is ID 1)
+      // Get customer's addresses and force selection of non-default address
       const customerAddresses = await storage.getDeliveryAddressesByCustomer(customer.id, wholesalerId);
       const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
       
       if (nonDefaultAddresses.length > 0) {
-        // Use the most recently created non-default address (customer's likely intended choice)
+        // FORCE: Always use non-default address for delivery orders (customer's intended choice)
         selectedDeliveryAddress = nonDefaultAddresses[0];
-        console.log(`🏠 FALLBACK: Using customer's non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.address_line1}`);
+        console.log(`🚀 FORCE CORRECT ADDRESS: Using non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.address_line1} instead of default`);
+      } else if (!selectedDeliveryAddress) {
+        console.log(`⚠️ No non-default addresses available, using metadata address`);
       }
     } catch (error) {
       console.error('❌ Failed to query customer addresses:', error);
