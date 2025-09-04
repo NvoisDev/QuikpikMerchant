@@ -4598,8 +4598,19 @@ The Quikpik Team`
         totalCustomerPays,
         wholesalerPlatformFee,
         wholesalerReceives,
-        selectedDeliveryAddressId
+        selectedDeliveryAddressId,
+        selectedDeliveryAddress: selectedDeliveryAddressJson
       } = paymentIntent.metadata;
+
+      // Parse the selected delivery address from metadata
+      let selectedDeliveryAddress = null;
+      if (selectedDeliveryAddressJson) {
+        try {
+          selectedDeliveryAddress = JSON.parse(selectedDeliveryAddressJson);
+        } catch (error) {
+          console.error('❌ Failed to parse selectedDeliveryAddress:', error);
+        }
+      }
 
       if (orderType === 'customer_portal') {
         const items = JSON.parse(itemsJson);
@@ -4788,7 +4799,9 @@ The Quikpik Team`
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null,
+              deliveryAddress: selectedDeliveryAddress ? 
+                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? ', ' + selectedDeliveryAddress.addressLine2 : ''}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country || 'United Kingdom'}` : 
+                (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
               deliveryAddressId: selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null,
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
