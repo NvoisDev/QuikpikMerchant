@@ -180,19 +180,27 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     }
   }
   
-  // ENHANCED FALLBACK: Force selection of non-default address for delivery orders
-  if (fulfillmentType === 'delivery') {
+  // CRITICAL FIX: Use explicit address ID from payment metadata if available
+  if (fulfillmentType === 'delivery' && !selectedDeliveryAddress && selectedDeliveryAddressId) {
     try {
-      // Get customer's addresses and force selection of non-default address
-      const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
-      const nonDefaultAddresses = customerAddresses.filter(addr => !addr.is_default && addr.id !== 1);
+      console.log(`🎯 EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
       
-      if (nonDefaultAddresses.length > 0) {
-        // FORCE: Always use non-default address for delivery orders (customer's intended choice)
-        selectedDeliveryAddress = nonDefaultAddresses[0];
-        console.log(`🚀 FORCE CORRECT ADDRESS: Using non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.address_line1} instead of default`);
-      } else if (!selectedDeliveryAddress) {
-        console.log(`⚠️ No non-default addresses available, using metadata address`);
+      // Get the specific address the customer selected
+      const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
+      const explicitlySelectedAddress = customerAddresses.find(addr => addr.id === parseInt(selectedDeliveryAddressId));
+      
+      if (explicitlySelectedAddress) {
+        selectedDeliveryAddress = explicitlySelectedAddress;
+        console.log(`🎯 CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+      } else {
+        console.log(`⚠️ Customer selected address ID ${selectedDeliveryAddressId} not found, checking available addresses...`);
+        
+        // Only fallback to non-default if customer's explicit choice is not available
+        const nonDefaultAddresses = customerAddresses.filter(addr => !addr.isDefault && addr.id !== 1);
+        if (nonDefaultAddresses.length > 0) {
+          selectedDeliveryAddress = nonDefaultAddresses[0];
+          console.log(`🔄 FALLBACK: Using first non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+        }
       }
     } catch (error) {
       console.error('❌ Failed to query customer addresses:', error);
@@ -218,7 +226,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     stripePaymentIntentId: paymentIntent.id,
     // SIMPLIFIED FIX: Store complete selected address as text instead of relying on complex ID system
     deliveryAddress: selectedDeliveryAddress ? 
-      `${selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
+      `${selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
       (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
     // Store the address ID only if explicitly provided (no complex fallback logic)
     deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined' ? 

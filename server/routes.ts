@@ -4747,27 +4747,41 @@ The Quikpik Team`
           willCreateDeliveryOrder: fulfillmentType === 'delivery'
         });
 
-        // ENHANCED FALLBACK: Force selection of non-default address for delivery orders (same as order-processor.ts)
-        if (fulfillmentType === 'delivery') {
+        // CRITICAL FIX: Use explicit address ID from payment metadata if available (same fix as order-processor.ts)
+        if (fulfillmentType === 'delivery' && !selectedDeliveryAddress && selectedDeliveryAddressId) {
           try {
-            // Get customer's addresses and force selection of non-default address
-            const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
-            const nonDefaultAddresses = customerAddresses.filter((addr: any) => !addr.is_default && addr.id !== 1);
+            console.log(`🎯 MARKETPLACE EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
             
-            if (nonDefaultAddresses.length > 0) {
-              // FORCE: Always use non-default address for delivery orders (customer's intended choice)
+            // Get the specific address the customer selected
+            const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
+            const explicitlySelectedAddress = customerAddresses.find((addr: any) => addr.id === parseInt(selectedDeliveryAddressId));
+            
+            if (explicitlySelectedAddress) {
               selectedDeliveryAddress = {
-                id: nonDefaultAddresses[0].id,
-                addressLine1: nonDefaultAddresses[0].address_line1,
-                addressLine2: nonDefaultAddresses[0].address_line2,
-                city: nonDefaultAddresses[0].city,
-                postalCode: nonDefaultAddresses[0].postal_code,
-                country: nonDefaultAddresses[0].country
+                id: explicitlySelectedAddress.id,
+                addressLine1: explicitlySelectedAddress.address_line1,
+                addressLine2: explicitlySelectedAddress.address_line2,
+                city: explicitlySelectedAddress.city,
+                postalCode: explicitlySelectedAddress.postal_code,
+                country: explicitlySelectedAddress.country
               };
-              let selectedDeliveryAddressIdOverride = nonDefaultAddresses[0].id.toString();
-              console.log(`🚀 MARKETPLACE FORCE CORRECT ADDRESS: Using non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1} instead of default`);
-            } else if (!selectedDeliveryAddress) {
-              console.log(`⚠️ MARKETPLACE: No non-default addresses available, using metadata address`);
+              console.log(`🎯 MARKETPLACE CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+            } else {
+              console.log(`⚠️ MARKETPLACE: Customer selected address ID ${selectedDeliveryAddressId} not found, checking available addresses...`);
+              
+              // Only fallback to non-default if customer's explicit choice is not available
+              const nonDefaultAddresses = customerAddresses.filter((addr: any) => !addr.is_default && addr.id !== 1);
+              if (nonDefaultAddresses.length > 0) {
+                selectedDeliveryAddress = {
+                  id: nonDefaultAddresses[0].id,
+                  addressLine1: nonDefaultAddresses[0].address_line1,
+                  addressLine2: nonDefaultAddresses[0].address_line2,
+                  city: nonDefaultAddresses[0].city,
+                  postalCode: nonDefaultAddresses[0].postal_code,
+                  country: nonDefaultAddresses[0].country
+                };
+                console.log(`🔄 MARKETPLACE FALLBACK: Using first non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+              }
             }
           } catch (error) {
             console.error('❌ MARKETPLACE: Failed to query customer addresses:', error);
