@@ -3622,7 +3622,7 @@ The Quikpik Team`
             businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
             businessAddress: wholesaler.businessAddress,
             orderTotal: updated.total,
-            readyTime: updated.readyToCollectAt.toLocaleString(),
+            readyTime: updated.readyToCollectAt ? updated.readyToCollectAt.toLocaleString() : new Date().toLocaleString(),
             orderUrl: `https://quikpik.app/customer-portal/${wholesaler.id}`
           });
 
