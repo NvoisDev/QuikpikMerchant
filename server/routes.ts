@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : 'https://quikpik.app';
             
           const refreshUrl = `${baseUrl}/settings?tab=integrations`;
-          const returnUrl = `${baseUrl}/settings?tab=integrations&stripe=connected`;
+          const returnUrl = `${baseUrl}/stripe-success`;
           
           console.log('🔗 Using Stripe redirect base URL:', baseUrl);
           console.log('🔗 Stripe refresh URL:', refreshUrl);
@@ -799,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : 'https://quikpik.app';
         
       const refreshUrl = `${baseUrl}/settings?tab=integrations`;
-      const returnUrl = `${baseUrl}/settings?tab=integrations&stripe=connected`;
+      const returnUrl = `${baseUrl}/stripe-success`;
       
       console.log('🔗 Using Stripe redirect base URL:', baseUrl);
       console.log('🔗 Stripe refresh URL:', refreshUrl);

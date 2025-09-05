@@ -20,6 +20,7 @@ import CustomerGroups from "@/pages/customer-groups";
 import SubscriptionSettingsSimple from "@/pages/subscription-settings-simple";
 import SimpleSubscription from "@/pages/simple-subscription";
 import Settings from "@/pages/settings";
+import StripeSuccess from "@/pages/stripe-success";
 import Marketplace from "@/pages/marketplace";
 import Advertising from "@/pages/advertising";
 import AdvertisingPreview from "@/pages/advertising-preview";
@@ -118,6 +119,7 @@ function AuthenticatedRoutes() {
             <Route path="/financials" component={Financials} />
             <Route path="/financial-health" component={FinancialHealth} />
             <Route path="/settings" component={Settings} />
+            <Route path="/stripe-success" component={StripeSuccess} />
             <Route path="/campaigns" component={Campaigns} />
             {/* Legacy route redirect */}
             <Route path="/broadcasts" component={Campaigns} />
