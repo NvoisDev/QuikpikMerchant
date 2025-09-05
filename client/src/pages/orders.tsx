@@ -108,6 +108,7 @@ interface Order {
   status: string;
   paymentStatus: string;
   createdAt: string;
+  readyToCollectAt?: string;
   updatedAt: string;
   deliveryAddress?: string;
   deliveryAddressId?: number;
@@ -277,6 +278,83 @@ export default function Orders() {
         variant: "destructive",
       });
     },
+  });
+
+  // Ready for Collection mutation
+  const readyForCollectionMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await fetch(`/api/orders/${orderId}/ready-for-collection`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to mark order as ready for collection');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, orderId) => {
+      toast({
+        title: "Order marked as ready for collection",
+        description: "Customer has been notified via email that their order is ready to collect",
+      });
+      
+      // Update the selected order status
+      if (selectedOrder && selectedOrder.id === orderId) {
+        const updatedOrder = {
+          ...selectedOrder,
+          status: 'ready_for_collection',
+          readyToCollectAt: new Date().toISOString()
+        };
+        setSelectedOrder(updatedOrder);
+      }
+      
+      // Refresh orders list
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to mark as ready",
+        description: error instanceof Error ? error.message : "Unable to mark order as ready for collection",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Resend ready for collection notification mutation
+  const resendReadyNotification = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await fetch(`/api/orders/${orderId}/resend-ready-notification`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to resend notification');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Notification Sent",
+        description: "Ready to collect notification has been resent to the customer.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend notification",
+        variant: "destructive"
+      });
+    }
   });
 
   // Fetch overall order statistics separately to avoid pagination limits
@@ -1771,12 +1849,69 @@ function OrderDetailsModal({ order }: { order: Order }) {
                       </div>
                     )}
                     {(selectedOrder.fulfillmentType === 'collection' || selectedOrder.fulfillmentType === 'pickup') && (
-                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                        <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
-                          <Hand className="h-4 w-4" />
-                          Collection Information
-                        </h4>
-                        <p className="text-sm text-green-800">This order is available for collection from your business location.</p>
+                      <div className="mt-4">
+                        {/* Ready for Collection Button - Show when order is not yet ready */}
+                        {selectedOrder.status !== 'ready_for_collection' && selectedOrder.status !== 'fulfilled' && (
+                          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+                              <Hand className="h-4 w-4" />
+                              Collection Actions
+                            </h4>
+                            <p className="text-sm text-green-800 mb-3">This order is available for collection from your business location.</p>
+                            <Button
+                              onClick={() => readyForCollectionMutation.mutate(selectedOrder.id)}
+                              disabled={readyForCollectionMutation.isPending}
+                              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white"
+                              size="sm"
+                            >
+                              <Clock className="h-4 w-4" />
+                              {readyForCollectionMutation.isPending ? 'Marking as Ready...' : 'Mark Ready for Collection'}
+                            </Button>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Customer will be notified via email that their order is ready to collect
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Ready for Collection Status Display */}
+                        {selectedOrder.status === 'ready_for_collection' && (
+                          <div className="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-orange-900 flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                Collection Status
+                              </h4>
+                            </div>
+                            <p className="text-sm text-orange-600 mb-2">
+                              Ready to collect sent
+                            </p>
+                            <div className="flex items-center justify-between">
+                              {selectedOrder.readyToCollectAt && (
+                                <p className="text-xs text-orange-500">
+                                  Sent: {new Date(selectedOrder.readyToCollectAt).toLocaleString()}
+                                </p>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs border-orange-300 text-orange-700 hover:bg-orange-100"
+                                onClick={() => resendReadyNotification.mutate(selectedOrder.id)}
+                                disabled={resendReadyNotification.isPending}
+                              >
+                                {resendReadyNotification.isPending ? 'Sending...' : 'Resend'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Basic Collection Information */}
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
+                            <Hand className="h-4 w-4" />
+                            Collection Information
+                          </h4>
+                          <p className="text-sm text-green-800">Customer will collect this order from your business location.</p>
+                        </div>
                       </div>
                     )}
                   </div>
