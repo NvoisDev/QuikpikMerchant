@@ -3649,6 +3649,72 @@ The Quikpik Team`
     }
   });
 
+  // Resend ready for collection notification
+  app.post("/api/orders/:id/resend-ready-notification", requireAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      console.log(`🔄 Resending ready for collection notification for order ${orderId}`);
+
+      // Get order details
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify ownership
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      // Check if order is actually ready for collection
+      if (order.status !== 'ready_for_collection' || !order.readyToCollectAt) {
+        return res.status(400).json({ error: 'Order is not ready for collection' });
+      }
+
+      console.log(`📦 Resending ready for collection notification for order ${orderId}`);
+
+      // Send email notification to customer
+      try {
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        
+        if (customer && wholesaler && customer.email) {
+          const emailData = generateReadyForCollectionEmail({
+            orderNumber: order.orderNumber,
+            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
+            businessAddress: wholesaler.businessAddress,
+            orderTotal: order.total,
+            readyTime: order.readyToCollectAt.toLocaleString(),
+            orderUrl: `https://quikpik.app/customer-portal/${wholesaler.id}`
+          });
+
+          await sendEmail({
+            to: customer.email,
+            from: 'hello@quikpik.co',
+            subject: emailData.subject,
+            html: emailData.html,
+            text: emailData.text
+          });
+          
+          console.log(`📧 Ready for collection notification resent to ${customer.email}`);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to resend ready for collection email:', emailError);
+        return res.status(500).json({ error: 'Failed to send notification email' });
+      }
+
+      console.log(`✅ Ready for collection notification resent for order ${orderId}`);
+      res.json({ success: true, message: 'Notification sent successfully' });
+    } catch (error) {
+      console.error("❌ Error resending ready for collection notification:", error);
+      res.status(500).json({ error: "Failed to resend notification" });
+    }
+  });
+
   // Update order status
   app.patch('/api/orders/:id/status', async (req: any, res) => {
     try {

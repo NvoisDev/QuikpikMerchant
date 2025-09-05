@@ -226,6 +226,39 @@ export default function OrdersFinal() {
     }
   });
 
+  // Resend ready for collection notification mutation
+  const resendReadyNotification = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await fetch(`/api/orders/${orderId}/resend-ready-notification`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to resend notification');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Notification Sent",
+        description: "Ready to collect notification has been resent to the customer.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend notification",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleImageUpload = async () => {
     if (!selectedOrder) return null;
     
@@ -719,18 +752,31 @@ export default function OrdersFinal() {
                 <div>
                   <h4 className="font-semibold">Collection Status</h4>
                   <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-700">
-                      <Clock className="h-4 w-4" />
-                      <span className="font-medium">Ready for Collection</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-orange-700">
+                        <Clock className="h-4 w-4" />
+                        <span className="font-medium">Ready for Collection</span>
+                      </div>
                     </div>
                     <p className="text-sm text-orange-600 mt-1">
-                      Customer has been notified that their order is ready to collect
+                      Ready to collect sent
                     </p>
-                    {selectedOrder.readyToCollectAt && (
-                      <p className="text-xs text-orange-500 mt-1">
-                        Marked ready: {new Date(selectedOrder.readyToCollectAt).toLocaleString()}
-                      </p>
-                    )}
+                    <div className="flex items-center justify-between mt-2">
+                      {selectedOrder.readyToCollectAt && (
+                        <p className="text-xs text-orange-500">
+                          Sent: {new Date(selectedOrder.readyToCollectAt).toLocaleString()}
+                        </p>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs border-orange-300 text-orange-700 hover:bg-orange-100"
+                        onClick={() => resendReadyNotification.mutate(selectedOrder.id)}
+                        disabled={resendReadyNotification.isPending}
+                      >
+                        {resendReadyNotification.isPending ? 'Sending...' : 'Resend'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
