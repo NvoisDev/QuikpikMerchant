@@ -2416,25 +2416,18 @@ export default function CustomerPortal() {
                       } : undefined}
                     >
                       {/* Wholesaler Logo */}
-                      {wholesalerItem.logoUrl ? (
-                        <img 
-                          src={wholesalerItem.logoUrl} 
-                          alt={wholesalerItem.businessName || "Business logo"} 
-                          className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-white">
-                            {wholesalerItem.businessName ? (
-                              wholesalerItem.businessName
-                                .split(' ')
-                                .map((word: string) => word.charAt(0).toUpperCase())
-                                .join('')
-                                .substring(0, 2)
-                            ) : 'WS'}
-                          </span>
-                        </div>
-                      )}
+                      <Logo 
+                        size="md" 
+                        variant="icon-only"
+                        className="flex-shrink-0"
+                        user={{
+                          logoType: wholesalerItem.logoType || 'business',
+                          logoUrl: wholesalerItem.logoUrl,
+                          businessName: wholesalerItem.businessName,
+                          firstName: wholesalerItem.firstName,
+                          lastName: wholesalerItem.lastName
+                        }}
+                      />
                       
                       <div className="flex-1 text-left">
                         <h4 className="font-medium text-gray-900">{wholesalerItem.businessName || "Business"}</h4>

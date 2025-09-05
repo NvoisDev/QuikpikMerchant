@@ -79,7 +79,7 @@ export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, role?: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
-  getAllWholesalers(): Promise<{ id: string; businessName: string; email: string }[]>;
+  getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]>;
   createUser(user: Partial<UpsertUser>): Promise<User>;
   updateUser(id: string, updates: Partial<UpsertUser>): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
@@ -410,12 +410,16 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getAllWholesalers(): Promise<{ id: string; businessName: string; email: string }[]> {
+  async getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]> {
     const wholesalers = await db
       .select({
         id: users.id,
         businessName: users.businessName,
-        email: users.email
+        email: users.email,
+        logoType: users.logoType,
+        logoUrl: users.logoUrl,
+        firstName: users.firstName,
+        lastName: users.lastName
       })
       .from(users)
       .where(eq(users.role, 'wholesaler'))
@@ -424,7 +428,11 @@ export class DatabaseStorage implements IStorage {
     return wholesalers.map(w => ({
       id: w.id,
       businessName: w.businessName || 'Business',
-      email: w.email || ''
+      email: w.email || '',
+      logoType: w.logoType || 'business',
+      logoUrl: w.logoUrl || '',
+      firstName: w.firstName || '',
+      lastName: w.lastName || ''
     }));
   }
 
@@ -1657,7 +1665,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; storeTagline?: string; location?: string; rating?: number }[]> {
+  async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; logoType?: string; storeTagline?: string; location?: string; rating?: number }[]> {
     try {
       console.log(`🔍 Finding accessible wholesalers for customer with last 4 digits: ${lastFourDigits}`);
       
@@ -1667,6 +1675,7 @@ export class DatabaseStorage implements IStorage {
           u.id,
           u.business_name,
           u.profile_image_url as logoUrl,
+          u.logo_type as logoType,
           u.business_description as storeTagline,
           u.business_address as location,
           5.0 as rating,
@@ -1692,6 +1701,7 @@ export class DatabaseStorage implements IStorage {
         id: row.id,
         businessName: row.business_name || 'Business',
         logoUrl: row.logoUrl,
+        logoType: row.logoType || 'business',
         storeTagline: row.storeTagline,
         location: row.location,
         rating: parseFloat(row.rating) || 5.0
