@@ -1,0 +1,20 @@
+Based on your screenshots, here is an ideal order timeline that covers all key events from payment to fulfillment, structured for both the wholesaler and the customer view.
+Ideal Order Timeline
+The timeline should clearly track the order's journey in a chronological, step-by-step manner. Use a green dot for completed steps and a grey dot for pending steps.
+Timeline for the Wholesaler
+The wholesaler's timeline should provide a clear checklist of actions they need to take.
+ * Order Received: Payment has been successfully processed and the order is in your system. This step should be automated upon successful payment.
+ * Order Items Prepared: The wholesaler has to manually confirm they have prepared the items for collection or delivery.
+ * Ready for Collection/Delivery: The wholesaler confirms the order is packaged and ready. This triggers the notification to the customer.
+ * Order Fulfilled: The final action, marking the order as complete. This happens after the customer has picked up the order or after it has been delivered.
+Timeline for the Customer
+The customer's timeline provides status updates and builds trust. The events are triggered by the system or by the wholesaler's actions.
+ * Payment Processed: Confirms the payment has been successfully received.
+ * Order Confirmation Sent: Confirms that the customer has received their order details and receipt.
+ * Wholesaler Notified of Your Order: Lets the customer know the wholesaler is aware of the order and is starting to prepare it.
+ * Order Ready for Collection/Delivery: A crucial step that tells the customer they can now pick up their order or that it is ready to be shipped.
+ * Order Fulfilled: The final step, confirming the order is complete.
+How to Implement This
+ * Database: Add a status field to your orders table. The values could be payment_received, items_prepared, ready_for_collection, and fulfilled.
+ * User Interface: The UI should read the status of the order to determine which steps to display with a green dot.
+ * Actions: Add buttons to the wholesaler’s order detail page that change the order status (e.g., a "Mark as Ready" button). When the wholesaler clicks this, it updates the database, changes the timeline for both parties, and triggers any relevant notifications.
