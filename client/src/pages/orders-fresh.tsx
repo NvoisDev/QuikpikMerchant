@@ -153,7 +153,10 @@ export default function OrdersFresh() {
         limit: ordersPerPage.toString(),
         ...(search && { search })
       });
-      const response = await fetch(`/api/orders-paginated?${params}`);
+      const response = await fetch(`/api/orders-paginated?${params}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       
       if (response.ok) {
         const data = await response.json();
