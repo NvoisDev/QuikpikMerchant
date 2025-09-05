@@ -797,70 +797,68 @@ export default function OrdersFresh() {
                 </div>
               </div>
 
-              {/* Delivery Address Section */}
-              {selectedOrder.fulfillmentType === 'delivery' && (
+              {/* Delivery Address / Collection Info */}
+              {selectedOrder.fulfillmentType === 'delivery' ? (
                 <div>
-                  <h3 className="font-medium mb-2 text-sm flex items-center">
-                    <Truck className="h-4 w-4 mr-2 text-green-600" />
-                    Delivery Address
-                  </h3>
-                  <div className="space-y-2">
-                    {(() => {
-                      console.log('🔍 Order delivery data:', { 
-                        deliveryAddressId: selectedOrder.deliveryAddressId, 
-                        deliveryAddress: selectedOrder.deliveryAddress 
-                      });
-                      
-                      // FIXED: Prioritize stored text address over database ID lookup (same fix as customer portal)
-                      if (selectedOrder.deliveryAddress) {
-                        console.log('✅ Using stored delivery address text:', selectedOrder.deliveryAddress);
-                      } else if (selectedOrder.deliveryAddressId) {
-                        console.log('✅ Fallback to delivery address ID:', selectedOrder.deliveryAddressId);
-                        return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
-                      }
-                      
-                      // Parse the delivery address text for detailed info
-                      if (selectedOrder.deliveryAddress) {
-                        try {
-                          const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
-                          if (parsedAddress && typeof parsedAddress === 'object') {
-                            const getAddressIcon = (label: string) => {
-                              switch (label?.toLowerCase()) {
-                                case 'home': return <Home className="h-4 w-4 text-green-600" />;
-                                case 'office': case 'work': return <Building className="h-4 w-4 text-blue-600" />;
-                                case 'warehouse': return <Warehouse className="h-4 w-4 text-purple-600" />;
-                                default: return <MapPin className="h-4 w-4 text-gray-600" />;
+                  <h3 className="font-medium mb-3 text-sm">Delivery Address</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div className="text-sm text-gray-700">
+                        {(() => {
+                          // FIXED: Prioritize stored text address over database ID lookup (same fix as customer portal)
+                          if (selectedOrder.deliveryAddress) {
+                            try {
+                              const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
+                              if (parsedAddress && typeof parsedAddress === 'object') {
+                                return (
+                                  <div>
+                                    <div className="font-medium text-gray-900">{parsedAddress.addressLine1}</div>
+                                    {parsedAddress.addressLine2 && (
+                                      <div className="text-gray-700">{parsedAddress.addressLine2}</div>
+                                    )}
+                                    <div className="text-gray-700">{parsedAddress.city}</div>
+                                    <div className="text-gray-700">{parsedAddress.postalCode}</div>
+                                    {parsedAddress.country && (
+                                      <div className="text-gray-700">{parsedAddress.country}</div>
+                                    )}
+                                  </div>
+                                );
                               }
-                            };
-
-                            return (
-                              <div className="bg-white p-3 rounded border border-blue-200 mt-3">
-                                <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
-                                <div className="text-sm text-gray-700">
-                                  <div>{parsedAddress.addressLine1}</div>
-                                  {parsedAddress.addressLine2 && (
-                                    <div>{parsedAddress.addressLine2}</div>
-                                  )}
-                                  <div>{parsedAddress.city}</div>
-                                  <div>{parsedAddress.postalCode}</div>
-                                  {parsedAddress.country && (
-                                    <div>{parsedAddress.country}</div>
-                                  )}
-                                </div>
-                              </div>
-                            );
+                            } catch (e) {
+                              // JSON parsing failed, treat as plain text
+                              return <div className="text-gray-700">{selectedOrder.deliveryAddress}</div>;
+                            }
+                          } else if (selectedOrder.deliveryAddressId) {
+                            return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
                           }
-                        } catch (e) {
-                          // JSON parsing failed, treat as plain text
-                        }
-                      }
-                      
-                      return (
-                        <div className="text-xs text-gray-500 italic">
-                          No delivery address information available
+                          
+                          return (
+                            <div className="text-gray-500 italic">
+                              No delivery address information available
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-medium mb-3 text-sm">Collection Address</h3>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <Package className="h-4 w-4 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-medium text-orange-800">Collect from business</div>
+                        <div className="text-orange-700 font-medium mt-1">
+                          {selectedOrder.wholesalerBusinessName || 'Business Location'}
                         </div>
-                      );
-                    })()}
+                        <div className="text-orange-600 text-xs mt-2">
+                          Please contact the business to arrange collection time and get the exact address.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
