@@ -560,42 +560,70 @@ export default function OrdersFinal() {
                     <Phone className="h-3 w-3" />
                     {selectedOrder.customerPhone || 'No phone'}
                   </p>
-                  {/* DELIVERY ADDRESS DISPLAY - FIXED TO SHOW BOTH ID AND TEXT ADDRESS */}
-                  {selectedOrder.fulfillmentType === 'delivery' && (
+                  {/* ADDRESS & FULFILLMENT INFORMATION - COMPREHENSIVE SYSTEM */}
+                  {selectedOrder.fulfillmentType === 'pickup' ? (
+                    /* Collection Address - Show business information */
                     <div className="text-sm mt-3">
                       <div className="flex items-center gap-1 mb-2">
-                        <MapPin className="h-3 w-3 text-green-600" />
-                        <span className="font-medium text-gray-900">Delivery Address:</span>
+                        <Truck className="h-4 w-4 text-orange-600" />
+                        <span className="font-medium text-gray-900">Collection Address</span>
                       </div>
-                      
-                      {selectedOrder.deliveryAddressId ? (
-                        <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />
-                      ) : selectedOrder.deliveryAddress ? (
-                        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg ml-4">
-                          {formatDeliveryAddressLines(selectedOrder.deliveryAddress).map((line, index) => (
-                            <div key={index} className="text-sm text-gray-700">{line}</div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg ml-4">
-                          <div className="text-sm text-gray-500 italic">
-                            Delivery address not recorded for this order
+                      <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg ml-4">
+                        <div className="flex items-start space-x-2">
+                          <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-xs">📦</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-orange-700 mb-1">Customer will collect from business</div>
+                            <div className="font-medium text-sm text-orange-900 break-words">
+                              {selectedOrder.wholesaler?.businessName || 'Your Business'}
+                            </div>
+                            <div className="text-xs text-orange-700 mt-2">
+                              Customer should contact you to arrange collection time and get the exact address.
+                            </div>
+                            {selectedOrder.wholesaler?.businessPhone && (
+                              <div className="text-xs text-orange-700 mt-1">
+                                <strong>Business Phone:</strong> {selectedOrder.wholesaler.businessPhone}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
+                  ) : (
+                    /* Delivery Address - Prioritize stored delivery address */
+                    (selectedOrder.deliveryAddress || selectedOrder.deliveryAddressId) && (
+                      <div className="text-sm mt-3">
+                        <div className="flex items-center gap-1 mb-2">
+                          <MapPin className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-gray-900">Delivery Address</span>
+                        </div>
+                        {selectedOrder.deliveryAddress ? (
+                          <DeliveryAddressDisplay 
+                            address={selectedOrder.deliveryAddress}
+                            className="bg-blue-50 border-blue-200 ml-4"
+                          />
+                        ) : (
+                          <WholesalerDeliveryAddressDisplay 
+                            addressId={selectedOrder.deliveryAddressId} 
+                            className="ml-4"
+                          />
+                        )}
+                      </div>
+                    )
                   )}
                   
-                  {/* COLLECTION/PICKUP INFORMATION */}
-                  {selectedOrder.fulfillmentType === 'pickup' && (
+                  {/* If no address info available for delivery orders */}
+                  {selectedOrder.fulfillmentType === 'delivery' && !selectedOrder.deliveryAddress && !selectedOrder.deliveryAddressId && (
                     <div className="text-sm mt-3">
                       <div className="flex items-center gap-1 mb-2">
-                        <Truck className="h-3 w-3 text-blue-600" />
-                        <span className="font-medium text-gray-900">Collection Method:</span>
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="font-medium text-gray-900">Delivery Address</span>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg ml-4">
-                        <div className="text-sm text-blue-800 font-medium">Customer Collection</div>
-                        <div className="text-xs text-blue-700 mt-1">Customer will collect this order from your premises</div>
+                      <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg ml-4">
+                        <div className="text-sm text-gray-500 italic">
+                          Delivery address not recorded for this order
+                        </div>
                       </div>
                     </div>
                   )}
