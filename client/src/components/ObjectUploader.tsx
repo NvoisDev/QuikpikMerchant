@@ -78,6 +78,11 @@ export function ObjectUploader({
     setSelectedFiles(prev => [...prev, ...validFiles].slice(0, maxNumberOfFiles));
   };
 
+  // Handle file input change (works for both regular files and camera)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileSelect(e.target.files);
+  };
+
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
@@ -411,13 +416,16 @@ export function ObjectUploader({
                   <p className="text-sm text-gray-600 mb-3">
                     Drag and drop images here, or use the options below
                   </p>
+                  <p className="text-xs text-blue-600 mb-3">
+                    📱 <strong>Camera:</strong> Opens your device's camera app • <strong>📷:</strong> Uses web camera
+                  </p>
                   
                   <div className="flex flex-col sm:flex-row gap-2 justify-center">
                     <input
                       type="file"
                       multiple={maxNumberOfFiles > 1}
                       accept="image/*"
-                      onChange={(e) => handleFileSelect(e.target.files)}
+                      onChange={handleInputChange}
                       className="hidden"
                       id="file-upload"
                     />
@@ -430,47 +438,47 @@ export function ObjectUploader({
                       <Upload className="h-4 w-4 mr-2" />
                       Select Images
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => {
-                        console.log('📷 Camera button clicked');
-                        startCamera();
-                      }}
-                      className="text-xs"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Take Photo
-                    </Button>
                     
-                    {/* Mobile Camera Debug Tool */}
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      onClick={() => {
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-                        const userAgent = navigator.userAgent;
-                        
-                        const diagnosticInfo = `📱 MOBILE CAMERA DEBUG:
-Device: ${isMobile ? 'Mobile' : 'Desktop'}
-Browser: ${userAgent.includes('Chrome') ? 'Chrome' : userAgent.includes('Safari') ? 'Safari' : 'Other'}
-Camera API: ${hasCamera ? 'Available' : 'Not Available'}
-Screen: ${screen.width}x${screen.height}`;
-                        
-                        console.log('🔍 MOBILE CAMERA DIAGNOSTIC:', {
-                          isMobile,
-                          hasCamera,
-                          userAgent,
-                          screen: { width: screen.width, height: screen.height }
-                        });
-                        
-                        alert(diagnosticInfo);
-                      }}
-                      className="text-xs"
-                    >
-                      🔍 Debug
-                    </Button>
+                    {/* Mobile Camera Options */}
+                    <div className="flex gap-1">
+                      {/* Native Camera (Mobile-First) */}
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => document.getElementById('camera-upload')?.click()}
+                        className="text-xs"
+                        title="Use your device's camera app"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Camera
+                      </Button>
+                      
+                      {/* Web Camera (Fallback) */}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => {
+                          console.log('📷 Web camera button clicked');
+                          startCamera();
+                        }}
+                        className="text-xs px-2"
+                        title="Use web camera"
+                      >
+                        📷
+                      </Button>
+                    </div>
+                    
+                    {/* Hidden Camera Input */}
+                    <input
+                      id="camera-upload"
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      multiple={maxNumberOfFiles > 1}
+                      onChange={handleInputChange}
+                      className="hidden"
+                    />
+                    
                   </div>
                 </div>
               </>
