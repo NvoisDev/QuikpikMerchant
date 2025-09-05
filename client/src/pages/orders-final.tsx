@@ -560,11 +560,6 @@ export default function OrdersFinal() {
                     <Phone className="h-3 w-3" />
                     {selectedOrder.customerPhone || 'No phone'}
                   </p>
-                  {/* DEBUG: Show delivery address debug info */}
-                  <p className="text-xs text-gray-400 mt-2">
-                    Debug: deliveryAddress: {selectedOrder.deliveryAddress ? 'YES' : 'NO'} | 
-                    deliveryAddressId: {selectedOrder.deliveryAddressId ? selectedOrder.deliveryAddressId : 'NO'}
-                  </p>
                   {selectedOrder.deliveryAddressId && (
                     <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />
                   )}

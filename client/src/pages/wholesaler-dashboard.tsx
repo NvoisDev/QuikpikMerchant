@@ -34,7 +34,8 @@ import {
   Users,
   Trophy,
   Share2,
-  CreditCard
+  CreditCard,
+  Eye
 } from "lucide-react";
 import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -884,17 +885,24 @@ export default function WholesalerDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {((orders as any) || []).slice(0, 5).map((order: any) => (
-                      <Link key={order.id} href={`/orders?id=${order.id}`}>
-                        <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                          <div>
-                            <p className="font-medium text-gray-900">Order #{order.id}</p>
-                            <p className="text-sm text-gray-600">{order.customerName}</p>
-                          </div>
+                      <div key={order.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div>
+                          <p className="font-medium text-blue-600">{order.orderNumber || `#${order.id}`}</p>
+                          <p className="text-sm text-gray-600">{order.customerName}</p>
+                          <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Badge variant={order.status === 'paid' ? 'default' : 'secondary'}>
                             {order.status}
                           </Badge>
+                          <Link href={`/orders?id=${order.id}`}>
+                            <Button variant="outline" size="sm" className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              View
+                            </Button>
+                          </Link>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                     {((orders as any) || []).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
