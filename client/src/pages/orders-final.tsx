@@ -694,11 +694,6 @@ export default function OrdersFinal() {
                 </div>
               </div>
 
-              {/* Debug Info - Remove after testing */}
-              <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                <strong>Debug:</strong> fulfillmentType: {selectedOrder.fulfillmentType}, status: {selectedOrder.status}, readyToCollectAt: {selectedOrder.readyToCollectAt || 'not set'}
-              </div>
-
               {/* Order Actions Section - Ready for Collection */}
               {selectedOrder.fulfillmentType === 'pickup' && selectedOrder.status !== 'ready_for_collection' && selectedOrder.status !== 'fulfilled' && (
                 <div>

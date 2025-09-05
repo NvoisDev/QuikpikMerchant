@@ -248,6 +248,45 @@ export default function OrdersFresh() {
     }
   };
 
+  // Mark order as ready for collection
+  const markReadyForCollection = async (orderId: number) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/ready-for-collection`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        // Update local state
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: 'ready_for_collection' } : order
+        ));
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: 'ready_for_collection' });
+        }
+        
+        toast({
+          title: "Order marked as ready for collection",
+          description: "Customer has been notified via email that their order is ready to collect",
+        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to mark order as ready for collection');
+      }
+    } catch (error) {
+      console.error('Failed to mark order as ready for collection:', error);
+      toast({
+        title: "Failed to mark as ready",
+        description: error instanceof Error ? error.message : "Unable to mark order as ready for collection",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   // Upload photo function
   const handlePhotoUpload = async (): Promise<{ method: "PUT"; url: string }> => {
     if (!selectedOrder) {
@@ -361,7 +400,8 @@ export default function OrdersFresh() {
       pending: "bg-yellow-100 text-yellow-800",
       paid: "bg-green-100 text-green-800",
       fulfilled: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800"
+      cancelled: "bg-red-100 text-red-800",
+      ready_for_collection: "bg-orange-100 text-orange-800"
     };
     return colors[status] || "bg-gray-100 text-gray-800";
   };
@@ -991,8 +1031,24 @@ export default function OrdersFresh() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end pt-2 border-t">
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                
+                {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
+                {selectedOrder.fulfillmentType === 'pickup' && 
+                 selectedOrder.status !== 'ready_for_collection' && 
+                 selectedOrder.status !== 'fulfilled' && (
+                  <Button 
+                    size="sm"
+                    onClick={() => markReadyForCollection(selectedOrder.id)}
+                    disabled={updatingOrderId === selectedOrder.id}
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    <Clock className="h-4 w-4 mr-1" />
+                    {updatingOrderId === selectedOrder.id ? 'Marking Ready...' : 'Ready for Collection'}
+                  </Button>
+                )}
 
+                {/* Mark as Fulfilled Button */}
                 {selectedOrder.status !== 'fulfilled' && (
                   <Button 
                     size="sm"
