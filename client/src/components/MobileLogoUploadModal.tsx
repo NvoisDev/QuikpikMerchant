@@ -61,9 +61,20 @@ export function MobileLogoUploadModal({
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
+      console.log('🔧 Logo upload: Getting upload URL from backend...');
+      
       // Get upload URL from backend
       const response = await apiRequest('POST', '/api/logo-upload-url');
+      console.log('🔧 Logo upload: Backend response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔧 Logo upload: Backend error:', errorText);
+        throw new Error(`Backend error (${response.status}): ${errorText}`);
+      }
+      
       const data = await response.json();
+      console.log('🔧 Logo upload: Got upload URL:', !!data.uploadURL);
       
       if (!data.uploadURL) {
         throw new Error('Failed to get upload URL');
@@ -73,6 +84,7 @@ export function MobileLogoUploadModal({
       setUploadProgress(95);
 
       // Upload file directly to object storage
+      console.log('🔧 Logo upload: Uploading to object storage...');
       const uploadResponse = await fetch(data.uploadURL, {
         method: 'PUT',
         body: file,
@@ -81,8 +93,12 @@ export function MobileLogoUploadModal({
         },
       });
 
+      console.log('🔧 Logo upload: Object storage response:', uploadResponse.status);
+      
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file');
+        const errorText = await uploadResponse.text();
+        console.error('🔧 Logo upload: Object storage error:', errorText);
+        throw new Error(`Object storage error (${uploadResponse.status}): ${errorText}`);
       }
 
       setUploadProgress(100);
@@ -102,10 +118,22 @@ export function MobileLogoUploadModal({
       }, 1000);
 
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('🔧 Logo upload: Full error:', error);
+      let errorMessage = "Unable to upload logo. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('Authentication')) {
+          errorMessage = "Session expired. Please refresh the page and log in again.";
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          errorMessage = "Permission denied. Please contact support.";
+        } else if (error.message.includes('Backend error')) {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Upload failed",
-        description: "Unable to upload logo. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       setPreviewUrl(null);
