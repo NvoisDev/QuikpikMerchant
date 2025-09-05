@@ -758,7 +758,7 @@ export default function Settings() {
                                 {businessForm.logoType === 'business' && (
                                   <p className="text-xs text-gray-500 ml-6 mt-1">
                                     Will show: {businessForm.businessName ? 
-                                      businessForm.businessName.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase() || 'QP'
+                                      businessForm.businessName.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase()
                                       : 'QP'
                                     }
                                   </p>

@@ -94,7 +94,18 @@ export default function Logo({
       );
     }
     
-    // 3. Name initials (fallback - default)
+    // 3. Default Quikpik logo
+    if (user?.logoType === "default") {
+      return (
+        <div className={`${sizeClasses[size]} aspect-square bg-blue-600 rounded-lg flex items-center justify-center`}>
+          <span className={`${textSizeClasses[size]} font-bold text-white select-none`}>
+            QP
+          </span>
+        </div>
+      );
+    }
+    
+    // 4. Fallback to user initials (when no logoType is set)
     const nameInitials = getInitials();
     console.log("Logo render - using fallback initials:", nameInitials);
     return (
