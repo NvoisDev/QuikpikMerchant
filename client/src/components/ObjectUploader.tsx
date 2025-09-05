@@ -138,12 +138,23 @@ export function ObjectUploader({
   // Camera functionality
   const startCamera = async () => {
     try {
+      // Check if running over HTTPS or localhost (required for camera access)
+      const isSecureContext = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!isSecureContext) {
+        throw new Error('Camera access requires HTTPS. Please use a secure connection.');
+      }
+
       // Check if camera API is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera API not available in this browser');
+        throw new Error('Camera API not available in this browser. Please try Chrome, Safari, or Firefox.');
       }
 
       console.log('🎥 Starting camera...');
+      console.log('📱 Device info:', { 
+        userAgent: navigator.userAgent,
+        isSecureContext,
+        hasMediaDevices: !!navigator.mediaDevices
+      });
       
       // MOBILE FIX: Try with mobile-optimized constraints first, then fallback
       let stream;
@@ -238,6 +249,8 @@ export function ObjectUploader({
           errorMessage += "Camera format not supported.";
         } else if (error.message.includes('API not available')) {
           errorMessage += "Camera not supported in this browser. Please use Chrome, Firefox, or Safari.";
+        } else if (error.message.includes('HTTPS')) {
+          errorMessage += "Camera requires a secure connection (HTTPS).";
         } else {
           errorMessage += `Error: ${error.message}`;
         }
