@@ -3628,7 +3628,7 @@ The Quikpik Team`
 
           await sendEmail({
             to: customer.email,
-            from: 'orders@quikpik.co',
+            from: 'hello@quikpik.co',
             subject: emailData.subject,
             html: emailData.html,
             text: emailData.text
