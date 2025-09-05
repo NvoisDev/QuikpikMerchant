@@ -514,10 +514,10 @@ export default function OrdersFinal() {
                           size="sm"
                           onClick={() => fetchOrderDetails(order.id)}
                           disabled={loadingOrderDetails}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-300 hover:bg-gray-50"
                         >
-                          <Eye className="h-3 w-3" />
-                          {loadingOrderDetails ? 'Loading...' : 'View'}
+                          <Eye className="h-4 w-4" />
+                          {loadingOrderDetails ? 'Loading...' : 'View Details'}
                         </Button>
                       </td>
                     </tr>
