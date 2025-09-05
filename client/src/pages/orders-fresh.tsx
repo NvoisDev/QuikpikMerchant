@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -648,7 +648,10 @@ export default function OrdersFresh() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        <div className="flex items-center justify-between">
+                          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -666,9 +669,12 @@ export default function OrdersFresh() {
                           <div className="font-medium text-sm">{order.orderNumber || `#${order.id}`}</div>
                           <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium text-sm">{formatCurrency(calculateNetAmount(order))}</div>
-                          <div className="text-xs text-gray-500">After platform fee</div>
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <div className="font-medium text-sm">{formatCurrency(calculateNetAmount(order))}</div>
+                            <div className="text-xs text-gray-500">After platform fee</div>
+                          </div>
+                          <Eye className="h-4 w-4 text-gray-400" />
                         </div>
                       </div>
                       
