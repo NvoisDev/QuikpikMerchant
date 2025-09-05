@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck, Camera, Upload } from "lucide-react";
+import { Package, DollarSign, TrendingUp, AlertCircle, RefreshCw, Search, Eye, Filter, Mail, Phone, MapPin, Home, Building, Truck, Camera, Upload, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,11 @@ interface Order {
   deliveryAddress?: string;
   deliveryAddressId?: number;
   createdAt: string;
+  readyToCollectAt?: string;
+  wholesaler?: {
+    businessName?: string;
+    businessPhone?: string;
+  };
   items?: OrderItem[];
   orderImages?: Array<{
     id: string;
@@ -177,6 +182,50 @@ export default function OrdersFinal() {
     }
   });
 
+  // Ready for Collection mutation
+  const readyForCollectionMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await fetch(`/api/orders/${orderId}/ready-for-collection`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to mark order as ready for collection');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, orderId) => {
+      toast({
+        title: "Order marked as ready for collection",
+        description: "Customer has been notified via email that their order is ready to collect",
+      });
+      
+      // Update the selected order status
+      if (selectedOrder && selectedOrder.id === orderId) {
+        const updatedOrder = {
+          ...selectedOrder,
+          status: 'ready_for_collection',
+          readyToCollectAt: new Date().toISOString()
+        };
+        setSelectedOrder(updatedOrder);
+      }
+      
+      // Refresh orders list
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to mark as ready",
+        description: error instanceof Error ? error.message : "Unable to mark order as ready for collection",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleImageUpload = async () => {
     if (!selectedOrder) return null;
     
@@ -299,12 +348,19 @@ export default function OrdersFinal() {
       pending: "bg-yellow-100 text-yellow-800",
       paid: "bg-green-100 text-green-800", 
       fulfilled: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800"
+      cancelled: "bg-red-100 text-red-800",
+      ready_for_collection: "bg-orange-100 text-orange-800"
     };
     const colorClass = colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    
+    // Format status display text
+    const displayText = status === 'ready_for_collection' 
+      ? 'Ready for Collection' 
+      : status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+    
     return (
       <Badge className={`${colorClass} border-0`}>
-        {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'}
+        {displayText}
       </Badge>
     );
   };
@@ -637,6 +693,47 @@ export default function OrdersFinal() {
                   <p className="text-sm font-medium">Total: {formatCurrency(parseFloat(selectedOrder.total || "0"))}</p>
                 </div>
               </div>
+
+              {/* Order Actions Section - Ready for Collection */}
+              {selectedOrder.fulfillmentType === 'pickup' && selectedOrder.status !== 'ready_for_collection' && selectedOrder.status !== 'fulfilled' && (
+                <div>
+                  <h4 className="font-semibold">Order Actions</h4>
+                  <div className="mt-3">
+                    <Button
+                      onClick={() => readyForCollectionMutation.mutate(selectedOrder.id)}
+                      disabled={readyForCollectionMutation.isPending}
+                      className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white"
+                    >
+                      <Clock className="h-4 w-4" />
+                      {readyForCollectionMutation.isPending ? 'Marking as Ready...' : 'Mark Ready for Collection'}
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Customer will be notified via email that their order is ready to collect
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Ready for Collection Status Display */}
+              {selectedOrder.fulfillmentType === 'pickup' && selectedOrder.status === 'ready_for_collection' && (
+                <div>
+                  <h4 className="font-semibold">Collection Status</h4>
+                  <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">Ready for Collection</span>
+                    </div>
+                    <p className="text-sm text-orange-600 mt-1">
+                      Customer has been notified that their order is ready to collect
+                    </p>
+                    {selectedOrder.readyToCollectAt && (
+                      <p className="text-xs text-orange-500 mt-1">
+                        Marked ready: {new Date(selectedOrder.readyToCollectAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {selectedOrder.items && selectedOrder.items.length > 0 && (
                 <div>

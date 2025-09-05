@@ -25,7 +25,7 @@ import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
 import { sendEmail } from "./sendgrid-service";
 import { createEmailVerification, verifyEmailCode } from "./email-verification";
-import { generateWholesalerOrderNotificationEmail, type OrderEmailData } from "./email-templates";
+import { generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail, type OrderEmailData, type ReadyForCollectionEmailData } from "./email-templates";
 import { sendWelcomeMessages } from "./services/welcomeMessageService.js";
 import { orderNotificationService } from "./services/orderNotificationService";
 // Removed conflicting import - using parseCustomerName defined below
@@ -3568,6 +3568,84 @@ The Quikpik Team`
     } catch (error) {
       console.error("❌ Error fetching order details:", error);
       res.status(500).json({ error: "Failed to fetch order details" });
+    }
+  });
+
+  // Mark order as ready for collection (pickup orders only)
+  app.put('/api/orders/:id/ready-for-collection', requireAuth, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ error: 'Invalid order ID' });
+      }
+
+      // Get order details first to validate it's a pickup order
+      const wholesalerId = req.user.role === 'team_member' && req.user.wholesalerId 
+        ? req.user.wholesalerId 
+        : req.user.id;
+      
+      const orders = await storage.getOrders(wholesalerId, undefined, undefined);
+      const order = orders.find(o => o.id === orderId);
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // ONLY allow for pickup/collection orders
+      if (order.fulfillmentType !== 'pickup') {
+        return res.status(400).json({ error: 'Ready for collection can only be set for pickup orders' });
+      }
+
+      // Check if already marked as ready
+      if (order.readyToCollectAt) {
+        return res.status(400).json({ error: 'Order is already marked as ready for collection' });
+      }
+
+      console.log(`📦 Marking pickup order ${orderId} as ready for collection`);
+
+      // Update order with ready for collection timestamp
+      const updated = await storage.markOrderReadyForCollection(orderId);
+      if (!updated) {
+        return res.status(500).json({ error: 'Failed to mark order as ready for collection' });
+      }
+
+      // Send email notification to customer
+      try {
+        const customer = await storage.getUser(updated.retailerId);
+        const wholesaler = await storage.getUser(updated.wholesalerId);
+        
+        if (customer && wholesaler && customer.email) {
+          const emailData = generateReadyForCollectionEmail({
+            orderNumber: updated.orderNumber,
+            customerName: `${customer.firstName} ${customer.lastName}`.trim() || 'Customer',
+            wholesalerName: wholesaler.businessName || `${wholesaler.firstName} ${wholesaler.lastName}`.trim(),
+            businessPhone: wholesaler.businessPhone || wholesaler.phoneNumber,
+            businessAddress: wholesaler.businessAddress,
+            orderTotal: updated.total,
+            readyTime: updated.readyToCollectAt.toLocaleString(),
+            orderUrl: `https://quikpik.app/customer-portal/${wholesaler.id}`
+          });
+
+          await sendEmail({
+            to: customer.email,
+            from: 'orders@quikpik.co',
+            subject: emailData.subject,
+            html: emailData.html,
+            text: emailData.text
+          });
+          
+          console.log(`📧 Ready for collection email sent to ${customer.email}`);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send ready for collection email:', emailError);
+        // Don't fail the API call if email fails
+      }
+
+      console.log(`✅ Order ${orderId} marked as ready for collection`);
+      res.json({ success: true, order: updated });
+    } catch (error) {
+      console.error("❌ Error marking order as ready for collection:", error);
+      res.status(500).json({ error: "Failed to mark order as ready for collection" });
     }
   });
 

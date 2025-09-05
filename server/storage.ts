@@ -1260,6 +1260,18 @@ export class DatabaseStorage implements IStorage {
     return updatedOrder;
   }
 
+  async markOrderReadyForCollection(id: number): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        readyToCollectAt: new Date(),
+        status: 'ready_for_collection'
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+
   async updateOrder(id: number, updates: Partial<Order>): Promise<Order> {
     const [updatedOrder] = await db
       .update(orders)

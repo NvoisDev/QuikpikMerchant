@@ -1,0 +1,29 @@
+To help your developer, here is the clear, actionable plan for adding a "Ready for Collection" feature.
+Step 1: Backend Updates
+The developer must update the backend to support the new order status and email trigger.
+ * Add ready_to_collect_at field: Add a new nullable datetime field to your orders table.
+ * Create a new API endpoint: Build a new endpoint (e.g., PUT /api/orders/{orderId}/ready-for-collection) that a wholesaler's front-end can call. This endpoint should:
+   * Authenticate: Verify the wholesaler is logged in and has permission to update this specific order.
+   * Update Status: Set the status of the order to ready_for_collection.
+   * Set Timestamp: Populate the new ready_to_collect_at field with the current timestamp.
+   * Trigger Email: After the database is updated, trigger a new email to the customer using your email service.
+Step 2: Customer Email
+Create a new email template for the "Ready for Collection" notification.
+ * Subject: Your Order from [Wholesaler Name] is Ready for Collection!
+ * Body:
+   * Start with a clear message: "Your order from [Wholesaler Name] is now ready for collection."
+   * Include a link to the customer's order detail page on your platform.
+   * Provide essential details like the order number, collection address, and a reminder of collection hours if applicable.
+Step 3: Front-end Implementation
+The developer needs to modify both the wholesaler and customer order detail pages.
+ * Wholesaler Order Detail Page:
+   * Add a "Ready for Collection" button to the UI.
+   * The button should be conditionally visible, only appearing for orders that are not yet marked as ready_for_collection.
+   * On a click event, the button will make an API call to the new endpoint created in Step 1.
+   * After a successful API call, the button should be hidden or disabled.
+ * Customer Order Detail Page:
+   * Display a clear message or status badge like "Ready for Collection" when the order's status matches the new value.
+   * Use the ready_to_collect_at timestamp to show when the order was marked as ready.
+Step 4: Update Order Timeline
+The timeline is a crucial part of the customer experience.
+ * Modify the logic that builds the order timeline to include the new "Ready for Collection" event. The event's timestamp should be pulled from the ready_to_collect_at field, providing a clear record of when the order became available for pickup.

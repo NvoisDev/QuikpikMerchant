@@ -15,6 +15,17 @@ function formatDeliveryAddressPlainText(address: string): string {
   return addressLines.join('\n');
 }
 
+export interface ReadyForCollectionEmailData {
+  orderNumber: string;
+  customerName: string;
+  wholesalerName: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  orderTotal: string;
+  readyTime: string;
+  orderUrl: string;
+}
+
 export interface OrderEmailData {
   orderNumber: string;
   customerName: string;
@@ -209,6 +220,126 @@ Manage customers: https://quikpik.app/customers
 ---
 Quikpik - Your B2B Wholesale Platform
 Manage your business at quikpik.app
+
+This is an automated notification. Please do not reply to this email.
+  `;
+
+  return { subject, html, text };
+}
+
+export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailData): { subject: string; html: string; text: string } {
+  const subject = `📦 Your Order ${data.orderNumber} is Ready for Collection!`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Ready for Collection</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; margin: -20px -20px 20px -20px; }
+        .collection-info { background-color: #fef3e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+        .order-details { background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+        .contact-info { background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+        .action-buttons { text-align: center; margin: 30px 0; }
+        .btn { display: inline-block; padding: 12px 24px; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; }
+        .btn-primary { background-color: #f59e0b; }
+        .btn-secondary { background-color: #3b82f6; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+        .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .ready-badge { display: inline-block; padding: 8px 16px; background-color: #059669; color: white; border-radius: 20px; font-size: 14px; font-weight: bold; margin: 10px 0; }
+        .highlight { color: #f59e0b; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Quikpik</div>
+            <h1 style="margin: 0; font-size: 24px;">📦 Order Ready for Collection!</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Order #${data.orderNumber}</p>
+            <div class="ready-badge">✅ READY TO COLLECT</div>
+        </div>
+
+        <div class="collection-info">
+            <h2 style="margin-top: 0; color: #d97706;">🚛 Collection Information</h2>
+            <p><strong>Hello ${data.customerName},</strong></p>
+            <p>Great news! Your order from <strong>${data.wholesalerName}</strong> is now ready for collection.</p>
+            <p><strong>Ready Since:</strong> <span class="highlight">${data.readyTime}</span></p>
+            <p><strong>Order Total:</strong> <span class="highlight">£${parseFloat(data.orderTotal).toFixed(2)}</span></p>
+        </div>
+
+        <div class="contact-info">
+            <h3 style="margin-top: 0; color: #1e40af;">📍 Collection Details</h3>
+            <p><strong>Collect From:</strong> ${data.wholesalerName}</p>
+            ${data.businessAddress ? `<p><strong>Address:</strong> ${data.businessAddress}</p>` : ''}
+            ${data.businessPhone ? `<p><strong>Phone:</strong> <a href="tel:${data.businessPhone}" style="color: #3b82f6; text-decoration: none;">${data.businessPhone}</a></p>` : ''}
+            <p style="margin-top: 15px; padding: 15px; background-color: #dbeafe; border-radius: 8px; color: #1e40af;">
+                <strong>⚠️ Important:</strong> Please contact ${data.wholesalerName} to arrange a suitable collection time before arriving.
+            </p>
+        </div>
+
+        <div class="order-details">
+            <h3 style="margin-top: 0; color: #059669;">📋 Order Summary</h3>
+            <p><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p><strong>Order Value:</strong> £${parseFloat(data.orderTotal).toFixed(2)}</p>
+            <p><strong>Collection Method:</strong> Customer Collection</p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="${data.orderUrl}" class="btn btn-primary">View Order Details</a>
+            ${data.businessPhone ? `<a href="tel:${data.businessPhone}" class="btn btn-secondary">Call Business</a>` : ''}
+        </div>
+
+        <div class="footer">
+            <p><strong>Next Steps:</strong></p>
+            <p>1. Contact ${data.wholesalerName} to arrange collection time<br/>
+            2. Bring a copy of this email or your order number<br/>
+            3. Collect your order during business hours</p>
+            
+            <p style="margin-top: 20px;">
+                <strong>Quikpik - Your B2B Wholesale Platform</strong><br/>
+                <a href="https://quikpik.app" style="color: #3b82f6;">quikpik.app</a>
+            </p>
+            <p style="font-size: 12px; color: #9ca3af;">
+                This is an automated notification. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+
+  const text = `
+📦 Order Ready for Collection!
+Order #${data.orderNumber}
+
+Hello ${data.customerName},
+
+Great news! Your order from ${data.wholesalerName} is now ready for collection.
+
+COLLECTION DETAILS:
+- Ready Since: ${data.readyTime}
+- Order Total: £${parseFloat(data.orderTotal).toFixed(2)}
+- Collect From: ${data.wholesalerName}
+${data.businessAddress ? `- Address: ${data.businessAddress}` : ''}
+${data.businessPhone ? `- Phone: ${data.businessPhone}` : ''}
+
+IMPORTANT: Please contact ${data.wholesalerName} to arrange a suitable collection time before arriving.
+
+Next Steps:
+1. Contact ${data.wholesalerName} to arrange collection time
+2. Bring a copy of this email or your order number
+3. Collect your order during business hours
+
+View Order Details: ${data.orderUrl}
+${data.businessPhone ? `Call Business: ${data.businessPhone}` : ''}
+
+---
+Quikpik - Your B2B Wholesale Platform
+Manage your orders at quikpik.app
 
 This is an automated notification. Please do not reply to this email.
   `;

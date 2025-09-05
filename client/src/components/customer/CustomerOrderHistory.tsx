@@ -38,6 +38,8 @@ interface Order {
     businessName: string;
     firstName: string;
     lastName: string;
+    businessPhone?: string;
+    businessAddress?: string;
   };
   fulfillmentType: string;
   deliveryCarrier: string;
@@ -56,6 +58,7 @@ interface Order {
   paymentStatus?: string;
   createdAt: string;
   updatedAt: string;
+  readyToCollectAt?: string;
   orderImages?: Array<{
     id: string;
     url: string;
@@ -104,6 +107,8 @@ const getStatusColor = (status: string) => {
       return 'bg-green-100 text-green-800';
     case 'cancelled':
       return 'bg-red-100 text-red-800';
+    case 'ready_for_collection':
+      return 'bg-orange-100 text-orange-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -119,6 +124,8 @@ const getStatusIcon = (status: string) => {
       return <Package className="h-3 w-3" />;
     case 'fulfilled':
       return <ShoppingBag className="h-3 w-3" />;
+    case 'ready_for_collection':
+      return <Warehouse className="h-3 w-3" />;
     default:
       return <Clock className="h-3 w-3" />;
   }
@@ -167,6 +174,36 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
           </div>
         </div>
 
+        {/* Ready for Collection Alert - Show prominently for pickup orders */}
+        {order.fulfillmentType === 'pickup' && order.status === 'ready_for_collection' && (
+          <div>
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-3 sm:p-4 rounded-r-lg">
+              <div className="flex items-center">
+                <Warehouse className="h-5 w-5 text-orange-600 mr-3" />
+                <div>
+                  <h3 className="font-semibold text-orange-900 text-sm sm:text-base">📦 Your Order is Ready for Collection!</h3>
+                  <p className="text-orange-800 text-xs sm:text-sm mt-1">
+                    Great news! Your order is prepared and waiting for you to collect.
+                  </p>
+                  {order.readyToCollectAt && (
+                    <p className="text-orange-700 text-xs mt-2">
+                      Ready since: {new Date(order.readyToCollectAt).toLocaleString()}
+                    </p>
+                  )}
+                  <div className="mt-3 text-xs sm:text-sm text-orange-800">
+                    <p className="font-medium">Next Steps:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Contact {order.wholesaler?.businessName} to arrange collection time</li>
+                      <li>Bring a copy of this order or your order number</li>
+                      <li>Collect during business hours</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Your Information */}
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Your Information</h3>
@@ -195,11 +232,14 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                     <div className="text-xs text-gray-600 mb-1">Collect from business</div>
                     <div className="font-medium text-sm break-words">{order.wholesaler?.businessName || 'Business'}</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Please contact the business to arrange collection time and get the exact address.
+                      {order.status === 'ready_for_collection' 
+                        ? 'Your order is ready! Contact the business to arrange collection time.'
+                        : 'Please contact the business to arrange collection time and get the exact address.'
+                      }
                     </div>
-                    {order.wholesaler?.phone && (
+                    {order.wholesaler?.businessPhone && (
                       <div className="text-xs text-gray-600 mt-1">
-                        <strong>Phone:</strong> {order.wholesaler.phone}
+                        <strong>Phone:</strong> {order.wholesaler.businessPhone}
                       </div>
                     )}
                   </div>
@@ -293,6 +333,18 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
                 <span className="font-medium break-words">Wholesaler notified of your order</span>
               </div>
             </div>
+            
+            {/* Ready for Collection Timeline Event */}
+            {order.status === 'ready_for_collection' && order.fulfillmentType === 'pickup' && order.readyToCollectAt && (
+              <div className="flex items-start space-x-2 text-xs">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-600 block">{format(new Date(order.readyToCollectAt), 'MMM d, yyyy \'at\' h:mm a')}</span>
+                  <span className="font-medium break-words text-orange-700">📦 Order ready for collection</span>
+                </div>
+              </div>
+            )}
+
             {order.status === 'fulfilled' ? (
               <div className="flex items-start space-x-2 text-xs">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
@@ -303,17 +355,32 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             ) : (
               <>
+                {/* Show different pending steps based on current status and fulfillment type */}
+                {order.status !== 'ready_for_collection' && (
+                  <>
+                    <div className="flex items-start space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                      <span className="text-gray-400 break-words">Awaiting wholesaler confirmation</span>
+                    </div>
+                    <div className="flex items-start space-x-2 text-xs">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                      <span className="text-gray-400 break-words">Order preparation pending</span>
+                    </div>
+                    {order.fulfillmentType === 'pickup' && (
+                      <div className="flex items-start space-x-2 text-xs">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
+                        <span className="text-gray-400 break-words">Ready for collection notification pending</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Show final step as pending */}
                 <div className="flex items-start space-x-2 text-xs">
                   <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
-                  <span className="text-gray-400 break-words">Awaiting wholesaler confirmation</span>
-                </div>
-                <div className="flex items-start space-x-2 text-xs">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
-                  <span className="text-gray-400 break-words">Order preparation pending</span>
-                </div>
-                <div className="flex items-start space-x-2 text-xs">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full mt-1 flex-shrink-0"></div>
-                  <span className="text-gray-400 break-words">Fulfillment pending</span>
+                  <span className="text-gray-400 break-words">
+                    {order.fulfillmentType === 'pickup' ? 'Collection completion pending' : 'Delivery completion pending'}
+                  </span>
                 </div>
               </>
             )}

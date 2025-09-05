@@ -481,6 +481,9 @@ export const orders = pgTable("orders", {
   shippingTotal: decimal("shipping_total", { precision: 10, scale: 2 }), // Total shipping cost from Parcel2Go
   shippingStatus: varchar("shipping_status"), // Status from Parcel2Go (created, paid, dispatched, delivered)
   
+  // Ready for Collection feature
+  readyToCollectAt: timestamp("ready_to_collect_at"), // When order was marked ready for collection
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
