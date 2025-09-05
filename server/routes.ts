@@ -3571,7 +3571,7 @@ The Quikpik Team`
     }
   });
 
-  // Mark order as ready for collection (pickup orders only)
+  // Mark order as ready for collection/delivery
   app.put('/api/orders/:id/ready-for-collection', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
@@ -3591,9 +3591,9 @@ The Quikpik Team`
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      // ONLY allow for pickup/collection orders
-      if (order.fulfillmentType !== 'pickup') {
-        return res.status(400).json({ error: 'Ready for collection can only be set for pickup orders' });
+      // Check if order items are prepared first
+      if (order.status !== 'items_prepared') {
+        return res.status(400).json({ error: 'Order items must be prepared first before marking as ready' });
       }
 
       // Check if already marked as ready
@@ -3601,7 +3601,8 @@ The Quikpik Team`
         return res.status(400).json({ error: 'Order is already marked as ready for collection' });
       }
 
-      console.log(`📦 Marking pickup order ${orderId} as ready for collection`);
+      const actionType = order.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
+      console.log(`📦 Marking order ${orderId} as ready for ${actionType}`);
 
       // Update order with ready for collection timestamp
       const updated = await storage.markOrderReadyForCollection(orderId);
@@ -3712,6 +3713,46 @@ The Quikpik Team`
     } catch (error) {
       console.error("❌ Error resending ready for collection notification:", error);
       res.status(500).json({ error: "Failed to resend notification" });
+    }
+  });
+
+  // Mark order items as prepared
+  app.put("/api/orders/:id/items-prepared", requireAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      console.log(`📦 Marking order ${orderId} items as prepared`);
+
+      // Get order details
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify ownership
+      if (order.wholesalerId !== userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      // Check if order is in the right status
+      if (order.status !== 'paid') {
+        return res.status(400).json({ error: 'Order must be in paid status to mark items as prepared' });
+      }
+
+      console.log(`📦 Updating order ${orderId} status to items_prepared`);
+
+      // Update order status using storage method
+      const updated = await storage.updateOrderStatus(orderId, 'items_prepared');
+      if (!updated) {
+        return res.status(500).json({ error: 'Failed to update order status' });
+      }
+
+      console.log(`✅ Order ${orderId} items marked as prepared`);
+      res.json({ success: true, order: updated });
+    } catch (error) {
+      console.error("❌ Error marking order items as prepared:", error);
+      res.status(500).json({ error: "Failed to mark order items as prepared" });
     }
   });
 

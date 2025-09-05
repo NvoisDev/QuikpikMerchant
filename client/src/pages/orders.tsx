@@ -222,6 +222,49 @@ export default function OrdersFresh() {
     }
   });
 
+  // Mark order items as prepared mutation
+  const itemsPreparedMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await fetch(`/api/orders/${orderId}/items-prepared`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to mark items as prepared');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, orderId) => {
+      toast({
+        title: "Items Prepared",
+        description: "Order items have been marked as prepared and ready for next step.",
+      });
+      
+      // Update the selected order status
+      if (selectedOrder && selectedOrder.id === orderId) {
+        const updatedOrder = {
+          ...selectedOrder,
+          status: 'items_prepared'
+        };
+        setSelectedOrder(updatedOrder);
+      }
+      
+      // Refresh orders list
+      loadOrders(currentPage, searchQuery);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to mark items as prepared",
+        description: error instanceof Error ? error.message : "Unable to mark items as prepared",
+        variant: "destructive"
+      });
+    }
+  });
+
   const loadOrders = async (page = 1, search = '') => {
     setLoading(true);
     setError(null);
@@ -330,44 +373,6 @@ export default function OrdersFresh() {
     }
   };
 
-  // Mark order as ready for collection
-  const markReadyForCollection = async (orderId: number) => {
-    setUpdatingOrderId(orderId);
-    try {
-      const response = await fetch(`/api/orders/${orderId}/ready-for-collection`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        // Update local state
-        setOrders(orders.map(order => 
-          order.id === orderId ? { ...order, status: 'ready_for_collection' } : order
-        ));
-        if (selectedOrder && selectedOrder.id === orderId) {
-          setSelectedOrder({ ...selectedOrder, status: 'ready_for_collection' });
-        }
-        
-        toast({
-          title: "Order marked as ready for collection",
-          description: "Customer has been notified via email that their order is ready to collect",
-        });
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to mark order as ready for collection');
-      }
-    } catch (error) {
-      console.error('Failed to mark order as ready for collection:', error);
-      toast({
-        title: "Failed to mark as ready",
-        description: error instanceof Error ? error.message : "Unable to mark order as ready for collection",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
 
   // Upload photo function
   const handlePhotoUpload = async (): Promise<{ method: "PUT"; url: string }> => {
@@ -481,11 +486,59 @@ export default function OrdersFresh() {
     const colors: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800",
       paid: "bg-green-100 text-green-800",
-      fulfilled: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800",
-      ready_for_collection: "bg-orange-100 text-orange-800"
+      items_prepared: "bg-blue-100 text-blue-800", 
+      ready_for_collection: "bg-orange-100 text-orange-800",
+      fulfilled: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800"
     };
     return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: "Pending",
+      paid: "Payment Received", 
+      items_prepared: "Items Prepared",
+      ready_for_collection: "Ready for Collection",
+      fulfilled: "Fulfilled",
+      cancelled: "Cancelled"
+    };
+    return labels[status] || status;
+  };
+
+  // Get timeline steps based on order type and status
+  const getTimelineSteps = (order: Order) => {
+    const isPickup = order.fulfillmentType === 'pickup';
+    
+    return [
+      {
+        id: 'payment_received',
+        title: 'Order Received',
+        description: 'Payment successfully processed',
+        completed: ['paid', 'items_prepared', 'ready_for_collection', 'fulfilled'].includes(order.status)
+      },
+      {
+        id: 'items_prepared', 
+        title: 'Order Items Prepared',
+        description: 'Items have been prepared and packaged',
+        completed: ['items_prepared', 'ready_for_collection', 'fulfilled'].includes(order.status),
+        current: order.status === 'paid'
+      },
+      {
+        id: 'ready_for_collection',
+        title: isPickup ? 'Ready for Collection' : 'Ready for Delivery',
+        description: isPickup ? 'Customer notified order is ready to collect' : 'Order packaged and ready for delivery',
+        completed: ['ready_for_collection', 'fulfilled'].includes(order.status),
+        current: order.status === 'items_prepared'
+      },
+      {
+        id: 'fulfilled',
+        title: 'Order Fulfilled',
+        description: isPickup ? 'Customer has collected the order' : 'Order has been delivered',
+        completed: order.status === 'fulfilled',
+        current: order.status === 'ready_for_collection'
+      }
+    ];
   };
 
   // Calculate amounts after platform fee using actual database platform fees
@@ -692,7 +745,7 @@ export default function OrdersFresh() {
                       <TableCell className="text-xs">
                         <div className="flex gap-1">
                           <Badge className={getStatusColor(order.status) + " text-xs"}>
-                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                            {getStatusLabel(order.status)}
                           </Badge>
                           {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
@@ -764,7 +817,7 @@ export default function OrdersFresh() {
                       
                       <div className="flex flex-wrap gap-2 mb-3">
                         <Badge className={getStatusColor(order.status) + " text-xs"}>
-                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                          {getStatusLabel(order.status)}
                         </Badge>
                         {order.fulfillmentType && (
                           <Badge variant="outline" className="text-xs">
@@ -1051,78 +1104,58 @@ export default function OrdersFresh() {
 
               {/* Order Timeline */}
               <div>
-                <h3 className="font-medium mb-2 text-sm">Order Timeline</h3>
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                    <div>
-                      <div className="text-xs font-medium">Customer payment received</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                <h3 className="font-medium mb-3 text-sm">Order Timeline</h3>
+                <div className="space-y-3">
+                  {getTimelineSteps(selectedOrder).map((step, index) => (
+                    <div key={step.id} className="flex items-start gap-3">
+                      <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                        step.completed ? 'bg-green-500' : 
+                        step.current ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}></div>
+                      <div className="flex-1">
+                        <div className={`text-sm font-medium ${
+                          step.completed ? 'text-green-700' : 
+                          step.current ? 'text-blue-700' : 'text-gray-500'
+                        }`}>
+                          {step.title}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {step.description}
+                        </div>
+                        {step.completed && index === 0 && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
+                          </div>
+                        )}
+                        {step.id === 'ready_for_collection' && step.completed && selectedOrder.readyToCollectAt && (
+                          <div className="text-xs text-orange-600 mt-1 font-medium">
+                            Ready notification sent: {new Date(selectedOrder.readyToCollectAt).toLocaleDateString()} at {new Date(selectedOrder.readyToCollectAt).toLocaleTimeString()}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                    <div>
-                      <div className="text-xs font-medium">Order notification received</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                    <div>
-                      <div className="text-xs font-medium">Customer confirmation sent</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString()} at {new Date(selectedOrder.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                  {selectedOrder.status !== 'fulfilled' && (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Prepare order items</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Package for {selectedOrder.fulfillmentType === 'delivery' ? 'delivery' : 'collection'}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-1.5"></div>
-                        <div>
-                          <div className="text-xs text-gray-500">Mark as fulfilled when ready</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {selectedOrder.status === 'fulfilled' && (
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                      <div>
-                        <div className="text-xs font-medium">Order fulfilled by you</div>
-                        <div className="text-xs text-gray-500">
-                          {selectedOrder.fulfillmentType === 'delivery' ? 'Ready for delivery' : 'Ready for customer collection'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-2 pt-2 border-t">
                 
-                {/* Ready for Collection Button - Only for pickup orders that aren't ready yet */}
-                {selectedOrder.fulfillmentType === 'pickup' && 
-                 selectedOrder.status !== 'ready_for_collection' && 
-                 selectedOrder.status !== 'fulfilled' && (
+                {/* Items Prepared Button - Only for paid orders */}
+                {selectedOrder.status === 'paid' && (
+                  <Button 
+                    size="sm"
+                    onClick={() => itemsPreparedMutation.mutate(selectedOrder.id)}
+                    disabled={itemsPreparedMutation.isPending}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Package className="h-4 w-4 mr-1" />
+                    {itemsPreparedMutation.isPending ? 'Marking Prepared...' : 'Items Prepared'}
+                  </Button>
+                )}
+                
+                {/* Ready for Collection/Delivery Button - For orders that have items prepared */}
+                {selectedOrder.status === 'items_prepared' && (
                   <Button 
                     size="sm"
                     onClick={() => readyForCollectionMutation.mutate(selectedOrder.id)}
@@ -1130,15 +1163,17 @@ export default function OrdersFresh() {
                     className="bg-orange-500 hover:bg-orange-600 text-white"
                   >
                     <Clock className="h-4 w-4 mr-1" />
-                    {readyForCollectionMutation.isPending ? 'Marking Ready...' : 'Ready for Collection'}
+                    {readyForCollectionMutation.isPending ? 'Marking Ready...' : 
+                     selectedOrder.fulfillmentType === 'pickup' ? 'Ready for Collection' : 'Ready for Delivery'}
                   </Button>
                 )}
 
-                {/* Ready for Collection Status Display */}
-                {selectedOrder.fulfillmentType === 'pickup' && 
-                 selectedOrder.status === 'ready_for_collection' && (
+                {/* Ready for Collection/Delivery Status Display */}
+                {selectedOrder.status === 'ready_for_collection' && (
                   <div className="text-right">
-                    <p className="text-sm text-orange-600 font-medium">Ready to collect sent</p>
+                    <p className="text-sm text-orange-600 font-medium">
+                      {selectedOrder.fulfillmentType === 'pickup' ? 'Ready to collect sent' : 'Ready for delivery sent'}
+                    </p>
                     {selectedOrder.readyToCollectAt && (
                       <p className="text-xs text-orange-500">
                         Sent: {new Date(selectedOrder.readyToCollectAt).toLocaleString()}
@@ -1157,7 +1192,7 @@ export default function OrdersFresh() {
                 )}
 
                 {/* Mark as Fulfilled Button */}
-                {selectedOrder.status !== 'fulfilled' && (
+                {(selectedOrder.status === 'items_prepared' || selectedOrder.status === 'ready_for_collection') && (
                   <Button 
                     size="sm"
                     onClick={() => markAsFulfilled(selectedOrder.id)}
