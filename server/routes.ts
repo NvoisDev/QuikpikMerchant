@@ -11339,11 +11339,16 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Format delivery address properly - use complete address data when available
+      // CRITICAL FIX: Format delivery address properly - prioritize complete address snapshot
       let deliveryAddress = 'Address to be confirmed';
       
-      // If order has delivery address ID, fetch complete address data
-      if (order.deliveryAddressId) {
+      // STEP 1: First try to use the complete deliveryAddress snapshot from order (highest priority)
+      if (order.deliveryAddress && typeof order.deliveryAddress === 'string' && order.deliveryAddress !== 'Address to be confirmed') {
+        deliveryAddress = order.deliveryAddress;
+        console.log('📍 Using deliveryAddress snapshot from order:', deliveryAddress);
+      }
+      // STEP 2: If no snapshot, try to fetch complete address data using deliveryAddressId
+      else if (order.deliveryAddressId) {
         try {
           const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
           const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
@@ -11360,13 +11365,14 @@ Please contact the customer to confirm this order.
             ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
             
             deliveryAddress = addressParts.join(', ');
+            console.log('📍 Built address from deliveryAddressId:', deliveryAddress);
           }
         } catch (error) {
           console.error('Error fetching complete delivery address for email:', error);
         }
       }
       
-      // Fallback to processing stored address string if no complete address was found
+      // STEP 3: Fallback to processing stored address string if no complete address was found
       if (deliveryAddress === 'Address to be confirmed') {
         try {
           if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
