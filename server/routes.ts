@@ -5156,11 +5156,12 @@ The Quikpik Team`
             if (explicitlySelectedAddress) {
               selectedDeliveryAddress = {
                 id: explicitlySelectedAddress.id,
-                addressLine1: explicitlySelectedAddress.address_line1,
-                addressLine2: explicitlySelectedAddress.address_line2,
-                city: explicitlySelectedAddress.city,
-                postalCode: explicitlySelectedAddress.postal_code,
-                country: explicitlySelectedAddress.country
+                addressLine1: explicitlySelectedAddress.address_line1 || '',
+                addressLine2: explicitlySelectedAddress.address_line2 || null,
+                city: explicitlySelectedAddress.city || '',
+                state: explicitlySelectedAddress.state || null,
+                postalCode: explicitlySelectedAddress.postal_code || '',
+                country: explicitlySelectedAddress.country || 'United Kingdom'
               };
               console.log(`🎯 MARKETPLACE CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
             } else {
@@ -5171,11 +5172,12 @@ The Quikpik Team`
               if (nonDefaultAddresses.length > 0) {
                 selectedDeliveryAddress = {
                   id: nonDefaultAddresses[0].id,
-                  addressLine1: nonDefaultAddresses[0].address_line1,
-                  addressLine2: nonDefaultAddresses[0].address_line2,
-                  city: nonDefaultAddresses[0].city,
-                  postalCode: nonDefaultAddresses[0].postal_code,
-                  country: nonDefaultAddresses[0].country
+                  addressLine1: nonDefaultAddresses[0].address_line1 || '',
+                  addressLine2: nonDefaultAddresses[0].address_line2 || null,
+                  city: nonDefaultAddresses[0].city || '',
+                  state: nonDefaultAddresses[0].state || null,
+                  postalCode: nonDefaultAddresses[0].postal_code || '',
+                  country: nonDefaultAddresses[0].country || 'United Kingdom'
                 };
                 console.log(`🔄 MARKETPLACE FALLBACK: Using first non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
               }

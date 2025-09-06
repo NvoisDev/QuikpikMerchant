@@ -4,6 +4,7 @@ export interface DeliveryAddress {
   addressLine1: string;
   addressLine2?: string;
   city: string;
+  state?: string;
   postalCode: string;
   country?: string;
 }
@@ -19,9 +20,10 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         address.addressLine1,
         address.addressLine2,
         address.city,
+        address.state,
         address.postalCode,
         address.country
-      ].filter(part => part && part.trim() && part !== 'undefined');
+      ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null' && part !== null && part !== undefined);
     }
     
     // If it's a JSON string, parse it first
@@ -31,14 +33,15 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         parsed.addressLine1,
         parsed.addressLine2,
         parsed.city,
+        parsed.state,
         parsed.postalCode,
         parsed.country
-      ].filter(part => part && part.trim() && part !== 'undefined');
+      ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null' && part !== null && part !== undefined);
     }
     
     // If it's already a comma-separated string, split it
     if (typeof address === 'string' && address.includes(',')) {
-      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined');
+      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined' && part !== 'null');
     }
     
     // Return as single line if it's just a string
@@ -46,7 +49,7 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
   } catch (error) {
     // Fallback: split by comma if it's a string
     if (typeof address === 'string') {
-      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined');
+      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined' && part !== 'null');
     }
     return [];
   }
