@@ -4567,6 +4567,10 @@ export default function CustomerPortal() {
                           if (address) {
                             console.log('🚚 ADDRESS SELECTED: Creating payment intent with fresh address:', address.addressLine1);
                             
+                            // CRITICAL FIX: Clear existing payment intent first to force recreation with new address
+                            console.log('🚚 CLEARING STALE PAYMENT: Clearing existing payment intent to force fresh creation with new address');
+                            setClientSecret('');
+                            
                             // IMPORTANT: Create custom payment intent with fresh address data directly
                             // Don't rely on state update - use the fresh address from callback parameter
                             const updatedCustomerData = {
@@ -4702,9 +4706,18 @@ export default function CustomerPortal() {
                         ...prev,
                         // Reset to no selection - customer chooses explicitly
                         shippingOption: undefined,
+                        // CRITICAL FIX: Clear selected delivery address to force fresh selection for next order
+                        selectedDeliveryAddress: null,
+                        // Reset address clearing flag to allow normal auto-selection for next order
+                        addressExplicitlyCleared: false,
                         // Keep selectedDeliveryAddress available but don't auto-select delivery
                         selectedShippingService: undefined
                       }));
+                      
+                      // 🔄 CRITICAL FIX: Reset payment state for next order
+                      setClientSecret('');
+                      setLastUsedShippingOption(null);
+                      console.log('💳 Payment state reset - next order will create fresh payment intent');
                       
                       // 🔄 REFRESH PRODUCT DATA: Fetch updated stock levels after order completion
                       console.log('🔄 Refreshing product data to show updated stock levels...');
