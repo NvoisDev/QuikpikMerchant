@@ -41,11 +41,11 @@ export const DynamicDeliveryAddressDisplay: React.FC<DynamicDeliveryAddressDispl
   // Determine if this order can have its address changed
   const isAddressChangeable = ['pending', 'confirmed', 'processing'].includes(orderStatus);
   
-  // For active orders, fetch the live address from the database
+  // Always fetch the live address when addressId is available for better data accuracy
   const { data: liveAddress, isLoading } = useQuery({
     queryKey: ['/api/customer/delivery-address', addressId],
     queryFn: async () => {
-      if (!addressId || !isAddressChangeable) return null;
+      if (!addressId) return null;
       
       try {
         const response = await apiRequest('GET', `/api/customer/delivery-addresses/${wholesalerId}`);
@@ -56,11 +56,11 @@ export const DynamicDeliveryAddressDisplay: React.FC<DynamicDeliveryAddressDispl
         return null;
       }
     },
-    enabled: Boolean(addressId && isAddressChangeable)
+    enabled: Boolean(addressId) // Always fetch when addressId exists
   });
 
-  // Determine which address to display
-  const displayAddress = isAddressChangeable && liveAddress ? liveAddress : staticAddress;
+  // Determine which address to display - prefer live address if available, fallback to static
+  const displayAddress = liveAddress || staticAddress;
   
   const handleChangeAddress = () => {
     setShowAddressSelector(true);
