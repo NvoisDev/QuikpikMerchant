@@ -37,14 +37,14 @@ const parseDeliveryAddress = (address: string | DeliveryAddress | null | undefin
       // Try to parse as JSON first
       const parsed = JSON.parse(cleanAddress);
       
-      // Handle different JSON formats - map "street" to "addressLine1"
+      // Handle different JSON formats - map various field names
       if (parsed && typeof parsed === 'object') {
         return {
-          addressLine1: parsed.street || parsed.addressLine1 || '',
-          addressLine2: parsed.addressLine2 || undefined,
+          addressLine1: parsed.street || parsed.addressLine1 || parsed.address1 || '',
+          addressLine2: parsed.addressLine2 || parsed.address2 || undefined,
           city: parsed.city || '',
-          state: parsed.state || undefined,
-          postalCode: parsed.postalCode || parsed.postcode || '',
+          state: parsed.state || parsed.region || parsed.county || undefined,
+          postalCode: parsed.postalCode || parsed.postcode || parsed.zipCode || parsed.zip || '',
           country: parsed.country || undefined,
           label: parsed.label || undefined,
           instructions: parsed.instructions || undefined,
@@ -100,34 +100,50 @@ export const DeliveryAddressDisplay: React.FC<DeliveryAddressDisplayProps> = ({
 
   return (
     <div className={`bg-white p-3 rounded border border-blue-200 ${className}`}>
-      <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
-      <div className="space-y-1">
-        <div className="flex items-start gap-2">
-          <Icon className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-gray-700 min-w-0">
-            <div className="font-medium">{parsedAddress.addressLine1}</div>
-            {parsedAddress.addressLine2 && (
-              <div>{parsedAddress.addressLine2}</div>
-            )}
-            <div>
-              {parsedAddress.city}
-              {parsedAddress.state && parsedAddress.state !== parsedAddress.city && `, ${parsedAddress.state}`}
-              {parsedAddress.postalCode && ` ${parsedAddress.postalCode}`}
-            </div>
-            {parsedAddress.country && (
-              <div>{parsedAddress.country}</div>
-            )}
+      <h6 className="font-medium text-blue-900 mb-2 text-sm flex items-center gap-2">
+        <Icon className="h-4 w-4 text-green-600" />
+        Delivery Address:
+      </h6>
+      <div className="space-y-2 text-sm">
+        {parsedAddress.addressLine1 && (
+          <div>
+            <span className="font-medium text-gray-600">Address Line 1:</span> {parsedAddress.addressLine1}
           </div>
-        </div>
+        )}
+        {parsedAddress.addressLine2 && (
+          <div>
+            <span className="font-medium text-gray-600">Address Line 2:</span> {parsedAddress.addressLine2}
+          </div>
+        )}
+        {parsedAddress.city && (
+          <div>
+            <span className="font-medium text-gray-600">City:</span> {parsedAddress.city}
+          </div>
+        )}
+        {parsedAddress.state && (
+          <div>
+            <span className="font-medium text-gray-600">State:</span> {parsedAddress.state}
+          </div>
+        )}
+        {parsedAddress.postalCode && (
+          <div>
+            <span className="font-medium text-gray-600">Postal Code:</span> {parsedAddress.postalCode}
+          </div>
+        )}
+        {parsedAddress.country && (
+          <div>
+            <span className="font-medium text-gray-600">Country:</span> {parsedAddress.country}
+          </div>
+        )}
         
         {showLabel && parsedAddress.label && (
-          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit">
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit mt-2">
             {parsedAddress.label}
           </div>
         )}
         
         {showInstructions && parsedAddress.instructions && (
-          <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+          <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-2">
             <span className="font-medium">Instructions:</span> {parsedAddress.instructions}
           </div>
         )}

@@ -112,16 +112,45 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   
   return (
     <div className="bg-white p-3 rounded border border-blue-200 mt-3">
-      <h6 className="font-medium text-blue-900 mb-2 text-sm">Delivery Address:</h6>
-      <div className="text-sm text-gray-700">
-        <div>{address?.addressLine1}</div>
-        {address?.addressLine2 && (
-          <div>{address.addressLine2}</div>
+      <h6 className="font-medium text-blue-900 mb-2 text-sm flex items-center gap-2">
+        {getAddressIcon(address?.label || 'other')}
+        Delivery Address:
+      </h6>
+      <div className="space-y-2 text-sm">
+        {address?.addressLine1 && (
+          <div>
+            <span className="font-medium text-gray-600">Address Line 1:</span> {address.addressLine1}
+          </div>
         )}
-        <div>{address?.city}</div>
-        <div>{address?.postalCode}</div>
+        {address?.addressLine2 && (
+          <div>
+            <span className="font-medium text-gray-600">Address Line 2:</span> {address.addressLine2}
+          </div>
+        )}
+        {address?.city && (
+          <div>
+            <span className="font-medium text-gray-600">City:</span> {address.city}
+          </div>
+        )}
+        {address?.postalCode && (
+          <div>
+            <span className="font-medium text-gray-600">Postal Code:</span> {address.postalCode}
+          </div>
+        )}
         {address?.country && (
-          <div>{address.country}</div>
+          <div>
+            <span className="font-medium text-gray-600">Country:</span> {address.country}
+          </div>
+        )}
+        {address?.label && (
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit mt-2">
+            {address.label.charAt(0).toUpperCase() + address.label.slice(1)}
+          </div>
+        )}
+        {address?.instructions && (
+          <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-2">
+            <span className="font-medium">Instructions:</span> {address.instructions}
+          </div>
         )}
       </div>
     </div>
