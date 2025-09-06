@@ -53,6 +53,7 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
 
     try {
       setUploadProgress(30);
+      console.log('🔧 Starting upload process for file:', file.name, 'Size:', file.size, 'Type:', file.type);
 
       // Step 1: Get upload URL
       const response = await fetch('/api/logo-upload-url', {
@@ -63,19 +64,25 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
         },
       });
 
+      console.log('🔧 Upload URL response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to get upload URL: ${errorText}`);
+        console.error('🔧 Upload URL error:', errorText);
+        throw new Error(`Failed to get upload URL (${response.status}): ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('🔧 Upload URL data received:', !!data.uploadURL);
+      
       if (!data.uploadURL) {
-        throw new Error('No upload URL received');
+        throw new Error('No upload URL received from server');
       }
 
       setUploadProgress(60);
 
       // Step 2: Upload to object storage
+      console.log('🔧 Uploading to object storage...');
       const uploadResponse = await fetch(data.uploadURL, {
         method: 'PUT',
         body: file,
@@ -84,8 +91,12 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
         },
       });
 
+      console.log('🔧 Object storage response status:', uploadResponse.status);
+
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
+        const errorText = await uploadResponse.text();
+        console.error('🔧 Object storage error:', errorText);
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
       }
 
       setUploadProgress(100);
@@ -93,6 +104,8 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
       // Step 3: Extract public URL
       const uploadUrl = new URL(data.uploadURL);
       const publicUrl = `${uploadUrl.origin}${uploadUrl.pathname}`;
+      
+      console.log('🔧 Generated public URL:', publicUrl);
 
       toast({
         title: "Upload successful!",
@@ -106,14 +119,22 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
       }, 500);
 
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('🔧 Full upload error:', error);
       
       let errorMessage = "Upload failed. Please try again.";
       if (error instanceof Error) {
+        console.error('🔧 Error message:', error.message);
+        
         if (error.message.includes('401') || error.message.includes('Authentication')) {
-          errorMessage = "Please refresh the page and log in again.";
+          errorMessage = "Authentication issue. Please refresh the page and try again.";
         } else if (error.message.includes('413')) {
           errorMessage = "File too large. Please use a smaller image.";
+        } else if (error.message.includes('Failed to get upload URL')) {
+          errorMessage = "Server error getting upload URL. Please try again.";
+        } else if (error.message.includes('Upload failed')) {
+          errorMessage = "Failed to upload to storage. Please try again.";
+        } else {
+          errorMessage = `Upload error: ${error.message}`;
         }
       }
 
