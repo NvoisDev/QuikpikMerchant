@@ -4403,6 +4403,16 @@ The Quikpik Team`
       console.log('🚚 CRITICAL DEBUG: Full request body received from frontend:');
       console.log('  - customerName:', customerName);
       console.log('  - items count:', items?.length);
+      
+      // CRITICAL DEBUG: Log address data to trace wrong address selection
+      console.log('🏠 ADDRESS DEBUG: Payment creation address data:', {
+        hasSelectedDeliveryAddress: !!selectedDeliveryAddress,
+        selectedDeliveryAddressId: selectedDeliveryAddress?.id,
+        selectedDeliveryAddressLine1: selectedDeliveryAddress?.addressLine1,
+        selectedDeliveryAddressCity: selectedDeliveryAddress?.city,
+        fallbackAddress: customerAddress,
+        shippingOption: shippingInfo?.option
+      });
       console.log('  - shippingInfo received:', JSON.stringify(shippingInfo, null, 2));
       console.log('  - shippingInfo.option:', shippingInfo?.option);
       console.log('  - shippingInfo.service:', shippingInfo?.service ? {
