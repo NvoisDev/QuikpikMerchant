@@ -52,9 +52,31 @@ const parseDeliveryAddress = (address: string | DeliveryAddress | null | undefin
       }
       return parsed;
     } catch {
-      // If not JSON, treat as a simple address line and create a basic object
+      // If not JSON, try to parse as comma-separated address
+      const addressParts = cleanAddress.split(',').map(part => part.trim());
+      
+      // Filter out undefined/null/empty values
+      const validParts = addressParts.filter(part => 
+        part && 
+        part !== 'undefined' && 
+        part !== 'null' && 
+        part.toLowerCase() !== 'undefined' && 
+        part.toLowerCase() !== 'null'
+      );
+      
+      if (validParts.length >= 2) {
+        // Try to identify parts based on typical UK address format
+        return {
+          addressLine1: validParts[0] || '',
+          city: validParts[validParts.length - 2] || '',
+          country: validParts[validParts.length - 1] || '',
+          postalCode: '', // Not available in this format
+        };
+      }
+      
+      // Fallback for single line addresses
       return {
-        addressLine1: cleanAddress,
+        addressLine1: validParts[0] || cleanAddress,
         city: '',
         postalCode: '',
       };
