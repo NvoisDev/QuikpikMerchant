@@ -87,9 +87,9 @@ export function AddressSelector({
     } else if (addresses.length === 0) {
       console.log('🏠 NO ADDRESSES: Customer has no delivery addresses saved');
     } else if (!defaultAddress && addresses.length > 0) {
-      console.log('🏠 NO DEFAULT: Customer has addresses but no default address set - auto-selecting first address');
-      // If no default but addresses exist, auto-select the first one
-      onAddressSelect(addresses[0]);
+      console.log('🏠 NO DEFAULT: Customer has addresses but no default address set - requiring explicit selection');
+      // CRITICAL FIX: Don't auto-select first address, force explicit customer choice
+      // This prevents wrong addresses from being selected automatically
     } else if (selectedAddress) {
       console.log('🏠 ADDRESS ALREADY SELECTED: Using existing selection:', selectedAddress.addressLine1);
     }
