@@ -11339,70 +11339,8 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // CRITICAL FIX: Format delivery address properly - prioritize complete address snapshot
-      let deliveryAddress = 'Address to be confirmed';
-      
-      // STEP 1: First try to use the complete deliveryAddress snapshot from order (highest priority)
-      if (order.deliveryAddress && typeof order.deliveryAddress === 'string' && order.deliveryAddress !== 'Address to be confirmed') {
-        deliveryAddress = order.deliveryAddress;
-        console.log('📍 Using deliveryAddress snapshot from order:', deliveryAddress);
-      }
-      // STEP 2: If no snapshot, try to fetch complete address data using deliveryAddressId
-      else if (order.deliveryAddressId) {
-        try {
-          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
-          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
-          
-          if (fullAddress) {
-            // Build complete address from individual components
-            const addressParts = [
-              fullAddress.addressLine1,
-              fullAddress.addressLine2,
-              fullAddress.city,
-              fullAddress.state,
-              fullAddress.postalCode,
-              fullAddress.country
-            ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
-            
-            deliveryAddress = addressParts.join(', ');
-            console.log('📍 Built address from deliveryAddressId:', deliveryAddress);
-          }
-        } catch (error) {
-          console.error('Error fetching complete delivery address for email:', error);
-        }
-      }
-      
-      // STEP 3: Fallback to processing stored address string if no complete address was found
-      if (deliveryAddress === 'Address to be confirmed') {
-        try {
-          if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
-            // Try to parse JSON address
-            const parsedAddress = JSON.parse(order.deliveryAddress);
-            if (parsedAddress.street) {
-              deliveryAddress = `${parsedAddress.street}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.postalCode}, ${parsedAddress.country}`;
-            } else if (parsedAddress.address) {
-              // Handle cases where address is nested
-              deliveryAddress = parsedAddress.address;
-            } else {
-              // Clean up JSON symbols from address string and use formatDeliveryAddress utility
-              const { formatDeliveryAddress } = await import('../shared/utils/address-formatter');
-              const addressLines = formatDeliveryAddress(order.deliveryAddress);
-              deliveryAddress = addressLines.length > 0 ? addressLines.join(', ') : 'Address to be confirmed';
-            }
-          } else if (customer.address) {
-            deliveryAddress = customer.address;
-          }
-        } catch (parseError) {
-          // If JSON parsing fails, use address formatter utility
-          if (order.deliveryAddress) {
-            const { formatDeliveryAddress } = await import('../shared/utils/address-formatter');
-            const addressLines = formatDeliveryAddress(order.deliveryAddress);
-            deliveryAddress = addressLines.length > 0 ? addressLines.join(', ') : customer.address || 'Address to be confirmed';
-          } else {
-            deliveryAddress = customer.address || 'Address to be confirmed';
-          }
-        }
-      }
+      // SIMPLIFIED: Use delivery address directly from order details - no complex fallback needed
+      const deliveryAddress = order.deliveryAddress || 'Address to be confirmed';
       
       // Create HTML email content with proper product names and pricing
       const itemsHtml = items.map((item) => {
