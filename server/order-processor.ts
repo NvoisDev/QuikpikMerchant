@@ -179,8 +179,17 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       const selectedAddress = await storage.getDeliveryAddressForCustomer(addressId, customer.id, wholesalerId);
       
       if (selectedAddress) {
-        // STEP 2: Save complete address snapshot for permanent order record (both formats)
-        deliveryAddressSnapshot = `${selectedAddress.addressLine1}${selectedAddress.addressLine2 ? ', ' + selectedAddress.addressLine2 : ''}, ${selectedAddress.city}${selectedAddress.state ? ', ' + selectedAddress.state : ''}, ${selectedAddress.postalCode}, ${selectedAddress.country}`;
+        // STEP 2: Save complete address snapshot for permanent order record - filter out empty components
+        const addressParts = [
+          selectedAddress.addressLine1,
+          selectedAddress.addressLine2,
+          selectedAddress.city,
+          selectedAddress.state,
+          selectedAddress.postalCode,
+          selectedAddress.country
+        ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
+        
+        deliveryAddressSnapshot = addressParts.join(', ');
         deliveryAddressId = selectedAddress.id;
         
         console.log(`✅ STEP 2 COMPLETE: Address snapshot saved - ${deliveryAddressSnapshot}`);
