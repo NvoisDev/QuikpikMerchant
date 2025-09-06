@@ -166,44 +166,28 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   const orderNumber = await storage.generateOrderNumber(wholesalerId);
   console.log(`🔢 WEBHOOK: Generated order number ${orderNumber} for ${wholesaler?.businessName}`);
   
-  // BYPASS METADATA ISSUES: Direct database lookup for customer's address selection
-  let selectedDeliveryAddress = null;
-  const selectedDeliveryAddressData = paymentIntent.metadata.selectedDeliveryAddress;
+  // SYSTEMATIC STEP 2: Use Address ID to fetch complete address details and save snapshot
+  let deliveryAddressSnapshot = null;
+  let deliveryAddressId = null;
   
-  // Try to get from metadata first
-  if (selectedDeliveryAddressData && selectedDeliveryAddressData !== 'null' && selectedDeliveryAddressData !== 'undefined' && selectedDeliveryAddressData !== '') {
-    try {
-      selectedDeliveryAddress = JSON.parse(selectedDeliveryAddressData);
-      console.log(`📍 PARSED: Selected delivery address from payment metadata:`, selectedDeliveryAddress);
-    } catch (error) {
-      console.error('❌ Failed to parse selectedDeliveryAddress from payment metadata:', error);
-    }
-  }
-  
-  // CRITICAL FIX: Use explicit address ID from payment metadata if available, ALWAYS override metadata address
   if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
     try {
-      console.log(`🎯 EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
+      const addressId = parseInt(selectedDeliveryAddressId);
+      console.log(`📍 STEP 2: Using Address ID ${addressId} to fetch complete address details...`);
       
-      // Get the specific address the customer selected
-      const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
-      const explicitlySelectedAddress = customerAddresses.find(addr => addr.id === parseInt(selectedDeliveryAddressId));
+      // CRITICAL: Use direct database lookup by ID (no wholesaler filtering needed - ID is unique)
+      const selectedAddress = await storage.getDeliveryAddressById(addressId);
       
-      if (explicitlySelectedAddress) {
-        selectedDeliveryAddress = explicitlySelectedAddress;
-        console.log(`🎯 CUSTOMER CHOICE RESPECTED: Using customer's explicit selection - Address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
+      if (selectedAddress) {
+        // STEP 2: Save complete address snapshot for permanent order record
+        deliveryAddressSnapshot = `${selectedAddress.address_line1}${selectedAddress.address_line2 ? ', ' + selectedAddress.address_line2 : ''}, ${selectedAddress.city}${selectedAddress.state ? ', ' + selectedAddress.state : ''}, ${selectedAddress.postal_code}, ${selectedAddress.country}`;
+        deliveryAddressId = selectedAddress.id;
+        console.log(`✅ STEP 2 COMPLETE: Address snapshot saved - ${deliveryAddressSnapshot}`);
       } else {
-        console.log(`⚠️ Customer selected address ID ${selectedDeliveryAddressId} not found, checking available addresses...`);
-        
-        // Only fallback to non-default if customer's explicit choice is not available
-        const nonDefaultAddresses = customerAddresses.filter(addr => !addr.isDefault && addr.id !== 1);
-        if (nonDefaultAddresses.length > 0) {
-          selectedDeliveryAddress = nonDefaultAddresses[0];
-          console.log(`🔄 FALLBACK: Using first non-default address ID ${selectedDeliveryAddress.id}: ${selectedDeliveryAddress.addressLine1}`);
-        }
+        console.error(`❌ STEP 2 FAILED: Address ID ${addressId} not found in database`);
       }
     } catch (error) {
-      console.error('❌ Failed to query customer addresses:', error);
+      console.error('❌ STEP 2 ERROR: Failed to fetch address details:', error);
     }
   }
 
@@ -224,13 +208,9 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     total: correctTotal, // Total = subtotal + customer transaction fee
     status: 'paid',
     stripePaymentIntentId: paymentIntent.id,
-    // SIMPLIFIED FIX: Store complete selected address as text instead of relying on complex ID system
-    deliveryAddress: selectedDeliveryAddress ? 
-      `${selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
-      (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
-    // Store the address ID only if explicitly provided (no complex fallback logic)
-    deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined' ? 
-      parseInt(selectedDeliveryAddressId) : null,
+    // SYSTEMATIC STEP 2: Save complete address snapshot in Orders table
+    deliveryAddress: deliveryAddressSnapshot,
+    deliveryAddressId: deliveryAddressId,
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
     deliveryCarrier: null, // No carrier needed for simplified delivery system

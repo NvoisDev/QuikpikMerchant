@@ -383,6 +383,7 @@ export interface IStorage {
   // Delivery address operations
   getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]>;
   getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined>;
+  getDeliveryAddressById(id: number): Promise<DeliveryAddress | undefined>;
   createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
   updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress>;
   deleteDeliveryAddress(id: number): Promise<void>;
@@ -4771,6 +4772,16 @@ export class DatabaseStorage implements IStorage {
       .from(deliveryAddresses)
       .where(eq(deliveryAddresses.id, id));
     
+    return address;
+  }
+
+  async getDeliveryAddressById(id: number): Promise<DeliveryAddress | undefined> {
+    const [address] = await db
+      .select()
+      .from(deliveryAddresses)
+      .where(eq(deliveryAddresses.id, id));
+    
+    console.log(`📍 STEP 2: Fetched address ID ${id} directly from database:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND');
     return address;
   }
 
