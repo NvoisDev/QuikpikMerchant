@@ -65,13 +65,50 @@ const parseDeliveryAddress = (address: string | DeliveryAddress | null | undefin
       );
       
       if (validParts.length >= 2) {
-        // Try to identify parts based on typical UK address format
-        return {
-          addressLine1: validParts[0] || '',
-          city: validParts[validParts.length - 2] || '',
-          country: validParts[validParts.length - 1] || '',
-          postalCode: '', // Not available in this format
+        // Enhanced parsing for UK/international address formats
+        // Typical format: Address1, Address2, City, State/County, PostalCode, Country
+        const result: any = {
+          addressLine1: '',
+          addressLine2: undefined,
+          city: '',
+          state: undefined,
+          postalCode: '',
+          country: ''
         };
+        
+        if (validParts.length === 2) {
+          // Simple format: City, Country
+          result.city = validParts[0];
+          result.country = validParts[1];
+        } else if (validParts.length === 3) {
+          // Format: Address, City, Country
+          result.addressLine1 = validParts[0];
+          result.city = validParts[1];
+          result.country = validParts[2];
+        } else if (validParts.length === 4) {
+          // Format: Address, City, PostalCode, Country
+          result.addressLine1 = validParts[0];
+          result.city = validParts[1];
+          result.postalCode = validParts[2];
+          result.country = validParts[3];
+        } else if (validParts.length === 5) {
+          // Format: Address1, Address2, City, PostalCode, Country
+          result.addressLine1 = validParts[0];
+          result.addressLine2 = validParts[1];
+          result.city = validParts[2];
+          result.postalCode = validParts[3];
+          result.country = validParts[4];
+        } else if (validParts.length >= 6) {
+          // Full format: Address1, Address2, City, State, PostalCode, Country
+          result.addressLine1 = validParts[0];
+          result.addressLine2 = validParts[1];
+          result.city = validParts[2];
+          result.state = validParts[3];
+          result.postalCode = validParts[4];
+          result.country = validParts[5];
+        }
+        
+        return result;
       }
       
       // Fallback for single line addresses

@@ -39,9 +39,17 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
       ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null' && part !== null && part !== undefined);
     }
     
-    // If it's already a comma-separated string, split it
+    // If it's already a comma-separated string, split it and filter properly
     if (typeof address === 'string' && address.includes(',')) {
-      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined' && part !== 'null');
+      return address.split(',')
+        .map(part => part.trim())
+        .filter(part => 
+          part && 
+          part !== 'undefined' && 
+          part !== 'null' && 
+          part.toLowerCase() !== 'undefined' && 
+          part.toLowerCase() !== 'null'
+        );
     }
     
     // Return as single line if it's just a string
