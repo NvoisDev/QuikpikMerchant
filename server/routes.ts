@@ -11339,8 +11339,39 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // SIMPLIFIED: Use delivery address directly from order details - no complex fallback needed
-      const deliveryAddress = order.deliveryAddress || 'Address to be confirmed';
+      // Always fetch live address data when addressId is available - prioritize complete data
+      let deliveryAddress = 'Address to be confirmed';
+      
+      // STEP 1: Always fetch complete live address from database when addressId available
+      if (order.deliveryAddressId) {
+        try {
+          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
+          
+          if (fullAddress) {
+            // Build complete address from live database components
+            const addressParts = [
+              fullAddress.addressLine1,
+              fullAddress.addressLine2,
+              fullAddress.city,
+              fullAddress.state,
+              fullAddress.postalCode,
+              fullAddress.country
+            ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
+            
+            deliveryAddress = addressParts.join(', ');
+            console.log('📍 Using live address from database:', deliveryAddress);
+          }
+        } catch (error) {
+          console.error('Error fetching live address:', error);
+        }
+      }
+      
+      // STEP 2: Fallback to stored address snapshot if live data unavailable
+      if (deliveryAddress === 'Address to be confirmed' && order.deliveryAddress) {
+        deliveryAddress = order.deliveryAddress;
+        console.log('📍 Fallback to stored address:', deliveryAddress);
+      }
       
       // Create HTML email content with proper product names and pricing
       const itemsHtml = items.map((item) => {
