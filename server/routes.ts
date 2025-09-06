@@ -11339,30 +11339,62 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Format delivery address properly - clean up JSON symbols
+      // Format delivery address properly - use complete address data when available
       let deliveryAddress = 'Address to be confirmed';
-      try {
-        if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
-          // Try to parse JSON address
-          const parsedAddress = JSON.parse(order.deliveryAddress);
-          if (parsedAddress.street) {
-            deliveryAddress = `${parsedAddress.street}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.postalCode}, ${parsedAddress.country}`;
-          } else if (parsedAddress.address) {
-            // Handle cases where address is nested
-            deliveryAddress = parsedAddress.address;
-          } else {
-            // Clean up JSON symbols from address string
-            deliveryAddress = order.deliveryAddress.replace(/[{}":]/g, '').replace(/,/g, ', ');
+      
+      // If order has delivery address ID, fetch complete address data
+      if (order.deliveryAddressId) {
+        try {
+          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
+          
+          if (fullAddress) {
+            // Build complete address from individual components
+            const addressParts = [
+              fullAddress.addressLine1,
+              fullAddress.addressLine2,
+              fullAddress.city,
+              fullAddress.state,
+              fullAddress.postalCode,
+              fullAddress.country
+            ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
+            
+            deliveryAddress = addressParts.join(', ');
           }
-        } else if (customer.address) {
-          deliveryAddress = customer.address;
+        } catch (error) {
+          console.error('Error fetching complete delivery address for email:', error);
         }
-      } catch (parseError) {
-        // If JSON parsing fails, clean up JSON symbols and use as plain text
-        if (order.deliveryAddress) {
-          deliveryAddress = order.deliveryAddress.replace(/[{}":]/g, '').replace(/,/g, ', ');
-        } else {
-          deliveryAddress = customer.address || 'Address to be confirmed';
+      }
+      
+      // Fallback to processing stored address string if no complete address was found
+      if (deliveryAddress === 'Address to be confirmed') {
+        try {
+          if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
+            // Try to parse JSON address
+            const parsedAddress = JSON.parse(order.deliveryAddress);
+            if (parsedAddress.street) {
+              deliveryAddress = `${parsedAddress.street}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.postalCode}, ${parsedAddress.country}`;
+            } else if (parsedAddress.address) {
+              // Handle cases where address is nested
+              deliveryAddress = parsedAddress.address;
+            } else {
+              // Clean up JSON symbols from address string and use formatDeliveryAddress utility
+              const { formatDeliveryAddress } = await import('../shared/utils/address-formatter');
+              const addressLines = formatDeliveryAddress(order.deliveryAddress);
+              deliveryAddress = addressLines.length > 0 ? addressLines.join(', ') : 'Address to be confirmed';
+            }
+          } else if (customer.address) {
+            deliveryAddress = customer.address;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use address formatter utility
+          if (order.deliveryAddress) {
+            const { formatDeliveryAddress } = await import('../shared/utils/address-formatter');
+            const addressLines = formatDeliveryAddress(order.deliveryAddress);
+            deliveryAddress = addressLines.length > 0 ? addressLines.join(', ') : customer.address || 'Address to be confirmed';
+          } else {
+            deliveryAddress = customer.address || 'Address to be confirmed';
+          }
         }
       }
       
