@@ -11,6 +11,7 @@ import { formatCurrency } from "@shared/utils/currency";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { formatDeliveryAddress } from "@shared/utils/address-formatter";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";
+import { DynamicDeliveryAddressDisplay } from "@/components/shared/DynamicDeliveryAddressDisplay";
 
 interface CustomerOrderHistoryProps {
   wholesalerId: string;
@@ -133,7 +134,8 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-const OrderDetailsModal = ({ order }: { order: Order }) => {
+const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Order, wholesalerId: string, customerPhone: string }) => {
+  const queryClient = useQueryClient();
   // Use stored values from order data
   const subtotal = parseFloat(order.subtotal || '0');
   const transactionFee = parseFloat(order.transactionFee || (subtotal * 0.055 + 0.50).toFixed(2)); // Use stored transaction fee or calculate
@@ -249,18 +251,22 @@ const OrderDetailsModal = ({ order }: { order: Order }) => {
               </div>
             </div>
           ) : (
-            /* Delivery Address - Prioritize stored text over database lookup */
+            /* Delivery Address - Dynamic display with address change capability */
             (order.deliveryAddress || order.deliveryAddressId) && (
-              <div>
-                {order.deliveryAddress ? (
-                  <DeliveryAddressDisplay 
-                    address={order.deliveryAddress}
-                    className="bg-gray-50 border-gray-200"
-                  />
-                ) : (
-                  <WholesalerDeliveryAddressDisplay addressId={order.deliveryAddressId} />
-                )}
-              </div>
+              <DynamicDeliveryAddressDisplay
+                orderId={order.id}
+                orderStatus={order.status}
+                wholesalerId={wholesalerId}
+                staticAddress={order.deliveryAddress}
+                addressId={order.deliveryAddressId}
+                className="bg-gray-50 border-gray-200"
+                onAddressChanged={() => {
+                  // Refresh the order data when address is changed
+                  queryClient.invalidateQueries({ 
+                    queryKey: ['/api/customer-orders', wholesalerId, encodeURIComponent(customerPhone)] 
+                  });
+                }}
+              />
             )
           )}
         </div>
@@ -810,7 +816,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone }: CustomerOr
                           <span className="text-xs">View Details</span>
                         </Button>
                       </DialogTrigger>
-                      <OrderDetailsModal order={order} />
+                      <OrderDetailsModal order={order} wholesalerId={wholesalerId} customerPhone={customerPhone} />
                     </Dialog>
                   </div>
                 </div>
