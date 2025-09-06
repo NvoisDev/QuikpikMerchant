@@ -301,9 +301,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       transactionFee: parseFloat(customerTransactionFee || '0'),
       totalPaid: parseFloat(totalCustomerPays || '0'),
       wholesalerName: wholesaler?.businessName || wholesaler?.firstName || 'Your Wholesaler',
-      shippingAddress: (customerAddress && typeof customerAddress === 'object') ? 
-        `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
-        customerAddress,
+      // CRITICAL FIX: Use complete delivery address snapshot for email instead of partial customerAddress
+      shippingAddress: deliveryAddressSnapshot || 
+        ((customerAddress && typeof customerAddress === 'object') ? 
+          `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
+          customerAddress),
       estimatedDelivery: undefined // Can be enhanced with shipping data later
     };
 
@@ -351,9 +353,11 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerName,
         customerEmail: customerEmail || '',
         customerPhone,
-        customerAddress: (customerAddress && typeof customerAddress === 'object') ? 
-          `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
-          customerAddress,
+        // CRITICAL FIX: Use complete delivery address snapshot for wholesaler email
+        customerAddress: deliveryAddressSnapshot || 
+          ((customerAddress && typeof customerAddress === 'object') ? 
+            `${customerAddress.addressLine1}${customerAddress.addressLine2 ? '\n' + customerAddress.addressLine2 : ''}\n${customerAddress.city}\n${customerAddress.postalCode}\n${customerAddress.country || 'United Kingdom'}` : 
+            customerAddress),
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
