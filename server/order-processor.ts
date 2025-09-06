@@ -180,7 +180,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       
       if (selectedAddress) {
         // STEP 2: Save complete address snapshot for permanent order record
-        deliveryAddressSnapshot = `${selectedAddress.address_line1}${selectedAddress.address_line2 ? ', ' + selectedAddress.address_line2 : ''}, ${selectedAddress.city}${selectedAddress.state ? ', ' + selectedAddress.state : ''}, ${selectedAddress.postal_code}, ${selectedAddress.country}`;
+        deliveryAddressSnapshot = `${selectedAddress.addressLine1}${selectedAddress.addressLine2 ? ', ' + selectedAddress.addressLine2 : ''}, ${selectedAddress.city}${selectedAddress.state ? ', ' + selectedAddress.state : ''}, ${selectedAddress.postalCode}, ${selectedAddress.country}`;
         deliveryAddressId = selectedAddress.id;
         console.log(`✅ STEP 2 COMPLETE: Address snapshot saved - ${deliveryAddressSnapshot}`);
       } else {
