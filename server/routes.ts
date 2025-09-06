@@ -2677,7 +2677,87 @@ The Quikpik Team`
     }
   });
 
-
+  // Change delivery address for a pending order
+  app.put('/api/orders/:orderId/change-delivery-address', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { deliveryAddressId } = req.body;
+      
+      // Get customer from session or fallback auth
+      let customerAuth = (req.session as any)?.customerAuth;
+      
+      if (!customerAuth && req.cookies?.customer_auth) {
+        try {
+          const cookieData = JSON.parse(Buffer.from(req.cookies.customer_auth, 'base64').toString());
+          if (cookieData.expires > Date.now()) {
+            customerAuth = {
+              customerId: cookieData.customerId,
+              wholesalerId: cookieData.wholesalerId
+            };
+          }
+        } catch (cookieError) {
+          console.error('Failed to parse customer auth cookie:', cookieError);
+        }
+      }
+      
+      if (!customerAuth) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Verify order exists and belongs to customer
+      const order = await storage.getOrderById(parseInt(orderId));
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Check if customer owns this order (multiple ways to check due to historical data)
+      const customerOwnsOrder = order.retailerId === customerAuth.customerId || 
+                               order.customerPhone === (await storage.getUser(customerAuth.customerId))?.phoneNumber;
+      
+      if (!customerOwnsOrder) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Check if order can be modified (only pending/confirmed orders)
+      const changeableStatuses = ['pending', 'confirmed', 'processing'];
+      if (!changeableStatuses.includes(order.status)) {
+        return res.status(400).json({ 
+          error: "Address cannot be changed", 
+          message: `Orders with status '${order.status}' cannot be modified` 
+        });
+      }
+      
+      // Verify the new address belongs to the customer
+      const newAddress = await storage.getDeliveryAddress(parseInt(deliveryAddressId));
+      if (!newAddress || newAddress.customerId !== customerAuth.customerId || newAddress.wholesalerId !== order.wholesalerId) {
+        return res.status(403).json({ error: "Address not found or access denied" });
+      }
+      
+      // Format the new address as a string for the delivery_address field
+      const formattedAddress = [
+        newAddress.addressLine1,
+        newAddress.addressLine2,
+        newAddress.city,
+        newAddress.state,
+        newAddress.postalCode,
+        newAddress.country
+      ].filter(Boolean).join(', ');
+      
+      // Update the order with new address
+      await storage.updateOrderDeliveryAddress(parseInt(orderId), parseInt(deliveryAddressId), formattedAddress);
+      
+      console.log(`📍 Updated order ${orderId} delivery address to address ID ${deliveryAddressId} for customer ${customerAuth.customerId}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Delivery address updated successfully",
+        newAddress: newAddress
+      });
+    } catch (error) {
+      console.error("❌ Error changing order delivery address:", error);
+      res.status(500).json({ error: "Failed to change delivery address" });
+    }
+  });
 
   // Get customer profile update notifications for a wholesaler
   app.get('/api/wholesaler/customer-update-notifications', requireAuth, async (req: any, res) => {

@@ -1321,6 +1321,19 @@ export class DatabaseStorage implements IStorage {
     return updatedOrder;
   }
 
+  async updateOrderDeliveryAddress(orderId: number, deliveryAddressId: number, formattedAddress: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        deliveryAddressId: deliveryAddressId,
+        deliveryAddress: formattedAddress,
+        updatedAt: new Date()
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+    return updatedOrder;
+  }
+
   async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {
     // RACE CONDITION FIX: Use direct SQL to get the highest order number atomically
     // This prevents concurrent transactions from getting the same order number
