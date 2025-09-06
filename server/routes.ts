@@ -537,16 +537,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logo upload URL endpoint  
-  app.post('/api/logo-upload-url', async (req, res) => {
+  app.post('/api/logo-upload-url', requireAuth, async (req, res) => {
     try {
-      console.log('🔧 Logo upload URL request (temporary bypass enabled)');
+      console.log('🔧 Logo upload URL request from authenticated user:', req.user?.email);
+      
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { ObjectStorageService } = await import('./objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      console.log('🔧 Logo upload URL generated successfully');
+      
+      console.log('✅ Logo upload URL generated successfully for user:', req.user.email);
       res.json({ uploadURL });
+      
     } catch (error) {
-      console.error('🔧 Error getting upload URL:', error);
+      console.error('❌ Error getting upload URL:', error);
       res.status(500).json({ error: 'Failed to get upload URL' });
     }
   });
