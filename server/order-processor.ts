@@ -2,43 +2,7 @@ import { storage } from './storage';
 import { generateWholesalerOrderNotificationEmail } from './email-templates';
 import { sendEmail } from './sendgrid-service';
 import { ShippingAutomationService } from './shipping-automation';
-
-// Helper function to fetch complete live address data
-async function getCompleteDeliveryAddress(order: any, storage: any): Promise<string | null> {
-  // STEP 1: Always fetch complete live address from database when addressId available
-  if (order.deliveryAddressId) {
-    try {
-      const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
-      const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
-      
-      if (fullAddress) {
-        // Build complete address from live database components
-        const addressParts = [
-          fullAddress.addressLine1,
-          fullAddress.addressLine2,
-          fullAddress.city,
-          fullAddress.state,
-          fullAddress.postalCode,
-          fullAddress.country
-        ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
-        
-        const completeAddress = addressParts.join(', ');
-        console.log('📍 Using live address from database:', completeAddress);
-        return completeAddress;
-      }
-    } catch (error) {
-      console.error('Error fetching live address:', error);
-    }
-  }
-  
-  // STEP 2: Fallback to stored address snapshot if live data unavailable
-  if (order.deliveryAddress) {
-    console.log('📍 Fallback to stored address:', order.deliveryAddress);
-    return order.deliveryAddress;
-  }
-  
-  return null;
-}
+import { getCompleteDeliveryAddress, getEmailDeliveryAddress } from './utils/address-helper';
 
 export interface OrderEmailData {
   orderNumber: string;
@@ -348,7 +312,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       totalPaid: parseFloat(totalCustomerPays || '0'),
       wholesalerName: wholesaler?.businessName || wholesaler?.firstName || 'Your Wholesaler',
       // Always fetch live address data - prioritize complete data over stored snapshot
-      shippingAddress: await getCompleteDeliveryAddress(order, storage) || 'Address to be confirmed',
+      shippingAddress: await getCompleteDeliveryAddress(order) || 'Address to be confirmed',
       estimatedDelivery: undefined // Can be enhanced with shipping data later
     };
 
@@ -397,7 +361,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerEmail: customerEmail || '',
         customerPhone,
         // Always fetch live address data - prioritize complete data over stored snapshot
-        customerAddress: await getCompleteDeliveryAddress(order, storage) || 'Address to be confirmed',
+        customerAddress: await getCompleteDeliveryAddress(order) || 'Address to be confirmed',
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),

@@ -44,6 +44,7 @@ import {
   logLimitReached 
 } from "./subscriptionLogger";
 import { registerWebhookRoutes } from "./webhook-handler";
+import { getEmailDeliveryAddress } from "./utils/address-helper";
 
 // Helper function to extract session ID from cookie string
 function extractSessionId(cookieString?: string): string | null {
@@ -11339,38 +11340,16 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Always fetch live address data when addressId is available - prioritize complete data
-      let deliveryAddress = 'Address to be confirmed';
+      // Use enhanced address helper for reliable address retrieval
+      const addressResult = await getEmailDeliveryAddress(order);
+      const deliveryAddress = addressResult.address;
       
-      // STEP 1: Always fetch complete live address from database when addressId available
-      if (order.deliveryAddressId) {
-        try {
-          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
-          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
-          
-          if (fullAddress) {
-            // Build complete address from live database components
-            const addressParts = [
-              fullAddress.addressLine1,
-              fullAddress.addressLine2,
-              fullAddress.city,
-              fullAddress.state,
-              fullAddress.postalCode,
-              fullAddress.country
-            ].filter(part => part && part.trim() && part !== 'undefined' && part !== 'null');
-            
-            deliveryAddress = addressParts.join(', ');
-            console.log('📍 Using live address from database:', deliveryAddress);
-          }
-        } catch (error) {
-          console.error('Error fetching live address:', error);
-        }
-      }
+      // Log address source for debugging
+      console.log(`📍 Email address - Source: ${addressResult.source}, Complete: ${addressResult.isComplete}, Address: ${deliveryAddress}`);
       
-      // STEP 2: Fallback to stored address snapshot if live data unavailable
-      if (deliveryAddress === 'Address to be confirmed' && order.deliveryAddress) {
-        deliveryAddress = order.deliveryAddress;
-        console.log('📍 Fallback to stored address:', deliveryAddress);
+      // Warn if using incomplete address data
+      if (!addressResult.isComplete && addressResult.source === 'stored') {
+        console.warn('⚠️ Using incomplete stored address in email - customer may need to provide complete address');
       }
       
       // Create HTML email content with proper product names and pricing
