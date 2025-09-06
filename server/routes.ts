@@ -572,29 +572,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Simple logo URL update endpoint (fallback method)
-  app.post('/api/update-logo-url', async (req, res) => {
+  app.post('/api/update-logo-url', requireAuth, async (req, res) => {
     try {
-      console.log('🔧 Direct logo URL update request');
+      console.log('🔧 Direct logo URL update request from authenticated user:', req.user?.email);
       const { logoUrl } = req.body;
       
       if (!logoUrl || typeof logoUrl !== 'string') {
         return res.status(400).json({ error: 'Valid logo URL required' });
       }
       
-      // For now, update the "Food 4 us" business directly
-      const businessEmail = 'ibk_legacy1997@hotmail.co.uk';
-      const user = await storage.getUserByEmail(businessEmail, 'wholesaler');
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
       }
       
-      const updatedUser = await storage.updateUserSettings(user.id, {
+      const updatedUser = await storage.updateUserSettings(req.user.id, {
         logoUrl: logoUrl,
         logoType: 'custom'
       });
       
-      console.log('✅ Logo URL updated successfully for user:', user.businessName);
+      console.log('✅ Logo URL updated successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo URL updated successfully',
@@ -608,32 +604,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Base64 logo upload endpoint (simple alternative)
-  app.post('/api/upload-logo-base64', async (req, res) => {
+  app.post('/api/upload-logo-base64', requireAuth, async (req, res) => {
     try {
-      console.log('🔧 Base64 logo upload request');
+      console.log('🔧 Base64 logo upload request from authenticated user:', req.user?.email);
       const { imageData, fileName, fileType } = req.body;
       
       if (!imageData || !fileType) {
         return res.status(400).json({ error: 'Image data and file type required' });
       }
       
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       // Convert base64 to data URL format
       const dataUrl = `data:${fileType};base64,${imageData}`;
       
-      // For now, update the "Food 4 us" business directly
-      const businessEmail = 'ibk_legacy1997@hotmail.co.uk';
-      const user = await storage.getUserByEmail(businessEmail, 'wholesaler');
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      const updatedUser = await storage.updateUserSettings(user.id, {
+      const updatedUser = await storage.updateUserSettings(req.user.id, {
         logoUrl: dataUrl,
         logoType: 'custom'
       });
       
-      console.log('✅ Base64 logo updated successfully for user:', user.businessName);
+      console.log('✅ Base64 logo updated successfully for user:', updatedUser.businessName);
       res.json({ 
         success: true, 
         message: 'Logo uploaded successfully',
