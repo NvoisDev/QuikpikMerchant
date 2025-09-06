@@ -1892,7 +1892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           id: order.id,
-          orderNumber: order.orderNumber || `#${order.id}`, // Use actual order number (SF-120) not ID
+          orderNumber: order.orderNumber || order.order_number || `#${order.id}`, // Use actual order number (SF-120) not ID
           date: new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short', 
