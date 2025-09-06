@@ -453,9 +453,17 @@ export const orders = pgTable("orders", {
   customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
-  deliveryAddress: text("delivery_address"),
+  deliveryAddress: text("delivery_address"), // Legacy single string address (keep for compatibility)
   // CRITICAL: Store exact delivery address ID used for this order
   deliveryAddressId: integer("delivery_address_id").references(() => deliveryAddresses.id),
+  
+  // STRUCTURED ADDRESS COMPONENTS: Save address components separately for flexibility
+  deliveryAddressLine1: varchar("delivery_address_line1"),
+  deliveryAddressLine2: varchar("delivery_address_line2"), 
+  deliveryCity: varchar("delivery_city"),
+  deliveryState: varchar("delivery_state"),
+  deliveryPostalCode: varchar("delivery_postal_code"),
+  deliveryCountry: varchar("delivery_country"),
   // Order images uploaded by wholesaler for customer confidence
   orderImages: jsonb("order_images").default([]).$type<Array<{
     id: string;

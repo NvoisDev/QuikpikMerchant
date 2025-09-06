@@ -384,6 +384,7 @@ export interface IStorage {
   getDeliveryAddresses(customerId: string, wholesalerId: string): Promise<DeliveryAddress[]>;
   getDeliveryAddress(id: number): Promise<DeliveryAddress | undefined>;
   getDeliveryAddressById(id: number): Promise<DeliveryAddress | undefined>;
+  getDeliveryAddressForCustomer(id: number, customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined>;
   createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
   updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress>;
   deleteDeliveryAddress(id: number): Promise<void>;
@@ -4782,6 +4783,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(deliveryAddresses.id, id));
     
     console.log(`📍 STEP 2: Fetched address ID ${id} directly from database:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND');
+    return address;
+  }
+
+  async getDeliveryAddressForCustomer(id: number, customerId: string, wholesalerId: string): Promise<DeliveryAddress | undefined> {
+    const [address] = await db
+      .select()
+      .from(deliveryAddresses)
+      .where(and(
+        eq(deliveryAddresses.id, id),
+        eq(deliveryAddresses.customerId, customerId),
+        eq(deliveryAddresses.wholesalerId, wholesalerId)
+      ));
+    
+    console.log(`🔒 SECURITY: Verified address ID ${id} belongs to customer ${customerId} for wholesaler ${wholesalerId}:`, address ? `${address.addressLine1}, ${address.city}` : 'NOT FOUND OR ACCESS DENIED');
     return address;
   }
 
