@@ -3908,11 +3908,11 @@ export default function CustomerPortal() {
                                                       suggestion.type === 'bulk' ? 'text-white border-0' :
                                                       'border-gray-300 text-gray-700'
                                                     }`}
-                                                    title={suggestion.description}
-                                                  >
                                                     style={suggestion.type === 'bulk' ? {
                                                       backgroundColor: 'var(--theme-primary)'
                                                     } : {}}
+                                                    title={suggestion.description}
+                                                  >
                                                     {suggestion.label}
                                                   </button>
                                                 ))}
