@@ -64,11 +64,6 @@ export default function WholesalerSelection() {
   };
 
   const getWholesalerLogo = (wholesaler: any) => {
-    console.log('🔧 WholesalerSelection - Logo data for', wholesaler.businessName, ':', {
-      logoUrl: !!wholesaler.logoUrl,
-      logoType: wholesaler.logoType,
-      logoUrlLength: wholesaler.logoUrl?.length || 0
-    });
     
     // Priority 1: Custom uploaded logo
     if (wholesaler.logoType === 'custom' && wholesaler.logoUrl) {
@@ -85,7 +80,7 @@ export default function WholesalerSelection() {
     if (wholesaler.logoType === 'business' && wholesaler.businessName) {
       const initials = wholesaler.businessName
         .split(' ')
-        .map(word => word.charAt(0))
+        .map((word: string) => word.charAt(0))
         .join('')
         .substring(0, 2)
         .toUpperCase();
@@ -112,7 +107,7 @@ export default function WholesalerSelection() {
     if (wholesaler.businessName) {
       const initials = wholesaler.businessName
         .split(' ')
-        .map(word => word.charAt(0))
+        .map((word: string) => word.charAt(0))
         .join('')
         .substring(0, 2)
         .toUpperCase();

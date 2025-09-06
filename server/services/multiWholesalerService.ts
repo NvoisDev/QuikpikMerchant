@@ -32,18 +32,10 @@ export class MultiWholesalerService {
           eq(wholesalerCustomerRelationships.status, 'active')
         ));
 
-      const result = relationships.map(item => ({
+      return relationships.map(item => ({
         wholesaler: item.wholesaler,
         relationship: item.relationship
       }));
-
-      // Debug logging for logo data
-      console.log('🔧 MultiWholesalerService - Customer wholesalers for', customerId, ':');
-      result.forEach(item => {
-        console.log(`  - ${item.wholesaler?.businessName}: logoType=${item.wholesaler?.logoType}, hasLogoUrl=${!!item.wholesaler?.logoUrl}`);
-      });
-
-      return result;
     } catch (error) {
       console.error('Error fetching customer wholesalers:', error);
       return [];

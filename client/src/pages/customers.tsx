@@ -976,7 +976,7 @@ export default function Customers() {
           </div>
 
           {isLoadingGroups ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="animate-pulse">
                   <CardHeader>
@@ -991,53 +991,55 @@ export default function Customers() {
             </div>
           ) : customerGroups.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Users className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No customer groups yet</h3>
-                <p className="text-gray-500 text-center mb-6 max-w-sm">
+              <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
+                <Users className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-4" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 text-center">No customer groups yet</h3>
+                <p className="text-sm sm:text-base text-gray-500 text-center mb-6 max-w-sm px-4">
                   Create your first customer group to organize your contacts and send targeted messages.
                 </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="text-sm sm:text-base">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Your First Group
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {customerGroups.map((group) => (
                 <Card key={group.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{group.name}</CardTitle>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">
-                          {group.memberCount || 0} members
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base sm:text-lg truncate">{group.name}</CardTitle>
+                        {group.description && (
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{group.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                        <Badge variant="secondary" className="text-xs">
+                          {group.memberCount || 0}
                         </Badge>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleViewMembers(group)}
                           title="View Members"
-                          className="h-8 w-8 p-0"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </div>
-                    {group.description && (
-                      <p className="text-sm text-muted-foreground">{group.description}</p>
-                    )}
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Add Member
-                              <ChevronDown className="ml-2 h-4 w-4" />
+                            <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3">
+                              <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline ml-1 sm:ml-2">Add Member</span>
+                              <ChevronDown className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
@@ -1071,7 +1073,7 @@ export default function Customers() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -1080,8 +1082,9 @@ export default function Customers() {
                             window.location.href = `/campaigns?groupId=${group.id}`;
                           }}
                           title="Send Message"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
-                          <MessageSquare className="h-4 w-4" />
+                          <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -1091,8 +1094,9 @@ export default function Customers() {
                             setIsEditGroupDialogOpen(true);
                           }}
                           title="Edit Group"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -1103,9 +1107,9 @@ export default function Customers() {
                             }
                           }}
                           title="Delete Group"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </div>
