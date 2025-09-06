@@ -226,7 +226,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     stripePaymentIntentId: paymentIntent.id,
     // SIMPLIFIED FIX: Store complete selected address as text instead of relying on complex ID system
     deliveryAddress: selectedDeliveryAddress ? 
-      `${selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
+      `${selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.state || selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country}` :
       (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
     // Store the address ID only if explicitly provided (no complex fallback logic)
     deliveryAddressId: selectedDeliveryAddressId && selectedDeliveryAddressId !== '' && selectedDeliveryAddressId !== 'undefined' ? 
