@@ -169,7 +169,6 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // SYSTEMATIC STEP 2: Use Address ID to fetch complete address details and save snapshot
   let deliveryAddressSnapshot = null;
   let deliveryAddressId = null;
-  let deliveryAddressComponents = {};
   
   if (fulfillmentType === 'delivery' && selectedDeliveryAddressId) {
     try {
@@ -184,18 +183,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         deliveryAddressSnapshot = `${selectedAddress.addressLine1}${selectedAddress.addressLine2 ? ', ' + selectedAddress.addressLine2 : ''}, ${selectedAddress.city}${selectedAddress.state ? ', ' + selectedAddress.state : ''}, ${selectedAddress.postalCode}, ${selectedAddress.country}`;
         deliveryAddressId = selectedAddress.id;
         
-        // STRUCTURED COMPONENTS: Save individual address components for flexibility
-        deliveryAddressComponents = {
-          deliveryAddressLine1: selectedAddress.addressLine1,
-          deliveryAddressLine2: selectedAddress.addressLine2 || null,
-          deliveryCity: selectedAddress.city,
-          deliveryState: selectedAddress.state || null,
-          deliveryPostalCode: selectedAddress.postalCode,
-          deliveryCountry: selectedAddress.country,
-        };
-        
         console.log(`✅ STEP 2 COMPLETE: Address snapshot saved - ${deliveryAddressSnapshot}`);
-        console.log(`📋 STRUCTURED: Saved components separately for flexibility`);
       } else {
         console.error(`❌ STEP 2 FAILED: Address ID ${addressId} not found or access denied`);
       }
@@ -224,8 +212,6 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
     // SYSTEMATIC STEP 2: Save complete address snapshot in Orders table
     deliveryAddress: deliveryAddressSnapshot,
     deliveryAddressId: deliveryAddressId,
-    // STRUCTURED ADDRESS COMPONENTS: Save separately for flexibility and security
-    ...deliveryAddressComponents,
     // SIMPLIFIED: Use customer shipping choice directly
     fulfillmentType: fulfillmentType,
     deliveryCarrier: null, // No carrier needed for simplified delivery system
