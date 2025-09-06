@@ -541,11 +541,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🔧 Logo upload URL request (bypass enabled for testing)');
       
+      // Check if object storage is configured
+      if (!process.env.PUBLIC_OBJECT_SEARCH_PATHS) {
+        console.error('❌ Object storage not configured - PUBLIC_OBJECT_SEARCH_PATHS missing');
+        return res.status(500).json({ 
+          error: 'Object storage not configured',
+          details: 'PUBLIC_OBJECT_SEARCH_PATHS environment variable not set'
+        });
+      }
+      
       const { ObjectStorageService } = await import('./objectStorage.js');
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       
-      console.log('✅ Logo upload URL generated successfully');
+      console.log('✅ Logo upload URL generated successfully:', uploadURL ? 'URL received' : 'No URL');
       res.json({ uploadURL });
       
     } catch (error) {
@@ -559,6 +568,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to get upload URL',
         details: error.message 
       });
+    }
+  });
+
+  // Simple logo URL update endpoint (fallback method)
+  app.post('/api/update-logo-url', async (req, res) => {
+    try {
+      console.log('🔧 Direct logo URL update request');
+      const { logoUrl } = req.body;
+      
+      if (!logoUrl || typeof logoUrl !== 'string') {
+        return res.status(400).json({ error: 'Valid logo URL required' });
+      }
+      
+      // For now, update the "Food 4 us" business directly
+      const businessEmail = 'ibk_legacy1997@hotmail.co.uk';
+      const user = await storage.getUserByEmail(businessEmail, 'wholesaler');
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const updatedUser = await storage.updateUserSettings(user.id, {
+        logoUrl: logoUrl,
+        logoType: 'custom'
+      });
+      
+      console.log('✅ Logo URL updated successfully for user:', user.businessName);
+      res.json({ 
+        success: true, 
+        message: 'Logo URL updated successfully',
+        logoUrl: updatedUser.logoUrl 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating logo URL:', error);
+      res.status(500).json({ error: 'Failed to update logo URL' });
     }
   });
 

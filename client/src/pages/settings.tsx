@@ -792,6 +792,9 @@ export default function Settings() {
                                         onChange={(e) => setBusinessForm({...businessForm, logoUrl: e.target.value})}
                                         className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
                                       />
+                                      <div className="text-xs text-gray-500">
+                                        💡 Upload your image to any free image hosting service (like Imgur, PostImages, etc.) and paste the direct link here
+                                      </div>
                                     </div>
                                   </div>
                                 )}
