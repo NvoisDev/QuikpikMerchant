@@ -64,7 +64,14 @@ export default function WholesalerSelection() {
   };
 
   const getWholesalerLogo = (wholesaler: any) => {
-    if (wholesaler.logoUrl) {
+    console.log('🔧 WholesalerSelection - Logo data for', wholesaler.businessName, ':', {
+      logoUrl: !!wholesaler.logoUrl,
+      logoType: wholesaler.logoType,
+      logoUrlLength: wholesaler.logoUrl?.length || 0
+    });
+    
+    // Priority 1: Custom uploaded logo
+    if (wholesaler.logoType === 'custom' && wholesaler.logoUrl) {
       return (
         <img 
           src={wholesaler.logoUrl} 
@@ -74,6 +81,7 @@ export default function WholesalerSelection() {
       );
     }
     
+    // Priority 2: Business name initials for logoType === 'business'
     if (wholesaler.logoType === 'business' && wholesaler.businessName) {
       const initials = wholesaler.businessName
         .split(' ')
@@ -89,7 +97,34 @@ export default function WholesalerSelection() {
       );
     }
     
-    // Default to name initials
+    // Priority 3: Any logoUrl (fallback)
+    if (wholesaler.logoUrl) {
+      return (
+        <img 
+          src={wholesaler.logoUrl} 
+          alt={`${wholesaler.businessName} logo`}
+          className="w-16 h-16 object-cover rounded-lg border"
+        />
+      );
+    }
+    
+    // Priority 4: Default to business name initials
+    if (wholesaler.businessName) {
+      const initials = wholesaler.businessName
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+      
+      return (
+        <div className="w-16 h-16 bg-emerald-600 rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-lg">{initials}</span>
+        </div>
+      );
+    }
+    
+    // Priority 5: Name initials fallback
     const nameInitials = `${wholesaler.firstName?.charAt(0) || ''}${wholesaler.lastName?.charAt(0) || ''}`;
     return (
       <div className="w-16 h-16 bg-emerald-600 rounded-lg flex items-center justify-center">
