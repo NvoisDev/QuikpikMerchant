@@ -21,7 +21,7 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         address.city,
         address.postalCode,
         address.country
-      ].filter(Boolean);
+      ].filter(part => part && part.trim() && part !== 'undefined');
     }
     
     // If it's a JSON string, parse it first
@@ -33,12 +33,12 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
         parsed.city,
         parsed.postalCode,
         parsed.country
-      ].filter(Boolean);
+      ].filter(part => part && part.trim() && part !== 'undefined');
     }
     
     // If it's already a comma-separated string, split it
     if (typeof address === 'string' && address.includes(',')) {
-      return address.split(',').map(part => part.trim()).filter(Boolean);
+      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined');
     }
     
     // Return as single line if it's just a string
@@ -46,7 +46,7 @@ export function formatDeliveryAddress(address: string | DeliveryAddress | null):
   } catch (error) {
     // Fallback: split by comma if it's a string
     if (typeof address === 'string') {
-      return address.split(',').map(part => part.trim()).filter(Boolean);
+      return address.split(',').map(part => part.trim()).filter(part => part && part !== 'undefined');
     }
     return [];
   }

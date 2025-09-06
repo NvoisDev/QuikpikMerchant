@@ -73,7 +73,9 @@ const formatAddress = (addressData?: string): string => {
   if (!addressData) return 'Address not provided';
   
   const addressLines = formatDeliveryAddress(addressData);
-  return addressLines.length > 0 ? addressLines.join(', ') : 'Address not provided';
+  // Additional filtering to remove any "undefined" strings
+  const cleanedLines = addressLines.filter(line => line && line.trim() && line !== 'undefined');
+  return cleanedLines.length > 0 ? cleanedLines.join(', ') : 'Address not provided';
 };
 
 const parseDeliveryAddress = (address: string | undefined): any => {
