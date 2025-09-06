@@ -28,6 +28,7 @@ interface AddressSelectorProps {
   wholesalerId: string;
   selectedAddress?: DeliveryAddress;
   onAddressSelect: (address: DeliveryAddress) => void;
+  addressExplicitlyCleared?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -57,10 +58,12 @@ export function AddressSelector({
   wholesalerId, 
   selectedAddress, 
   onAddressSelect, 
+  addressExplicitlyCleared = false,
   compact = false,
   className = ""
 }: AddressSelectorProps) {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [userClearedAddress, setUserClearedAddress] = useState(false);
 
   // Fetch delivery addresses
   const { data: addresses = [], isLoading } = useQuery<DeliveryAddress[]>({
@@ -70,7 +73,19 @@ export function AddressSelector({
 
   // Get default address if no address is selected
   const defaultAddress = addresses.find(addr => addr.isDefault);
-  const displayAddress = selectedAddress || defaultAddress;
+  const displayAddress = selectedAddress || (userClearedAddress ? null : defaultAddress);
+
+  // Sync local state with prop
+  useEffect(() => {
+    setUserClearedAddress(addressExplicitlyCleared);
+  }, [addressExplicitlyCleared]);
+
+  // Reset userClearedAddress flag when selectedAddress is explicitly set
+  useEffect(() => {
+    if (selectedAddress) {
+      setUserClearedAddress(false);
+    }
+  }, [selectedAddress]);
 
   // Auto-select default address when available and no address is currently selected
   useEffect(() => {
@@ -78,10 +93,13 @@ export function AddressSelector({
       addressesLength: addresses.length,
       hasDefaultAddress: !!defaultAddress,
       hasSelectedAddress: !!selectedAddress,
+      userClearedAddress,
+      addressExplicitlyCleared,
       defaultAddressData: defaultAddress ? defaultAddress.addressLine1 : 'none'
     });
     
-    if (defaultAddress && !selectedAddress && addresses.length > 0) {
+    // Only auto-select default address if user hasn't explicitly cleared it
+    if (defaultAddress && !selectedAddress && addresses.length > 0 && !userClearedAddress && !addressExplicitlyCleared) {
       console.log('🏠 AUTO-SELECTING: Default address found, auto-selecting for customer convenience:', defaultAddress.addressLine1);
       onAddressSelect(defaultAddress);
     } else if (addresses.length === 0) {
@@ -92,8 +110,10 @@ export function AddressSelector({
       // This prevents wrong addresses from being selected automatically
     } else if (selectedAddress) {
       console.log('🏠 ADDRESS ALREADY SELECTED: Using existing selection:', selectedAddress.addressLine1);
+    } else if (userClearedAddress || addressExplicitlyCleared) {
+      console.log('🏠 USER CLEARED: User explicitly cleared address selection - showing address selection interface');
     }
-  }, [defaultAddress, selectedAddress, onAddressSelect, addresses.length, addresses]);
+  }, [defaultAddress, selectedAddress, onAddressSelect, addresses.length, addresses, userClearedAddress, addressExplicitlyCleared]);
 
   const handleAddressSelect = (address: DeliveryAddress) => {
     onAddressSelect(address);

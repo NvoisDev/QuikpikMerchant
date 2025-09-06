@@ -4508,12 +4508,16 @@ export default function CustomerPortal() {
                             onClick={() => {
                               console.log('🏠 CHANGE ADDRESS: User clicked change address button');
                               console.log('🏠 CURRENT ADDRESS: Before clearing:', customerData.selectedDeliveryAddress?.addressLine1);
+                              
+                              // Set a flag to indicate user explicitly cleared address
                               setCustomerData(prev => {
                                 const newData = {
                                   ...prev,
-                                  selectedDeliveryAddress: null
+                                  selectedDeliveryAddress: null,
+                                  // Add a flag to track explicit user clearing
+                                  addressExplicitlyCleared: true
                                 };
-                                console.log('🏠 ADDRESS CLEARED: selectedDeliveryAddress set to null');
+                                console.log('🏠 ADDRESS CLEARED: selectedDeliveryAddress set to null with explicit flag');
                                 return newData;
                               });
                             }}
@@ -4528,6 +4532,7 @@ export default function CustomerPortal() {
                       <AddressSelector
                         wholesalerId={wholesaler.id}
                         selectedAddress={customerData.selectedDeliveryAddress}
+                        addressExplicitlyCleared={customerData.addressExplicitlyCleared || false}
                         onAddressSelect={(address) => {
                           console.log('🏠 Address selected in checkout:', address);
                           console.log('🏠 Address object keys:', address ? Object.keys(address) : 'no address');
@@ -4543,6 +4548,8 @@ export default function CustomerPortal() {
                               country: address?.country || '',
                               // Save complete delivery address object for order
                               selectedDeliveryAddress: address,
+                              // Reset the cleared flag when user selects an address
+                              addressExplicitlyCleared: false,
                               // Keep current shipping option - don't override user's explicit choice
                               shippingOption: 'delivery' // Ensure delivery stays selected when address is chosen
                             };
