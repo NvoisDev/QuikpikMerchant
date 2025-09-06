@@ -607,6 +607,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Base64 logo upload endpoint (simple alternative)
+  app.post('/api/upload-logo-base64', async (req, res) => {
+    try {
+      console.log('🔧 Base64 logo upload request');
+      const { imageData, fileName, fileType } = req.body;
+      
+      if (!imageData || !fileType) {
+        return res.status(400).json({ error: 'Image data and file type required' });
+      }
+      
+      // Convert base64 to data URL format
+      const dataUrl = `data:${fileType};base64,${imageData}`;
+      
+      // For now, update the "Food 4 us" business directly
+      const businessEmail = 'ibk_legacy1997@hotmail.co.uk';
+      const user = await storage.getUserByEmail(businessEmail, 'wholesaler');
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const updatedUser = await storage.updateUserSettings(user.id, {
+        logoUrl: dataUrl,
+        logoType: 'custom'
+      });
+      
+      console.log('✅ Base64 logo updated successfully for user:', user.businessName);
+      res.json({ 
+        success: true, 
+        message: 'Logo uploaded successfully',
+        logoUrl: dataUrl 
+      });
+      
+    } catch (error) {
+      console.error('❌ Error uploading base64 logo:', error);
+      res.status(500).json({ error: 'Failed to upload logo' });
+    }
+  });
+
   // Clear/reset user logo endpoint
   app.post('/api/clear-logo', async (req, res) => {
     try {

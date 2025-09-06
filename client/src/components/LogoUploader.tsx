@@ -53,59 +53,52 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
 
     try {
       setUploadProgress(30);
-      console.log('🔧 Starting upload process for file:', file.name, 'Size:', file.size, 'Type:', file.type);
+      console.log('🔧 Using direct base64 upload method for:', file.name);
 
-      // Step 1: Get upload URL
-      const response = await fetch('/api/logo-upload-url', {
+      // Convert file to base64 using FileReader
+      const base64Reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        base64Reader.onload = () => {
+          const result = base64Reader.result as string;
+          // Remove the data URL prefix to get just the base64 data
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        base64Reader.onerror = reject;
+      });
+
+      base64Reader.readAsDataURL(file);
+      const imageData = await base64Promise;
+
+      setUploadProgress(60);
+
+      // Upload using base64 method (bypasses object storage issues)
+      console.log('🔧 Uploading via base64 method...');
+      const response = await fetch('/api/upload-logo-base64', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          imageData,
+          fileName: file.name,
+          fileType: file.type
+        }),
       });
 
-      console.log('🔧 Upload URL response status:', response.status);
+      console.log('🔧 Base64 upload response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('🔧 Upload URL error:', errorText);
-        throw new Error(`Failed to get upload URL (${response.status}): ${errorText}`);
+        console.error('🔧 Base64 upload error:', errorText);
+        throw new Error(`Upload failed (${response.status}): ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('🔧 Upload URL data received:', !!data.uploadURL);
-      
-      if (!data.uploadURL) {
-        throw new Error('No upload URL received from server');
-      }
-
-      setUploadProgress(60);
-
-      // Step 2: Upload to object storage
-      console.log('🔧 Uploading to object storage...');
-      const uploadResponse = await fetch(data.uploadURL, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      console.log('🔧 Object storage response status:', uploadResponse.status);
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('🔧 Object storage error:', errorText);
-        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
-      }
-
       setUploadProgress(100);
 
-      // Step 3: Extract public URL
-      const uploadUrl = new URL(data.uploadURL);
-      const publicUrl = `${uploadUrl.origin}${uploadUrl.pathname}`;
-      
-      console.log('🔧 Generated public URL:', publicUrl);
+      console.log('🔧 Logo uploaded successfully via base64');
 
       toast({
         title: "Upload successful!",
@@ -114,25 +107,19 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
 
       // Complete the upload
       setTimeout(() => {
-        onUploadComplete(publicUrl);
+        onUploadComplete(data.logoUrl);
         handleClose();
       }, 500);
 
     } catch (error) {
-      console.error('🔧 Full upload error:', error);
+      console.error('🔧 Base64 upload error:', error);
       
       let errorMessage = "Upload failed. Please try again.";
       if (error instanceof Error) {
         console.error('🔧 Error message:', error.message);
         
-        if (error.message.includes('401') || error.message.includes('Authentication')) {
-          errorMessage = "Authentication issue. Please refresh the page and try again.";
-        } else if (error.message.includes('413')) {
+        if (error.message.includes('413')) {
           errorMessage = "File too large. Please use a smaller image.";
-        } else if (error.message.includes('Failed to get upload URL')) {
-          errorMessage = "Server error getting upload URL. Please try again.";
-        } else if (error.message.includes('Upload failed')) {
-          errorMessage = "Failed to upload to storage. Please try again.";
         } else {
           errorMessage = `Upload error: ${error.message}`;
         }
