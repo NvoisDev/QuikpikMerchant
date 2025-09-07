@@ -458,15 +458,13 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         };
       }));
 
-      const addressComponents = parseAddressForEmail(order.deliveryAddress);
-
       const emailData: OrderEmailData = {
         orderNumber: order.orderNumber || `ORD-${order.id}`,
         customerName,
         customerEmail: customerEmail || '',
         customerPhone,
-        // Use the same address parsing logic as the UI order detail page
-        ...addressComponents,
+        // FIXED: Use same simple address approach as customer email template
+        shippingAddress: order.deliveryAddress,
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),

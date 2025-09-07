@@ -5510,35 +5510,18 @@ The Quikpik Team`
               };
             }));
 
-            // CRITICAL FIX: Use the same address parsing logic as order detail UI
-            console.log(`📍 EMAIL DEBUG - selectedDeliveryAddress:`, selectedDeliveryAddress);
-            console.log(`📍 EMAIL DEBUG - order.deliveryAddress:`, order.deliveryAddress);
-            
-            let addressComponents;
-            if (selectedDeliveryAddress && Object.keys(selectedDeliveryAddress).length > 0) {
-              // Use selectedDeliveryAddress if available
-              addressComponents = {
-                addressLine1: selectedDeliveryAddress.addressLine1 || '',
-                addressLine2: selectedDeliveryAddress.addressLine2 || '',
-                city: selectedDeliveryAddress.city || '',
-                state: selectedDeliveryAddress.state || '',
-                postalCode: selectedDeliveryAddress.postalCode || '',
-                country: selectedDeliveryAddress.country || ''
-              };
-              console.log(`📍 EMAIL DEBUG - Using selectedDeliveryAddress components:`, addressComponents);
-            } else {
-              // Fallback to parsing order.deliveryAddress string (same as UI)
-              addressComponents = parseAddressForEmail(order.deliveryAddress);
-              console.log(`📍 EMAIL DEBUG - Using parsed order.deliveryAddress components:`, addressComponents);
-            }
+            // FIXED: Use the same simple address approach as customer email template
+            const completeAddress = selectedDeliveryAddress 
+              ? `${selectedDeliveryAddress.addressLine1 ? selectedDeliveryAddress.addressLine1 + '\n' : ''}${selectedDeliveryAddress.addressLine2 ? selectedDeliveryAddress.addressLine2 + '\n' : ''}${selectedDeliveryAddress.city}${selectedDeliveryAddress.state ? ', ' + selectedDeliveryAddress.state : ''}${selectedDeliveryAddress.postalCode ? '\n' + selectedDeliveryAddress.postalCode : ''}${selectedDeliveryAddress.country ? '\n' + selectedDeliveryAddress.country : ''}`
+              : order.deliveryAddress;
 
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              // Use parsed address components
-              ...addressComponents,
+              // Use complete address string like customer email (WORKING APPROACH)
+              shippingAddress: completeAddress,
               total: correctTotal,
               subtotal: productSubtotal,
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
