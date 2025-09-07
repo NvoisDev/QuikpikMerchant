@@ -2,11 +2,11 @@
 import { storage } from '../storage';
 
 export interface AddressData {
-  addressLine1?: string;
-  addressLine2?: string;
+  address_line1?: string;  // Match database schema
+  address_line2?: string;  // Match database schema
   city?: string;
   state?: string;
-  postalCode?: string;
+  postal_code?: string;    // Match database schema
   country?: string;
 }
 
@@ -67,11 +67,11 @@ export function formatAddressComponents(address: AddressData): string {
   if (!address) return 'Address not available';
   
   const components = [
-    address.addressLine1,
-    address.addressLine2,
+    address.address_line1,
+    address.address_line2,
     address.city,
     address.state,
-    address.postalCode,
+    address.postal_code,
     address.country
   ];
   
