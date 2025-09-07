@@ -5510,24 +5510,18 @@ The Quikpik Team`
               };
             }));
 
-            // DEBUG: Check what's in the address objects
-            console.log(`🏠 WHOLESALER EMAIL DEBUG - selectedDeliveryAddress:`, JSON.stringify(selectedDeliveryAddress, null, 2));
-            console.log(`🏠 WHOLESALER EMAIL DEBUG - order.deliveryAddress:`, order.deliveryAddress);
-            
-            // FIXED: Use the same simple address approach as customer email template
-            const completeAddress = selectedDeliveryAddress 
-              ? `${selectedDeliveryAddress.addressLine1 ? selectedDeliveryAddress.addressLine1 + '\n' : ''}${selectedDeliveryAddress.addressLine2 ? selectedDeliveryAddress.addressLine2 + '\n' : ''}${selectedDeliveryAddress.city}${selectedDeliveryAddress.state ? ', ' + selectedDeliveryAddress.state : ''}${selectedDeliveryAddress.postalCode ? '\n' + selectedDeliveryAddress.postalCode : ''}${selectedDeliveryAddress.country ? '\n' + selectedDeliveryAddress.country : ''}`
-              : order.deliveryAddress;
-              
-            console.log(`🏠 WHOLESALER EMAIL DEBUG - completeAddress result:`, JSON.stringify(completeAddress));
+            // FIXED: Use the exact same logic as customer email (working approach)
+            const shippingAddress = fulfillmentType === 'delivery' 
+              ? (typeof selectedDeliveryAddress === 'string' ? selectedDeliveryAddress : order.deliveryAddress)
+              : undefined;
 
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              // Use complete address string like customer email (WORKING APPROACH)
-              shippingAddress: completeAddress,
+              // Use complete address string like customer email (WORKING APPROACH)  
+              shippingAddress: shippingAddress,
               total: correctTotal,
               subtotal: productSubtotal,
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
