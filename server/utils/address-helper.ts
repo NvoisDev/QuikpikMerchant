@@ -186,3 +186,48 @@ export async function getEmailDeliveryAddress(order: Order): Promise<{
     source: 'fallback'
   };
 }
+
+/**
+ * Get individual address components for email templates
+ * Returns object with individual components that can be spread into email data
+ */
+export async function getAddressComponentsForEmail(order: Order): Promise<{
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}> {
+  const defaultComponents = {
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: ''
+  };
+
+  // Try to fetch individual address components from live database
+  if (order.deliveryAddressId) {
+    try {
+      const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+      const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
+      
+      if (fullAddress) {
+        return {
+          addressLine1: fullAddress.address_line1 || '',
+          addressLine2: fullAddress.address_line2 || '',
+          city: fullAddress.city || '',
+          state: fullAddress.state || '',
+          postalCode: fullAddress.postal_code || '',
+          country: fullAddress.country || ''
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching address components for email:', error);
+    }
+  }
+  
+  return defaultComponents;
+}

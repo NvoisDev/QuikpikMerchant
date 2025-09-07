@@ -5395,9 +5395,13 @@ The Quikpik Team`
               customerName,
               customerEmail: customerEmail || '',
               customerPhone,
-              customerAddress: selectedDeliveryAddress ? 
-                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? '\n' + selectedDeliveryAddress.addressLine2 : ''}\n${selectedDeliveryAddress.city}\n${selectedDeliveryAddress.postalCode}\n${selectedDeliveryAddress.country || 'United Kingdom'}` : 
-                customerAddress,
+              // Individual address components for reliable email display
+              addressLine1: selectedDeliveryAddress?.addressLine1 || '',
+              addressLine2: selectedDeliveryAddress?.addressLine2 || '',
+              city: selectedDeliveryAddress?.city || '',
+              state: selectedDeliveryAddress?.state || '',
+              postalCode: selectedDeliveryAddress?.postalCode || '',
+              country: selectedDeliveryAddress?.country || '',
               total: correctTotal,
               subtotal: productSubtotal,
               platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),

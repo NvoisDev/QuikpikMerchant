@@ -2,7 +2,7 @@ import { storage } from './storage';
 import { generateWholesalerOrderNotificationEmail } from './email-templates';
 import { sendEmail } from './sendgrid-service';
 import { ShippingAutomationService } from './shipping-automation';
-import { getCompleteDeliveryAddress, getEmailDeliveryAddress } from './utils/address-helper';
+import { getCompleteDeliveryAddress, getEmailDeliveryAddress, getAddressComponentsForEmail } from './utils/address-helper';
 
 export interface OrderEmailData {
   orderNumber: string;
@@ -360,8 +360,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerName,
         customerEmail: customerEmail || '',
         customerPhone,
-        // Always fetch live address data - prioritize complete data over stored snapshot
-        customerAddress: await getCompleteDeliveryAddress(order) || 'Address to be confirmed',
+        // Fetch individual address components from database for reliable email display
+        ...await getAddressComponentsForEmail(order),
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
