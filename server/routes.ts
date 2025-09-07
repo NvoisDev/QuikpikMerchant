@@ -5511,6 +5511,9 @@ The Quikpik Team`
             }));
 
             // CRITICAL FIX: Use the same address parsing logic as order detail UI
+            console.log(`📍 EMAIL DEBUG - selectedDeliveryAddress:`, selectedDeliveryAddress);
+            console.log(`📍 EMAIL DEBUG - order.deliveryAddress:`, order.deliveryAddress);
+            
             let addressComponents;
             if (selectedDeliveryAddress && Object.keys(selectedDeliveryAddress).length > 0) {
               // Use selectedDeliveryAddress if available
@@ -5522,9 +5525,11 @@ The Quikpik Team`
                 postalCode: selectedDeliveryAddress.postalCode || '',
                 country: selectedDeliveryAddress.country || ''
               };
+              console.log(`📍 EMAIL DEBUG - Using selectedDeliveryAddress components:`, addressComponents);
             } else {
               // Fallback to parsing order.deliveryAddress string (same as UI)
               addressComponents = parseAddressForEmail(order.deliveryAddress);
+              console.log(`📍 EMAIL DEBUG - Using parsed order.deliveryAddress components:`, addressComponents);
             }
 
             const emailData: OrderEmailData = {
