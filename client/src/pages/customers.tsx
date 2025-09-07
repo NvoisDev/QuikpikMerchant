@@ -887,16 +887,6 @@ export default function Customers() {
               <span className="xs:hidden sm:hidden">Requests</span>
             </Button>
           </Link>
-          
-          <Button 
-            variant="outline" 
-            className="w-full sm:w-auto flex items-center justify-center space-x-2"
-            onClick={() => setIsAddCustomerDialogOpen(true)}
-          >
-            <UserPlus className="h-4 w-4" />
-            <span className="hidden xs:inline sm:inline">Add Customer</span>
-            <span className="xs:hidden sm:hidden">Add</span>
-          </Button>
         </div>
       </div>
 
