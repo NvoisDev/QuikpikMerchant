@@ -5006,7 +5006,15 @@ The Quikpik Team`
         selectedDeliveryAddressIdValue: selectedDeliveryAddressId,
         hasSelectedDeliveryAddress: !!selectedDeliveryAddressJson,
         allMetadataKeys: Object.keys(paymentIntent.metadata || {}),
-        shippingInfo: paymentIntent.metadata.shippingInfo
+        shippingInfo: paymentIntent.metadata.shippingInfo,
+        customerAddress: customerAddress
+      });
+      
+      console.log(`🔍 MARKETPLACE DEBUG: Will my address fix be triggered?`, {
+        fulfillmentTypeWillBe: shippingInfo?.option === 'delivery' ? 'delivery' : 'pickup',
+        hasSelectedDeliveryAddressId: !!selectedDeliveryAddressId,
+        selectedDeliveryAddressIdValue: selectedDeliveryAddressId,
+        addressFixWillTrigger: (shippingInfo?.option === 'delivery') && selectedDeliveryAddressId
       });
 
       // Parse the selected delivery address from metadata
