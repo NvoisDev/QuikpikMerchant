@@ -5510,10 +5510,16 @@ The Quikpik Team`
               };
             }));
 
+            // DEBUG: Check what's in the address objects
+            console.log(`🏠 WHOLESALER EMAIL DEBUG - selectedDeliveryAddress:`, JSON.stringify(selectedDeliveryAddress, null, 2));
+            console.log(`🏠 WHOLESALER EMAIL DEBUG - order.deliveryAddress:`, order.deliveryAddress);
+            
             // FIXED: Use the same simple address approach as customer email template
             const completeAddress = selectedDeliveryAddress 
               ? `${selectedDeliveryAddress.addressLine1 ? selectedDeliveryAddress.addressLine1 + '\n' : ''}${selectedDeliveryAddress.addressLine2 ? selectedDeliveryAddress.addressLine2 + '\n' : ''}${selectedDeliveryAddress.city}${selectedDeliveryAddress.state ? ', ' + selectedDeliveryAddress.state : ''}${selectedDeliveryAddress.postalCode ? '\n' + selectedDeliveryAddress.postalCode : ''}${selectedDeliveryAddress.country ? '\n' + selectedDeliveryAddress.country : ''}`
               : order.deliveryAddress;
+              
+            console.log(`🏠 WHOLESALER EMAIL DEBUG - completeAddress result:`, JSON.stringify(completeAddress));
 
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
