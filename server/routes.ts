@@ -5349,17 +5349,22 @@ The Quikpik Team`
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: selectedDeliveryAddress ? (() => {
-                // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
+                console.log(`🏠 ORDER CREATION - selectedDeliveryAddress:`, JSON.stringify(selectedDeliveryAddress, null, 2));
+                
+                // FIXED: Use correct database field names (snake_case) and simpler filter
                 const addressParts = [
-                  selectedDeliveryAddress.addressLine1,
-                  selectedDeliveryAddress.addressLine2,
+                  selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1,
+                  selectedDeliveryAddress.address_line2 || selectedDeliveryAddress.addressLine2,
                   selectedDeliveryAddress.city,
                   selectedDeliveryAddress.state,
-                  selectedDeliveryAddress.postalCode,
+                  selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode,
                   selectedDeliveryAddress.country || 'United Kingdom'
-                ].filter(part => part && typeof part === 'string' && part.trim() && part.trim() !== 'undefined' && part.trim() !== 'null');
+                ].filter(Boolean);
                 
-                return addressParts.length > 0 ? addressParts.join(', ') : null;
+                console.log(`🏠 ORDER CREATION - addressParts:`, addressParts);
+                const result = addressParts.length > 0 ? addressParts.join(', ') : null;
+                console.log(`🏠 ORDER CREATION - final deliveryAddress:`, result);
+                return result;
               })() : (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
               deliveryAddressId: selectedDeliveryAddress?.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null),
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
