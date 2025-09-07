@@ -566,6 +566,28 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
   // SEND EMAIL CONFIRMATIONS
   console.log('📧 Sending order confirmation emails...');
   
+  // CRITICAL FIX: Get complete address for both emails from database source
+  let completeShippingAddress = undefined;
+  if (fulfillmentType === 'delivery' && deliveryAddressId) {
+    try {
+      const completeAddress = await storage.getDeliveryAddressById(deliveryAddressId);
+      if (completeAddress) {
+        completeShippingAddress = [
+          completeAddress.address_line1,
+          completeAddress.address_line2,
+          `${completeAddress.city}${completeAddress.state ? ', ' + completeAddress.state : ''}`,
+          completeAddress.postal_code,
+          completeAddress.country
+        ].filter(Boolean).join('\n');
+        console.log(`📧 Using complete address for both emails: ${completeShippingAddress}`);
+      }
+    } catch (addressError) {
+      console.error('❌ Failed to get complete address for emails:', addressError);
+      // Fallback to customerAddress
+      completeShippingAddress = typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress);
+    }
+  }
+  
   try {
     // Import sendgrid service
     const { sendOrderConfirmationEmail, sendWholesalerOrderNotification } = await import('./sendgrid-service');
@@ -585,7 +607,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       transactionFee: parseFloat(orderData.customerTransactionFee),
       totalPaid: parseFloat(orderData.total),
       wholesalerName: wholesaler?.businessName || 'Supplier',
-      shippingAddress: fulfillmentType === 'delivery' ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : undefined
+      shippingAddress: completeShippingAddress
     });
 
     console.log('📧 Customer confirmation email:', emailSent ? '✅ Sent' : '❌ Failed');
@@ -608,8 +630,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         subtotal: parseFloat(orderData.subtotal),
         totalAmount: parseFloat(orderData.total),
         fulfillmentType: fulfillmentType,
-        // FIXED: Use same simple address approach as customer email (WORKING APPROACH)
-        shippingAddress: fulfillmentType === 'delivery' ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : undefined
+        // FIXED: Use same complete address as customer email (WORKING APPROACH)
+        shippingAddress: completeShippingAddress
       });
 
       console.log('📧 Wholesaler notification email:', wholesalerEmailSent ? '✅ Sent' : '❌ Failed');

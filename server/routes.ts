@@ -5510,10 +5510,30 @@ The Quikpik Team`
               };
             }));
 
-            // FIXED: Use the exact same logic as customer email (working approach)
-            const shippingAddress = fulfillmentType === 'delivery' 
-              ? (typeof selectedDeliveryAddress === 'string' ? selectedDeliveryAddress : order.deliveryAddress)
-              : undefined;
+            // CRITICAL FIX: Get complete address from database like order-processor.ts does
+            let shippingAddress = undefined;
+            if (fulfillmentType === 'delivery' && order.deliveryAddressId) {
+              try {
+                const completeAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
+                if (completeAddress) {
+                  shippingAddress = [
+                    completeAddress.address_line1,
+                    completeAddress.address_line2,
+                    `${completeAddress.city}${completeAddress.state ? ', ' + completeAddress.state : ''}`,
+                    completeAddress.postal_code,
+                    completeAddress.country
+                  ].filter(Boolean).join('\n');
+                  console.log(`📧 ROUTES: Using complete address for email: ${shippingAddress}`);
+                } else {
+                  // Fallback to order deliveryAddress
+                  shippingAddress = order.deliveryAddress;
+                }
+              } catch (addressError) {
+                console.error('❌ ROUTES: Failed to get complete address:', addressError);
+                // Fallback to order deliveryAddress
+                shippingAddress = order.deliveryAddress;
+              }
+            }
 
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
