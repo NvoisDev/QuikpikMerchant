@@ -5349,22 +5349,17 @@ The Quikpik Team`
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
               deliveryAddress: selectedDeliveryAddress ? (() => {
-                console.log(`🏠 ORDER CREATION - selectedDeliveryAddress:`, JSON.stringify(selectedDeliveryAddress, null, 2));
-                
-                // FIXED: Use correct database field names (snake_case) and simpler filter
+                // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
                 const addressParts = [
-                  selectedDeliveryAddress.address_line1 || selectedDeliveryAddress.addressLine1,
-                  selectedDeliveryAddress.address_line2 || selectedDeliveryAddress.addressLine2,
+                  selectedDeliveryAddress.addressLine1,
+                  selectedDeliveryAddress.addressLine2,
                   selectedDeliveryAddress.city,
                   selectedDeliveryAddress.state,
-                  selectedDeliveryAddress.postal_code || selectedDeliveryAddress.postalCode,
+                  selectedDeliveryAddress.postalCode,
                   selectedDeliveryAddress.country || 'United Kingdom'
-                ].filter(Boolean);
+                ].filter(part => part && typeof part === 'string' && part.trim() && part.trim() !== 'undefined' && part.trim() !== 'null');
                 
-                console.log(`🏠 ORDER CREATION - addressParts:`, addressParts);
-                const result = addressParts.length > 0 ? addressParts.join(', ') : null;
-                console.log(`🏠 ORDER CREATION - final deliveryAddress:`, result);
-                return result;
+                return addressParts.length > 0 ? addressParts.join(', ') : null;
               })() : (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
               deliveryAddressId: selectedDeliveryAddress?.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null),
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
@@ -5521,29 +5516,14 @@ The Quikpik Team`
               try {
                 const completeAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
                 if (completeAddress) {
-                  console.log(`🏠 ADDRESS DEBUG - Raw database data:`, {
-                    line1: completeAddress.address_line1,
-                    line2: completeAddress.address_line2,
-                    city: completeAddress.city,
-                    state: completeAddress.state,
-                    postal: completeAddress.postal_code,
-                    country: completeAddress.country
-                  });
-                  
-                  const addressParts = [
+                  shippingAddress = [
                     completeAddress.address_line1,
                     completeAddress.address_line2,
                     `${completeAddress.city}${completeAddress.state ? ', ' + completeAddress.state : ''}`,
                     completeAddress.postal_code,
                     completeAddress.country
-                  ];
-                  console.log(`🏠 ADDRESS DEBUG - Parts before filter:`, addressParts);
-                  
-                  const filteredParts = addressParts.filter(Boolean);
-                  console.log(`🏠 ADDRESS DEBUG - Parts after filter:`, filteredParts);
-                  
-                  shippingAddress = filteredParts.join('\n');
-                  console.log(`📧 ROUTES: Final complete address: "${shippingAddress}"`);
+                  ].filter(Boolean).join('\n');
+                  console.log(`📧 ROUTES: Using complete address for email: ${shippingAddress}`);
                 } else {
                   // Fallback to order deliveryAddress
                   shippingAddress = order.deliveryAddress;
