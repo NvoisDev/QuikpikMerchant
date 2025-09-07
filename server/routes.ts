@@ -11379,8 +11379,9 @@ Please contact the customer to confirm this order.
       // STEP 1: Always fetch individual address components from live database
       if (order.deliveryAddressId) {
         try {
-          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
-          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
+          // CRITICAL FIX: Get address by ID directly, not filtered by wholesaler
+          console.log(`📍 Fetching address ID ${order.deliveryAddressId} for email template`);
+          const fullAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
           
           if (fullAddress) {
             addressComponents = {
@@ -11391,15 +11392,15 @@ Please contact the customer to confirm this order.
               postalCode: fullAddress.postal_code || '',
               country: fullAddress.country || ''
             };
-            console.log('📍 Using individual address components from database:', addressComponents);
+            console.log('✅ EMAIL: Using complete address components from database:', addressComponents);
           } else {
-            console.warn('⚠️ Address ID found but no matching address in database');
+            console.warn(`⚠️ EMAIL: Address ID ${order.deliveryAddressId} not found in database`);
           }
         } catch (error) {
-          console.error('❌ Error fetching address components:', error);
+          console.error('❌ EMAIL: Error fetching address components:', error);
         }
       } else {
-        console.warn('⚠️ No delivery address ID found for email');
+        console.warn('⚠️ EMAIL: No delivery address ID found for email');
       }
       
       // Create HTML email content with proper product names and pricing
