@@ -114,7 +114,13 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.shippingAddress ? `<p><strong>Delivery Address:</strong> ${data.shippingAddress}</p>` : data.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed</p>` : ''}
+            ${data.fulfillmentType === 'pickup' ? `
+                <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                    <h4 style="margin-top: 0; color: #92400e;">📦 Customer Collection Information</h4>
+                    <p style="margin-bottom: 0; color: #92400e;"><strong>Customer will collect from your business address.</strong><br>
+                    Please ensure the order is ready for collection and contact the customer to arrange a suitable time.</p>
+                </div>
+            ` : data.shippingAddress ? `<p><strong>Delivery Address:</strong> ${data.shippingAddress}</p>` : data.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>

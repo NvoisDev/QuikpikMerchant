@@ -235,10 +235,23 @@ const OrderDetailsModal = ({ order, wholesalerId, customerPhone }: { order: Orde
                   <div className="flex-1 min-w-0">
                     <div className="text-xs text-gray-600 mb-1">Collect from business</div>
                     <div className="font-medium text-sm break-words">{order.wholesaler?.businessName || 'Business'}</div>
+                    {/* Business Address */}
+                    {(order.wholesaler?.businessAddress || order.wholesaler?.city) && (
+                      <div className="text-xs text-gray-700 mt-2 bg-white border rounded p-2">
+                        <div className="font-medium text-gray-900 mb-1">Collection Address:</div>
+                        <div>{order.wholesaler.businessAddress}</div>
+                        {order.wholesaler.city && (
+                          <div>{order.wholesaler.city} {order.wholesaler.postalCode}</div>
+                        )}
+                        {order.wholesaler.country && (
+                          <div>{order.wholesaler.country}</div>
+                        )}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-600 mt-1">
                       {order.status === 'ready_for_collection' 
                         ? 'Your order is ready! Contact the business to arrange collection time.'
-                        : 'Please contact the business to arrange collection time and get the exact address.'
+                        : 'Contact the business to arrange collection time.'
                       }
                     </div>
                     {order.wholesaler?.businessPhone && (
