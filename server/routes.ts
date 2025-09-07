@@ -5349,7 +5349,19 @@ The Quikpik Team`
               email: customerEmail,
               phone: customerPhone,
               address: selectedDeliveryAddress ? 
-                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? '\n' + selectedDeliveryAddress.addressLine2 : ''}\n${selectedDeliveryAddress.city}\n${selectedDeliveryAddress.postalCode}\n${selectedDeliveryAddress.country || 'United Kingdom'}` : 
+                (() => {
+                  // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
+                  const addressParts = [
+                    selectedDeliveryAddress.addressLine1,
+                    selectedDeliveryAddress.addressLine2,
+                    selectedDeliveryAddress.city,
+                    selectedDeliveryAddress.state,
+                    selectedDeliveryAddress.postalCode,
+                    selectedDeliveryAddress.country || 'United Kingdom'
+                  ].filter(part => part && typeof part === 'string' && part.trim() && part.trim() !== 'undefined' && part.trim() !== 'null');
+                  
+                  return addressParts.length > 0 ? addressParts.join(', ') : null;
+                })() : 
                 customerAddress
             }, order, enrichedItems, wholesaler);
             console.log(`📧 Confirmation email sent to ${customerEmail} for order #${order.id}`);
