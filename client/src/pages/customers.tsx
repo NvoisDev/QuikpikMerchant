@@ -890,15 +890,15 @@ export default function Customers() {
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="space-y-4 sm:space-y-6">
+      <Tabs defaultValue="address-book" className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-2 h-auto">
-          <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
-            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">Groups</span>
-          </TabsTrigger>
           <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
             <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="text-xs sm:text-sm">Directory</span>
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Groups</span>
           </TabsTrigger>
         </TabsList>
 
