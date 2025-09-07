@@ -5250,9 +5250,19 @@ The Quikpik Team`
               total: correctTotal, // Total = subtotal + customer transaction fee
               status: 'paid',
               stripePaymentIntentId: paymentIntent.id,
-              deliveryAddress: selectedDeliveryAddress ? 
-                `${selectedDeliveryAddress.addressLine1}${selectedDeliveryAddress.addressLine2 ? ', ' + selectedDeliveryAddress.addressLine2 : ''}, ${selectedDeliveryAddress.city}, ${selectedDeliveryAddress.postalCode}, ${selectedDeliveryAddress.country || 'United Kingdom'}` : 
-                (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
+              deliveryAddress: selectedDeliveryAddress ? (() => {
+                // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
+                const addressParts = [
+                  selectedDeliveryAddress.addressLine1,
+                  selectedDeliveryAddress.addressLine2,
+                  selectedDeliveryAddress.city,
+                  selectedDeliveryAddress.state,
+                  selectedDeliveryAddress.postalCode,
+                  selectedDeliveryAddress.country || 'United Kingdom'
+                ].filter(part => part && typeof part === 'string' && part.trim() && part.trim() !== 'undefined' && part.trim() !== 'null');
+                
+                return addressParts.length > 0 ? addressParts.join(', ') : null;
+              })() : (customerAddress ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : null),
               deliveryAddressId: selectedDeliveryAddress?.id || (selectedDeliveryAddressId ? parseInt(selectedDeliveryAddressId) : null),
               // 🚚 SIMPLIFIED: Use saved customer shipping choice
               fulfillmentType: fulfillmentType,
