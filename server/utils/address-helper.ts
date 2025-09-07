@@ -217,19 +217,27 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
-        console.log(`🏠 ADDRESS COMPONENTS DEBUG: Raw address object:`, fullAddress);
-        console.log(`🏠 ADDRESS COMPONENTS DEBUG: Available keys:`, Object.keys(fullAddress));
+        console.log(`🏠 RAW DATABASE OBJECT:`, JSON.stringify(fullAddress, null, 2));
+        console.log(`🏠 OBJECT KEYS:`, Object.keys(fullAddress));
+        console.log(`🏠 FIELD ACCESS TEST:`);
+        console.log(`  - fullAddress.addressLine1: "${fullAddress.addressLine1}"`);
+        console.log(`  - fullAddress.address_line1: "${fullAddress.address_line1}"`);
+        console.log(`  - fullAddress.postalCode: "${fullAddress.postalCode}"`);
+        console.log(`  - fullAddress.postal_code: "${fullAddress.postal_code}"`);
+        console.log(`  - fullAddress.city: "${fullAddress.city}"`);
+        console.log(`  - fullAddress.state: "${fullAddress.state}"`);
+        console.log(`  - fullAddress.country: "${fullAddress.country}"`);
         
         const components = {
-          addressLine1: fullAddress.addressLine1 || '',
-          addressLine2: fullAddress.addressLine2 || '',
+          addressLine1: fullAddress.addressLine1 || fullAddress.address_line1 || '',
+          addressLine2: fullAddress.addressLine2 || fullAddress.address_line2 || '',
           city: fullAddress.city || '',
           state: fullAddress.state || '',
-          postalCode: fullAddress.postalCode || '',
+          postalCode: fullAddress.postalCode || fullAddress.postal_code || '',
           country: fullAddress.country || ''
         };
         
-        console.log(`🏠 ADDRESS COMPONENTS EXTRACTED:`, components);
+        console.log(`🏠 FINAL COMPONENTS:`, components);
         return components;
       }
     } catch (error) {
