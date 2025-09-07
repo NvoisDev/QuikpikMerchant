@@ -215,14 +215,20 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
-        return {
-          addressLine1: fullAddress.address_line1 || '',
-          addressLine2: fullAddress.address_line2 || '',
+        console.log(`🏠 ADDRESS COMPONENTS DEBUG: Raw address object:`, fullAddress);
+        console.log(`🏠 ADDRESS COMPONENTS DEBUG: Available keys:`, Object.keys(fullAddress));
+        
+        const components = {
+          addressLine1: fullAddress.addressLine1 || '',
+          addressLine2: fullAddress.addressLine2 || '',
           city: fullAddress.city || '',
           state: fullAddress.state || '',
-          postalCode: fullAddress.postal_code || '',
+          postalCode: fullAddress.postalCode || '',
           country: fullAddress.country || ''
         };
+        
+        console.log(`🏠 ADDRESS COMPONENTS EXTRACTED:`, components);
+        return components;
       }
     } catch (error) {
       console.error('Error fetching address components for email:', error);
