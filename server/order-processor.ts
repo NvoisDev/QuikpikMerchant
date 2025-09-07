@@ -176,8 +176,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       const addressId = parseInt(selectedDeliveryAddressId);
       console.log(`📍 STEP 2: Using Address ID ${addressId} to fetch complete address details...`);
       
-      // SECURITY: Verify address belongs to the authenticated customer
-      const selectedAddress = await storage.getDeliveryAddressForCustomer(addressId, customer.id, wholesalerId);
+      // CRITICAL FIX: Get address by ID directly - addresses belong to customers, not wholesalers
+      const selectedAddress = await storage.getDeliveryAddressById(addressId);
       
       if (selectedAddress) {
         // STEP 2: Save complete address snapshot for permanent order record - filter out empty components
