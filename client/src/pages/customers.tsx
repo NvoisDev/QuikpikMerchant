@@ -870,45 +870,52 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+      {/* Mobile-friendly header */}
+      <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold">Customer Management</h1>
-          <p className="text-muted-foreground">Manage your customer groups and address book</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Customer Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your customer groups and address book</p>
         </div>
-        <Link href="/customer-registration-requests">
-          <Button variant="outline" className="flex items-center space-x-2">
-            <UserPlus className="h-4 w-4" />
-            <span>Registration Requests</span>
-          </Button>
-        </Link>
         
-        <Button 
-          variant="outline" 
-          className="flex items-center space-x-2"
-          onClick={() => setIsInvitationModalOpen(true)}
-        >
-          <Send className="h-4 w-4" />
-          <span>Invite Customer</span>
-        </Button>
+        {/* Mobile-responsive button layout */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Link href="/customer-registration-requests" className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center space-x-2">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden xs:inline sm:inline">Registration Requests</span>
+              <span className="xs:hidden sm:hidden">Requests</span>
+            </Button>
+          </Link>
+          
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto flex items-center justify-center space-x-2"
+            onClick={() => setIsInvitationModalOpen(true)}
+          >
+            <Send className="h-4 w-4" />
+            <span className="hidden xs:inline sm:inline">Invite Customer</span>
+            <span className="xs:hidden sm:hidden">Invite</span>
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="groups" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
-            <span>Customer Groups</span>
+      <Tabs defaultValue={defaultTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Groups</span>
           </TabsTrigger>
-          <TabsTrigger value="address-book" className="flex items-center space-x-2">
-            <Contact className="h-4 w-4" />
-            <span>Customer Directory</span>
+          <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3">
+            <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Directory</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Customer Groups Tab */}
-        <TabsContent value="groups" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Customer Groups</h2>
+        <TabsContent value="groups" className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+            <h2 className="text-lg sm:text-xl font-semibold">Customer Groups</h2>
             <div className="flex items-center space-x-2">
               <ContextualHelpBubble 
                 topic="Customer Groups"
@@ -917,9 +924,10 @@ export default function Customers() {
               />
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
-                    Create Group
+                    <span className="hidden xs:inline">Create Group</span>
+                    <span className="xs:hidden">Create</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -1004,19 +1012,19 @@ export default function Customers() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {customerGroups.map((group) => (
                 <Card key={group.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-3 p-4 sm:p-6">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-base sm:text-lg truncate">{group.name}</CardTitle>
+                        <CardTitle className="text-sm sm:text-base md:text-lg truncate">{group.name}</CardTitle>
                         {group.description && (
                           <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{group.description}</p>
                         )}
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs font-medium px-2 py-1">
                           {group.memberCount || 0}
                         </Badge>
                         <Button
@@ -1024,21 +1032,21 @@ export default function Customers() {
                           size="sm"
                           onClick={() => handleViewMembers(group)}
                           title="View Members"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 shrink-0"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3">
+                            <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm">
                               <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline ml-1 sm:ml-2">Add Member</span>
+                              <span className="hidden xs:inline ml-1 sm:ml-2">Add</span>
                               <ChevronDown className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </DropdownMenuTrigger>
