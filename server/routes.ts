@@ -5010,6 +5010,10 @@ The Quikpik Team`
         customerAddress: customerAddress
       });
       
+      // Parse shipping info first for debug logging
+      const shippingInfoJson = paymentIntent.metadata.shippingInfo;
+      const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+      
       console.log(`🔍 MARKETPLACE DEBUG: Will my address fix be triggered?`, {
         fulfillmentTypeWillBe: shippingInfo?.option === 'delivery' ? 'delivery' : 'pickup',
         hasSelectedDeliveryAddressId: !!selectedDeliveryAddressId,
@@ -5127,9 +5131,7 @@ The Quikpik Team`
         
         console.log(`👤 Using customer for order: ${customer.id} (${customer.firstName} ${customer.lastName})`);;
 
-        // 🚚 CRITICAL FIX: Extract and process shipping data from payment metadata
-        const shippingInfoJson = paymentIntent.metadata.shippingInfo;
-        const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
+        // 🚚 SHIPPING INFO: Already parsed above for debug logging - use existing shippingInfo variable
         
         
         // ENHANCED LOGGING: Alert if shipping info is missing or defaults to pickup
