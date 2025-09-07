@@ -26,7 +26,7 @@ export async function getCompleteDeliveryAddress(order: Order): Promise<string> 
   if (order.deliveryAddressId) {
     try {
       console.log(`📍 Fetching live address for ID: ${order.deliveryAddressId}`);
-      const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+      const addresses = await storage.getDeliveryAddresses(order.customerId, order.wholesalerId);
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
@@ -211,7 +211,9 @@ export async function getAddressComponentsForEmail(order: Order): Promise<{
   // Try to fetch individual address components from live database
   if (order.deliveryAddressId) {
     try {
-      const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+      console.log(`🏠 FETCHING ADDRESS: deliveryAddressId=${order.deliveryAddressId}, customerId=${order.customerId}, wholesalerId=${order.wholesalerId}`);
+      const addresses = await storage.getDeliveryAddresses(order.customerId, order.wholesalerId);
+      console.log(`🏠 FOUND ${addresses.length} addresses for customer ${order.customerId}`);
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
