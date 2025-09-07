@@ -2,11 +2,11 @@
 import { storage } from '../storage';
 
 export interface AddressData {
-  address_line1?: string;  // Match database schema
-  address_line2?: string;  // Match database schema
+  addressLine1?: string;   // Match storage layer return format
+  addressLine2?: string;   // Match storage layer return format
   city?: string;
   state?: string;
-  postal_code?: string;    // Match database schema
+  postalCode?: string;     // Match storage layer return format
   country?: string;
 }
 
@@ -25,18 +25,15 @@ export async function getCompleteDeliveryAddress(order: Order): Promise<string> 
   // STEP 1: Always prioritize live address data from database
   if (order.deliveryAddressId) {
     try {
-      console.log(`📍 Fetching live address for ID: ${order.deliveryAddressId}`);
       const addresses = await storage.getDeliveryAddresses(order.customerId, order.wholesalerId);
       const fullAddress = addresses.find((addr: any) => addr.id === order.deliveryAddressId);
       
       if (fullAddress) {
         const completeAddress = formatAddressComponents(fullAddress);
         if (completeAddress && completeAddress !== 'Address not available') {
-          console.log(`✅ Live address found: ${completeAddress}`);
           return completeAddress;
         }
       }
-      console.log(`⚠️ Live address lookup failed for ID: ${order.deliveryAddressId}`);
     } catch (error) {
       console.error('❌ Error fetching live address:', error);
     }
@@ -46,7 +43,6 @@ export async function getCompleteDeliveryAddress(order: Order): Promise<string> 
   if (order.deliveryAddress && order.deliveryAddress.trim()) {
     const cleanedAddress = cleanStoredAddress(order.deliveryAddress);
     if (cleanedAddress && cleanedAddress !== 'Address not available') {
-      console.log(`📍 Using stored address: ${cleanedAddress}`);
       return cleanedAddress;
     }
   }
@@ -56,7 +52,6 @@ export async function getCompleteDeliveryAddress(order: Order): Promise<string> 
     ? 'Collection from store' 
     : 'Address to be confirmed';
   
-  console.log(`📍 Using fallback: ${fallback}`);
   return fallback;
 }
 
@@ -67,11 +62,11 @@ export function formatAddressComponents(address: AddressData): string {
   if (!address) return 'Address not available';
   
   const components = [
-    address.address_line1,
-    address.address_line2,
+    address.addressLine1,
+    address.addressLine2,
     address.city,
     address.state,
-    address.postal_code,
+    address.postalCode,
     address.country
   ];
   
