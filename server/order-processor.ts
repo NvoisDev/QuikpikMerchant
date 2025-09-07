@@ -4,6 +4,109 @@ import { sendEmail } from './sendgrid-service';
 import { ShippingAutomationService } from './shipping-automation';
 import { getCompleteDeliveryAddress, getEmailDeliveryAddress, getAddressComponentsForEmail } from './utils/address-helper';
 
+// CRITICAL FIX: Copy exact address parsing logic from UI order detail page
+function parseAddressForEmail(address: string | null | undefined): {
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+} {
+  const defaultComponents = {
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: ''
+  };
+
+  if (!address || typeof address !== 'string') return defaultComponents;
+  
+  // Clean up the string - remove extra quotes and whitespace
+  let cleanAddress = address.trim();
+  cleanAddress = cleanAddress.replace(/^["']+|["']+$/g, '');
+  
+  if (!cleanAddress) return defaultComponents;
+
+  try {
+    // Try to parse as JSON first
+    const parsed = JSON.parse(cleanAddress);
+    
+    if (parsed && typeof parsed === 'object') {
+      return {
+        addressLine1: parsed.street || parsed.addressLine1 || parsed.address1 || '',
+        addressLine2: parsed.addressLine2 || parsed.address2 || '',
+        city: parsed.city || '',
+        state: parsed.state || parsed.region || parsed.county || '',
+        postalCode: parsed.postalCode || parsed.postcode || parsed.zipCode || parsed.zip || '',
+        country: parsed.country || '',
+      };
+    }
+  } catch {
+    // If not JSON, parse as comma-separated address (this is the key part!)
+    const addressParts = cleanAddress.split(',').map(part => part.trim());
+    
+    // Filter out undefined/null/empty values
+    const validParts = addressParts.filter(part => 
+      part && 
+      part !== 'undefined' && 
+      part !== 'null' && 
+      part.toLowerCase() !== 'undefined' && 
+      part.toLowerCase() !== 'null'
+    );
+    
+    if (validParts.length >= 2) {
+      const result: any = {
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+      };
+      
+      if (validParts.length >= 6) {
+        // Full format: Address1, Address2, City, State, PostalCode, Country
+        result.addressLine1 = validParts[0];
+        result.addressLine2 = validParts[1];
+        result.city = validParts[2];
+        result.state = validParts[3];
+        result.postalCode = validParts[4];
+        result.country = validParts[5];
+      } else if (validParts.length === 5) {
+        // Format: Address, City, State, PostalCode, Country
+        result.addressLine1 = validParts[0];
+        result.city = validParts[1];
+        result.state = validParts[2];
+        result.postalCode = validParts[3];
+        result.country = validParts[4];
+      } else if (validParts.length === 4) {
+        // Format: City, State, PostalCode, Country
+        result.city = validParts[0];
+        result.state = validParts[1];
+        result.postalCode = validParts[2];
+        result.country = validParts[3];
+      } else if (validParts.length === 3) {
+        // Format: Address, City, Country
+        result.addressLine1 = validParts[0];
+        result.city = validParts[1];
+        result.country = validParts[2];
+      } else if (validParts.length === 2) {
+        // Simple format: City, Country
+        result.city = validParts[0];
+        result.country = validParts[1];
+      }
+      
+      console.log(`🏠 EMAIL ADDRESS PARSED: "${cleanAddress}" → components:`, result);
+      return result;
+    }
+  }
+  
+  return defaultComponents;
+}
+
 export interface OrderEmailData {
   orderNumber: string;
   customerName: string;
@@ -360,8 +463,8 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         customerName,
         customerEmail: customerEmail || '',
         customerPhone,
-        // Fetch individual address components from database for reliable email display
-        ...await getAddressComponentsForEmail(order),
+        // Use the same address parsing logic as the UI order detail page
+        ...parseAddressForEmail(order.deliveryAddress),
         total: correctTotal,
         subtotal: order.subtotal, // CRITICAL FIX: Use actual database subtotal, not metadata
         platformFee: parseFloat(wholesalerPlatformFee || '0').toFixed(2),
