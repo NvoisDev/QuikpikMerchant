@@ -1022,7 +1022,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ webhookTest: 'success', timestamp: new Date().toISOString() });
   });
 
-  // STRIPE WEBHOOK - Now enabled on main server for public accessibility
+  // STRIPE WEBHOOK DISABLED - Using standalone webhook server on port 5001 to prevent conflicts
+  // CRITICAL: Multiple webhook handlers were causing payment blocking due to race conditions
+  /*
   app.post('/api/webhooks/stripe', async (req, res) => {
     console.log(`🚀 MAIN SERVER WEBHOOK EXECUTING at ${new Date().toISOString()}`);
     console.log(`📦 Event data:`, JSON.stringify(req.body, null, 2));
@@ -1125,6 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
+  */
 
   // STRIPE WEBHOOK DISABLED - Using standalone webhook server on port 5001 to prevent duplicates
   // app.post('/api/stripe-webhook', async (req, res) => { ... });
