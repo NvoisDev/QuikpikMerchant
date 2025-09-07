@@ -128,37 +128,43 @@ webhookApp.post('/api/webhooks/stripe', async (req, res) => {
         });
       }
       
-      // Handle customer portal orders directly in webhook
+      // Handle customer portal orders with immediate acknowledgment
       if (orderType === 'customer_portal') {
-        console.log(`🛒 Processing customer portal order for payment: ${paymentIntent?.id}`);
+        console.log(`🛒 Customer portal order payment received: ${paymentIntent?.id}`);
         
-        try {
-          // Import order processing logic directly
-          const { processCustomerPortalOrder } = await import('./order-processor');
-          
-          console.log(`📦 About to process order with payment intent:`, paymentIntent?.id);
-          
-          // Process order directly without HTTP call
-          const orderResult = await processCustomerPortalOrder(paymentIntent);
-          
-          console.log(`✅ Webhook created order successfully: ${orderResult.orderNumber || orderResult.id}`);
-          
-          return res.json({
-            received: true,
-            message: `Customer order created successfully`,
-            orderId: orderResult.id,
-            orderNumber: orderResult.orderNumber
-          });
-          
-        } catch (orderError: any) {
-          console.error(`❌ Webhook order processing error:`, orderError);
-          console.error(`❌ Full error details:`, orderError.stack);
-          return res.status(500).json({
-            error: 'Order processing failed in webhook',
-            paymentIntentId: paymentIntent.id,
-            errorMessage: orderError.message
-          });
-        }
+        // CRITICAL FIX: Acknowledge webhook immediately, process order in background
+        // This prevents Stripe webhook timeouts that were blocking payment completion
+        
+        // Schedule order processing in background (non-blocking)
+        setImmediate(async () => {
+          try {
+            console.log(`📦 Background processing order for payment: ${paymentIntent?.id}`);
+            
+            // Import order processing logic
+            const { processCustomerPortalOrder } = await import('./order-processor');
+            
+            // Process order in background
+            const orderResult = await processCustomerPortalOrder(paymentIntent);
+            
+            console.log(`✅ Background order processing complete: ${orderResult.orderNumber || orderResult.id}`);
+            
+          } catch (orderError: any) {
+            console.error(`❌ Background order processing error for payment ${paymentIntent?.id}:`, orderError);
+            console.error(`❌ Full error details:`, orderError.stack);
+            
+            // TODO: Implement retry mechanism or alert system for failed background processing
+            // For now, log the error for monitoring
+            console.error(`🚨 CRITICAL: Order creation failed for successful payment ${paymentIntent?.id}`);
+          }
+        });
+        
+        // Return immediate success to Stripe to prevent timeout/blocking
+        return res.json({
+          received: true,
+          message: `Payment acknowledged - order processing in background`,
+          paymentIntentId: paymentIntent.id,
+          status: 'processing'
+        });
       }
     }
     
