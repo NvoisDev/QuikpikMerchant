@@ -832,8 +832,10 @@ export default function OrdersFresh() {
                       <MapPin className="h-4 w-4 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
                       <div className="text-sm text-gray-700">
                         {(() => {
-                          // FIXED: Prioritize stored text address over database ID lookup (same fix as customer portal)
-                          if (selectedOrder.deliveryAddress) {
+                          // FIXED: Prioritize complete address lookup over incomplete stored text
+                          if (selectedOrder.deliveryAddressId) {
+                            return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
+                          } else if (selectedOrder.deliveryAddress) {
                             try {
                               const parsedAddress = JSON.parse(selectedOrder.deliveryAddress);
                               if (parsedAddress && typeof parsedAddress === 'object') {
@@ -855,8 +857,6 @@ export default function OrdersFresh() {
                               // JSON parsing failed, treat as plain text
                               return <div className="text-gray-700">{selectedOrder.deliveryAddress}</div>;
                             }
-                          } else if (selectedOrder.deliveryAddressId) {
-                            return <WholesalerDeliveryAddressDisplay addressId={selectedOrder.deliveryAddressId} />;
                           }
                           
                           return (
