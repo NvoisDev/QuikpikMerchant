@@ -31,7 +31,13 @@ export interface OrderEmailData {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  customerAddress?: string;
+  // Individual address components for reliable display
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
   total: string;
   subtotal: string;
   platformFee: string;
@@ -113,7 +119,17 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.customerAddress ? `<p><strong>Address:</strong><br>${formatDeliveryAddressForEmail(data.customerAddress)}</p>` : ''}
+            ${(data.addressLine1 || data.city) ? `
+              <p><strong>Delivery Address:</strong></p>
+              <div style="margin-left: 20px; line-height: 1.5;">
+                ${data.addressLine1 ? `${data.addressLine1}<br>` : ''}
+                ${data.addressLine2 ? `${data.addressLine2}<br>` : ''}
+                ${data.city ? `${data.city}` : ''}
+                ${data.state ? `, ${data.state}` : ''}<br>
+                ${data.postalCode ? `${data.postalCode}<br>` : ''}
+                ${data.country ? `${data.country}` : ''}
+              </div>
+            ` : data.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>
@@ -194,7 +210,7 @@ Fulfillment: ${data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery
 Name: ${data.customerName}
 Email: ${data.customerEmail}
 Phone: ${data.customerPhone}
-${data.customerAddress ? `Address:\n${formatDeliveryAddressPlainText(data.customerAddress)}` : ''}
+${(data.addressLine1 || data.city) ? `Delivery Address:\n${[data.addressLine1, data.addressLine2, data.city + (data.state ? `, ${data.state}` : ''), data.postalCode, data.country].filter(Boolean).join('\n')}` : data.fulfillmentType === 'delivery' ? `Delivery Address: Address to be confirmed` : ''}
 
 🛍️ ORDER ITEMS
 ${data.items.map(item => `• ${item.productName} - Qty: ${item.quantity} ${item.sellingType === 'pallets' ? 'pallet(s)' : 'units'} - £${item.unitPrice} each - Total: £${item.total}`).join('\n')}

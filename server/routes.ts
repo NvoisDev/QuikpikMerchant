@@ -11340,16 +11340,40 @@ Please contact the customer to confirm this order.
                            (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName) || 
                            'Valued Customer';
       
-      // Use enhanced address helper for reliable address retrieval
-      const addressResult = await getEmailDeliveryAddress(order);
-      const deliveryAddress = addressResult.address;
+      // Fetch individual address components from database for email template
+      let addressComponents = {
+        line1: '',
+        line2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+      };
       
-      // Log address source for debugging
-      console.log(`📍 Email address - Source: ${addressResult.source}, Complete: ${addressResult.isComplete}, Address: ${deliveryAddress}`);
-      
-      // Warn if using incomplete address data
-      if (!addressResult.isComplete && addressResult.source === 'stored') {
-        console.warn('⚠️ Using incomplete stored address in email - customer may need to provide complete address');
+      // STEP 1: Always fetch individual address components from live database
+      if (order.deliveryAddressId) {
+        try {
+          const addresses = await storage.getDeliveryAddresses(order.wholesalerId);
+          const fullAddress = addresses.find(addr => addr.id === order.deliveryAddressId);
+          
+          if (fullAddress) {
+            addressComponents = {
+              line1: fullAddress.address_line1 || '',
+              line2: fullAddress.address_line2 || '',
+              city: fullAddress.city || '',
+              state: fullAddress.state || '',
+              postalCode: fullAddress.postal_code || '',
+              country: fullAddress.country || ''
+            };
+            console.log('📍 Using individual address components from database:', addressComponents);
+          } else {
+            console.warn('⚠️ Address ID found but no matching address in database');
+          }
+        } catch (error) {
+          console.error('❌ Error fetching address components:', error);
+        }
+      } else {
+        console.warn('⚠️ No delivery address ID found for email');
       }
       
       // Create HTML email content with proper product names and pricing
@@ -11408,7 +11432,17 @@ Please contact the customer to confirm this order.
             <p><strong>Wholesale Reference:</strong> ${order.orderNumber || `WS-${order.id}`}</p>
             <p><strong>From:</strong> ${wholesaler.businessName || 'Wholesale Store'}</p>
             <p><strong>Fulfillment Type:</strong> ${order.fulfillmentType === 'delivery' ? 'Delivery to your address' : 'Collection from store'}</p>
-            ${order.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> ${deliveryAddress}</p>` : ''}
+            ${order.fulfillmentType === 'delivery' && (addressComponents.line1 || addressComponents.city) ? `
+              <p><strong>Delivery Address:</strong></p>
+              <div style="margin-left: 20px; line-height: 1.4;">
+                ${addressComponents.line1 ? `${addressComponents.line1}<br>` : ''}
+                ${addressComponents.line2 ? `${addressComponents.line2}<br>` : ''}
+                ${addressComponents.city ? `${addressComponents.city}` : ''}
+                ${addressComponents.state ? `, ${addressComponents.state}` : ''}<br>
+                ${addressComponents.postalCode ? `${addressComponents.postalCode}<br>` : ''}
+                ${addressComponents.country ? `${addressComponents.country}` : ''}
+              </div>
+            ` : order.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed - customer will be contacted</p>` : ''}
             ${order.fulfillmentType === 'pickup' ? `<p><strong>Collection Address:</strong> ${wholesaler.businessAddress || 'Please contact store for address'}</p>` : ''}
             ${order.deliveryCost && parseFloat(order.deliveryCost) > 0 ? `<p><strong>Delivery Service:</strong> ${order.shippingServiceName || 'Standard Delivery'}</p>` : ''}
           </div>
