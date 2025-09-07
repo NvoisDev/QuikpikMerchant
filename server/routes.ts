@@ -5150,9 +5150,8 @@ The Quikpik Team`
           try {
             console.log(`🎯 MARKETPLACE EXPLICIT ADDRESS: Customer selected address ID ${selectedDeliveryAddressId}, fetching from database...`);
             
-            // Get the specific address the customer selected
-            const customerAddresses = await storage.getDeliveryAddresses(customer.id, wholesalerId);
-            const explicitlySelectedAddress = customerAddresses.find((addr: any) => addr.id === parseInt(selectedDeliveryAddressId));
+            // CRITICAL FIX: Get the specific address directly by ID since customer already selected it
+            const explicitlySelectedAddress = await storage.getDeliveryAddressById(parseInt(selectedDeliveryAddressId));
             
             if (explicitlySelectedAddress) {
               selectedDeliveryAddress = {
