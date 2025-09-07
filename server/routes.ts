@@ -11385,11 +11385,11 @@ Please contact the customer to confirm this order.
           
           if (fullAddress) {
             addressComponents = {
-              line1: fullAddress.address_line1 || '',
-              line2: fullAddress.address_line2 || '',
+              line1: fullAddress.addressLine1 || '',
+              line2: fullAddress.addressLine2 || '',
               city: fullAddress.city || '',
               state: fullAddress.state || '',
-              postalCode: fullAddress.postal_code || '',
+              postalCode: fullAddress.postalCode || '',
               country: fullAddress.country || ''
             };
             console.log('✅ EMAIL: Using complete address components from database:', addressComponents);
