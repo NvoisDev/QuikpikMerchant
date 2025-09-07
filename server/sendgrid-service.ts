@@ -226,7 +226,13 @@ export async function sendWholesalerOrderNotification(orderData: {
   subtotal: number;
   totalAmount: number;
   fulfillmentType: string;
-  deliveryAddress?: string;
+  // FIXED: Use individual address components instead of incomplete snapshot
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 }): Promise<boolean> {
   const itemsHtml = orderData.orderItems.map(item => `
     <tr style="border-bottom: 1px solid #eee;">
@@ -256,7 +262,17 @@ export async function sendWholesalerOrderNotification(orderData: {
         <p><strong>Email:</strong> ${orderData.customerEmail}</p>
         <p><strong>Phone:</strong> ${orderData.customerPhone}</p>
         <p><strong>Fulfillment:</strong> ${orderData.fulfillmentType === 'delivery' ? '🚛 Delivery' : '🏪 Pickup'}</p>
-        ${orderData.deliveryAddress ? `<p><strong>Delivery Address:</strong> ${orderData.deliveryAddress}</p>` : ''}
+        ${(orderData.addressLine1 || orderData.city) ? `
+          <p><strong>Delivery Address:</strong></p>
+          <div style="margin-left: 20px; line-height: 1.5;">
+            ${orderData.addressLine1 ? `${orderData.addressLine1}<br>` : ''}
+            ${orderData.addressLine2 ? `${orderData.addressLine2}<br>` : ''}
+            ${orderData.city ? `${orderData.city}` : ''}
+            ${orderData.state ? `, ${orderData.state}` : ''}<br>
+            ${orderData.postalCode ? `${orderData.postalCode}<br>` : ''}
+            ${orderData.country ? `${orderData.country}` : 'United Kingdom'}
+          </div>
+        ` : orderData.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed</p>` : ''}
       </div>
 
       <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">

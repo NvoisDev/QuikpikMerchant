@@ -489,6 +489,27 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
 
     // Send wholesaler notification email
     if (wholesaler?.email) {
+      // CRITICAL FIX: Get complete address components for email instead of incomplete snapshot
+      let addressComponents = {};
+      if (fulfillmentType === 'delivery' && deliveryAddressId) {
+        try {
+          const completeAddress = await storage.getDeliveryAddressById(deliveryAddressId);
+          if (completeAddress) {
+            addressComponents = {
+              addressLine1: completeAddress.address_line1 || '',
+              addressLine2: completeAddress.address_line2 || '',
+              city: completeAddress.city || '',
+              state: completeAddress.state || '',
+              postalCode: completeAddress.postal_code || '',
+              country: completeAddress.country || 'United Kingdom'
+            };
+            console.log(`📧 EMAIL: Using complete address components: ${completeAddress.address_line1}, ${completeAddress.city}, ${completeAddress.postal_code}`);
+          }
+        } catch (addressError) {
+          console.error('❌ Failed to get complete address for email:', addressError);
+        }
+      }
+
       const wholesalerEmailSent = await sendWholesalerOrderNotification({
         wholesalerEmail: wholesaler.email,
         wholesalerName: wholesaler.businessName || 'Wholesaler',
@@ -505,7 +526,7 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
         subtotal: parseFloat(orderData.subtotal),
         totalAmount: parseFloat(orderData.total),
         fulfillmentType: fulfillmentType,
-        deliveryAddress: fulfillmentType === 'delivery' ? (typeof customerAddress === 'string' ? customerAddress : JSON.stringify(customerAddress)) : undefined
+        ...addressComponents // FIXED: Spread complete address components instead of incomplete snapshot
       });
 
       console.log('📧 Wholesaler notification email:', wholesalerEmailSent ? '✅ Sent' : '❌ Failed');

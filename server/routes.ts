@@ -5000,26 +5000,9 @@ The Quikpik Team`
         selectedDeliveryAddress: selectedDeliveryAddressJson
       } = paymentIntent.metadata;
 
-      console.log(`🔍 DEBUGGING ADDRESS SELECTION - Payment Intent Metadata:`, {
-        paymentIntentId: paymentIntentId,
-        hasSelectedDeliveryAddressId: !!selectedDeliveryAddressId,
-        selectedDeliveryAddressIdValue: selectedDeliveryAddressId,
-        hasSelectedDeliveryAddress: !!selectedDeliveryAddressJson,
-        allMetadataKeys: Object.keys(paymentIntent.metadata || {}),
-        shippingInfo: paymentIntent.metadata.shippingInfo,
-        customerAddress: customerAddress
-      });
-      
-      // Parse shipping info first for debug logging
+      // Parse shipping info from payment metadata
       const shippingInfoJson = paymentIntent.metadata.shippingInfo;
       const shippingInfo = shippingInfoJson ? JSON.parse(shippingInfoJson) : { option: 'pickup' };
-      
-      console.log(`🔍 MARKETPLACE DEBUG: Will my address fix be triggered?`, {
-        fulfillmentTypeWillBe: shippingInfo?.option === 'delivery' ? 'delivery' : 'pickup',
-        hasSelectedDeliveryAddressId: !!selectedDeliveryAddressId,
-        selectedDeliveryAddressIdValue: selectedDeliveryAddressId,
-        addressFixWillTrigger: (shippingInfo?.option === 'delivery') && selectedDeliveryAddressId
-      });
 
       // Parse the selected delivery address from metadata
       let selectedDeliveryAddress = null;
@@ -5533,12 +5516,34 @@ The Quikpik Team`
         ? `${customer.firstName} ${customer.lastName}` 
         : customer.firstName || customer.businessName || 'Customer');
 
+      // CRITICAL FIX: Get complete address components for email instead of incomplete snapshot
+      let addressComponents = {};
+      if (order.fulfillmentType === 'delivery' && order.deliveryAddressId) {
+        try {
+          const completeAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
+          if (completeAddress) {
+            addressComponents = {
+              addressLine1: completeAddress.address_line1 || '',
+              addressLine2: completeAddress.address_line2 || '',
+              city: completeAddress.city || '',
+              state: completeAddress.state || '',
+              postalCode: completeAddress.postal_code || '',
+              country: completeAddress.country || 'United Kingdom'
+            };
+            console.log(`📧 TEST EMAIL: Using complete address components: ${completeAddress.address_line1}, ${completeAddress.city}, ${completeAddress.postal_code}`);
+          }
+        } catch (addressError) {
+          console.error('❌ Failed to get complete address for test email:', addressError);
+        }
+      }
+
       const emailData = {
         orderNumber: `#${order.id}`,
         customerName: customerName || 'Customer',
         customerEmail: customer?.email || '',
         customerPhone: customer?.phoneNumber || customer?.businessPhone || '',
-        customerAddress: order.deliveryAddress,
+        // FIXED: Use complete address components from database
+        ...addressComponents,
         total: order.total || '0.00',
         subtotal: order.subtotal || '0.00',
         platformFee: order.platformFee || '0.00',
