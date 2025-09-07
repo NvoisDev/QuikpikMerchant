@@ -124,8 +124,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
               <div style="margin-left: 20px; line-height: 1.5;">
                 ${data.addressLine1 ? `${data.addressLine1}<br>` : ''}
                 ${data.addressLine2 ? `${data.addressLine2}<br>` : ''}
-                ${data.city ? `${data.city}` : ''}
-                ${data.state ? `, ${data.state}` : ''}<br>
+                ${data.city ? `${data.city}${data.state ? `, ${data.state}` : ''}<br>` : ''}
                 ${data.postalCode ? `${data.postalCode}<br>` : ''}
                 ${data.country ? `${data.country}` : ''}
               </div>

@@ -5510,10 +5510,6 @@ The Quikpik Team`
               };
             }));
 
-            // DEBUG: Check what selectedDeliveryAddress contains
-            console.log(`🏠 ROUTES DEBUG: selectedDeliveryAddress:`, selectedDeliveryAddress);
-            console.log(`🏠 ROUTES DEBUG: order.deliveryAddress:`, order.deliveryAddress);
-            
             // CRITICAL FIX: Use the same address parsing logic as order detail UI
             let addressComponents;
             if (selectedDeliveryAddress && Object.keys(selectedDeliveryAddress).length > 0) {
@@ -5530,7 +5526,6 @@ The Quikpik Team`
               // Fallback to parsing order.deliveryAddress string (same as UI)
               addressComponents = parseAddressForEmail(order.deliveryAddress);
             }
-            console.log(`🏠 ROUTES DEBUG: Final address components:`, addressComponents);
 
             const emailData: OrderEmailData = {
               orderNumber: order.orderNumber || `ORD-${order.id}`,
