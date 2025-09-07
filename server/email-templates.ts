@@ -114,7 +114,7 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
             <p><strong>Name:</strong> ${data.customerName}</p>
             <p><strong>Email:</strong> <a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             <p><strong>Phone:</strong> <a href="tel:${data.customerPhone}">${data.customerPhone}</a></p>
-            ${data.shippingAddress ? `<p><strong>Delivery Address:</strong> ${data.shippingAddress}</p>` : data.fulfillmentType === 'delivery' ? `<p><strong>Delivery Address:</strong> Address to be confirmed</p>` : ''}
+            ${data.shippingAddress ? `<p><strong>Shipping to:</strong> ${data.shippingAddress}</p>` : ''}
         </div>
 
         <h2 style="color: #374151;">🛍️ Order Items</h2>
