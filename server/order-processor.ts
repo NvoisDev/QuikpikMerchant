@@ -573,13 +573,12 @@ export async function processCustomerPortalOrder(paymentIntent: any) {
       const completeAddress = await storage.getDeliveryAddressById(deliveryAddressId);
       if (completeAddress) {
         completeShippingAddress = [
-          completeAddress.address_line1,
-          completeAddress.address_line2,
+          completeAddress.addressLine1,
+          completeAddress.addressLine2,
           `${completeAddress.city}${completeAddress.state ? ', ' + completeAddress.state : ''}`,
-          completeAddress.postal_code,
+          completeAddress.postalCode,
           completeAddress.country
         ].filter(Boolean).join('\n');
-        console.log(`📧 Using complete address for both emails: ${completeShippingAddress}`);
       }
     } catch (addressError) {
       console.error('❌ Failed to get complete address for emails:', addressError);

@@ -5510,26 +5510,25 @@ The Quikpik Team`
               };
             }));
 
-            // CRITICAL FIX: Get complete address from database like order-processor.ts does
+            // FIXED: Get complete address using correct camelCase field names
             let shippingAddress = undefined;
             if (fulfillmentType === 'delivery' && order.deliveryAddressId) {
               try {
                 const completeAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
                 if (completeAddress) {
                   shippingAddress = [
-                    completeAddress.address_line1,
-                    completeAddress.address_line2,
+                    completeAddress.addressLine1,
+                    completeAddress.addressLine2,
                     `${completeAddress.city}${completeAddress.state ? ', ' + completeAddress.state : ''}`,
-                    completeAddress.postal_code,
+                    completeAddress.postalCode,
                     completeAddress.country
                   ].filter(Boolean).join('\n');
-                  console.log(`📧 ROUTES: Using complete address for email: ${shippingAddress}`);
                 } else {
                   // Fallback to order deliveryAddress
                   shippingAddress = order.deliveryAddress;
                 }
               } catch (addressError) {
-                console.error('❌ ROUTES: Failed to get complete address:', addressError);
+                console.error('❌ Failed to get complete address:', addressError);
                 // Fallback to order deliveryAddress
                 shippingAddress = order.deliveryAddress;
               }
