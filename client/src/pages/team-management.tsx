@@ -243,6 +243,52 @@ export default function TeamManagement() {
     }
   };
 
+  // Premium access check - redirect non-premium users
+  if (simpleTier !== 'premium') {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Card className="text-center py-12">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <Crown className="h-8 w-8 text-yellow-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl mb-2">Premium Feature Required</CardTitle>
+            <p className="text-gray-600 mb-6">
+              Team Management is a premium feature that allows you to invite and manage team members with custom permissions.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-yellow-50 p-4 rounded-lg mb-6">
+              <h3 className="font-semibold text-yellow-800 mb-2">Premium Plan includes:</h3>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• Up to 5 team members</li>
+                <li>• Custom role permissions</li>
+                <li>• Team invitation management</li>
+                <li>• Advanced access controls</li>
+              </ul>
+            </div>
+            <Button 
+              onClick={() => setShowUpgradeModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Upgrade to Premium
+            </Button>
+          </CardContent>
+        </Card>
+        
+        {/* Upgrade Modal */}
+        <SubscriptionUpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          currentPlan={simpleTier}
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto p-6">

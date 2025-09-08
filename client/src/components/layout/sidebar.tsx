@@ -41,7 +41,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
 
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns" },
-  { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
+  { name: "Team Management", href: "/team-management", icon: Contact, premiumOnly: true, tabName: "team-management" },
   { name: "Subscription", href: "/subscription", icon: CreditCard, tabName: "subscription" },
   { name: "Business Performance", href: "/business-performance", icon: TrendingUp, premiumOnly: true, tabName: "analytics" },
   { name: "Advertising", href: "/advertising", icon: Megaphone, premiumOnly: true, tabName: "advertising" },
