@@ -23,7 +23,7 @@ export function useAuth() {
                                  currentPath.includes('/preview-store');
           
           const isOnDashboard = !isCustomerPortal && (
-            currentPath.includes('dashboard') || currentPath === '/' || 
+            currentPath.includes('dashboard') || 
             currentPath.includes('products') || currentPath.includes('orders') ||
             currentPath.includes('customers') || currentPath.includes('analytics')
           );
