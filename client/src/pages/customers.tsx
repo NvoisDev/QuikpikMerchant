@@ -879,7 +879,7 @@ export default function Customers() {
         </div>
         
         {/* Mobile-responsive button layout */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex flex-col gap-2 sm:gap-3">
           <Link href="/customer-registration-requests" className="flex-1 sm:flex-initial">
             <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center space-x-2">
               <UserPlus className="h-4 w-4" />
@@ -887,6 +887,88 @@ export default function Customers() {
               <span className="xs:hidden sm:hidden">Requests</span>
             </Button>
           </Link>
+          
+          <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto flex items-center justify-center space-x-2">
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden xs:inline sm:inline">Add Customer</span>
+                <span className="xs:hidden sm:hidden">Add</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Customer</DialogTitle>
+                <DialogDescription>
+                  Add a new customer to your directory.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...addCustomerForm}>
+                <form onSubmit={addCustomerForm.handleSubmit(handleAddCustomer)} className="space-y-4">
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="john@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addCustomerForm.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+447123456789" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addCustomerMutation.isPending}>
+                      {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -1301,93 +1383,6 @@ export default function Customers() {
                   <span className="sm:hidden">Import</span>
                 </Button>
               </DynamicTooltip>
-              <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-                <DynamicTooltip 
-                  content="Add a new customer manually with their contact information and details."
-                  type="tip"
-                  placement="bottom"
-                >
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
-                      <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">Add Customer</span>
-                      <span className="sm:hidden">Add</span>
-                    </Button>
-                  </DialogTrigger>
-                </DynamicTooltip>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Customer</DialogTitle>
-                    <DialogDescription>
-                      Add a new customer to your directory.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...addCustomerForm}>
-                    <form onSubmit={addCustomerForm.handleSubmit(handleAddCustomer)} className="space-y-4">
-                      <FormField
-                        control={addCustomerForm.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={addCustomerForm.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={addCustomerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="john@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={addCustomerForm.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+447123456789" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="flex justify-end space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={addCustomerMutation.isPending}>
-                          {addCustomerMutation.isPending ? "Adding..." : "Add Customer"}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
 
