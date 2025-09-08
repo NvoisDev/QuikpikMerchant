@@ -7938,7 +7938,65 @@ Write a professional, sales-focused description that highlights the key benefits
 
   // Note: Subscription status endpoint is defined later in the file with correct product counting
 
+  // NEW: Get available subscription plans
+  app.get('/api/subscription/plans', async (req, res) => {
+    try {
+      const { getAvailablePlans } = await import('./stripe-subscription');
+      const plans = await getAvailablePlans();
+      res.json({ plans });
+    } catch (error) {
+      console.error('❌ Failed to get plans:', error);
+      res.status(500).json({ error: 'Failed to get subscription plans' });
+    }
+  });
+
+  // NEW: Create Stripe customer and subscription
   app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
+    try {
+      const { createOrUpdateStripeCustomer, createSubscription } = await import('./stripe-subscription');
+      const { priceId } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      if (!priceId) {
+        return res.status(400).json({ error: 'Price ID is required' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Create Stripe customer if needed
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await createOrUpdateStripeCustomer(
+          userId, 
+          user.email || '',
+          user.firstName || user.businessName
+        );
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUser(userId, { stripeCustomerId });
+      }
+      
+      // Create subscription
+      const subscription = await createSubscription(stripeCustomerId, priceId);
+      
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        status: subscription.status
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to create subscription:', error);
+      res.status(500).json({ error: 'Failed to create subscription' });
+    }
+  });
+
+  // OLD: Keep old endpoint for compatibility - will be removed later
+  app.post('/api/subscription/OLD_create', requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe not configured" });
     }
@@ -12884,15 +12942,22 @@ https://quikpik.app`;
     }
   });
 
-  // Subscription status endpoint (with proper authentication)
+  // NEW: Subscription status endpoint using proper Stripe data
   app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
+      const { getUserSubscription } = await import('./stripe-subscription');
       const userId = req.user.id || req.user.claims?.sub;
       const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
+      
+      // Get subscription data from Stripe
+      const subscriptionData = await getUserSubscription(
+        user.stripeCustomerId || '', 
+        user.stripeSubscriptionId
+      );
       
       // Get product count safely 
       let productCount = 0;
@@ -12904,10 +12969,13 @@ https://quikpik.app`;
       }
 
       res.json({
-        tier: user.subscriptionTier || 'free',
-        status: user.subscriptionStatus || 'inactive',
+        tier: subscriptionData.tier,
+        status: subscriptionData.status,
         productCount,
-        productLimit: user.productLimit || 3
+        productLimit: subscriptionData.productLimit,
+        features: subscriptionData.features,
+        currentPeriodEnd: subscriptionData.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd
       });
     } catch (error: any) {
       console.error('❌ Error fetching subscription status:', error);
