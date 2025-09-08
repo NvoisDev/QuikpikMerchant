@@ -12786,12 +12786,12 @@ https://quikpik.app`;
       }
 
       // For testing - simulate successful upgrade instead of using Stripe
-      // Check for development environment more reliably
-      const isDevelopment = process.env.NODE_ENV === 'development' || 
-                           process.argv.includes('--development') || 
-                           !process.env.REPL_ID;
+      // Use test mode in development OR when not in production environment
+      const isTestMode = process.env.NODE_ENV !== 'production' || 
+                        process.env.REPL_ID || // We're in Replit, use test mode
+                        process.argv.includes('--test');
       
-      if (!process.env.STRIPE_SECRET_KEY || isDevelopment) {
+      if (isTestMode) {
         // Simulate instant upgrade for testing
         await storage.updateUserSubscription(userId, {
           tier: planId,
@@ -12800,7 +12800,7 @@ https://quikpik.app`;
           subscriptionEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         });
         
-        console.log(`✅ TEST MODE: Instantly upgraded user ${userId} to ${planId}`);
+        console.log(`✅ TEST MODE: Instantly upgraded user ${userId} to ${planId} (NODE_ENV: ${process.env.NODE_ENV}, REPL_ID: ${!!process.env.REPL_ID})`);
         
         res.json({ 
           checkoutUrl: `https://quikpik.app/simple-subscription?success=true&plan=${planId}`,
