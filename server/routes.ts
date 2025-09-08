@@ -15868,6 +15868,106 @@ The Quikpik Team
   });
 
   // ============================================================================
+  // STRIPE WEBHOOK HANDLER FOR SUBSCRIPTIONS
+  // ============================================================================
+
+  // Stripe webhook endpoint for subscription events
+  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    if (!endpointSecret) {
+      console.error('❌ STRIPE_WEBHOOK_SECRET is not configured');
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      // Verify webhook signature
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      console.log('✅ Stripe webhook verified:', event.type);
+    } catch (error) {
+      console.error('❌ Stripe webhook signature verification failed:', error);
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    try {
+      // Handle different subscription events
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          console.log('🛒 Checkout session completed:', session.id);
+          
+          if (session.mode === 'subscription' && session.subscription) {
+            // Retrieve the subscription details
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+            console.log('✅ Subscription created from checkout:', subscription.id);
+          }
+          break;
+        }
+
+        case 'customer.subscription.created': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log('🆕 Subscription created:', subscription.id);
+          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+          break;
+        }
+
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log('📝 Subscription updated:', subscription.id, 'Status:', subscription.status);
+          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log('❌ Subscription deleted:', subscription.id);
+          await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+          break;
+        }
+
+        case 'invoice.payment_succeeded': {
+          const invoice = event.data.object as Stripe.Invoice;
+          console.log('💰 Invoice payment succeeded:', invoice.id);
+          
+          if (invoice.subscription) {
+            // Subscription payment successful - update status if needed
+            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+          }
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object as Stripe.Invoice;
+          console.log('⚠️ Invoice payment failed:', invoice.id);
+          
+          if (invoice.subscription) {
+            // Subscription payment failed - update status
+            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            await SubscriptionService.updateUserSubscriptionFromWebhook(subscription.id, subscription);
+          }
+          break;
+        }
+
+        default:
+          console.log('ℹ️ Unhandled Stripe webhook event type:', event.type);
+      }
+
+      res.json({ received: true, event: event.type });
+    } catch (error) {
+      console.error('❌ Error handling Stripe webhook:', error);
+      res.status(500).json({ 
+        error: 'Webhook handler failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ============================================================================
   // SUBSCRIPTION MANAGEMENT ENDPOINTS
   // ============================================================================
 
