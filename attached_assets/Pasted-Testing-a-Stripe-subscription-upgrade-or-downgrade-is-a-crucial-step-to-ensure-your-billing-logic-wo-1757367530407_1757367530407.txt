@@ -1,0 +1,25 @@
+Testing a Stripe subscription upgrade or downgrade is a crucial step to ensure your billing logic works correctly. You should always perform these tests in Stripe's test mode to avoid real charges.
+Here's the step-by-step process you should follow:
+1. Use Test Cards
+Stripe provides a set of test credit card numbers that you can use to simulate payments.
+• Successful payments: Use any of the test card numbers provided in Stripe's documentation. The card number 4242 4242 4242 4242 is a common one.
+• Failed payments: Use specific card numbers to simulate different failures, such as a decline or insufficient funds.
+2. The Upgrade Flow
+1. Create a test user in your application and link them to a Stripe test customer.
+2. Subscribe the test user to a lower-tier plan (e.g., Free or Standard).
+3. On your front end, have the user go to the subscription management page.
+4. Select the higher-tier plan (e.g., Premium).
+5. On the backend, your code should call the Stripe API to update the subscription. The key parameters to include are the new priceId and proration_behavior set to 'always_invoice' to immediately charge the difference.
+6. Verify the charge: Go to your Stripe Dashboard in test mode. You should see a new invoice for the prorated amount (the difference between the old and new plan for the remainder of the billing cycle).
+7. Check your database: Your webhook handler for customer.subscription.updated should have correctly updated the user's subscription in your own database.
+3. The Downgrade Flow
+1. Create a test user on a higher-tier plan (e.g., Premium).
+2. On the front end, have the user select a lower-tier plan (e.g., Standard).
+3. On the backend, your code should call the Stripe API to update the subscription with the new, lower priceId.
+4. Handle Proration: Proration for downgrades results in a credit for the unused time on the old plan. By default, Stripe will apply this credit to the next invoice. You should ensure your code and UI correctly reflect this credit.
+5. Verify in Dashboard: In the Stripe Dashboard, check the test customer's subscription. You should see a credit balance. You can then use Stripe's test clocks to fast-forward time to the next billing date to confirm the credit is applied correctly.
+6. Check your database: Ensure your webhook handler correctly updates the user's subscription tier in your database to reflect the downgrade.
+4. Use Webhooks and Logs
+This is the most important part of testing.
+• Run a webhook listener during your tests. Use a tool like the Stripe CLI (stripe listen --forward-to localhost:4242/webhook) to receive webhook events locally.
+• Watch the logs: As you perform an upgrade or downgrade, you should see a series of events in your console. The most important ones are customer.subscription.updated and invoice.created (for upgrades) or invoiceitem.created (for downgrades).
