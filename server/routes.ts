@@ -123,6 +123,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
+import SubscriptionService from "./subscription-service";
 import sgMail from "@sendgrid/mail";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
@@ -15863,6 +15864,187 @@ The Quikpik Team
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
       res.status(500).json({ message: 'Failed to fetch pending invitations' });
+    }
+  });
+
+  // ============================================================================
+  // SUBSCRIPTION MANAGEMENT ENDPOINTS
+  // ============================================================================
+
+  // Initialize subscription plans (run once on startup)
+  app.post('/api/subscriptions/initialize-plans', requireAuth, async (req: any, res) => {
+    try {
+      // Only allow super admin to initialize plans
+      if (req.user.role !== 'wholesaler') {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+      
+      const plans = await SubscriptionService.initializePlans();
+      res.json({ success: true, plans });
+    } catch (error) {
+      console.error('❌ Failed to initialize subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to initialize subscription plans',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get available subscription plans
+  app.get('/api/subscriptions/plans', async (req, res) => {
+    try {
+      const plans = await SubscriptionService.getPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error('❌ Failed to get subscription plans:', error);
+      res.status(500).json({ 
+        message: 'Failed to get subscription plans',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get user's current subscription
+  app.get('/api/subscriptions/current', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const subscription = await SubscriptionService.getUserSubscription(userId);
+      res.json(subscription);
+    } catch (error) {
+      console.error('❌ Failed to get user subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to get user subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Create or update subscription
+  app.post('/api/subscriptions/create', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { priceId } = req.body;
+
+      if (!priceId) {
+        return res.status(400).json({ message: 'Price ID is required' });
+      }
+
+      // Get or create Stripe customer
+      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId);
+      
+      // Create or update subscription
+      const subscription = await SubscriptionService.createSubscription(stripeCustomerId, priceId);
+      
+      res.json({ 
+        success: true, 
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          cancel_at_period_end: subscription.cancel_at_period_end
+        }
+      });
+    } catch (error) {
+      console.error('❌ Failed to create subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to create subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Create Stripe checkout session for subscription
+  app.post('/api/subscriptions/create-checkout-session', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { priceId } = req.body;
+
+      if (!priceId) {
+        return res.status(400).json({ message: 'Price ID is required' });
+      }
+
+      // Get or create Stripe customer
+      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId);
+      
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        success_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription/cancelled`,
+        metadata: {
+          userId: userId
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        sessionId: session.id,
+        url: session.url 
+      });
+    } catch (error) {
+      console.error('❌ Failed to create checkout session:', error);
+      res.status(500).json({ 
+        message: 'Failed to create checkout session',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Check feature access
+  app.post('/api/subscriptions/check-feature-access', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { feature, value } = req.body;
+
+      if (!feature) {
+        return res.status(400).json({ message: 'Feature name is required' });
+      }
+
+      const hasAccess = await SubscriptionService.checkFeatureAccess(userId, feature, value);
+      res.json({ hasAccess, feature, value });
+    } catch (error) {
+      console.error('❌ Failed to check feature access:', error);
+      res.status(500).json({ 
+        message: 'Failed to check feature access',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Cancel subscription
+  app.post('/api/subscriptions/cancel', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { user } = await SubscriptionService.getUserSubscription(userId);
+      
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'No active subscription found' });
+      }
+
+      // Cancel subscription at period end
+      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'Subscription will be canceled at the end of the current period',
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        currentPeriodEnd: subscription.current_period_end
+      });
+    } catch (error) {
+      console.error('❌ Failed to cancel subscription:', error);
+      res.status(500).json({ 
+        message: 'Failed to cancel subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
