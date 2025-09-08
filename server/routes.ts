@@ -3367,7 +3367,7 @@ The Quikpik Team`
     }
   });
 
-  app.get('/api/auth/user', requireAnyAuth, async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
       // Always fetch fresh user data from database to ensure subscription updates are reflected
       const userId = req.user.id || req.user.claims?.sub;
@@ -7951,7 +7951,7 @@ Write a professional, sales-focused description that highlights the key benefits
   });
 
   // NEW: Create Stripe customer and subscription
-  app.post('/api/subscription/create', requireAnyAuth, async (req: any, res) => {
+  app.post('/api/subscription/create', requireAuth, async (req: any, res) => {
     try {
       const { createOrUpdateStripeCustomer, createSubscription } = await import('./stripe-subscription');
       const { priceId } = req.body;
@@ -12950,7 +12950,7 @@ https://quikpik.app`;
   });
 
   // NEW: Subscription status endpoint using proper Stripe data
-  app.get('/api/subscription/status', requireAnyAuth, async (req: any, res) => {
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
       const { getUserSubscription } = await import('./stripe-subscription');
       const userId = req.user.id || req.user.claims?.sub;
