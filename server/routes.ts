@@ -124,6 +124,7 @@ import OpenAI from "openai";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
 import SubscriptionService from "./subscription-service";
+import { requireFeatureAccess, requireProductLimits, requireBroadcastLimits, requireTeamMemberLimits, getUserPlanLimits } from "./middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
 import cookieParser from "cookie-parser";
 import { ReliableSMSService } from "./sms-service";
@@ -3568,7 +3569,7 @@ The Quikpik Team`
     }
   });
 
-  app.post('/api/products', requireAuth, async (req: any, res) => {
+  app.post('/api/products', requireAuth, requireProductLimits(), async (req: any, res) => {
     try {
       // Use parent company ID for team members to ensure data inheritance
       const targetUserId = req.user.role === 'team_member' && req.user.wholesalerId 
@@ -7551,7 +7552,7 @@ This message was sent by Quikpik Merchant Platform
   });
 
   // WhatsApp Broadcast endpoints
-  app.post('/api/broadcasts', requireAuth, async (req: any, res) => {
+  app.post('/api/broadcasts', requireAuth, requireBroadcastLimits(), async (req: any, res) => {
     try {
       const { productId, customerGroupId, customMessage, scheduledAt } = req.body;
       // Use parent company ID for team members
@@ -16143,6 +16144,21 @@ The Quikpik Team
       console.error('❌ Failed to cancel subscription:', error);
       res.status(500).json({ 
         message: 'Failed to cancel subscription',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get user's plan limits and usage
+  app.get('/api/subscriptions/plan-limits', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const planLimits = await getUserPlanLimits(userId);
+      res.json(planLimits);
+    } catch (error) {
+      console.error('❌ Failed to get plan limits:', error);
+      res.status(500).json({ 
+        message: 'Failed to get plan limits',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
