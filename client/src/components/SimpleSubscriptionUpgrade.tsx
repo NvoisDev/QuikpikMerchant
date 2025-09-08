@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,18 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 
+interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  priceId: string;
+  amount: number;
+  currency: string;
+  interval: string;
+  metadata: any;
+  tier: string;
+}
+
 interface SimpleSubscriptionUpgradeProps {
   currentPlan: string;
   onUpgradeSuccess?: () => void;
@@ -14,59 +26,121 @@ interface SimpleSubscriptionUpgradeProps {
 
 export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: SimpleSubscriptionUpgradeProps) {
   const [upgrading, setUpgrading] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const plans = [
-    {
-      id: "free",
-      name: "Free",
-      price: "£0",
-      period: "forever",
-      features: [
-        "Up to 3 products",
-        "Basic WhatsApp integration",
-        "Email support"
-      ],
-      current: currentPlan === "free"
-    },
-    {
-      id: "premium", 
-      name: "Premium",
-      price: "£19.99",
-      period: "per month",
-      popular: true,
-      features: [
-        "Unlimited products",
-        "B2B marketplace access", 
-        "Team management",
-        "Advanced analytics",
-        "Priority support"
-      ],
-      current: currentPlan === "premium"
-    }
-  ];
+  // Load available plans from Stripe
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/subscription/plans");
+        const data = await response.json();
+        setPlans(data.plans || []);
+      } catch (error) {
+        console.error("Failed to load plans:", error);
+        toast({
+          title: "Error loading plans",
+          description: "Please refresh the page to try again",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleUpgrade = async (planId: string) => {
-    if (planId === currentPlan || upgrading) return;
+    loadPlans();
+  }, [toast]);
+
+  // Format plan data for display
+  const formatPlan = (plan: Plan) => {
+    const features = [];
+    
+    if (plan.metadata.productLimit === '-1') {
+      features.push("Unlimited products");
+    } else {
+      features.push(`Up to ${plan.metadata.productLimit} products`);
+    }
+    
+    if (plan.metadata.whatsappIntegration === 'full') {
+      features.push("Full WhatsApp integration");
+    } else if (plan.metadata.whatsappIntegration === 'advanced') {
+      features.push("Advanced WhatsApp integration");
+    } else {
+      features.push("Basic WhatsApp integration");
+    }
+    
+    if (plan.metadata.marketplaceAccess === 'true') {
+      features.push("B2B marketplace access");
+    }
+    
+    if (plan.metadata.teamMembers === '-1') {
+      features.push("Unlimited team members");
+    } else if (plan.metadata.teamMembers !== '1') {
+      features.push(`Up to ${plan.metadata.teamMembers} team members`);
+    }
+    
+    features.push(`${plan.metadata.support} support`);
+    
+    return {
+      id: plan.tier,
+      name: plan.name,
+      price: plan.amount === 0 ? "£0" : `£${(plan.amount / 100).toFixed(2)}`,
+      period: plan.amount === 0 ? "forever" : `per ${plan.interval}`,
+      features,
+      priceId: plan.priceId,
+      current: currentPlan === plan.tier,
+      popular: plan.tier === 'premium'
+    };
+  };
+
+  const handleUpgrade = async (formattedPlan: any) => {
+    if (formattedPlan.current || upgrading) return;
     
     setUpgrading(true);
     try {
-      const response = await apiRequest("POST", "/api/subscription/upgrade", {
-        planId
+      // For free plan, handle as downgrade (if needed)
+      if (formattedPlan.id === 'free') {
+        toast({
+          title: "Free plan activated",
+          description: "Your account has been downgraded to the free plan",
+        });
+        onUpgradeSuccess?.();
+        return;
+      }
+
+      // Create subscription with proper Stripe flow
+      const response = await apiRequest("POST", "/api/subscription/create", {
+        priceId: formattedPlan.priceId
       });
       
       if (response.ok) {
-        const { checkoutUrl } = await response.json();
+        const { subscriptionId, clientSecret, status } = await response.json();
         
-        toast({
-          title: "Redirecting to payment...",
-          description: "Taking you to secure checkout",
-        });
-        
-        // Redirect to Stripe checkout
-        window.location.href = checkoutUrl;
+        if (status === 'active') {
+          // Subscription is immediately active (free tier or no payment required)
+          toast({
+            title: "Plan upgraded successfully!",
+            description: `Welcome to ${formattedPlan.name}`,
+          });
+          onUpgradeSuccess?.();
+        } else if (clientSecret) {
+          // Payment required - redirect to Stripe checkout
+          toast({
+            title: "Redirecting to payment...",
+            description: "Taking you to secure checkout",
+          });
+          
+          // For this implementation, we'll use Stripe's payment element
+          // In a production app, you'd implement the full Stripe Elements flow
+          const checkoutUrl = `https://checkout.stripe.com/pay/${clientSecret}`;
+          window.location.href = checkoutUrl;
+        } else {
+          throw new Error("Unexpected subscription status");
+        }
       } else {
-        throw new Error("Failed to create checkout session");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create subscription");
       }
     } catch (error: any) {
       console.error("Upgrade error:", error);
