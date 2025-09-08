@@ -166,15 +166,28 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
     }
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading subscription plans...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const formattedPlans = plans.map(formatPlan);
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Choose Your Plan</h2>
-        <p className="text-gray-600">Simple, transparent pricing</p>
+        <p className="text-gray-600">Powered by Stripe - Real subscription management</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {plans.map((plan) => (
+        {formattedPlans.map((plan) => (
           <Card 
             key={plan.id} 
             className={`relative ${plan.popular ? 'border-primary/50 shadow-lg' : ''} ${plan.current ? 'bg-primary/5' : ''}`}
@@ -208,7 +221,7 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
               </ul>
 
               <Button
-                onClick={() => handleUpgrade(plan.id)}
+                onClick={() => handleUpgrade(plan)}
                 disabled={plan.current || upgrading}
                 className="w-full"
                 variant={plan.popular ? "default" : "outline"}
