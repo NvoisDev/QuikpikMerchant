@@ -1,0 +1,27 @@
+An ideal Stripe subscription codebase should be structured to handle multiple tiers (Free, Standard, Premium) by using a single, scalable subscription model and a robust backend. The key is to avoid hardcoding prices or plans and instead rely on Stripe's products and prices.
+1. Backend Data Model
+Your database needs a clear structure to link your users to their Stripe subscriptions.
+ * users table:
+   * id
+   * stripe_customer_id: Crucial for linking your user to their Stripe data.
+   * stripe_subscription_id: The ID of the user's active subscription.
+   * subscription_status: The current status of the subscription (e.g., active, cancelled, past_due).
+ * Stripe products & prices: Do not store product or price information in your own database. Use the Stripe API to fetch this information in real-time. This ensures your platform always has the correct pricing.
+2. Subscription Flow
+The entire process, from a user selecting a plan to a successful subscription, should be handled on your backend.
+ * Create a Customer: When a new user signs up, create a Stripe Customer object on your backend using their email. Store the stripe_customer_id in your users table.
+ * User Selects a Plan: On your front end, a user chooses a plan (e.g., Standard). The front end sends the plan's Stripe Price ID to your backend.
+ * Create the Subscription: On your backend, use the Stripe API to create a new stripe_subscription for the user.
+   * Pass the stripe_customer_id and the Stripe Price ID of the chosen plan.
+   * Set collection_method to charge_automatically.
+ * Handle Payment: If the plan has a cost, the subscription creation will automatically trigger a payment intent. Stripe will manage the checkout flow, either with a saved card or by redirecting the user to collect payment details.
+3. Webhooks: The Single Source of Truth
+Stripe webhooks are essential for keeping your database in sync. Your backend should listen for these events.
+ * customer.subscription.created: When a new subscription is created. Save the stripe_subscription_id and update the subscription_status to active.
+ * customer.subscription.updated: When a subscription's status changes (e.g., from active to past_due). Update the subscription_status in your users table.
+ * customer.subscription.deleted: When a subscription is canceled. Update the subscription_status in your users table to cancelled.
+ * invoice.payment_succeeded: When a recurring payment is successful. This confirms the subscription is active and paid for.
+4. Logic for Tiers (Free, Standard, Premium)
+The beauty of this model is that all plans, including the Free one, are handled as Stripe subscriptions.
+ * Free Plan: Create a Stripe Product called "Free Plan" with a Price of $0. When a user selects the free plan, create a subscription for them using this price ID. Your backend code will then check if the user has an active subscription to enable access to features.
+ * Access Control: All feature gating should be based on the user's current stripe_subscription_id and subscription_status in your database. Don't hardcode logic like "if user is free, disable this feature." Instead, check the user's subscription status and its associated plan on the server side to determine what features to enable.
