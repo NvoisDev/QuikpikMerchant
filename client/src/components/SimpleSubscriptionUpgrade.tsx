@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface SimpleSubscriptionUpgradeProps {
   currentPlan: string;
@@ -70,8 +71,8 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
     } catch (error: any) {
       console.error("Upgrade error:", error);
       
-      // Handle authentication errors specifically
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      // Handle authentication errors specifically  
+      if (isUnauthorizedError(error) || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
         toast({
           title: "Session Expired",
           description: "Please log in again to upgrade your subscription",
