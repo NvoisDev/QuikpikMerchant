@@ -69,11 +69,24 @@ export function SimpleSubscriptionUpgrade({ currentPlan, onUpgradeSuccess }: Sim
       }
     } catch (error: any) {
       console.error("Upgrade error:", error);
-      toast({
-        title: "Upgrade Failed",
-        description: "Please try again or contact support",
-        variant: "destructive",
-      });
+      
+      // Handle authentication errors specifically
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        toast({
+          title: "Session Expired",
+          description: "Please log in again to upgrade your subscription",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+      } else {
+        toast({
+          title: "Upgrade Failed",
+          description: "Please try again or contact support",
+          variant: "destructive",
+        });
+      }
       setUpgrading(false);
     }
   };
