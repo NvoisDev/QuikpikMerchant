@@ -210,7 +210,12 @@ export default function Campaigns() {
   };
   const { user } = useAuth();
   const { toast } = useToast();
-  // Subscription system removed
+  
+  // Fetch user's subscription plan limits
+  const { data: planLimits } = useQuery({
+    queryKey: ['/api/subscriptions/plan-limits'],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -846,6 +851,13 @@ export default function Campaigns() {
                 });
                 return;
               }
+              
+              // Check if user has reached broadcast limits
+              if (planLimits && campaigns.length >= planLimits.broadcasts && planLimits.broadcasts !== -1) {
+                setIsUpgradeModalOpen(true);
+                return;
+              }
+              
               setEditingCampaign(null);
               setCampaignType('single');
               form.reset({
@@ -859,11 +871,17 @@ export default function Campaigns() {
               setIsCreateOpen(true);
             }}
           >
-            <Plus className="h-4 w-4" />
+            {planLimits && campaigns.length >= planLimits.broadcasts && planLimits.broadcasts !== -1 ? (
+              <Crown className="h-4 w-4" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             <span>
-              {(whatsappStatus as any)?.isConfigured 
-                ? "Create Broadcast" 
-                : "WhatsApp Required"
+              {!(whatsappStatus as any)?.isConfigured 
+                ? "WhatsApp Required"
+                : planLimits && campaigns.length >= planLimits.broadcasts && planLimits.broadcasts !== -1
+                ? "Upgrade Required"
+                : "Create Broadcast"
               }
             </span>
           </Button>
@@ -1725,7 +1743,7 @@ export default function Campaigns() {
         open={isUpgradeModalOpen}
         onOpenChange={setIsUpgradeModalOpen}
         reason="broadcast_limit"
-        currentPlan={subscription?.tier || "free"}
+        currentPlan={user?.currentPlan || "free"}
       />
     </div>
   );

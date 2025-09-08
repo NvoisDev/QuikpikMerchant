@@ -45,6 +45,7 @@ const navigation = [
   { name: "Advertising", href: "/advertising", icon: Megaphone, tabName: "advertising" },
   { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace" },
   { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
+  { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
 
