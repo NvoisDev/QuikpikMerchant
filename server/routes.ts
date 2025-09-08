@@ -15872,8 +15872,20 @@ The Quikpik Team
   // STRIPE WEBHOOK HANDLER FOR SUBSCRIPTIONS
   // ============================================================================
 
-  // Stripe webhook endpoint for subscription events
-  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  // Stripe webhook endpoint for subscription events  
+  app.post('/api/webhooks/stripe', (req, res, next) => {
+    if (req.originalUrl === '/api/webhooks/stripe') {
+      req.body = '';
+      req.on('data', (chunk) => {
+        req.body += chunk.toString();
+      });
+      req.on('end', () => {
+        next();
+      });
+    } else {
+      next();
+    }
+  }, async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     

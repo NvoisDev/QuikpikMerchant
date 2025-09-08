@@ -51,6 +51,7 @@ import AuthSuccess from "@/pages/auth-success";
 import SuperAdmin from "@/pages/super-admin";
 import { LoadingDemo } from "@/pages/loading-demo";
 import { LoadingOverlay } from "@/components/ui/loading-spinner";
+import SubscriptionPricing from "@/pages/SubscriptionPricing";
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -121,6 +122,7 @@ function AuthenticatedRoutes() {
             <Route path="/team-management" component={TeamManagement} />
             <Route path="/help" component={Help} />
             <Route path="/loading-demo" component={LoadingDemo} />
+            <Route path="/subscription/pricing" component={SubscriptionPricing} />
             <Route path="/preview-store" component={CustomerPortal} />
             <Route path="/preview-store/:id" component={CustomerPortal} />
             <Route path="/store/:id" component={CustomerPortal} />
