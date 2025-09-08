@@ -1,0 +1,18 @@
+To handle downgrades, your developer needs to implement server-side feature gating based on the user's subscription tier. This logic ensures that once a user downgrades, features and products exceeding the new limit are "locked."
+Step 1: Backend Logic for Feature Gating
+The most important step is to check the user's subscription status on the backend for every request.
+• User Check: When a user logs in or makes a request (e.g., to view products), your backend should retrieve their current subscription tier from your database.
+• Product Limit Check: Before displaying the product list, the backend should count the number of products the wholesaler has uploaded.
+• If the number of products is greater than the limit for their new (downgraded) plan (e.g., more than 10 products for a Standard plan), the backend should flag those extra products as "locked" or "inactive."
+• This logic should be applied to all features with quantity limits, such as broadcast counts.
+Step 2: Front-end Implementation
+The front-end should visually represent the locked features and handle user interaction.
+• Visual Locking: The front-end receives the data from the backend, which includes the "locked" flag for certain items. It should display a lock icon or a similar visual cue on these items.
+• Upgrade Pop-up: When the user clicks on a locked item, the front-end should trigger a pop-up or modal.
+• The pop-up should explain that the item is locked due to the current subscription plan.
+• It should include a clear Call to Action button to "Upgrade Your Plan."
+• Hide Premium Features: For features exclusive to higher tiers (like custom reports for a Premium plan), the front-end should hide these from the navigation or dashboard entirely if the user is not on the correct plan.
+Step 3: Handling Upgrades
+When a user upgrades their subscription, the system should automatically unlock all their content.
+• Webhook Trigger: The customer.subscription.updated webhook from Stripe is crucial here. When a user upgrades, this webhook will fire, and your backend should update the user's subscription tier in your database.
+• Instant Access: Once the database is updated, the user's account should immediately reflect the change. When they refresh the page, the front-end will see the new tier and display all their products and features, with no items locked.
