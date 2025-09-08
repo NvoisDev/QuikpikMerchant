@@ -3367,7 +3367,7 @@ The Quikpik Team`
     }
   });
 
-  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+  app.get('/api/auth/user', requireAnyAuth, async (req: any, res) => {
     try {
       // Always fetch fresh user data from database to ensure subscription updates are reflected
       const userId = req.user.id || req.user.claims?.sub;
