@@ -160,7 +160,6 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Check for legacy session userId (fallback)
-    const sessionUserId = (req.session as any)?.userId;
     if (sessionUserId) {
       const user = await storage.getUser(sessionUserId);
       if (user) {
