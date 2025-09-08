@@ -1,6 +1,8 @@
 import { OAuth2Client } from 'google-auth-library';
 import { Request, Response, NextFunction } from 'express';
 import { storage } from './storage';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
